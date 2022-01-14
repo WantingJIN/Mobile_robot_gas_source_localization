@@ -1,0 +1,81 @@
+*************************
+* Makefiles Explanation *
+*************************
+
+WEBOTS_HOME and WK3_PORTABLE (library path) paths should be defined at
+your .bashrc
+
+Makefile at WK3_PORTABLE: does the make instruction for our library
+libk3_webots.a
+
+The relativepositionboard module makes use of GNU Scientific Library in
+order to generate gaussian noise in the range and bearing values. In
+order to compile libraries -lgsl -lgslcblas must be added to the
+Makefile (see below) and in the case of Ubuntu  libgsl0-dev package
+installed.
+
+Makefile at our Controller Path: does the make instruction for our
+controller, including our libk3_webots.a library and needed headers at
+WK3_PORTABLE. This makefile should be something like this:
+
+	C_SOURCES=your_controller.c other_code.c
+
+	#Your library
+	MY_LIBRARY=-lk3_webots
+
+	#Include Webots Makefile
+	include $(WEBOTS_HOME)/projects/default/controllers/Makefile.include
+
+	#Include headers and libraries paths
+	INCLUDE= -I "$(WK3_PORTABLE)" -I"$(WEBOTS_HOME)/include"
+
+	LIBRARIES= -L $(WK3_PORTABLE) $(MY_LIBRARY) -lgsl -lgslcblas
+
+Webots Makefile: not modified Makefile.
+
+*****************************************************************
+* What you can do with libk3_webots.a library and how to use it *
+*****************************************************************
+
+The code this library owns has been made trying to respect faithfully
+KheperaIIIToolbox author's code and style.  So future improvement and
+modifications can be made easily by anyone familiar with the toolbox.
+
+
+For using this library you just need to #include <khepera3.h> in your
+program.
+
+
+Khepera3 module has been implemented, and it includes these submodules:
+		
+	KHEPERA3: defines Khepera3 structure and initialization
+	functions. It includes every webots header needed for correct
+	operation.  A defined control_step variable is set to 32 ms by
+	default in khepera3.h, present at every sudmodule needed
+	(e.g. infrared and ultrasound).
+
+	KHEPERA3_DRIVE: you can set motors speed and differential
+	speed. Also get and set current position from encoders.
+
+	KHEPERA3_MOTOR: defines the motor structure for later use in
+	khepera3_drive submodule.  No more things were implemented as
+	they were useless. Main motor control is defined at
+	khepera3_drive.
+
+	KHEPERA3_INFRARED: defines khepera3_infrared_proximity()
+	function and creates a numerical index of each sensor.  Does
+	not define infrared_ambient().
+
+	KHEPERA3_ULTRASOUND: defines everything previously defined in
+	khepera3 toolbox and initializes each sensor structure,
+	setting only the first value of their fields.  This task is
+	implemented in ultrasound_structure_init().  Amplitude field
+	is defined as 1 in khepera3_ultrasound.h. This functions have
+        not been tested.
+
+Odometry_track module has been implemented:
+
+The values of WHEEL_RADIUS 0.0212, AXLE_LENGTH 0.0893,
+ENCODER_RESOLUTION 440, have been added as #define to use the values
+of the webots model of the Khepera III.
+

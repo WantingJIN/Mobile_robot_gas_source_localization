@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+
+<!-- This XML file is written by the odor_physics plugin at the beginning of each simulation with the configuration. It cannot be read by the the odor_physics plugin, but two such files can be compared to check for configuration differences. -->
+
+<OdorPhysics>
+<SimulationTime>0</SimulationTime>
+<SimulationTimeStep>0.032</SimulationTimeStep>
+<ObstacleList>
+<Size>0</Size>
+</ObstacleList>
+<WindFieldConstant>
+	<WindSpeed>-0.9	0	0</WindSpeed>
+</WindFieldConstant>
+<FilamentList>
+	<Size>1600</Size>
+</FilamentList>
+<FilamentPropagation>
+	<StdDev>0.02</StdDev>
+	<FilamentGrowthGamma>4e-07</FilamentGrowthGamma>
+</FilamentPropagation>
+<OdorModel />
+<FilamentSourceList>
+<FilamentSourceConstant>
+	<Radius>0.01</Radius>
+	<ReleaseAmount unit="filaments/s">20</ReleaseAmount>
+	<FilamentAmount>830</FilamentAmount>
+	<FilamentWidth>0.08</FilamentWidth>
+	<FilamentOdorType>0</FilamentOdorType>
+</FilamentSourceConstant>
+</FilamentSourceList>
+<SensorList>
+<SensorOdor>
+	<OdorType>0</OdorType>
+	<NoiseStdDev>0</NoiseStdDev>
+	<RunningAverageFactor>0</RunningAverageFactor>
+</SensorOdor>
+<SensorWind>
+	<NoiseStdDev>0.1</NoiseStdDev>
+	<RunningAverageFactor>0</RunningAverageFactor>
+</SensorWind>
+</SensorList>
+</OdorPhysics>

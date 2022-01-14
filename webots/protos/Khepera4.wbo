@@ -1,0 +1,60 @@
+#VRML_OBJ R2019a utf8
+DEF n101 Khepera4 {
+  translation 1 1 0
+  rotation -0.5773502627301778 0.5773502738035171 0.5773502710351824 4.188790199249721
+  name "101"
+  controller "controller_STE_clean"
+  turretSlot [
+    GPS {
+    }
+    Compass {
+    }
+    Emitter {
+      name "emitter_K4"
+      channel 10
+    }
+    Receiver {
+      name "receiver_K4"
+      channel 8
+    }
+    DEF SENSOR_ODOR_0 Receiver {
+      translation 0 0.07 -0.05
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0 1 0
+            }
+          }
+          geometry DEF CYLINDER_ODOR Cylinder {
+            height 0.02
+            radius 0.01
+          }
+        }
+      ]
+      name "sensor_odor_101"
+      boundingObject USE CYLINDER_ODOR
+      physics Physics {
+      }
+    }
+    DEF SENSOR_WIND_0 Receiver {
+      translation 0 0.07 0
+      rotation 0 0 1 0
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0.3 1 1
+            }
+          }
+          geometry DEF CYLINDER_WIND Cylinder {
+            height 0.02
+            radius 0.02
+          }
+        }
+      ]
+      name "sensor_wind"
+      channel 100
+    }
+  ]
+}

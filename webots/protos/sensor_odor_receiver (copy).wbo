@@ -1,0 +1,22 @@
+#VRML_OBJ R2019b utf8
+DEF SENSOR_ODOR_9 Receiver {
+    translation 5.814113 3.321885 0.1
+    children [
+        Shape {
+            appearance Appearance {
+                material Material {
+                    diffuseColor 0 1 0
+                }
+            }
+            geometry DEF CYLINDER_ODOR Cylinder {
+                height 0.02
+                radius 0.01
+            }
+        }
+    ]
+    name "sensor_odor_9"
+    boundingObject USE CYLINDER_ODOR
+    physics Physics {
+    }
+    channel 9
+}

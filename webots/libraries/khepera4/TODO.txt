@@ -1,0 +1,16 @@
+Real robots:
+- Recompile modules and programs for the korebot2 in the real robot toolbox. Commit to the repo.
+- Update R&B init (tx rate, idsend,)
+- Check motor initialization amd khepera4.init()
+
+NEW and UPDATE MODULES
+----------------------
+             REAL       WEBOTS          NOTES
+R&B           OK          OK          Check angles
+Sync         Jorge?       OK
+Abs Pose     Jose student OK          Check angles
+Robot model   OK          OK          Check sensor order
+Toggle leds   yes?         ?
+Robot ID      Integrate   Integrate   Check
+Sensor norm.   ?          ?
+

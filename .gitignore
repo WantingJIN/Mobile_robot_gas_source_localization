@@ -1,0 +1,7 @@
+webots/plugins/physics/odor_physics/results/SENSOR_*
+Results/**
+openfoam/training_random/training_random_win*/*
+!openfoam/training_random/training_random_win*/0
+openfoam/test_maps/map*/map*_wind1
+**/build
+**~

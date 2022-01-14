@@ -1,0 +1,21 @@
+#VRML_OBJ R2019b utf8
+DEF SENSOR_WIND_0 Receiver {
+  translation 0 0.07 0
+  rotation 0 0 1 0
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          diffuseColor 1 0 0
+          emissiveColor 1 0 0
+        }
+      }
+      geometry DEF CYLINDER_WIND Cylinder {
+        height 0.02
+        radius 0.02
+      }
+    }
+  ]
+  name "sensor_wind"
+  channel 100
+}
