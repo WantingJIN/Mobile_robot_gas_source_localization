@@ -23,7 +23,7 @@ boundaryField
 {
     inlet
     {
-        type            kqRWallFunction;
+        type            fixedValue;
         value           uniform 0.00375;
     }
     outlet

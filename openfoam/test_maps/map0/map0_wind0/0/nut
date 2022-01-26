@@ -23,16 +23,18 @@ boundaryField
 {
     inlet
     {
-        type            fixedValue;
+        type            calculated;
         value           uniform 0;
     }
     outlet
     {
-        type            zeroGradient;
+        type            calculated;
+        value           uniform 0;
     }
     walls
     {
-        type            zeroGradient;
+        type            nutkWallFunction;
+        value           uniform 0;
     }
 }
 

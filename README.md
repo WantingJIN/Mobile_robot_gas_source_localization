@@ -12,9 +12,11 @@
 
 3. **Visualization**: matlab `openfoam_process_for_webots_random.m`
 
+Note: To visualize the openfoam simulation result in ParaView, the embedded command with paraFoam didn't work well for me. Thus I directly lunch paraview and open vtk file from there.
+
 ## Webots
 
-    
+​    
 
-    
-   
+​    
+
