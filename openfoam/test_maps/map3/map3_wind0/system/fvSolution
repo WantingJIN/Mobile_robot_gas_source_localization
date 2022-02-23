@@ -69,12 +69,12 @@ SIMPLE
 
 relaxationFactors
 {
-    p               0.15;
-    U               0.005;
-    k               0.001;
-    epsilon         0.001;
-    R               0.001;
-    nuTilda         0.001;
+    p               0.3;
+    U               0.7;
+    k               0.7;
+    epsilon         0.7;
+    R               0.7;
+    nuTilda         0.7;
 }
 
 
