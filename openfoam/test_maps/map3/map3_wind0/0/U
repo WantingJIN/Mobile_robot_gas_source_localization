@@ -22,12 +22,13 @@ boundaryField
 {
     inlet
     {
-        type            surfaceNormalFixedValue;
-        refValue        uniform -1;
+        type            fixedValue;
+        value           uniform (0 0 0);
     }
     outlet
     {
-        type            zeroGradient;
+        type            pressureInletOutletVelocity;
+        value           uniform (0 0 0);
     }
     walls
     {

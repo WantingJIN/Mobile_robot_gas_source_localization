@@ -1,66 +1,49 @@
-/*---------------------------------------------------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  1.4                                   |
-|   \\  /    A nd           | Web:      http://www.openfoam.org               |
-|    \\/     M anipulation  |                                                 |
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  9
+     \\/     M anipulation  |
 \*---------------------------------------------------------------------------*/
-
 FoamFile
 {
-    version         2.0;
-    format          ascii;
-
-    root            "";
-    case            "";
-    instance        "";
-    local           "";
-
-    class           dictionary;
-    object          fvSchemes;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
 }
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 ddtSchemes
 {
-    default steadyState;
+    default         steadyState;
 }
 
 gradSchemes
 {
     default         Gauss linear;
-    grad(p)         Gauss linear;
-    grad(U)         Gauss linear;
 }
 
 divSchemes
 {
     default         none;
-    div(phi,U)      Gauss upwind;
+    div(phi,U)      bounded Gauss linearUpwind grad(U);
+
     div(phi,k)      Gauss upwind;
     div(phi,epsilon) Gauss upwind;
-    div(phi,R)      Gauss upwind;
-    div(R)          Gauss linear;
-    div(phi,nuTilda) Gauss upwind;
+
+    div(phi,nuTilda) bounded Gauss linearUpwind grad(nuTilda);
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 }
 
 laplacianSchemes
 {
-    default         none;
-    laplacian(nuEff,U) Gauss linear corrected;
-    laplacian((1|A(U)),p) Gauss linear corrected;
-    laplacian(DkEff,k) Gauss linear corrected;
-    laplacian(DepsilonEff,epsilon) Gauss linear corrected;
-    laplacian(DREff,R) Gauss linear corrected;
-    laplacian(DnuTildaEff,nuTilda) Gauss linear corrected;
+    default         Gauss linear corrected;
 }
 
 interpolationSchemes
 {
     default         linear;
-    interpolate(U)  linear;
 }
 
 snGradSchemes
@@ -68,11 +51,9 @@ snGradSchemes
     default         corrected;
 }
 
-fluxRequired
+wallDist
 {
-    default         no;
-    p;
-
+    method meshWave;
 }
 
 

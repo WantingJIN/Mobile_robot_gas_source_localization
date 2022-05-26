@@ -6,7 +6,7 @@ read n <<<${name//[^0-9]/ }
 echo $n 
 
 #define wind values
-for w in 0 0.1
+for w in 0 0.75
 do
 	d=map${n}_wind$w
 	if [ $w != 0 ]

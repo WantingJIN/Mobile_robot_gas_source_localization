@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #for all the maps
-for n in 3
+for n in {1..8}
 do
 	cd map$n
 	echo $PWD

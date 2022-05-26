@@ -1,8 +1,7 @@
 close all; clear all; clc;
 
 % general folder
-%general_folder = '../openfoam/test_maps/';
-general_folder = '/home/wanting/Workspace/kheperaodor/plume_model_learning/WIRE_Lab/'
+general_folder = '../openfoam/test_maps/';
 addpath("functions");
 % universal grid
 step = 0.1; % this should match the grid size in openfoam
@@ -17,8 +16,8 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 9 %1:length(folder_list)
-    folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind1/'];
+for maps = 1 %1:length(folder_list)
+    folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind0.75/'];
     
     % data
     [CC, U] = openfoam_steadyState_CC_U(folder);

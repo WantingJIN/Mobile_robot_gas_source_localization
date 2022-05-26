@@ -22,11 +22,16 @@ boundaryField
 {
     inlet
     {
-        type            zeroGradient;
+        type            freestreamPressure;
+        freestreamValue uniform 0;
+        supersonic      0;
+        value           uniform 0;
     }
     outlet
     {
-        type            fixedValue;
+        type            freestreamPressure;
+        freestreamValue uniform 0;
+        supersonic      0;
         value           uniform 0;
     }
     walls
