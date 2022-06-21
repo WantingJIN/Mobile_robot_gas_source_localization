@@ -10,14 +10,16 @@ y = round(0.01:0.0632:3.9916, 4);
 z = round(0:0.1:2, 4);
 [X,Y,Z] = meshgrid(x,y,z);
 
+
 % list of maps
 folder_list = dir(general_folder);
 folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 1 %1:length(folder_list)
-    folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind0.75/'];
+for maps = 1:length(folder_list)-1
+    close all;
+    folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind1/'];
     
     % data
     [CC, U] = openfoam_steadyState_CC_U(folder);
@@ -130,7 +132,7 @@ for maps = 1 %1:length(folder_list)
     
     %% obstacles
     obstacle_flag = ismembertol([X(:),Y(:),Z(:)], CC, 'ByRows', true);
-    
+    figure();
     % 2D obstacle map
     X2 = X(:,:,1);
     Y2 = Y(:,:,1);
@@ -174,13 +176,15 @@ for maps = 1 %1:length(folder_list)
     %% wind magnitude
     mag = sqrt(wind_x.^2 + wind_y.^2);
     mag_map = obstacle_map .* mag(:,:,10);
-    imagesc(X2(:),Y2(:),mag_map);
+    imagesc(X2(:),Y2(:),mag_map); 
     colorbar;
+    set(gca,'YDir','normal')
     hold off;
     
     %% save
     saveas(gcf,[folder num2str(maps) '_wind'  '.png']);
     %% visualize to make sure we have all correct data
+  
     subplot(3,3,1);
     imagesc(flow_def);
     title("flow def");
@@ -194,7 +198,7 @@ for maps = 1 %1:length(folder_list)
     imagesc(wind_y2D);
     title("wind y");
     pause(0.1)
-    
+    hold off
     %% save
     saveas(gcf,[folder '/' num2str(maps) '.png']);
 end
