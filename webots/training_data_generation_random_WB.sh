@@ -7,7 +7,7 @@ webots="/usr/local/webots/webots"
 
 mkdir -p $wb_folder/log
 # for every wind map
-for d in {11..13}
+for d in {1..3}
 do
     echo "$d"
     # make sure this wind map was not used before
@@ -30,7 +30,7 @@ do
 			# create a folder for this release rate
 			# mkdir ../../Results/training_set_map1/$d/rr$rr
 			# run the simulation 20 times (with random source positions)
-			for j in {1..1}
+			for j in {1..3}
 			do
 				# run webots
 				cd $wb_folder
