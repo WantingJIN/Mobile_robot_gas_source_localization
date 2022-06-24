@@ -26,7 +26,7 @@
 #define ITERATIONS          1
 #define RANDOM0_GRID1       1
 #define RANDOM_ITERATIONS   0
-#define MAX_OBSTACLE_NBR    6      //The maximal number of the obstacles (small pieces, one U shape obstacle counted as 3 here)
+#define MAX_OBSTACLE_NBR    6      //Be careful about this number
 
 #define XMIN 2.75
 #define XMAX 12.7418
@@ -51,7 +51,7 @@ int total_nbr_iteration = 0;
 int iteration = 0;
 
 int nbr_obstacle=0;
-double obstacles[MAX_OBSTACLE_NBR][4] = {0};
+float obstacles[MAX_OBSTACLE_NBR][4] = {0};
 
 void change_number_of_sensors();
 void set_sensor_position(int i, double * position);
@@ -102,7 +102,9 @@ void init(){
 
     //read and save the obstacle list
     FILE * obstacle_file = fopen("../../data/obstacle_list.txt", "r");
+    fscanf(obstacle_file, "%o\n", &nbr_obstacle);
     for(int j = 0; j < nbr_obstacle; j++){
+        printf("number of obstacle is: %d\n", nbr_obstacle);
         fscanf(obstacle_file, "%f %f %f %f\n", &(obstacles[j][0]), &(obstacles[j][1]), &(obstacles[j][2]), &(obstacles[j][3]));
         printf("obstacle %d: %f %f %f %f\n", j, obstacles[j][0], obstacles[j][1], obstacles[j][2], obstacles[j][3]);
     }
