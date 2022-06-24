@@ -26,7 +26,7 @@
 #define ITERATIONS          1
 #define RANDOM0_GRID1       1
 #define RANDOM_ITERATIONS   0
-#define MAX_OBSTACLE_NBR    4
+#define MAX_OBSTACLE_NBR    6      //The maximal number of the obstacles (small pieces, one U shape obstacle counted as 3 here)
 
 #define XMIN 2.75
 #define XMAX 12.7418
@@ -50,8 +50,8 @@ double source_position[3] = {0};
 int total_nbr_iteration = 0;
 int iteration = 0;
 
-int nbr_obstacle = 0;
-float obstacles[MAX_OBSTACLE_NBR][4] = {0};
+int nbr_obstacle=0;
+double obstacles[MAX_OBSTACLE_NBR][4] = {0};
 
 void change_number_of_sensors();
 void set_sensor_position(int i, double * position);
@@ -102,11 +102,11 @@ void init(){
 
     //read and save the obstacle list
     FILE * obstacle_file = fopen("../../data/obstacle_list.txt", "r");
-    fscanf(obstacle_file, "%d\n", &nbr_obstacle);
-    for(int i = 0; i < nbr_obstacle; i++){
-        fscanf(obstacle_file, "%f %f %f %f\n", &(obstacles[i][0]), &(obstacles[i][1]), &(obstacles[i][2]), &(obstacles[i][3]));
-        printf("obstacle %d: %f %f %f %f\n", i, obstacles[i][0], obstacles[i][1], obstacles[i][2], obstacles[i][3]);
+    for(int j = 0; j < nbr_obstacle; j++){
+        fscanf(obstacle_file, "%f %f %f %f\n", &(obstacles[j][0]), &(obstacles[j][1]), &(obstacles[j][2]), &(obstacles[j][3]));
+        printf("obstacle %d: %f %f %f %f\n", j, obstacles[j][0], obstacles[j][1], obstacles[j][2], obstacles[j][3]);
     }
+    
     fclose(obstacle_file);
 
     // set the source position randomly (on upperwind half on x)
@@ -187,7 +187,7 @@ void read_sensor_positions_from_file(){
 void change_number_of_sensors(){
     //open txt file and make the necessary modifications, then copy paste in the world file
     FILE * wbo_file = fopen("../../protos/sensor_odor_receiver.wbo", "w");
-    fprintf(wbo_file, "#VRML_OBJ R2019b utf8\n");
+    fprintf(wbo_file, "#VRML_OBJ R2021b utf8\n");
     for (int i = 0; i < SENSOR_NUM_MAX; i++){
         fprintf(wbo_file, "DEF SENSOR_ODOR_%d Receiver {\n\
         translation %f %f 0.1\n\
