@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 cd training_random_wind1.0_angle0
 
