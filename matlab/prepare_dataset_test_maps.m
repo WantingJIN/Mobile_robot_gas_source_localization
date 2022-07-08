@@ -24,7 +24,7 @@ y = round(0.01:0.0632:3.9916, 4);
 counter = 0;
  
 %% create 3D grid sets
-for i=0:length(plume_data_list)-1
+for i=1:length(plume_data_list)-1
     
     mapN = ['map' num2str(i)];
     

@@ -184,7 +184,6 @@ for maps = 1:length(folder_list)-1
     %% save
     saveas(gcf,[folder num2str(maps) '_wind'  '.png']);
     %% visualize to make sure we have all correct data
-  
     subplot(3,3,1);
     imagesc(flow_def);
     title("flow def");

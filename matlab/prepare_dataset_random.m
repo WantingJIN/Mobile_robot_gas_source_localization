@@ -1,12 +1,12 @@
 close all; clear all; clc;
 
 % data files
-flow_data_folder = '../openfoam/training_random2/training_random2_wind1.0_angle0/';
+flow_data_folder = '../openfoam/training_random/training_random_wind1.0_angle0/';
 flow_data_list = dir(flow_data_folder);
 flow_data_list = flow_data_list([flow_data_list.isdir]);
 flow_data_list = flow_data_list(~ismember({flow_data_list.name},{'.','..','0'}));
 
-plume_data_folder = '../Results/training_random2/';
+plume_data_folder = '../Results/training_random/';
 plume_data_list = dir(plume_data_folder);
 plume_data_list = plume_data_list([plume_data_list.isdir]);
 plume_data_list = plume_data_list(~ismember({plume_data_list.name},{'.','..','0'}));
@@ -31,7 +31,7 @@ py_y = zeros(data_size, 2, 64, 64);
 
 
 %% create 3D grid sets
-for i=180:length(plume_data_list)
+for i=1:length(plume_data_list)
     disp([num2str(i) '/' num2str(length(plume_data_list))]);
     
     % flow def

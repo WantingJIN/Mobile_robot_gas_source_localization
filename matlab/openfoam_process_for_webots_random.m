@@ -1,3 +1,10 @@
+% Note: 
+% 1. when the source height has changed in the setup -> Ux, Uy, CCx, CCy, when
+% extact the wind at a certain level (0.1m) for instance, needs to be
+% changed
+% 2. when the obstacle height has changed in the setup -> threshold to
+% select the obstacle region need to be adapted ->line 138 for instance
+
 close all; clear all; clc;
 
 % general folder
@@ -16,7 +23,7 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 11:13
+for maps = 196%1:200
     folder = [general_folder num2str(maps)];
     
     % data
@@ -25,7 +32,7 @@ for maps = 11:13
     %% obstacles
     str = fileread([folder '/system/topoSetDict']);
     C = regexp(str,'boxes ([^\n\r]+);','match');
-    C1 = textscan(C{1}(8:end-2),'(%f %f 0) (%f %f 2)','Delimiter',{')','(',' '});
+    C1 = textscan(C{1}(8:end-2),'(%f %f 0) (%f %f 1)','Delimiter',{')','(',' '});
     
     nbr_obstacles = size(C1{1},1);
     
@@ -105,6 +112,7 @@ for maps = 11:13
     wind_x = zeros(length(Wx), length(Wy));
     wind_y = zeros(length(Wx), length(Wy));
     % load the txt file from openfoam
+    % Load the Ux and Uy at the height of 0.1m
     Ux = U(ismember(CC(:,1),x) & CC(:,3)==0.1, 1);
     Uy = U(ismember(CC(:,1),x) & CC(:,3)==0.1, 2);
     CCx = CC(ismember(CC(:,1),x) & CC(:,3)==0.1, 1);
@@ -126,7 +134,9 @@ for maps = 11:13
     X2 = X(:,:,1);
     Y2 = Y(:,:,1);
     Z2 = Z(:,:,1);
-    obstacle_map = sum(reshape(obstacle_flag.*2,length(y),length(x),length(z)),3) > 0;
+    % Note this number *20* depend on the height of the obstacle 
+    % TODO: only extract obstacle at a fixed height level
+    obstacle_map = sum(reshape(obstacle_flag.*2,length(y),length(x),length(z)),3) > 20;
     
     % the walls around the map
     obstacle_map(X2==step/2 | round(X2,4)==16-step/2 | Y2==step/2 | round(Y2,4)==4-step/2) = 0;
