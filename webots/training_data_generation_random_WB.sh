@@ -1,18 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 
 wb_folder=`pwd`
 wind_map_folder=$wb_folder/../openfoam/training_random/training_random_wind1.0_angle0/
+results_map=$wb_folder/../Results/training_random/
 cd $wind_map_folder
-webots="/usr/local/webots/webots"
+webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
 
 mkdir -p $wb_folder/log
 # for every wind map
-for d in {1..3}
+for d in {1..200}
 do
-    echo "$d"
     # make sure this wind map was not used before
-    #if [ ! -d "../../Results/training_set_map1/$d" ]
-	#then
+	    cd $results_map
+		if [ -d $d ]
+		then
+			continue
+		fi 
+		cd $wind_map_folder
+	    echo "$d"
 		# create a new folder with the same name
 		results_folder=../../../Results/training_random/$d
 		mkdir -p $results_folder
@@ -30,11 +35,11 @@ do
 			# create a folder for this release rate
 			# mkdir ../../Results/training_set_map1/$d/rr$rr
 			# run the simulation 20 times (with random source positions)
-			for j in {1..3}
+			for j in {1..20}
 			do
 				# run webots
 				cd $wb_folder
-				$webots 'worlds/WT_static_sensor_network.wbt' '--minimize' '--mode=fast' 
+				$webots 'worlds/WT_static_sensor_network.wbt' '--minimize' '--mode=fast' '--no-rendering'
 				cd $wind_map_folder
 
 				# if a log file was created successfully
@@ -50,5 +55,4 @@ do
 		done
 		# remove the wind map for the next round
 		rm $wb_folder/data/plugin_parameters/wind_map.txt
-	#fi
 done

@@ -1,12 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
-webots="/usr/local/webots/webots"
+webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
 wb_folder=`pwd`
 wind_map_folder=$wb_folder/../openfoam/test_maps
 cd $wind_map_folder
 
 # for every wind map
-for d in {9..9}
+for d in {1..9}
 do
     echo "map${d}"
     # make sure this wind map was not used before
@@ -14,7 +14,7 @@ do
 	#then
 		# create a new folder with the same name
 		results_folder=../../Results/test_maps/map${d}
-		mkdir $results_folder
+		mkdir -p $results_folder
 		# copy the txt file for odor plugin
 		cp map${d}/map${d}_wind1/${d}.txt $wb_folder/data/plugin_parameters/wind_map.txt
 		cp map${d}/map${d}_wind1/${d}_obstacles.txt $wb_folder/data/obstacle_list.txt
@@ -29,11 +29,11 @@ do
 			# create a folder for this release rate
 			# mkdir ../../Results/training_set_map1/$d/rr$rr
 			# run the simulation 20 times (with random source positions)
-			for j in {1..10}
+			for j in {1..20}
 			do
 				# run webots
 				cd $wb_folder
-				$webots 'worlds/WT_static_sensor_network.wbt' '--minimize' '--mode=fast' 
+				$webots 'worlds/WT_static_sensor_network.wbt' '--minimize' '--mode=fast' '--no-rendering'
 				cd $wind_map_folder
 
 				# if a log file was created successfully
