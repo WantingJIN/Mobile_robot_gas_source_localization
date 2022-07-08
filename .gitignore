@@ -1,7 +1,26 @@
+# webots
 webots/plugins/physics/odor_physics/results/SENSOR_*
-Results/**
+Results*/**
+webots/wb_output.txt
+webots_*/
+
+# openfoam
 openfoam/training_random/training_random_win*/*
 !openfoam/training_random/training_random_win*/0
 openfoam/test_maps/map*/map*_wind1
-**/build
+openfoam/simulation_comparision/*
+
+# executable file
+**/build/
 **~
+
+# vscde
+*.vscode
+
+# training results
+**/output/
+**/output*/
+**/ReadmeFile/
+*.pt
+**/c++*/
+
