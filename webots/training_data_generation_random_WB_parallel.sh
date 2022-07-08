@@ -18,15 +18,17 @@ do
 	cd $project_folder/webots_test_$d
 	start=$((iter_start+d*task_for_each_core-task_for_each_core))
 	end=$((iter_start+d*task_for_each_core))
-	if [$d -eq 1]
+	if [ $d -eq 1 ]
 	then
-		tmux new-session -d ".$project_folder/training_data_generation_random_WB_test.sh start end"
-	else if [$d/2 -eq 0] 
+		tmux new-session -d '.$project_folder/training_data_generation_random_WB_test.sh start end'
+	else if [ $d\2 -eq 0 ] 
     	then  
-		tmux split-window -v ".$project_folder/training_data_generation_random_WB_test.sh start end"
+		tmux split-window -v '.$project_folder/training_data_generation_random_WB_test.sh start end'
 		else 
-		tmux split-window -h ".$project_folder/training_data_generation_random_WB_test.sh start end"
+		tmux split-window -h '.$project_folder/training_data_generation_random_WB_test.sh start end'
 		fi
 	fi
 done
 
+tmux new-window 'mutt'
+tmux -2 attach-session -d
