@@ -1,0 +1,16 @@
+
+.idea/
+
+*.pkl
+
+.ipynb_checkpoints/
+
+__pycache__/
+
+*.txt
+
+Results/
+
+BestRun/
+
+_Results/

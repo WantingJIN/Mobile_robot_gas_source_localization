@@ -1,0 +1,87 @@
+import torch.nn as nn
+import numpy as np
+from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+def split_tensors(*tensors, ratio):
+    assert len(tensors) > 0
+    split1, split2 = [], []
+    count = len(tensors[0])
+    for tensor in tensors:
+        assert len(tensor) == count
+        split1.append(tensor[:int(len(tensor) * ratio)])
+        split2.append(tensor[int(len(tensor) * ratio):])
+    if len(tensors) == 1:
+        split1, split2 = split1[0], split2[0]
+    return split1, split2
+
+def initialize(model, gain=1, std=0.02):
+    for module in model.modules():
+        if type(module) in [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d]:
+            nn.init.xavier_normal_(module.weight, gain)
+            if module.bias is not None:
+                nn.init.normal_(module.bias, 0, std)
+                
+def visualize(sample_x, sample_y, out_y, error, s):
+
+    # min and max values for colormaps
+    minu = np.min(sample_y[s, 0, :, :])
+    maxu = np.max(sample_y[s, 0, :, :])
+    
+    minv = np.min(sample_y[s, 1, :, :])
+    maxv = np.max(sample_y[s, 1, :, :])
+    
+    mineu = np.min(error[s, 0, :, :])
+    maxeu = np.max(error[s, 0, :, :])
+    
+    minev = np.min(error[s, 1, :, :])
+    maxev = np.max(error[s, 1, :, :])
+
+    # obstacles
+    obs_in = sample_x[s,0,:,:]==0
+    obs_border = sample_x[s,0,:,:]==5
+    obs = obs_in + obs_border
+
+    # plots
+    plt.figure()
+    fig = plt.gcf()
+    fig.set_size_inches(15, 10)
+
+    # C_avg
+    plt.subplot(2, 3, 1)
+    plt.title('CFD', fontsize=18)
+    plt.imshow(np.multiply(obs,(maxu-minu)/6) + sample_y[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    plt.ylabel('Average', fontsize=18)
+    plt.subplot(2, 3, 2)
+    plt.title('CNN', fontsize=18)
+    plt.imshow(np.multiply(obs,(maxu-minu)/6) + out_y[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    plt.subplot(2, 3, 3)
+    plt.title('Error', fontsize=18)
+    ax = plt.gca()
+    im = plt.imshow(np.multiply(obs,(maxu-minu)/6) + error[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax)
+
+    # C_std
+    plt.subplot(2, 3, 4)
+    plt.imshow(np.multiply(obs,(maxv-minv)/6) + sample_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    plt.ylabel('Standard deviation', fontsize=18)
+    plt.subplot(2, 3, 5)
+    plt.imshow(np.multiply(obs,(maxv-minv)/6) + out_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    plt.subplot(2, 3, 6)
+    ax = plt.gca()
+    im = plt.imshow(np.multiply(obs,(maxv-minv)/6) + error[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    plt.colorbar(im, cax=cax)
+    
+    plt.tight_layout()
+    plt.savefig("output/output_{}.png".format(s))
+    #plt.show()
+    plt.close('all')
