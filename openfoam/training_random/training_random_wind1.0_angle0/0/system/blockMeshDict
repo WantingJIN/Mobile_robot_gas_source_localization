@@ -41,7 +41,7 @@ vertices
 
 blocks
 (    
-    hex (0 4 5 1 2 6 7 3)			(100 64 19) 	simpleGrading 	(1 1 1) //mesh ~15 cm
+    hex (0 4 5 1 2 6 7 3)			(200 64 38) 	simpleGrading 	(1 1 1) //mesh ~15 cm
 );
 
 edges

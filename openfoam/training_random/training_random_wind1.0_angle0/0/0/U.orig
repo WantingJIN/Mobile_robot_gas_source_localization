@@ -8,31 +8,37 @@
 FoamFile
 {
     format      ascii;
-    class       volScalarField;
+    class       volVectorField;
     location    "0";
-    object      epsilon;
+    object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 2 -3 0 0 0 0];
+dimensions      [0 1 -1 0 0 0 0];
 
-internalField   uniform 0.0125;
+internalField   uniform (-0.75 0 0);
 
 boundaryField
 {
+    #includeEtc "caseDicts/setConstraintTypes"
     inlet
     {
         type            fixedValue;
-        value           uniform 0.0125;
+        value           $internalField;
     }
     outlet
     {
-        type            zeroGradient;
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           $internalField;
     }
     walls
     {
-        type            epsilonWallFunction;
-        value           uniform 0.0125;
+        type            noSlip;
+    }
+    obstacles
+    {
+        type            noSlip;
     }
 }
 
