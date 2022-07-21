@@ -5,7 +5,7 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','constant','system','VTK'}));
 
 %U file
-fileID = fopen([case_path,'/',folder_list(end).name,'/U']);
+fileID = fopen([case_path,'/',folder_list(end).name,'/UMean']);
 U = cell2mat(textscan(fileID,'(%f %f %f)', 'HeaderLines', 22));
 fclose(fileID);
 
