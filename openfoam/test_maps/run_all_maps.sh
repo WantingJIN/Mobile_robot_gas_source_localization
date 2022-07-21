@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #for all the maps
-for n in {1..8}
+for n in {1..9}
 do
 	cd map$n
 	echo $PWD
@@ -25,7 +25,7 @@ do
 				text1="value           uniform (0 0 0);\n    }\n    outlet"
 				text2="value           uniform (-$w 0 0);\n    }\n    outlet"
 				sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U
-				./Allrun.sh
+				./Allrun_parallel.sh
 				cd ..
 			else
 				echo $d already exists! Nothing to be done here.
@@ -36,7 +36,7 @@ do
 			then
 				#go in the subfolder
 				cd $d
-				./Allrun.sh
+				./Allrun_parallel.sh
 				cd ..
 			fi
 		fi

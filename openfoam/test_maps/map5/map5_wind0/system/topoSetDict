@@ -33,7 +33,7 @@ actions
         source  boxToCell;
         sourceInfo
         {
-            box (5.5 1 0) (9.5 3 2);
+            box (5.5 1 0) (9.5 3 1);
         }
     }
 );
