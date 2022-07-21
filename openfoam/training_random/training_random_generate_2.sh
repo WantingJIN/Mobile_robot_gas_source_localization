@@ -24,8 +24,8 @@ do
 	s=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); s=rand()*4; print s; }')
 
 	# determine the size of the L shape on x, y and thickness
-	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=2+rand()*3; print dX; }')
-	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=2+rand()*1; print dY; }')
+	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=1+rand()*2; print dX; }')
+	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=1+rand()*1; print dY; }')
 	dL=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dL=0.5+rand()*0.5; print dL; }')
 
 	if (( $(echo "$s < 1" |bc -l) )); then
@@ -110,7 +110,7 @@ do
 
 	# write the values in topoSetDict
 	text1="boxes ((11.5 0 0) (12 1.5 2));"
-	text2="boxes (($MINX1 $MINY1 0) ($MAXX1 $MAXY1 2) ($MINX2 $MINY2 0) ($MAXX2 $MAXY2 2));"
+	text2="boxes (($MINX1 $MINY1 0) ($MAXX1 $MAXY1 1) ($MINX2 $MINY2 0) ($MAXX2 $MAXY2 1));"
 	sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" $i/system/topoSetDict
 
 	# run the simulation

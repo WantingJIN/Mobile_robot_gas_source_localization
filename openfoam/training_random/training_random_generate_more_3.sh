@@ -29,8 +29,8 @@ do
 	s=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); s=rand()*4; print s; }')
 
 	# determine the size of the L shape on x, y and thickness
-	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=2+rand()*3; print dX; }')
-	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=2+rand()*1; print dY; }')
+	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=1+rand()*2; print dX; }')
+	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=1+rand()*1; print dY; }')
 	dL=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dL=0.5+rand()*0.5; print dL; }')
 
 	# stuck to the upper wall or lower
@@ -158,8 +158,8 @@ do
 	s=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); s=rand()*4; print s; }')
 
 	# determine the size of the L shape on x, y and thickness
-	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=2+rand()*3; print dX; }')
-	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=2+rand()*1; print dY; }')
+	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=1+rand()*2; print dX; }')
+	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=1+rand()*1; print dY; }')
 	dL=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dL=0.5+rand()*0.5; print dL; }')
 
 	# stuck to the upper wall or lower
@@ -316,8 +316,8 @@ do
 	s=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); s=rand()*4; print s; }')
 
 	# determine the size of the L shape on x, y and thickness
-	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=2+rand()*2; print dX; }')
-	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=2+rand()*1; print dY; }')
+	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=1+rand()*1; print dX; }')
+	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=1+rand()*1; print dY; }')
 	dL=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dL=0.5+rand()*0.5; print dL; }')
 
 	# stuck to the upper wall or lower
@@ -471,8 +471,8 @@ do
 	s=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); s=rand()*4; print s; }')
 
 	# determine the size of the L shape on x, y and thickness
-	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=2+rand()*2; print dX; }')
-	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=2+rand()*1; print dY; }')
+	dX=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dX=1+rand()*1; print dX; }')
+	dY=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dY=1+rand()*1; print dY; }')
 	dL=$(awk -v seed="$RANDOM" 'BEGIN { srand(seed); dL=0.5+rand()*0.5; print dL; }')
 
 	# stuck to the upper wall or lower
