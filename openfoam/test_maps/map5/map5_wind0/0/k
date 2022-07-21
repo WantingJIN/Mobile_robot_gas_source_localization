@@ -7,7 +7,7 @@
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
-    format      ascii;
+    format      binary;
     class       volScalarField;
     location    "0";
     object      k;
@@ -16,23 +16,25 @@ FoamFile
 
 dimensions      [0 2 -2 0 0 0 0];
 
-internalField   uniform 0.00375;
+internalField   uniform 0.00275;
 
 boundaryField
 {
     inlet
     {
         type            fixedValue;
-        value           uniform 0.00375;
+        value           uniform 0.00275;
     }
     outlet
     {
-        type            zeroGradient;
+        type            inletOutlet;
+        inletValue      uniform 0.00275;
+        value           uniform 0.00275;
     }
     walls
     {
         type            kqRWallFunction;
-        value           uniform 0.00375;
+        value           uniform 0.00275;
     }
 }
 

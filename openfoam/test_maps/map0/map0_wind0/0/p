@@ -7,7 +7,7 @@
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
-    format      ascii;
+    format      binary;
     class       volScalarField;
     location    "0";
     object      p;
@@ -22,16 +22,11 @@ boundaryField
 {
     inlet
     {
-        type            freestreamPressure;
-        freestreamValue uniform 0;
-        supersonic      0;
-        value           uniform 0;
+        type            zeroGradient;
     }
     outlet
     {
-        type            freestreamPressure;
-        freestreamValue uniform 0;
-        supersonic      0;
+        type            fixedValue;
         value           uniform 0;
     }
     walls

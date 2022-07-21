@@ -14,7 +14,8 @@ subsetMesh -overwrite c0 -patch walls
 postProcess -func writeCellCentres
 
 #to run the solver and generate results
-simpleFoam
+simpleFoam > log
 
 #to generate VTK files for paraview
 foamToVTK
+
