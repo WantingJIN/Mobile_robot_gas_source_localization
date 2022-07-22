@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #for all the maps
 for n in {1..9}

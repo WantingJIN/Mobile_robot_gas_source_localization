@@ -113,8 +113,8 @@ py_x = py_x(rand_idx, :,:,:);
 py_y = py_y(rand_idx, :,:,:);
 
 %% save 
-save([plume_data_folder 'my_x_for_torch_180.mat'], 'py_x');
-save([plume_data_folder 'my_y_for_torch_180.mat'], 'py_y');
+save([plume_data_folder 'my_x_for_torch_200.mat'], 'py_x');
+save([plume_data_folder 'my_y_for_torch_200.mat'], 'py_y');
 
 test_x = py_x(1,:,:,:);
-save([plume_data_folder 'input_stationary_channels_180.mat'], 'test_x', 'X', 'Y');
+save([plume_data_folder 'input_stationary_channels_200.mat'], 'test_x', 'X', 'Y');
