@@ -9,6 +9,8 @@ openfoam/training_random/training_random_win*/*
 !openfoam/training_random/training_random_win*/0
 openfoam/test_maps/map*/map*_wind1
 openfoam/simulation_comparision/*
+openfoam/simscale
+
 
 # executable file
 **/build/
