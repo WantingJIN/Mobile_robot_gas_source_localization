@@ -5,7 +5,7 @@ echo "Start time : $now"
 
 webots=/usr/local/webots/webots
 webots_folder="../webots"
-map_nbr_filename="/home/wanting/Workspace/plume_model_learning/webots/data/map_nbr.txt"
+map_nbr_filename="/home/wjin/Workspace/plume_model_learning/webots/data/map_nbr.txt"
 
 
 #{0..8}
@@ -14,9 +14,9 @@ do
 	echo $m > $map_nbr_filename
 
 	# wind map and obstacle list
-	cp /home/wanting/Workspace/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
-	cp /home/wanting/Workspace/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
-	cp /home/wanting/DISAL/Research/KheperaOdor/data-driven_plume_model/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
+	cp /home/wjin/Workspace/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
+	cp /home/wjin/Workspace/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
+	cp /home/wjin/Workspace/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 	#for k in {1..3}
     for k in 1

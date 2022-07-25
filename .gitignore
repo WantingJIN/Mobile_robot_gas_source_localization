@@ -10,6 +10,8 @@ openfoam/training_random/training_random_win*/*
 openfoam/test_maps/map*/map*_wind1
 openfoam/simulation_comparision/*
 openfoam/simscale
+openfoam/AutoGDM
+*.zip
 
 
 # executable file
