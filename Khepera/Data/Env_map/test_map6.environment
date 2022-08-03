@@ -1,0 +1,14 @@
+//Environment Model
+//Outer Boundary x-y coordinates listed counterclockwise
+2.9 	0.15
+5.35	0.15
+5.35    2.15
+9.65    2.15
+9.65    0.15
+12.6 	0.15
+12.6	3.85
+9.65    3.85
+9.65    2.85
+5.35    2.85
+5.35    3.85
+2.9 	3.85
