@@ -1,0 +1,72 @@
+import torch
+import math 
+import pickle
+import numpy as np
+import scipy.io as sio
+# from matplotlib import pyplot as plt
+
+def DeepCFD_output_eval(sx, sy, lpx, lpy):
+	# sx and sy are the source coordinates 
+	# px and py are the coordinates of the point of interest
+	
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+	# map number 
+	f = open('/home/rahbar/Projects/DDPM_K4/Data/params/map_nbr.txt', 'r')
+	m = int(f.read())
+	f.close()
+	# print("map nbr {}".format(m))
+
+	# load the saved model
+	DeepCFD = torch.load("/home/rahbar/Projects/DDPM_K4/STE_PC_server/myDeepCFD_model_Cavg_noWind_training_random2_1000_border_fixed_4layers_input180.pt") 
+	DeepCFD.eval()
+	
+	# when no source position is given
+	if(sx==-1 and sy==-1):
+		adr = "/home/rahbar/Projects/DDPM_K4/Data/DeepCFD_input/test_map{}_flowdef_sdf_allsourcepos.mat".format(m)
+		mat_x = sio.loadmat(adr)
+		array_x = mat_x.get('py_x')
+		double_x = torch.from_numpy(array_x)
+		x = double_x.float()
+		x = x[:,:3,:,:]
+		r = torch.from_numpy(mat_x.get('X')).float()
+		c = torch.from_numpy(mat_x.get('Y')).float()
+	else:
+		# make the input tensors using sx sy
+		adr = "/home/rahbar/Projects/DDPM_K4/Data/DeepCFD_input/test_map{}_flowdef_sdf_emptysourcepos.mat".format(m)
+		mat_x = sio.loadmat(adr)
+		array_x = mat_x.get('py_x')
+		double_x = torch.from_numpy(array_x)
+		x = double_x.float()
+		x = x[:,:3,:,:]
+		# print("making source dist map")
+		r = torch.from_numpy(mat_x.get('X')).float()
+		c = torch.from_numpy(mat_x.get('Y')).float()
+		x[0,2,:,:] = 1/np.sqrt( (sx-r)**2 + (sy-c)**2 )
+
+	# get the output maps
+	out = DeepCFD(x.to(device))
+	out = out.cpu().detach().numpy()
+	
+	# get the values at (px, py)
+	if(isinstance(lpx, float) or isinstance(lpx, int)):
+		# print("int")
+		idx_r = int(round((lpx-min(r[0]).item()) / (r[0,1]-r[0,0]).item()))
+		idx_c = int(round((lpy-min(c[:,0]).item()) / (c[1,0]-c[0,0]).item()))
+		c_avg = [out[:, 0, idx_c,idx_r].tolist()]
+		c_std = [0] #out[0, 1, idx_r,idx_c]
+	elif(isinstance(lpx, list) or isinstance(lpx, tuple) or isinstance(lpx, np.ndarray)):
+		# print("list or tuple of size", len(lpx))
+		c_avg = [[]]*len(lpx)
+		c_std = [[]]*len(lpx)
+		for i in range(len(lpx)):
+			# get the values at (px, py)
+			idx_r = int(round((lpx[i]-min(r[0]).item()) / (r[0,1]-r[0,0]).item()))
+			idx_c = int(round((lpy[i]-min(c[:,0]).item()) / (c[1,0]-c[0,0]).item()))
+			c_avg[i]=out[:, 0, idx_c,idx_r].tolist()
+			c_std[i]=[0] #out[0, 1, idx_r,idx_c]
+			# print("(",lpx[i], lpy[i],") -> (", idx_r, idx_c, ") -> ", out[0, 0, idx_r,idx_c])
+	else:
+		print("apply_DeepCFD: Bad input format.")
+	
+	return c_avg, c_std

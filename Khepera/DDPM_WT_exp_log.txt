@@ -1,0 +1,33 @@
+DDPM WT exp log
+
+--------------------
+
+0 and 1: first experiments with map 1
+
+2021-03-06_* : first experiments with map 0
+	4 exp, 1 success, 1 unfinished. 
+	the first 2 ones with 103(F), then with 101(D)
+	source position (13.17, 2.2, 0.1)
+	wind speed 300
+	source rr 3 leds
+
+all experiments should be done with sensor F!
+source position should be closer to the edge of the map.
+
+
+--------------------
+Mar 7
+
+still map 0
+103(F)
+source placed at 12.75
+	|----> to do this, I sent the robot to the point (12.75, 2) then I placed the source right in front of it.
+exact source position from MCS (12.91 1.99 0.1)
+
+2021-03-07_15-54 -> not bad, MaxApost value: @(12.000000 1.700000)
+2021-03-07_16-23 -> not so good, Expected value: @(10.500000 1.500000) with 23 steps!
+2021-03-07_16-31 -> better, Expected value: @(12.500000 1.700000)
+2021-03-07_16-42 -> Expected value: @(12.482707 2.099405)
+2021-03-07_17-13 -> Expected value: @(12.500000 1.700000)
+
+
