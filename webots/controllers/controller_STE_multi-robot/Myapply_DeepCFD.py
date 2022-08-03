@@ -7,13 +7,13 @@ import os
 # from matplotlib import pyplot as plt
 
 def DeepCFD_output_eval(sx, sy, lpx, lpy):
-	
 	# sx and sy are the source coordinates 
 	# px and py are the coordinates of the point of interest
+	
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	#device = torch.device("cpu")
+	
 	# map number 
-	print(device)
+	#print(device)
 	f = open('/home/wjin/Workspace/plume_model_learning/webots/data/map_nbr.txt', 'r')
 	m = int(f.read())
 	f.close()

@@ -493,11 +493,10 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 	float sy = param_list[1];
 	float px[nbr];
 	float py[nbr];
+
 	for(int i=0; i<nbr; i++){
 		px[i] = robot_position[i].x;
 		py[i] = robot_position[i].y;
-		printf("nbr is: %d \n", nbr);
-		printf("i is %d, robot_position x is %f, y is: %f\n", i, px[i],py[i]);
 	}
 
 	// import the python file as a module
@@ -505,20 +504,18 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 	// make the arguments with the provided values
 	npy_intp dims[1] = {nbr};
     import_array(); 
-	printf("sx is %f, sy is %f, px[0] is %f, py[0] is %f \n", sx, sy, px[0], py[0]);
 	CPyObject pArgs = PyTuple_New(4);
     PyTuple_SetItem(pArgs, 0, PyFloat_FromDouble(sx));
     PyTuple_SetItem(pArgs, 1, PyFloat_FromDouble(sy));
     PyTuple_SetItem(pArgs, 2, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, px));
     PyTuple_SetItem(pArgs, 3, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, py));
+
 	// if the module is well imported
 	if(pModule){
 		// find the function
-		printf("successfully load model\n");
 		CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
 		// in the function is found and is callable
 		if(pFunc && PyCallable_Check(pFunc)){
-			printf("successfully call the function\n");
 			// call the function with the argument list and get the output
 			CPyObject pValue = PyObject_CallObject(pFunc, pArgs);
 			// convert the output to c++-readable values and set in the pointers
@@ -526,12 +523,12 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 				//printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
 				c_avg[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,0),i));
 				c_std[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,1),i));
-				printf("Model values C_avg[i]=");
-				for (auto c_avg_iter : c_avg[i])
-                {
-                  printf("%f", c_avg_iter);
-                }
-				printf("\n");
+				// printf("Model values C_avg[i]=");
+				// for (auto c_avg_iter : c_avg[i])
+                // {
+                //   printf("%f", c_avg_iter);
+                // }
+				// printf("\n");
 			}
 		}else
 			printf("ERROR: function DeepCFD_output()\n");

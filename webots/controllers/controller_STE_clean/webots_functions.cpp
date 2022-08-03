@@ -346,7 +346,7 @@ void obstacle_avoidance_k4(){
 		//printf("%f ", sensors_value[i]);
 	}
 	//printf("\n");
-	printf("\n%f ", sensors_value[4]);
+	//printf("\n%f ", sensors_value[4]);
 
 	//adjust the speed to avoid the obstacle
 	for (int i = 0; i < 2; i++){
@@ -515,23 +515,23 @@ void set_wheels_speed(double speed1, double speed2){
 }
 
 void cleaning_up(){
-	int systemRet = 0;
-	char file_name[256];
-	FILE * ack_file;
-	char * pPath;
+	// int systemRet = 0;
+	// char file_name[256];
+	// FILE * ack_file;
+	// char * pPath;
 
-	// end of program notif for cluster
-	pPath = getenv ("WB_WORKING_DIR");
-    if (pPath!=NULL){
-    	sprintf(file_name, "%s/ack.txt",  pPath);
-    	ack_file = fopen(file_name, "w");
-    	fclose(ack_file);
-    }else{ //for local PC
-    	if(access("/home/rahbar/bell.wav", F_OK) != -1 )
-			//systemRet = system("aplay -q /home/rahbar/bell.wav");
-		if(systemRet == -1)
-			printf("end of program notification didn't work.\n");
-    }
+	// // end of program notif for cluster
+	// pPath = getenv ("WB_WORKING_DIR");
+    // if (pPath!=NULL){
+    // 	sprintf(file_name, "%s/ack.txt",  pPath);
+    // 	ack_file = fopen(file_name, "w");
+    // 	fclose(ack_file);
+    // }else{ //for local PC
+    // 	if(access("/home/rahbar/bell.wav", F_OK) != -1 )
+	// 		//systemRet = system("aplay -q /home/rahbar/bell.wav");
+	// 	if(systemRet == -1)
+	// 		printf("end of program notification didn't work.\n");
+    // }
     //ask the supervisor to quit the simulation
     //wb_emitter_set_channel(emitter, 8);
     goal_position[0] = -1; goal_position[1] = -1; goal_position[2] = -1;

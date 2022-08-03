@@ -3,6 +3,7 @@ webots/plugins/physics/odor_physics/results/SENSOR_*
 Results*/**
 webots/wb_output.txt
 webots_*/
+*.wbproj
 
 # openfoam
 openfoam/training_random/training_random_win*/*
@@ -13,10 +14,16 @@ openfoam/simscale
 openfoam/AutoGDM
 *.zip
 
+# khepera
+Khepera/Data/**
+Khepera/Results/**
 
-# executable file
+# executable file 
 **/build/
 **~
+*.o
+*.pyc
+*.cache
 
 # vscde
 *.vscode
