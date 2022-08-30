@@ -103,12 +103,14 @@ float ** obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
-std::string environment_file("/home/root/rahbar/test_map.environment");
+std::string environment_file("/home/root/wanting/test_map.environment");
 VisiLibity::Environment my_environment(environment_file);
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 
 int finished = 0;
+
+bool set_odometry_pos_from_MCS = false;
 
 //############################################### to fix
 int nb_robots = 1;
@@ -156,7 +158,7 @@ void history_print(struct history history){
 
 void read_obstacle_list(){
 	// open file
-	std::ifstream infile("/home/root/rahbar/obstacle_list.txt");
+	std::ifstream infile("/home/root/wanting/obstacle_list.txt");
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	// allocate memory for obstacle list array
@@ -237,7 +239,7 @@ int init_TCP_socket(){
 	//serv_addr.sin_addr.s_addr = INADDR_ANY; 
 	
 	// Convert IPv4 and IPv6 addresses from text to binary form 
-	if(inet_pton(AF_INET, "192.168.141.14", &serv_addr.sin_addr)<=0) { //Server's IP
+	if(inet_pton(AF_INET, "192.168.141.11", &serv_addr.sin_addr)<=0) { //Server's IP
 		printf("\nInvalid address/ Address not supported \n"); 
 		return -1; 
 	} 

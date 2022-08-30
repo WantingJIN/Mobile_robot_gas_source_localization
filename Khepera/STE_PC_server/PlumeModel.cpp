@@ -475,7 +475,6 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 		px[i] = robot_position[i].x;
 		py[i] = robot_position[i].y;
 	}
-
 	// import the python file as a module
 	CPyObject pModule = PyImport_Import(PyUnicode_FromString("Myapply_DeepCFD"));
 	// make the arguments with the provided values
@@ -497,7 +496,7 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 			CPyObject pValue = PyObject_CallObject(pFunc, pArgs);
 			// convert the output to c++-readable values and set in the pointers
 			for(int i = 0; i < nbr; i++){
-				// printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
+				//printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
 				c_avg[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,0),i));
 				// c_std[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,1),i));
 				// printf("Model values C_avg[%d] = %f, C_std[%d] = %f\n", i, c_avg[i], i, c_std[i]);

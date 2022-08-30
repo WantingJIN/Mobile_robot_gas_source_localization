@@ -96,7 +96,7 @@ float ** obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
-std::string environment_file("/home/rahbar/Projects/DDPM_K4/Data/test_map.environment");
+std::string environment_file("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test_map.environment");
 VisiLibity::Environment my_environment(environment_file);
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
@@ -105,6 +105,7 @@ int sock = 0;
 
 // =========================== FUNCTIONS ================================ //
 int init_TCP_socket(){
+	printf("enter init_TCP_socket\n");
     int server_fd;
     struct sockaddr_in address; 
     int addrlen = sizeof(address); 
@@ -130,16 +131,19 @@ int init_TCP_socket(){
         perror("bind failed"); 
         exit(EXIT_FAILURE); 
     } 
+	printf("After bind\n");
     // listen
     if (listen(server_fd, 3) < 0){ 
         perror("listen"); 
         exit(EXIT_FAILURE); 
     } 
+	printf("After listen\n");
     // accept
     if ((sock = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0){ 
         perror("accept"); 
         exit(EXIT_FAILURE); 
     } 
+	printf("After accept\n");
 }
 
 //random value sampled from a nromal distribution
@@ -217,8 +221,8 @@ void go_to_goal(Position goal){
     //printf("movement : %f %f \n", movement[0], movement[1]);
 
     //vector to the goal in robot coordinates
-    float x =  movement[0]*cosf(current_position.heading) + movement[1]*sinf(current_position.heading); // x in robot coordinates    
-    float z = -movement[0]*sinf(current_position.heading) + movement[1]*cosf(current_position.heading); // z in robot coordinates  
+    float x =  movement[0]*cosf(current_position.heading) + movement[1]*sinf(current_position.heading); // x in robot coordinates   
+    float z = -movement[0]*sinf(current_position.heading) + movement[1]*cosf(current_position.heading); // z in robot coordinates 
     float bearing = atan2(z, x);    //[-PI, PI]
     //printf("bearing : %f \n", bearing/PI*180);
 
@@ -243,7 +247,7 @@ void history_print(struct history history){
 
 void read_obstacle_list(){
 	// open file
-	std::ifstream infile("/home/rahbar/Projects/DDPM_K4/Data/obstacle_list.txt");
+	std::ifstream infile("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt");
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	// allocate memory for obstacle list array
@@ -365,7 +369,7 @@ void log_trajectory(Position p){
 //ASSUMPTION : Using the history of measurements, but only one robot is operating
 double likelihood(struct history history, double *parameters, PlumeModel *model){ 
 	float sigmaE = simulation_parameters.likelihood_error;
-	float sigmaD = 0; //125;
+	float sigmaD = 125; //125;
 	double sum_tmp = 0;
 	// if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
@@ -390,7 +394,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 
 double likelihood(struct history history, double *parameters, vector<float> model_c_avg){ 
 	float sigmaE = simulation_parameters.likelihood_error;
-	float sigmaD = 0; //125;
+	float sigmaD = 125; //125;
 	double sum_tmp = 0;
 	// if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
@@ -973,6 +977,7 @@ int main(int argc, char **argv){
 
 	init();
 	init_TCP_socket();
+	printf("finish init TCP. \n");
 	read_obstacle_list();
 
 	// visibility graph (visilibity library)
