@@ -14,6 +14,7 @@ k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test
 # obstacle list
 # cp /home/rahbar/Projects/DDPM_K4/Data/Obstacle_lists/"$map"_obstacles.txt /home/rahbar/Projects/DDPM_K4/Data/obstacle_list.txt
 k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt +$ID
+k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt +$ID
 
 # start the server
 # export PYTHONPATH=/home/rahbar/Projects/DDPM_K4/STE_PC_server
