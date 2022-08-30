@@ -52,6 +52,20 @@ char entropy_logfile_name[256];
 char config_logfile_name[256];
 char trajectory_logfile_name[256];
 
+
+// read data from file
+char logfile_folder_name[256];
+FILE* experiment_measurements_logfile;
+char experiment_measurements_logfile_name[256];
+FILE* experiment_position_logfile;
+char experiment_position_logfile_name[256];
+
+char scan_folder_name[256];
+FILE* scan_measurements_logfile;
+char scan_measurements_logfile_name[256];
+FILE* scan_position_logfile;
+char scan_position_logfile_name[256];
+
 // finite state machine
 struct FSM FSM;
 
@@ -367,10 +381,13 @@ void log_trajectory(Position p){
 // ====================== ESTIMATIOM functions ========================= //
 
 //ASSUMPTION : Using the history of measurements, but only one robot is operating
-double likelihood(struct history history, double *parameters, PlumeModel *model){ 
+double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose){ 
 	float sigmaE = simulation_parameters.likelihood_error;
-	float sigmaD = 125; //125;
+	//float sigmaD = 250; //125;
 	double sum_tmp = 0;
+
+	double true_source_location[2] = {10,2};
+
 	// if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
 	// for each sample, getting the model concentration and calculate the likelihood
@@ -383,10 +400,16 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
 	vector<vector<float>> model_c_avg(history.size, vector<float> (1)); 
+	//vector<vector<float>> true_model_c_avg(history.size, vector<float> (1)); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg);
+	//model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, true_source_location, true_model_c_avg);
 	for (int i = 0; i < history.size; i++){
-		float sigmaE_std = sigmaE + history.measurement_std[i];
-		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i][0], 2) / (sigmaE_std*sigmaE_std + sigmaD*sigmaD);
+		float sigmaD = history.measurement_std[i];
+		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i][0], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+		if (verbose){
+			//printf("Parameters is : %f, %f\n", parameters[0], parameters[1]);
+			//printf("For %d, estimation: %f, measurement: %f \n", i, true_model_c_avg[i][0], history.measurement_avg[i]);
+		}
 	}
 	
 	return (exp(-0.5 * sum_tmp));
@@ -827,7 +850,7 @@ void state_estimating(){
 	else
 		posterior.exhaustive_evaluation(history);
 	if(posterior.dirac_flag){
-		if(VERBOSE) printf("[%d] exhaustive search and then done!\n", ID);
+		if(VERBOSE) printf("[%d] exhaustive search!\n", ID);
 		posterior.exhaustive_evaluation(history);
 	}
 	
@@ -843,13 +866,23 @@ void state_estimating(){
 	if(VERBOSE) printf("[%d] entropy : %f\n", ID, posterior.entropy);
 	
 	//check if time is up
-	if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1 || posterior.dirac_flag){
+	//if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1 || posterior.dirac_flag){
+	if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1){
 		//the end
 		FSM.state = STATE_FINISHED;
 	}else{
-		//update goal
-		FSM.state = STATE_UPDATEGOAL;
-		FSM.hook  = state_updategoal;
+        // Mode: Experiment
+		// update goal
+		switch(WORKING_MODE){
+			case EXPERIMENT:
+				FSM.state = STATE_UPDATEGOAL;
+		        FSM.hook = state_updategoal;
+				break;
+			case OFFLINE:
+			    FSM.state = STATE_READ;
+		        FSM.hook  = state_read;
+				break;
+		}
 	}
 }
 
@@ -967,6 +1000,43 @@ void state_listen(){
 	}
 }
 
+void state_read(){
+    int d;
+	float f1, f2, f3, f4; 
+	unsigned long t;
+	char line[256];
+
+	// NOTE Read from an experiment
+	fscanf(experiment_measurements_logfile, "%d, %f %f", &d, &f1, &f2);
+    history.size = d;
+	history.measurement_avg[history.size] = f1;
+	history.measurement_std[history.size] = f2;
+	//history.measurement_std[history.size] = 0;
+
+	fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
+	history.position[history.size].x = f1;
+	history.position[history.size].y = f2;
+
+	// NOTE Read from a scan
+	// printf("I am here \n");
+	// fscanf(scan_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f4);
+	// history.size ++;
+	// history.measurement_avg[history.size] = f2;
+	// if (history.measurement_avg[history.size] < 0.0)
+	// 	history.measurement_avg[history.size] = 0.0;
+	// history.measurement_std[history.size] = 0.0;
+
+	// fscanf(scan_position_logfile, "%d, %f, %f, %f, %f", &d, &f1, &f2, &f3, &f4);
+	// history.position[history.size].x = f1;
+	// history.position[history.size].y = f2;
+
+    // Move to estimating
+    history_print(history);
+    FSM.state = STATE_ESTIMATING;
+    FSM.hook = state_estimating;
+
+}
+
 
 // =========================== MAIN ============================== //
 
@@ -976,8 +1046,10 @@ int main(int argc, char **argv){
 	CPyInstance hInstance;
 
 	init();
-	init_TCP_socket();
-	printf("finish init TCP. \n");
+	if (WORKING_MODE == EXPERIMENT){
+		init_TCP_socket();
+	    printf("finish init TCP. \n");
+	}
 	read_obstacle_list();
 
 	// visibility graph (visilibity library)

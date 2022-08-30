@@ -58,8 +58,16 @@ void init(){
     // updateCortexPos(current_position);
 
 	//set the state to wait for stationary plume
-	FSM.state = STATE_LISTEN;
-	FSM.hook  = state_listen;
+	switch (WORKING_MODE){
+		case EXPERIMENT:
+		    FSM.state = STATE_LISTEN;
+	        FSM.hook  = state_listen;
+		case OFFLINE:
+			FSM.state = STATE_READ;
+	        FSM.hook  = state_read;
+			break;
+	}
+	
 	FSM.n_cycles = 0;
 	// measurements.n_samples = 0;
 	// measurements.instant_concentration = 0;
@@ -87,7 +95,15 @@ void init(){
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-   
+    // log name of the experiment and scan
+    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/fail/2022-08-22_19-38");
+	sprintf(experiment_measurements_logfile_name, "%s/k4/measurement_history.csv", logfile_folder_name);
+	sprintf(experiment_position_logfile_name, "%s/k4/position_history.csv", logfile_folder_name);
+
+    sprintf(scan_folder_name, "/home/wanting/Workspace/windtunnel/K4_code_scan_WT/result/map10_wind_200_source_10_1.5_3rd");
+	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
+	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
+
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
     fclose(measurements_logfile);
@@ -97,10 +113,16 @@ void init(){
     fclose(expected_a_posteriori_logfile);
     max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "w");
     fclose(max_a_posteriori_logfile);
+	// experiment results folder
+    experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
+    experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
+    // scan results folder
+	scan_measurements_logfile = fopen(scan_measurements_logfile_name, "r");
+	scan_position_logfile = fopen(scan_position_logfile_name,"r");
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0};
+    simulation_parameters = (struct simulation_parameters) {375, 0.5, 100, 1, 1, 0, 0};
 
 	//read simulation parameters
 	FILE* sim_param_file;
