@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 % plot selected trajectories for the thesis
-general_folder = '/home/wjin/Workspace/plume_model_learning/Results/results_test_maps';
+general_folder = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/results_test_maps';
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
@@ -20,7 +20,7 @@ number = length(folder_list);
 %     7, 1614422570165
 %     8, 1614605746471];
 
-sel_traj = [1, 1658758580617];
+sel_traj = [1, 1661960855092];
 
 % the figure
 f2all = figure('Name','measurements','Position',[-1561 656 794 415]); 
@@ -43,7 +43,7 @@ for i=1:length(sel_traj)
     % obstacles
     obstacles_x=[];
     obstacles_y=[];
-    obst_file = ['/home/wjin/Workspace/plume_model_learning/openfoam/test_maps/map' num2str(params.map_nbr) '/map' num2str(params.map_nbr) '_wind1/' num2str(params.map_nbr) '_obstacles.txt'];
+    obst_file = ['/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/openfoam/test_maps/map' num2str(params.map_nbr) '/map' num2str(params.map_nbr) '_wind1/' num2str(params.map_nbr) '_obstacles.txt'];
     obst_fileID = fopen(obst_file);
     C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
     for k=1:length(C{1,1})

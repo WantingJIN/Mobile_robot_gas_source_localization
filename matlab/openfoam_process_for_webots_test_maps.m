@@ -17,7 +17,7 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 1:length(folder_list)-1
+for maps = 1%0:length(folder_list)-1
     close all;
     folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind1/'];
     
@@ -137,7 +137,7 @@ for maps = 1:length(folder_list)-1
     X2 = X(:,:,1);
     Y2 = Y(:,:,1);
     Z2 = Z(:,:,1);
-    obstacle_map = sum(reshape(obstacle_flag.*2,length(y),length(x),length(z)),3) > 0;
+    obstacle_map = sum(reshape(obstacle_flag.*2,length(y),length(x),length(z)),3) > 20;
     
     % the walls around the map
     obstacle_map(X2==step/2 | round(X2,4)==16-step/2 | Y2==step/2 | round(Y2,4)==4-step/2) = 0;

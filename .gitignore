@@ -15,7 +15,7 @@ openfoam/AutoGDM
 *.zip
 
 # khepera
-Khepera/Data/**
+
 Khepera/Results/**
 
 # executable file 
@@ -32,6 +32,5 @@ Khepera/Results/**
 **/output/
 **/output*/
 **/ReadmeFile/
-*.pt
 **/c++*/
 

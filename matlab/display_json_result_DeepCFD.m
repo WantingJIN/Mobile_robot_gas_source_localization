@@ -1,4 +1,4 @@
-fname = '/home/wjin/Workspace/plume_model_learning/python/MyDeepCFD-master/Run/results.json'; 
+fname = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/python/MyDeepCFD-master/Run/results.json'; 
 fid = fopen(fname); 
 raw = fread(fid,inf); 
 str = char(raw'); 
