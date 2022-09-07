@@ -343,7 +343,7 @@ void state_measuring(){
   //   		send_msg(msg);
   //   	}
 
-    	double m_buffer[4] = {0};
+    	double m_buffer[5] = {0};
 		int timeout = 10;
 		int success = -1;
 
@@ -352,13 +352,14 @@ void state_measuring(){
 		m_buffer[1] = current_position.x;
 		m_buffer[2] = current_position.y;
 		m_buffer[3] = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : sampleBuffer.average_concentration - odor_baseline_value;
+		m_buffer[4] = sampleBuffer.stdDev_concentration;
 		//variable = (condition) ? expressionTrue : expressionFalse;
 		do{
 			success = send(sock, m_buffer, sizeof(m_buffer), 0);
 			--timeout;
 		} while(success == -1 && timeout > 0);
 		if(success > 0)
-			printf("successfully sent measurement %f: (%f, %f) %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3]);
+			printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
 		else
 			printf("sending failed with timeout!\n");
 

@@ -32,17 +32,17 @@
 #define WHEEL_RADIUS	        0.021  	//K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	200 
+#define MAX_SAMPLE_NUMBER 	50 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
 #define MAX_NB_ROBOTS          	3
 //wind tunnel boundaries
-#define XMIN 2.85
-#define YMIN 0.1
+#define XMIN 3.0
+#define YMIN 0.16
 //#define ZMIN 0.1
-#define XMAX 12.65
-#define YMAX 3.9
+#define XMAX 12.5
+#define YMAX 3.8
 //#define ZMAX 1.9
 // min and max for each parameter
 #define Q_min  1

@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 def split_tensors(*tensors, ratio):
     assert len(tensors) > 0
     split1, split2 = [], []
@@ -28,6 +29,63 @@ def visualize(sample_x, sample_y, out_y, error, s):
     minu = np.min(sample_y[s, 0, :, :])
     maxu = np.max(sample_y[s, 0, :, :])
     
+    # minv = np.min(sample_y[s, 1, :, :])
+    # maxv = np.max(sample_y[s, 1, :, :])
+    
+    mineu = np.min(error[s, 0, :, :])
+    maxeu = np.max(error[s, 0, :, :])
+    
+    # minev = np.min(error[s, 1, :, :])
+    # maxev = np.max(error[s, 1, :, :])
+
+    # obstacles
+    obs_in = sample_x[s,0,:,:]==0
+    obs_border = sample_x[s,0,:,:]==5
+    obs = obs_in + obs_border
+
+    # plots
+    plt.figure()
+    fig = plt.gcf()
+    fig.set_size_inches(15, 10)
+
+    # C_avg
+    plt.subplot(2, 3, 1)
+    plt.title('CFD', fontsize=18)
+    plt.imshow(np.multiply(obs,(maxu-minu)/6) + sample_y[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
+    #plt.colorbar(orientation='horizontal')
+    plt.ylabel('C_avg', fontsize=18)
+    plt.subplot(2, 3, 2)
+    plt.title('CNN', fontsize=18)
+    plt.imshow(np.multiply(obs,(maxu-minu)/6) + out_y[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
+    plt.colorbar(orientation='horizontal')
+    plt.subplot(2, 3, 3)
+    plt.title('Error', fontsize=18)
+    plt.imshow(np.multiply(obs,(maxu-minu)/6) + error[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
+    plt.colorbar(orientation='horizontal')
+
+    # C_std
+    # plt.subplot(2, 3, 4)
+    # plt.imshow(np.multiply(obs,(maxv-minv)/6) + sample_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    # plt.ylabel('C_std', fontsize=18)
+    # plt.subplot(2, 3, 5)
+    # plt.imshow(np.multiply(obs,(maxv-minv)/6) + out_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    # plt.subplot(2, 3, 6)
+    # plt.imshow(np.multiply(obs,(maxv-minv)/6) + error[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    # plt.colorbar(orientation='horizontal')
+    
+    plt.tight_layout()
+    plt.savefig("output/output_{}.png".format(s))
+    #plt.show()
+    plt.close('all')
+    
+def plot_figure(sample_x, sample_y, out_y, error, s):
+
+    # min and max values for colormaps
+    minu = np.min(sample_y[s, 0, :, :])
+    maxu = np.max(sample_y[s, 0, :, :])
+    
     minv = np.min(sample_y[s, 1, :, :])
     maxv = np.max(sample_y[s, 1, :, :])
     
@@ -44,44 +102,53 @@ def visualize(sample_x, sample_y, out_y, error, s):
 
     # plots
     plt.figure()
+    plt.gca().invert_xaxis()
     fig = plt.gcf()
     fig.set_size_inches(15, 10)
 
     # C_avg
-    plt.subplot(2, 3, 1)
+    plt.subplot(1, 3, 1)
     plt.title('CFD', fontsize=18)
+    ax = plt.gca()
+    ax.set_xlim(13, 3)
+    ax.set_ylim(4.0, 0)
     plt.imshow(np.multiply(obs,(maxu-minu)/6) + sample_y[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
     # plt.colorbar(orientation='horizontal')
     plt.ylabel('Average', fontsize=18)
-    plt.subplot(2, 3, 2)
+    plt.subplot(1, 3, 2)
     plt.title('CNN', fontsize=18)
+    ax = plt.gca()
+    ax.set_xlim(13, 3)
+    ax.set_ylim(4.0, 0)
     plt.imshow(np.multiply(obs,(maxu-minu)/6) + out_y[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
     # plt.colorbar(orientation='horizontal')
-    plt.subplot(2, 3, 3)
+    plt.subplot(1, 3, 3)
     plt.title('Error', fontsize=18)
     ax = plt.gca()
+    ax.set_xlim(13, 3)
+    ax.set_ylim(4.0, 0)
     im = plt.imshow(np.multiply(obs,(maxu-minu)/6) + error[s, 0, :, :], cmap='jet', vmin = minu, vmax = maxu, origin='lower', extent=[2.75,12.75,0,4])
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     plt.colorbar(im, cax=cax)
 
     # C_std
-    plt.subplot(2, 3, 4)
-    plt.imshow(np.multiply(obs,(maxv-minv)/6) + sample_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    #plt.subplot(2, 3, 4)
+    #plt.imshow(np.multiply(obs,(maxv-minv)/6) + sample_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
     # plt.colorbar(orientation='horizontal')
-    plt.ylabel('Standard deviation', fontsize=18)
-    plt.subplot(2, 3, 5)
-    plt.imshow(np.multiply(obs,(maxv-minv)/6) + out_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    #plt.ylabel('Standard deviation', fontsize=18)
+    #plt.subplot(2, 3, 5)
+    #plt.imshow(np.multiply(obs,(maxv-minv)/6) + out_y[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
     # plt.colorbar(orientation='horizontal')
-    plt.subplot(2, 3, 6)
-    ax = plt.gca()
-    im = plt.imshow(np.multiply(obs,(maxv-minv)/6) + error[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
+    #plt.subplot(2, 3, 6)
+    #ax = plt.gca()
+    #im = plt.imshow(np.multiply(obs,(maxv-minv)/6) + error[s, 1, :, :], cmap='jet', vmin = minv, vmax = maxv, origin='lower', extent=[2.75,12.75,0,4])
     # plt.colorbar(orientation='horizontal')
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    plt.colorbar(im, cax=cax)
+    #divider = make_axes_locatable(ax)
+    #cax = divider.append_axes("right", size="5%", pad=0.05)
+    #plt.colorbar(im, cax=cax)
     
     plt.tight_layout()
-    plt.savefig("output/output_{}.png".format(s))
+    plt.savefig("output_paper/output_{}.png".format(s))
     #plt.show()
     plt.close('all')

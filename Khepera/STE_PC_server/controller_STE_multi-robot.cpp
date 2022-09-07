@@ -784,7 +784,7 @@ void goal_outside_obstacles(Position * goal){
 	// is the goal position in an obstacle?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
 	// if not, then back to business
-	if(idx == -1){
+	if(idx == -1 && !position_outside_arena(goal)){
 		// printf(">>> the goal is not in any obstacles\n");
 		return;
 	}
@@ -965,28 +965,29 @@ void state_updategoal(){
 
 void state_listen(){
 	int success = -1;
-    double buffer[4] = {0}; 
+    double buffer[5] = {0}; 
 
 	// wait for gas measurements
-    success = read(sock, buffer, sizeof(double)*4); 
+    success = read(sock, buffer, sizeof(double)*5); 
     //printf("received Gas value %f %f %f %f\n", buffer[0], buffer[1], buffer[2], buffer[3]); 
     // printf("listening..\n");
 
     if(success > 0){
-    	printf("received Gas value %f: (%f, %f) %f\n", buffer[0], buffer[1], buffer[2], buffer[3]); 
+    	printf("received Gas value %f: (%f, %f) %f +- %f\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]); 
 
     	// save in history
 	    history.position[history.size].x = buffer[1];
 		history.position[history.size].y = buffer[2];
 		history.position[history.size].heading = 0;
 		history.measurement_avg[history.size] = buffer[3];
+		history.measurement_std[history.size] = buffer[4];
 		history.size++;
 
 		//save current position
 		current_position.x = buffer[1];
 		current_position.y = buffer[2];
 		current_position.heading = 0;
-		
+		 
 		// check if all was received so far
 		if(history.size != buffer[0])
 			printf("Something wrong in history...\n");

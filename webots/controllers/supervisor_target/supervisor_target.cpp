@@ -135,8 +135,8 @@ int main(void){
     double source_position[3] = {0};
     //make sure the source is not in an obstacle
     do{
-        source_position[0] = 12.9;
-        source_position[1] = 2.01;//(((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
+        source_position[0] = 12.7;
+        source_position[1] = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
         source_position[2] = 0.1;
     }while(is_in_obstacle_list(source_position[0], source_position[1], obstacles, nbr_obs) != -1);
     wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def("SOURCE_ODOR_0"),"translation"), source_position);
