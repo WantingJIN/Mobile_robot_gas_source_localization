@@ -2,7 +2,7 @@
 
 
 # robot's ID
-ID=103
+ID=102
 
 # set the map number
 # map=0
@@ -26,6 +26,6 @@ ID=103
 # gather log files
 current_time=$(date +"%Y-%m-%d_%H-%M")
 mkdir Results/$current_time
-mv -r /home/rahbar/Projects/DDPM_K4/log_STE_multi Results/$"current_time"/pc
+mv /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/log_STE_multi Results/$current_time/pc
 k4get log_STE_multi +$ID
-mv -r /home/rahbar/Projects/DDPM_K4/k4-192.168.141."$ID"/log_STE_multi Results/$"current_time"/k4
+mv /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/k4-192.168.141."$ID"/log_STE_multi Results/$current_time/k4

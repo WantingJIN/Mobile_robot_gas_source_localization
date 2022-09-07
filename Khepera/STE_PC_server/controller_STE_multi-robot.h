@@ -32,7 +32,7 @@
 #define WHEEL_RADIUS	        0.021  	//K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	200 
+#define MAX_SAMPLE_NUMBER 	30 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
@@ -78,6 +78,10 @@
 #define COM_NO_COOR		1
 #define COM_COOR 		2
 #define SCENARIO 		NO_COM_NO_COOR
+// Working mode
+#define EXPERIMENT 0
+#define OFFLINE 1
+#define WORKING_MODE   OFFLINE
 
 #define TIMEOUT         1000*1000 // miliseconds
 
@@ -118,6 +122,7 @@ typedef enum state {
   STATE_FINISHED    	=	5,
   STATE_OBSTACLE_AVOIDANCE = 6,
   STATE_LISTEN			=	7,
+  STATE_READ            =   8,
 }eState;
 
 //finite state machine
@@ -159,9 +164,10 @@ void state_moving();
 void state_waiting();
 void state_obstacle_avoidance();
 void state_listen();
+void state_read();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
-double likelihood(struct history history, double *parameters, PlumeModel *model);
+double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose);
 double likelihood(struct history history, double *parameters, vector<float> model_c_avg);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 

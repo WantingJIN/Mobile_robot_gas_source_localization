@@ -67,6 +67,18 @@ extern char position_history_logfile_name[256];
 extern char posterior_pdf_3D_name[256];
 extern char entropy_logfile_name[256];
 extern char config_logfile_name[256];
+// read logfile from the experiment
+extern char logfile_folder_name[256];
+extern FILE* experiment_measurements_logfile;
+extern char experiment_measurements_logfile_name[256];
+extern FILE* experiment_position_logfile;
+extern char experiment_position_logfile_name[256];
+// read scan file
+extern char scan_folder_name[256];
+extern FILE* scan_measurements_logfile;
+extern char scan_measurements_logfile_name[256];
+extern FILE* scan_position_logfile;
+extern char scan_position_logfile_name[256];
 
 // finite state machine
 extern struct FSM FSM;

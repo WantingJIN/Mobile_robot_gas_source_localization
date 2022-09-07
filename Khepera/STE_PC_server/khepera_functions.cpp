@@ -58,8 +58,16 @@ void init(){
     // updateCortexPos(current_position);
 
 	//set the state to wait for stationary plume
-	FSM.state = STATE_LISTEN;
-	FSM.hook  = state_listen;
+	switch (WORKING_MODE){
+		case EXPERIMENT:
+		    FSM.state = STATE_LISTEN;
+	        FSM.hook  = state_listen;
+		case OFFLINE:
+			FSM.state = STATE_READ;
+	        FSM.hook  = state_read;
+			break;
+	}
+	
 	FSM.n_cycles = 0;
 	// measurements.n_samples = 0;
 	// measurements.instant_concentration = 0;
@@ -87,7 +95,15 @@ void init(){
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-   
+    // log name of the experiment and scan
+    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/fail/2022-08-22_19-38");
+	sprintf(experiment_measurements_logfile_name, "%s/k4/measurement_history.csv", logfile_folder_name);
+	sprintf(experiment_position_logfile_name, "%s/k4/position_history.csv", logfile_folder_name);
+
+    sprintf(scan_folder_name, "/home/wanting/Workspace/windtunnel/K4_code_scan_WT/result/map10_wind_200_source_10_1.5_3rd");
+	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
+	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
+
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
     fclose(measurements_logfile);
@@ -97,53 +113,59 @@ void init(){
     fclose(expected_a_posteriori_logfile);
     max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "w");
     fclose(max_a_posteriori_logfile);
+	// experiment results folder
+    experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
+    experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
+    // scan results folder
+	scan_measurements_logfile = fopen(scan_measurements_logfile_name, "r");
+	scan_position_logfile = fopen(scan_position_logfile_name,"r");
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0};
+    simulation_parameters = (struct simulation_parameters) {375, 0.5, 100, 1, 1, 0, 0};
 
 	//read simulation parameters
 	FILE* sim_param_file;
 	int ok = 0;
-	if(access("/home/rahbar/Projects/DDPM_K4/Data/params/likelihood_error.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/simulation_parameters/likelihood_error.txt", "r");
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/likelihood_error.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/likelihood_error.txt", "r");
 		ok = fscanf(sim_param_file, "%f", &simulation_parameters.likelihood_error);
 		if(ok) printf("likelihood_error : %f\n", simulation_parameters.likelihood_error);
 		fclose(sim_param_file);
 	}
     //printf("likelihood_error %f\n", simulation_parameters.likelihood_error);
-	if(access("/home/rahbar/Projects/DDPM_K4/Data/params/gloabl_local_search_ratio.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/params/gloabl_local_search_ratio.txt", "r");
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/gloabl_local_search_ratio.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params", "r");
 		ok = fscanf(sim_param_file, "%f", &simulation_parameters.gloabl_local_search_ratio);
 		if(ok) printf("gloabl_local_search_ratio : %f\n", simulation_parameters.gloabl_local_search_ratio);
 		fclose(sim_param_file);
 	}
-	if(access("/home/rahbar/Projects/DDPM_K4/Data/params/MCMC_iteration_num.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/params/MCMC_iteration_num.txt", "r");
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_iteration_num.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_iteration_num.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_iteration_num);
 		if(ok) printf("MCMC_iteration_num : %d\n", simulation_parameters.MCMC_iteration_num);
 		fclose(sim_param_file);
 	}
-	if(access("/home/rahbar/Projects/DDPM_K4/Data/params/MCMC_or_exhaustive_eval.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/params/MCMC_or_exhaustive_eval.txt", "r");
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_or_exhaustive_eval.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_or_exhaustive_eval.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_or_exhaustive_eval);
 		if(ok) printf("MCMC_or_exhaustive_eval : %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
 		fclose(sim_param_file);
 	}
-	if(access("/home/rahbar/Projects/DDPM_K4/Data/params/number_of_robots.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/params/number_of_robots.txt", "r");
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/number_of_robots.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/number_of_robots.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.number_of_robots);
 		if(ok) printf("number_of_robots : %d\n", simulation_parameters.number_of_robots);
 		fclose(sim_param_file);
 	}
-	if(access("/home/rahbar/Projects/DDPM_K4/Data/params/scenario.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/params/scenario.txt", "r");
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/scenario.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/scenario.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.scenario);
 		if(ok) printf("scenario : %d\n", simulation_parameters.scenario);
 		fclose(sim_param_file);
 	}
-    if(access("/home/rahbar/Projects/DDPM_K4/Data/params/map_nbr.txt", F_OK) != -1 ){
-       sim_param_file = fopen("/home/rahbar/Projects/DDPM_K4/Data/params/map_nbr.txt", "r");
+    if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt", F_OK) != -1 ){
+       sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt", "r");
        ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
        if(ok) printf("map number : %d\n", simulation_parameters.map_nbr);
        fclose(sim_param_file);

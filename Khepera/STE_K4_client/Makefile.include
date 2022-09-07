@@ -14,8 +14,15 @@ STATICTARGET	:= $(strip $(TARGET))-static
 #CC			:= arm-linux-gcc
 
 # Toolchain (compiler, linker, ...) if you are using kernel 2.6 (korebot-oetools-1.0)
-CC			:= arm-angstrom-linux-gnueabi-g++
+#CC			:= arm-angstrom-linux-gnueabi-g++ -std=gnu++0x
 
+# Toolchain for 2019 Kheperas
+# CC needs additional arguments which are set by opt/poky/1.8/environment-setup-...
+# following works by ourcing the file in bash and outputting the modified environment, after formatting it, to a file called makeenv which is then sourced by the makefile.
+IGNORE := $(shell bash -c "source /opt/poky/1.8/environment-setup-cortexa8hf-vfp-neon-poky-linux-gnueabi; env | sed 's/=/:=/' | sed 's/^/export /' > makeenv")
+include makeenv
+#CFLAGS_ADD += -std=c++11
+ 
 #########################################################
 
 # Preparing files and flags
@@ -32,11 +39,11 @@ CFLAGS 		:= $(CFLAGS_ADD)
 
 $(TARGET): $(OBJS) $(MODS)
 	@echo "=== Building $@"
-	$(CC) -o $@ $(OBJS) $(INCS) $(CFLAGS) $(LIBS) $(MODS)
+	$(CXX) -o $@ $(OBJS) $(INCS) $(CFLAGS) $(LIBS) $(MODS)
 
 $(STATICTARGET): $(OBJS)
 	@echo "=== Building $@ (statically)"
-	$(CC) -o $@ $(OBJS) -static $(INCS) $(CFLAGS) $(LIBS) $(MODS)
+	$(CXX) -o $@ $(OBJS) -static $(INCS) $(CFLAGS) $(LIBS) $(MODS)
 
 .PHONY: all
 all: $(TARGET)
@@ -58,7 +65,7 @@ depend:
 
 %.o: %.cpp
 	@echo "=== Compiling $@"
-	$(CC) -Wall $(INCS) -c $(CFLAGS) $< -o $@
+	$(CXX) -Wall $(INCS) -c $(CFLAGS) $< -o $@
 
 ifeq (.depend,$(wildcard .depend))
 include .depend 

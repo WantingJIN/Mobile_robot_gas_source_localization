@@ -261,8 +261,10 @@ void Posterior::process(){
 	for(i = 0; i < nbr_element; i++){
 		//normalize
 		//printf("%f / %f =  %f ", pdf[i],sum, pdf[i]/sum);
+		if (sum == 0)
+			printf("error: Sum is zero!! \n");
 		pdf[i] /= sum;
-		
+	
 		//entropy
 		if(pdf[i] > 0) 
 			entropy += pdf[i] * log(pdf[i]);
@@ -284,9 +286,9 @@ void Posterior::process(){
 	//printf("\n");
 
 	//log
-	/*const char* str = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf.csv";
+	const char* str = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/pdf.csv";
 	log_pdf(str, 'a');
-	const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
+	/*const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
 	log_marginal_pdf(str2, 'a');
 	*/
 	//print on screen
@@ -322,13 +324,18 @@ void Posterior::MCMC_evaluation(struct history history){
 	}
 
 	//error detection
-	double sample_likelihood = likelihood(history, sample, model);
+	// if (sample[0] > 9 && sample[0]< 11 && sample[1] >1 && sample[2]<1.5){
+	// 	double sample_likelihood = likelihood(history, sample, model,1);
+	// }
+	double sample_likelihood = likelihood(history, sample, model, 1);
 	if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f %f %f %f\n", 
-			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1], sample[2], sample[3], sample[4]);
+		if(VERBOSE) printf("!!!!!!!!!!!!!!done ---- prior = %d, likelihood = %f, sample: %f %f\n", 
+			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
 		dirac_flag = 1;
 		return;
 	}
+	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
+	update(posterior_value, sample);
 
 	//get model concentrations
 	// if(history.size==1){
@@ -358,7 +365,7 @@ void Posterior::MCMC_evaluation(struct history history){
 			candidate[j] = random_sample()(j);
 		
 		//calculate the acceptance chance
-		double candidate_likelihood = likelihood(history, candidate, model);
+		double candidate_likelihood = likelihood(history, candidate, model,0);
 		p_acceptance = (prior(candidate, nbr_dimension, model) * candidate_likelihood) /
 					   (prior(sample, nbr_dimension, model) * sample_likelihood);
 		if(p_acceptance > 1) p_acceptance = 1;
@@ -376,7 +383,7 @@ void Posterior::MCMC_evaluation(struct history history){
 		posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 		update(posterior_value, sample);
 	}
-
+    printf("*************After MCMC, sample is:%f, %f; sample_likelihood is: %f\n", sample[0], sample[1], sample_likelihood);
 	memcpy(last_sample, sample, sizeof(double)*nbr_dimension);
 	
 	//print of screen
@@ -396,7 +403,7 @@ void Posterior::exhaustive_evaluation(struct history history){
 		//convert index 'i' to set of parameter values 'sample'
 		index_to_param_values(i, sample);
 		//calculate the posterior of 'sample'
-		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
+		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model,1);
 		//printf("%f, ", pdf[i]);
 		//add the new value to the sum
 		sum += pdf[i];
@@ -466,8 +473,11 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 			
 			//if the cell(i,j) is the best so far, its center is copied in best_point
 			if(tmp_value > value){
+				// When measure very close to the source, the reading is not very realistic
+			    // Keep some distance from the estimated gas source location
+				// FIXME use the downwind direction, now with the assumption that the wind is along x-axis    
 				value = tmp_value;
-				best_point[0] = tmp_position[0]; 
+				best_point[0] = tmp_position[0] - 1.5; 
 				best_point[1] = tmp_position[1]; 
 			}
 		}

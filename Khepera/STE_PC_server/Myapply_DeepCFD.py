@@ -12,18 +12,18 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 	# map number 
-	f = open('/home/rahbar/Projects/DDPM_K4/Data/params/map_nbr.txt', 'r')
+	f = open('/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt', 'r')
 	m = int(f.read())
 	f.close()
 	# print("map nbr {}".format(m))
 
 	# load the saved model
-	DeepCFD = torch.load("/home/rahbar/Projects/DDPM_K4/STE_PC_server/myDeepCFD_model_Cavg_noWind_training_random2_1000_border_fixed_4layers_input180.pt") 
+	DeepCFD = torch.load("/home/wanting/Workspace/kheperaodor/plume_model_learning/webots/controllers/controller_STE_multi-robot/Wanting_test.pt") 
 	DeepCFD.eval()
 	
 	# when no source position is given
 	if(sx==-1 and sy==-1):
-		adr = "/home/rahbar/Projects/DDPM_K4/Data/DeepCFD_input/test_map{}_flowdef_sdf_allsourcepos.mat".format(m)
+		adr = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_map{}_flowdef_sdf_allsourcepos.mat".format(m)
 		mat_x = sio.loadmat(adr)
 		array_x = mat_x.get('py_x')
 		double_x = torch.from_numpy(array_x)
@@ -33,7 +33,7 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 		c = torch.from_numpy(mat_x.get('Y')).float()
 	else:
 		# make the input tensors using sx sy
-		adr = "/home/rahbar/Projects/DDPM_K4/Data/DeepCFD_input/test_map{}_flowdef_sdf_emptysourcepos.mat".format(m)
+		adr = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_map{}_flowdef_sdf_emptysourcepos.mat".format(m)
 		mat_x = sio.loadmat(adr)
 		array_x = mat_x.get('py_x')
 		double_x = torch.from_numpy(array_x)
@@ -70,3 +70,7 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 		print("apply_DeepCFD: Bad input format.")
 	
 	return c_avg, c_std
+
+if __name__ == "__main__":
+	c_avg, c_std = DeepCFD_output_eval(3.224360,2.772563,4.511471,2.830724)
+	print("c_avg = ", c_avg,"c_std = ", c_std)

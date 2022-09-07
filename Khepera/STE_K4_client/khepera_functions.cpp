@@ -300,7 +300,7 @@ void establish_baseline(){
     }
     //once reached the end of the line
     khepera4_drive_set_speed(0,0);
-    odor_baseline_value = (max-min)*0.4 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
+    odor_baseline_value = (max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
     printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
 
     //starting point of the actuall algorithm random on Y
@@ -365,9 +365,25 @@ void updateCortexPos(Position * position){
     while(FrameOfData == NULL)
         FrameOfData = Cortex_GetCurrentFrame();
     
+    double new_x = 0.0;
+    double new_y = 0.0;
+        
     //decode the received frame of data
     for(int i=0;i<FrameOfData->nBodies;i++){
         if(!strcmp(FrameOfData->BodyData[i].szName, prop_name)){
+            new_x = FrameOfData->BodyData[i].Segments[0][0]/1000;
+            new_y = FrameOfData->BodyData[i].Segments[0][1]/1000;
+            // Check if the MCS is available; otherwise, use odometry instead
+            if (new_x > 15.0 || new_x < 0.0 || new_y > 5.0 || new_y < 0.0){
+            //    if (!set_odometry_pos_from_MCS){
+            //        odometry_set_absolute_position_from_external(&ot, position->x, position->y, position->heading);
+            //        set_odometry_pos_from_MCS = true;
+            //    }
+            //    do_odometry();
+               printf("Error! my current position is (%f %f %f)\n", new_x, new_y);
+               continue;
+            }
+            set_odometry_pos_from_MCS = false;
             position->x=FrameOfData->BodyData[i].Segments[0][0]/1000;
             position->y=FrameOfData->BodyData[i].Segments[0][1]/1000;
             position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
@@ -384,7 +400,6 @@ void update_position() {
     updateCortexPos(&current_position);
     while (current_position.heading > 2*PI) current_position.heading -= 2.0*PI;
     while (current_position.heading < 0   ) current_position.heading += 2.0*PI;
-    //printf("my current position is (%f %f %f)\n", current_position[0], current_position[1], current_position[2]);
 }
 
 int obstacle_or_not(){
