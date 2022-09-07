@@ -39,10 +39,10 @@
 #define MAX_NB_ROBOTS          	3
 //wind tunnel boundaries
 #define XMIN 2.85
-#define YMIN 0.1
+#define YMIN 0.16
 //#define ZMIN 0.1
-#define XMAX 12.65
-#define YMAX 3.9
+#define XMAX 12.5
+#define YMAX 3.8
 //#define ZMAX 1.9
 // min and max for each parameter
 #define Q_min  1

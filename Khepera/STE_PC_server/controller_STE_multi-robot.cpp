@@ -438,11 +438,11 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
 		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] >= model->param_list[i].lower_limit);
 	
 	// verify the x and y elements of the parameters are not inside obstacles
-	// Position tmp_p(parameters[0], parameters[1], 0);
-	// if(tmp_p.is_in_obstacle_list(obstacles, nbr_obs) != -1){
-	// 	printf("point %f %f is in obstacle\n", parameters[0], parameters[1]);
-	// 	output = 0;
-	// }
+	Position tmp_p(parameters[0], parameters[1], 0);
+	if(tmp_p.is_in_obstacle_list(obstacles, nbr_obs) != -1){
+		printf("point %f %f is in obstacle\n", parameters[0], parameters[1]);
+		output = 0;
+	}
 
 	//if(output == 0)
 	//	printf("parameters: %f %f %f %f %f\n", parameters[0], parameters[1], parameters[2], parameters[3], parameters[4]);
@@ -796,34 +796,64 @@ void goal_outside_obstacles(Position * goal){
 	history.measurement_avg[history.size] = 0;
 	history.size++;
 
-	// printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 	// otherwise, lets try 4 different candidates
-	float min_dist = 10000.0;
-	Position nearest_position(*goal);
-	Position candidates[4] = {	Position(obstacles[idx][0], goal->y, 0), 
+	// for each candidate position
+	if (idx != -1){
+		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
+		float min_dist = 10000.0;
+	    Position nearest_position(*goal);
+	    Position candidates[4] = {	Position(obstacles[idx][0], goal->y, 0), 
 								Position(obstacles[idx][2], goal->y, 0),
 								Position(goal->x, obstacles[idx][1], 0),
 								Position(goal->x, obstacles[idx][3], 0)};
-	// for each candidate position
-	for(int i=0; i<4; i++){
-		//check if the distance to candidate is smaller than others
-		// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
-		if(goal->distance_from(candidates[i]) < min_dist){
-			// printf(">>> best sor far\n");
-			//if so, then check if that position is not in another obstacle and it's inside the arena
-			// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
-			// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
-			if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
-				//if so, then this is the nearest position
-				nearest_position.copy_position(candidates[i]);
-				min_dist = goal->distance_from(candidates[i]);
-				// printf(">>> chose it as new position !!! \n");
+		for(int i=0; i<4; i++){
+			//check if the distance to candidate is smaller than others
+			//printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
+			if(goal->distance_from(candidates[i]) < min_dist){
+				// printf(">>> best sor far\n");
+				//if so, then check if that position is not in another obstacle and it's inside the arena
+				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
+				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
+				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
+					//if so, then this is the nearest position
+					nearest_position.copy_position(candidates[i]);
+					min_dist = goal->distance_from(candidates[i]);
+					// printf(">>> chose it as new position !!! \n");
+				}
 			}
-		}
+			//change the goal position using the pointer
+			printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+			goal->copy_position(nearest_position);
 	}
-	//change the goal position using the pointer
-	// printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-	goal->copy_position(nearest_position);
+	if (position_outside_arena(*goal)){
+		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
+		// otherwise, lets try 4 different candidates
+		float min_dist = 10000.0;
+		Position nearest_position(*goal);
+		Position candidates[4] = {	Position(XMIN, goal->y, 0), 
+									Position(XMAX, goal->y, 0),
+									Position(goal->x, YMIN, 0),
+									Position(goal->x, YMAX, 0)};
+
+		for(int i=0; i<4; i++){
+			//check if the distance to candidate is smaller than others
+			if(goal->distance_from(candidates[i]) < min_dist){
+				// printf(">>> best sor far\n");
+				//if so, then check if that position is not in another obstacle and it's inside the arena
+				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
+				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
+				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
+					//if so, then this is the nearest position
+					nearest_position.copy_position(candidates[i]);
+					min_dist = goal->distance_from(candidates[i]);
+					// printf(">>> chose it as new position !!! \n");
+				}
+			}
+			//change the goal position using the pointer
+			printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+			goal->copy_position(nearest_position);
+	    }
+	}
 }
 
 // ============================== STATES ================================= //
