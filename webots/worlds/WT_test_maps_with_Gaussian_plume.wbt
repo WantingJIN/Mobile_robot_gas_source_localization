@@ -1,0 +1,433 @@
+#VRML_SIM R2021b utf8
+WorldInfo {
+  info [
+    "Author: Thomas Lochmatter"
+    "Date: 2008-06-07"
+    "Model of the Khepera III robot by Simon Blanchoud, 2006"
+  ]
+  title "Odor Source Localization in the EPFL Wind Tunnel"
+  gravity 9.8
+  physics "odor_physics"
+}
+Viewpoint {
+  orientation -0.012669597063749465 -0.03219885756887109 0.9994011781469451 3.135733706935144
+  position 6.608832028854766 0.37583390382423026 21.306647087288997
+}
+Background {
+  skyColor [
+    0.4 0.7 1
+  ]
+}
+PointLight {
+  attenuation 0 0 12.56
+  location -7.14 0.6 -0.55
+}
+PointLight {
+  attenuation 0 0 2
+  intensity 0.5
+  location -7.14 0.6 -0.55
+}
+DEF ground Solid {
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          ambientIntensity 1
+          diffuseColor 1 1 1
+          emissiveColor 0.823529 0.6 0.34902
+          shininess 0
+          specularColor 0.196078 0.196078 0
+        }
+        texture ImageTexture {
+          url [
+            "textures/lightwood.png"
+          ]
+        }
+        textureTransform TextureTransform {
+          center 0.46 0
+          rotation -0.32
+          translation -1.01 0
+        }
+      }
+      geometry DEF ground_geo IndexedFaceSet {
+        coord Coordinate {
+          point [
+            0 4 0
+            0 0 0
+            16 0 0
+            16 4 0
+          ]
+        }
+        texCoord TextureCoordinate {
+          point [
+            0 0
+            0 5
+            5 5
+            5 0
+          ]
+        }
+        coordIndex [
+          0, 1, 2, 3, -1
+        ]
+        texCoordIndex [
+          0, 1, 2, 3, -1
+        ]
+      }
+    }
+  ]
+  boundingObject Transform {
+    rotation 1 0 0 1.5708
+    children [
+      Plane {
+      }
+    ]
+  }
+}
+DEF SOURCE_ODOR_0 Solid {
+  translation 13.2 2.2 0.05
+  rotation 1 0 0 1.5708
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          diffuseColor 1 1 1
+          emissiveColor 1 1 1
+        }
+        texture ImageTexture {
+          url [
+            "textures/strips.png"
+          ]
+        }
+      }
+      geometry DEF CYLINDER_SOURCE_ODOR Cylinder {
+        height 0.1
+        radius 0.05
+      }
+    }
+  ]
+  name "source_odor"
+  boundingObject USE CYLINDER_SOURCE_ODOR
+}
+Solid {
+  translation 0 2 0.05
+  rotation 1 0 0 1.5708
+  children [
+    DEF WALL_SHAPE1 Shape {
+      appearance DEF WALL_APPEARANCE1 Appearance {
+        material Material {
+          diffuseColor 1 0.501961 0.25098
+        }
+      }
+      geometry Box {
+        size 0.02 0.1 4
+      }
+    }
+  ]
+  name "solid_right"
+  boundingObject USE WALL_SHAPE1
+}
+Solid {
+  translation 16 2 0.05
+  rotation 1 0 0 4.71239
+  children [
+    USE WALL_SHAPE1
+  ]
+  name "solid_left"
+  boundingObject USE WALL_SHAPE1
+}
+Solid {
+  translation 8 0 0.05
+  rotation -0.5773509358554485 0.5773509358554485 -0.5773489358556708 2.0944
+  children [
+    DEF WALL_SHAPE2 Shape {
+      appearance DEF WALL_APPEARANCE2 Appearance {
+        material Material {
+          diffuseColor 1 0.501961 0.25098
+        }
+      }
+      geometry Box {
+        size 0.02 0.1 16
+      }
+    }
+  ]
+  name "solid_up"
+  boundingObject USE WALL_SHAPE2
+}
+Solid {
+  translation 8 4 0.05
+  rotation 0.5773509358554485 0.5773509358554485 0.5773489358556708 2.0944
+  children [
+    USE WALL_SHAPE2
+  ]
+  name "solid_down"
+  boundingObject USE WALL_SHAPE2
+}
+DEF goal_101 Transform {
+  rotation 1 0 0 1.5708
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          diffuseColor 1 0 0
+          emissiveColor 1 0 0
+        }
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.05
+      }
+    }
+  ]
+}
+DEF goal_102 Transform {
+  rotation 1 0 0 1.5708
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          diffuseColor 0 1 0
+          emissiveColor 0 1 0
+        }
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.05
+      }
+    }
+  ]
+}
+DEF goal_103 Transform {
+  rotation 1 0 0 1.5708
+  children [
+    Shape {
+      appearance Appearance {
+        material Material {
+          diffuseColor 0.7 0 1
+          emissiveColor 0.7 0 1
+        }
+      }
+      geometry Cylinder {
+        height 0.001
+        radius 0.05
+      }
+    }
+  ]
+}
+DEF ODOR_SUP Robot {
+  children [
+    Receiver {
+      name "odor_receiver"
+      channel 8000
+    }
+  ]
+  name "odor_sup"
+  controller ""
+  supervisor TRUE
+}
+DEF n101 Khepera4 {
+  translation 3 1 0
+  rotation -0.5773502627301778 0.5773502738035171 0.5773502710351824 4.188790199249721
+  name "101"
+  controller "controller_STE_multi-robot_Gaussian_plume"
+  emitterChannel -1
+  receiverChannel -1
+  turretSlot [
+    GPS {
+    }
+    Compass {
+    }
+    Emitter {
+      name "emitter_K4"
+      channel 601
+    }
+    Receiver {
+      name "receiver_K4"
+      channel 601
+    }
+    DEF SENSOR_ODOR_0 Receiver {
+      translation 0 0.07 -0.05
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0 1 0
+            }
+          }
+          geometry DEF CYLINDER_ODOR Cylinder {
+            height 0.02
+            radius 0.01
+          }
+        }
+      ]
+      name "sensor_odor_101"
+      boundingObject USE CYLINDER_ODOR
+      physics Physics {
+      }
+    }
+    DEF SENSOR_WIND_0 Receiver {
+      translation 0 0.07 0
+      rotation 0 0 1 0
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 1 0 0
+              emissiveColor 1 0 0
+            }
+          }
+          geometry DEF CYLINDER_WIND Cylinder {
+            height 0.02
+            radius 0.02
+          }
+        }
+      ]
+      name "sensor_wind_101"
+      boundingObject USE CYLINDER_WIND
+      channel 250
+    }
+  ]
+}
+DEF n102 Khepera4 {
+  translation 3 2 0
+  rotation -0.5773502627301778 0.5773502738035171 0.5773502710351824 4.188790199249721
+  name "102"
+  controller "controller_STE_multi-robot_Gaussian_plume"
+  emitterChannel -1
+  receiverChannel -1
+  turretSlot [
+    GPS {
+    }
+    Compass {
+    }
+    Emitter {
+      name "emitter_K4"
+      channel 601
+    }
+    Receiver {
+      name "receiver_K4"
+      channel 601
+    }
+    DEF SENSOR_ODOR_1 Receiver {
+      translation 0 0.07 -0.05
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0 1 0
+            }
+          }
+          geometry DEF CYLINDER_ODOR Cylinder {
+            height 0.02
+            radius 0.01
+          }
+        }
+      ]
+      name "sensor_odor_102"
+      boundingObject USE CYLINDER_ODOR
+      physics Physics {
+      }
+      channel 1
+    }
+    DEF SENSOR_WIND_1 Receiver {
+      translation 0 0.07 0
+      rotation 0 0 1 0
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0 1 0
+              emissiveColor 0 1 0
+            }
+          }
+          geometry DEF CYLINDER_WIND Cylinder {
+            height 0.02
+            radius 0.02
+          }
+        }
+      ]
+      name "sensor_wind_102"
+      boundingObject USE CYLINDER_WIND
+      channel 251
+    }
+  ]
+}
+DEF n103 Khepera4 {
+  translation 3 3 0
+  rotation -0.5773502627301778 0.5773502738035171 0.5773502710351824 4.188790199249721
+  name "103"
+  controller "controller_STE_multi-robot_Gaussian_plume"
+  emitterChannel -1
+  receiverChannel -1
+  turretSlot [
+    GPS {
+    }
+    Compass {
+    }
+    Emitter {
+      name "emitter_K4"
+      channel 601
+    }
+    Receiver {
+      name "receiver_K4"
+      channel 601
+    }
+    DEF SENSOR_ODOR_2 Receiver {
+      translation 0 0.07 -0.05
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0 1 0
+            }
+          }
+          geometry DEF CYLINDER_ODOR Cylinder {
+            height 0.02
+            radius 0.01
+          }
+        }
+      ]
+      name "sensor_odor_103"
+      boundingObject USE CYLINDER_ODOR
+      physics Physics {
+      }
+      channel 2
+    }
+    DEF SENSOR_WIND_2 Receiver {
+      translation 0 0.07 0
+      rotation 0 0 1 0
+      children [
+        Shape {
+          appearance Appearance {
+            material Material {
+              diffuseColor 0.7 0 1
+              emissiveColor 0.7 0 1
+            }
+          }
+          geometry DEF CYLINDER_WIND Cylinder {
+            height 0.02
+            radius 0.02
+          }
+        }
+      ]
+      name "sensor_wind_103"
+      boundingObject USE CYLINDER_WIND
+      rotationStep 0.261799
+      channel 252
+    }
+  ]
+}
+DEF Supervisor Robot {
+  children [
+    Receiver {
+      name "receiver_radio"
+      channel 600
+    }
+    Emitter {
+      name "emitter_sup"
+      channel 600
+    }
+  ]
+  name "Supervisor"
+  controller "supervisor_target"
+  supervisor TRUE
+}
