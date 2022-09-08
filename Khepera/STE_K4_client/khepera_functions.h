@@ -57,6 +57,8 @@ extern FILE* entropy_logfile;
 extern FILE* tmp_file;
 extern FILE* config_logfile;
 extern FILE* trajectory_logfile;
+extern FILE* baseline_measurements_logfile;
+
 extern char goalposition_logfile_name[256];
 extern char measurements_logfile_name[256];
 extern char posterior_logfile_name[256];
@@ -70,6 +72,7 @@ extern char posterior_pdf_3D_name[256];
 extern char entropy_logfile_name[256];
 extern char config_logfile_name[256];
 extern char trajectory_logfile_name[256];
+extern char baseline_measurements_logfile_name[256];
 
 // finite state machine
 extern struct FSM FSM;
@@ -147,6 +150,7 @@ void obstacle_avoidance(double speed[2]);
 void set_wheels_speed(double speed1, double speed2);
 void cleaning_up();
 void next_iteration_time();
+void log_baseline(double min_c, double max_c, double baseline_c);
 
 
 #endif
