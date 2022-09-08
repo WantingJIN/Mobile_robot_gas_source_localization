@@ -23,7 +23,7 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 196%1:200
+for maps = 173
     folder = [general_folder num2str(maps)];
     
     % data

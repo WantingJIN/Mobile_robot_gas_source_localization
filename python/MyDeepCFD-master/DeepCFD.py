@@ -16,23 +16,21 @@ if __name__ == "__main__":
     # Loading dataset
     print(torch.__version__)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # device = torch.device("cpu")
-    print(device)
 
     # input data x and the ground truth y
-    mat_x = sio.loadmat('/home/wanting/DISAL/Research/KheperaOdor/data-driven_plume_model/Results/training_random2/my_x_for_torch_180.mat')
+    mat_x = sio.loadmat('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/training_random/my_x_for_torch_200.mat')
     array_x = mat_x.get('py_x')
     double_x = torch.from_numpy(array_x)
     x = double_x.float()
     x=x[:,:3,:,:]
-    mat_y = sio.loadmat('/home/wanting/DISAL/Research/KheperaOdor/data-driven_plume_model/Results/training_random2/my_y_for_torch_180.mat')
+    mat_y = sio.loadmat('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/training_random/my_y_for_torch_200.mat')
     array_y = mat_y.get('py_y')
     double_y = torch.from_numpy(array_y)
     y = double_y.float()
-    # y = y[:,0,:,:]
-    # y=y.unsqueeze(1);
+    y = y[:,0,:,:]
+    y=y.unsqueeze(1);
 
-    channels_weights = torch.sqrt(torch.mean(y.permute(0, 2, 3, 1).reshape((y.size(0)*64*64,2)) ** 2, dim=0)).view(1, -1, 1, 1).to(device)
+    channels_weights = torch.sqrt(torch.mean(y.permute(0, 2, 3, 1).reshape((y.size(0)*64*64,1)) ** 2, dim=0)).view(1, -1, 1, 1).to(device)
     print(channels_weights)
     
     simulation_directory = "./Run/"
@@ -40,7 +38,7 @@ if __name__ == "__main__":
         os.makedirs(simulation_directory)
         
     # Spliting dataset into 70% train and 30% test
-    train_data, test_data = split_tensors(x, y, ratio=0.7)
+    train_data, test_data = split_tensors(x, y, ratio=0.90)
     
     train_dataset, test_dataset = TensorDataset(*train_data), TensorDataset(*test_data)        
     test_x, test_y = test_dataset[:]
@@ -52,7 +50,7 @@ if __name__ == "__main__":
     bn = False
     wn = False
     wd = 0.005
-    model = UNetEx(3, 2, filters=filters, kernel_size=kernel_size, batch_norm=bn, weight_norm=wn)
+    model = UNetEx(3, 1, filters=filters, kernel_size=kernel_size, batch_norm=bn, weight_norm=wn)
     # Define opotimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd) 
     
@@ -63,8 +61,8 @@ if __name__ == "__main__":
     test_mse_curve = []
     train_ux_curve = []
     test_ux_curve = []
-    train_uy_curve = []
-    test_uy_curve = []
+    # train_uy_curve = []
+    # test_uy_curve = []
     # train_p_curve = []
     # test_p_curve = []
     
@@ -75,8 +73,8 @@ if __name__ == "__main__":
         test_mse_curve.append(scope["val_metrics"]["mse"])
         train_ux_curve.append(scope["train_metrics"]["ux"])
         test_ux_curve.append(scope["val_metrics"]["ux"])
-        train_uy_curve.append(scope["train_metrics"]["uy"])
-        test_uy_curve.append(scope["val_metrics"]["uy"])
+        # train_uy_curve.append(scope["train_metrics"]["uy"])
+        # test_uy_curve.append(scope["val_metrics"]["uy"])
         #train_p_curve.append(scope["train_metrics"]["p"])
         #test_p_curve.append(scope["val_metrics"]["p"])
 
@@ -84,7 +82,7 @@ if __name__ == "__main__":
         x, y = batch
         output = model(x)
         lossu = ((output[:,0,:,:] - y[:,0,:,:]) ** 2).reshape((output.shape[0],1,output.shape[2],output.shape[3])) 
-        lossv = ((output[:,1,:,:] - y[:,1,:,:]) ** 2).reshape((output.shape[0],1,output.shape[2],output.shape[3])) 
+        lossv = 0 #((output[:,1,:,:] - y[:,1,:,:]) ** 2).reshape((output.shape[0],1,output.shape[2],output.shape[3])) 
         #lossp = torch.abs((output[:,2,:,:] - y[:,2,:,:])).reshape((output.shape[0],1,output.shape[2],output.shape[3])) 
         lossp = 0
         loss = (lossu + lossv + lossp)/channels_weights
@@ -92,16 +90,16 @@ if __name__ == "__main__":
     
     # Training model
     DeepCFD, train_metrics, train_loss, test_metrics, test_loss = train_model(model, loss_func, train_dataset, test_dataset, optimizer,
-        epochs=8, batch_size=64, device=device,
+        epochs=1000, batch_size=64, device=device,
         m_mse_name="Total MSE",
         m_mse_on_batch=lambda scope: float(torch.sum((scope["output"] - scope["batch"][1]) ** 2)),
         m_mse_on_epoch=lambda scope: sum(scope["list"]) / len(scope["dataset"]),
         m_ux_name="Ux MSE",
         m_ux_on_batch=lambda scope: float(torch.sum((scope["output"][:,0,:,:] - scope["batch"][1][:,0,:,:]) ** 2)),
         m_ux_on_epoch=lambda scope: sum(scope["list"]) / len(scope["dataset"]),
-        m_uy_name="Uy MSE",
-        m_uy_on_batch=lambda scope: float(torch.sum((scope["output"][:,1,:,:] - scope["batch"][1][:,1,:,:]) ** 2)),
-        m_uy_on_epoch=lambda scope: sum(scope["list"]) / len(scope["dataset"]),
+        # m_uy_name="Uy MSE",
+        # m_uy_on_batch=lambda scope: float(torch.sum((scope["output"][:,1,:,:] - scope["batch"][1][:,1,:,:]) ** 2)),
+        # m_uy_on_epoch=lambda scope: sum(scope["list"]) / len(scope["dataset"]),
         #m_p_name="p MSE",
         #m_p_on_batch=lambda scope: float(torch.sum((scope["output"][:,2,:,:] - scope["batch"][1][:,2,:,:]) ** 2)),
         #m_p_on_epoch=lambda scope: sum(scope["list"]) / len(scope["dataset"]), 
@@ -120,10 +118,10 @@ if __name__ == "__main__":
     curves["test_mse_curve"] = test_mse_curve
     curves["train_ux_curve"] = train_ux_curve
     curves["test_ux_curve"] = test_ux_curve
-    curves["train_uy_curve"] = train_uy_curve
-    curves["test_uy_curve"] = test_uy_curve
-    # curves["train_p_curve"] = train_p_curve
-    # curves["test_p_curve"] = test_p_curve
+    # curves["train_uy_curve"] = train_uy_curve
+    # curves["test_uy_curve"] = test_uy_curve
+    #curves["train_p_curve"] = train_p_curve
+    #curves["test_p_curve"] = test_p_curve
     config["metrics"] = metrics
     config["curves"] = curves
     with open(simulation_directory + "results.json", "w") as file:
@@ -134,12 +132,12 @@ if __name__ == "__main__":
     # traced_script_module = torch.jit.trace(DeepCFD, test_x[:1].to(device))
     # traced_script_module.save("myDeepCFD_jit.pt")
     # state_dict (for python, recommended on pytorch.org)
-    torch.save(DeepCFD.state_dict(), "myDeepCFD_wanting_test.pt")
+    torch.save(DeepCFD.state_dict(), "Wanting_test_20000data.pt")
     # the entire model (for python, faster to load in py_test.py)
-    torch.save(DeepCFD, "myDeepCFD_wanting_test")
+    torch.save(DeepCFD, "Wanting_test_20000data")
    
-    out = DeepCFD(test_x[:10].to(device))
-    error = torch.abs(out.cpu() - test_y[:10].cpu())
     # generate results on the test set and save in output/
-    for s in range(test_x[:10].size(0)):
-        visualize(test_x[:10].cpu().detach().numpy(), test_y[:10].cpu().detach().numpy(), out.cpu().detach().numpy(), error.cpu().detach().numpy(), s)
+    out = DeepCFD(test_x.to(device))
+    error = torch.abs(out.cpu() - test_y.cpu())
+    for s in range(test_x.size(0)):
+        visualize(test_x.cpu().detach().numpy(), test_y.cpu().detach().numpy(), out.cpu().detach().numpy(), error.cpu().detach().numpy(), s)

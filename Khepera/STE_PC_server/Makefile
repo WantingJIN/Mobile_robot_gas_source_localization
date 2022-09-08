@@ -1,6 +1,5 @@
 CC := g++
-CFLAGS := -std=c++11 -fpermissive -I"/usr/include/python3.8"
-
+CFLAGS := -std=c++11 -fpermissive -I"/usr/include/python3.8" 
 LDFLAGS := -L"/usr/lib/python3.8/" -L"/usr/lib/python3.8/config-3.8m-x86_64-linux-gnu/" -lpython3.8 -lm
 TARGET := STE_PC_server
 

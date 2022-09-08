@@ -262,6 +262,9 @@ void Posterior::process(){
 	for(i = 0; i < nbr_element; i++){
 		//normalize
 		//printf("%f / %f =  %f ", pdf[i],sum, pdf[i]/sum);
+		if (sum == 0){
+			printf("!!!!!!!!!!!!!sum is equal to zero!\n");
+		}
 		pdf[i] /= sum;
 		
 		//entropy
@@ -283,13 +286,13 @@ void Posterior::process(){
 	}
 	entropy = -1 * entropy;
 	//printf("\n");
-
+    printf("here4\n");
 	//log
-	const char* str = "/home/wjin/Workspace/plume_model_learning/Results/pdf.csv";
-	log_pdf(str, 'a');
+	//const char* str = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/pdf.csv";
+	//log_pdf(str, 'a');
 	// const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
 	// log_marginal_pdf(str2, 'a');
-	
+	printf("here5\n");
 	//print on screen
 	if(VERBOSE) model->print_expected_val();
 	if(VERBOSE) model->print_max_a_post_val();
@@ -353,6 +356,9 @@ void Posterior::MCMC_evaluation(struct history history){
 		dirac_flag = 1;
 		return;
 	}
+
+	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
+	update(posterior_value, sample);
 
 
 	//get model concentrations
