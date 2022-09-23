@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #for all the maps
-for n in {1..9}
+#for n in {1..9}
+for n in {9..10}
 do
 	cd map$n
 	echo $PWD
@@ -24,7 +25,7 @@ do
 				#change the wind speed in the file U in folder 0
 				text1="value           uniform (0 0 0);\n    }\n    outlet"
 				text2="value           uniform (-$w 0 0);\n    }\n    outlet"
-				sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U
+				sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U.orig
 				./Allrun_parallel.sh
 				cd ..
 			else

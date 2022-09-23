@@ -77,7 +77,7 @@ void PlumeModel::set_max_a_post_value(double* container){
 //constructor : default values
 GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	//number of parameters to estimate
-	nbr_param = 2;
+	nbr_param = 5;
 	
 	//allocate memory for the parameters
 	param_list = new parameter[nbr_param];
@@ -88,11 +88,11 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	//source_y
 	param_list[1] = parameter {"source_y", 		0,  	4, 		0.2, 	20, 	0, 0};
 	//Q
-	//param_list[2] = parameter {"Q", 			1, 		20, 	1.9, 	10, 	0, 0};
+	param_list[2] = parameter {"Q", 			1, 		50, 	1.9, 	20, 	0, 0};
 	//sigma_a
-	//param_list[3] = parameter {"sigma_y_a", 	0.01,  	0.05, 	0.004, 	10, 	0, 0};
+	param_list[3] = parameter {"sigma_y_a", 	0.01,  	0.05, 	0.004, 	10, 	0, 0};
 	//sigma_b
-	//param_list[4] = parameter {"sigma_y_b",  	0.1,   	0.5,  	0.04, 	10, 	0, 0};
+	param_list[4] = parameter {"sigma_y_b",  	0.1,   	0.5,  	0.04, 	10, 	0, 0};
 
 	
 
@@ -108,9 +108,9 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	covar_sig_ii = new double[nbr_param];
 	covar_sig_ii[0] = 4;	//x
 	covar_sig_ii[1] = 0.1;	//y
-	//covar_sig_ii[2] = 4;	//Q
-	//covar_sig_ii[3] = 0.00001;	//sigma_y_a
-	//covar_sig_ii[4] = 0.0005;	//sigma_y_n
+	covar_sig_ii[2] = 4;	//Q
+	covar_sig_ii[3] = 0.00001;	//sigma_y_a
+	covar_sig_ii[4] = 0.0005;	//sigma_y_n
 }
 
 //destructor
@@ -138,17 +138,17 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
 	double y = param_list[1] - robot_position.y;
 	double z = 0;//robot_position[2] - parameters.source_position[2];
 	// We take the average results from Faezeh's 2019 ICRA with wind0.9ReleaseRate50
-	double Q = 53.0; //param_list[2]
-	double sigma_a = 0.03; //param_list[3]
-	double sigma_b = 0.12; //param_list[4]
+	//double Q = 28.0; //param_list[2]
+	//double sigma_a = 0.036; //param_list[3]
+	//double sigma_b = 0.12; //param_list[4]
 
 	// verify if the point is not before the source
 	if(x < 0)
 		return 0.0;
 	else{
 		//std on y and z
-		//double sigma_y = param_list[3] * x + param_list[4];
-		double sigma_y = sigma_a * x + sigma_b;
+	    double sigma_y = param_list[3] * x + param_list[4];
+		//double sigma_y = sigma_a * x + sigma_b;
 		double sigma_z = 1;//parameters.a_z * x + parameters.b_z;
 		//double sigma_y = 0.000803  * x*x - 0.004406 * x + 0.1726;
     	//double sigma_z = 0.0006798 * x*x - 0.00244  * x + 0.1562;
@@ -156,7 +156,8 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
         //double sigma_z = 0.01 * x + 0.1;
 
 		//model : C(x,y,z) = (Q/2pi.u.sigmaY.sigmaZ) * exp (-y^2/2sigmaY^2 - z^2/2sigmaZ^2)
-		double model_value = (Q/(2*PI*wind_intensity*sigma_y*sigma_z)) * exp( -((y*y)/(2*sigma_y*sigma_y)) - ((z*z)/(2*sigma_z*sigma_z)) );
+		//double model_value = (Q/(2*PI*wind_intensity*sigma_y*sigma_z)) * exp( -((y*y)/(2*sigma_y*sigma_y)) - ((z*z)/(2*sigma_z*sigma_z)) );
+		double model_value = (param_list[2]/(2*PI*wind_intensity*sigma_y*sigma_z)) * exp( -((y*y)/(2*sigma_y*sigma_y)) - ((z*z)/(2*sigma_z*sigma_z)) );
 		
 		return model_value;
 	}

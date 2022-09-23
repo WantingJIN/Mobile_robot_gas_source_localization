@@ -40,9 +40,9 @@ if __name__ == "__main__":
     DeepCFD.eval()
 
     # visualize and save the output
-    out = DeepCFD(test_x[:160].to(device))
-    error = torch.abs(out.cpu() - test_y[:160].cpu())
-    for s in range(test_x[:160].size(0)):
-    	visualize(test_x[:160].cpu().detach().numpy(), test_y[:160].cpu().detach().numpy(), out.cpu().detach().numpy(), error.cpu().detach().numpy(), s)
-    	plot_figure(test_x[:160].cpu().detach().numpy(), test_y[:160].cpu().detach().numpy(), out.cpu().detach().numpy(), error.cpu().detach().numpy(), s)
+    out = DeepCFD(test_x[:1].to(device))
+    error = torch.abs(out.cpu() - test_y[:1].cpu())
+    for s in range(test_x[:1].size(0)):
+    	visualize(test_x[:1].cpu().detach().numpy(), test_y[:1].cpu().detach().numpy(), out.cpu().detach().numpy(), error.cpu().detach().numpy(), s)
+    	plot_figure(test_x[:1].cpu().detach().numpy(), test_y[:1].cpu().detach().numpy(), out.cpu().detach().numpy(), error.cpu().detach().numpy(), s)
     print("sum of all errors on c_avg: ", error[:,0,:,:].sum())
