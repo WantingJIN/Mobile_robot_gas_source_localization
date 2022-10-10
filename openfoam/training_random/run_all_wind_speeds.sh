@@ -17,8 +17,8 @@ do
 	cd $d
 	./Allremove.sh
 	#change the wind speed
-	text1="value           uniform (0 0 0);\n    }\n    outlet"
-	text2="value           uniform (-$w 0 0);\n    }\n    outlet"
+	text1="internalField   uniform (-0.75 0 0);\n"
+	text2="internalField   uniform (-$w 0 0);\n"
 	sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U
 	./Allrun.sh
 	cd ..

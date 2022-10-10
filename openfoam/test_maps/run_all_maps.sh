@@ -2,12 +2,12 @@
 
 #for all the maps
 #for n in {1..9}
-for n in {9..10}
+for n in {1..8}
 do
 	cd map$n
 	echo $PWD
 	#run for different wind speeds
-	for w in 1
+	for w in 0.2
 	do
 		d=map${n}_wind$w
 		echo $d
@@ -23,8 +23,8 @@ do
 				cd $d
 				./Allremove.sh
 				#change the wind speed in the file U in folder 0
-				text1="value           uniform (0 0 0);\n    }\n    outlet"
-				text2="value           uniform (-$w 0 0);\n    }\n    outlet"
+				text1="internalField   uniform (-0.75 0 0);\n"
+				text2="internalField   uniform (-$w 0 0);\n"
 				sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U.orig
 				./Allrun_parallel.sh
 				cd ..
