@@ -4,6 +4,7 @@ Results*/**
 webots/wb_output.txt
 webots_*/
 *.wbproj
+webots/controllers/controller_STE_video
 
 # openfoam
 openfoam/training_random/training_random_win*/*
@@ -17,6 +18,8 @@ openfoam/AutoGDM
 # khepera
 
 Khepera/Results/**
+Khepera/STE_PC_server/**
+
 
 # executable file 
 **/build/
@@ -34,3 +37,6 @@ Khepera/Results/**
 **/ReadmeFile/
 **/c++*/
 
+# some figures
+**feature**.png
+**truth**.png

@@ -136,7 +136,7 @@ void webots_physics_init() {
 	// The number of filaments should be adjusted such that the filaments disappear roughly at the border of the simulation area.
 	// WEBOTS 2019 UPDATE
 	// 200 is the number of filaments. Should be the same as the number in the webots supervisor
-	new FilamentList(simulation, (filament_n ? strtol(filament_n, 0, 0) : 2400));
+	new FilamentList(simulation, (filament_n ? strtol(filament_n, 0, 0) : 900));
 // Fa
 	// Add a constant wind field
 	//new ObstacleList(simulation);

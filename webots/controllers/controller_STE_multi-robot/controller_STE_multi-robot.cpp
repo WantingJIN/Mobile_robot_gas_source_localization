@@ -17,6 +17,8 @@
 #include "aStar.h"
 #include "visilibity.hpp"
 
+#include <webots/supervisor.h>
+
 using namespace std;
 
 //Global Variables
@@ -775,7 +777,6 @@ void state_measuring(){
 	}else{
 		//average all samples
 		sampleBuffer.average_all();
-
 		//log and save
 		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
@@ -792,6 +793,12 @@ void state_measuring(){
 			Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
     		send_msg(msg);
     	}
+		char label[255];
+        sprintf(label,"Iteration: %d\n",history.size);
+        wb_supervisor_set_label(2,label,0.1,0.8,0.1,0x61A8E8,0,"Impact");
+	    char label2[255];
+        sprintf(label2,"Reading: %.3f\n",sampleBuffer.average_concentration);
+        wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
 
 		// go to estimation
 		FSM.state = STATE_ESTIMATING;
@@ -980,6 +987,12 @@ int main(int argc, char **argv){
     	exit(0);
   	}
   	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
+	char label[255];
+    sprintf(label,"Iteration: %d\n",0);
+    wb_supervisor_set_label(2,label,0.1,0.8,0.1,0x61A8E8,0,"Impact");
+	char label2[255];
+    sprintf(label2,"Reading: %d\n",0);
+    wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED){
