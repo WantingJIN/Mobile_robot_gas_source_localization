@@ -103,6 +103,7 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
+	double source_position[2];
 };
 extern struct simulation_parameters simulation_parameters;
 

@@ -39,6 +39,8 @@ FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
+FILE* baseline_measurements_logfile;
+
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
 char posterior_logfile_name[256];
@@ -52,6 +54,7 @@ char posterior_pdf_3D_name[256];
 char entropy_logfile_name[256];
 char config_logfile_name[256];
 char trajectory_logfile_name[256];
+char baseline_measurements_logfile_name[256];
 
 // finite state machine
 struct FSM FSM;

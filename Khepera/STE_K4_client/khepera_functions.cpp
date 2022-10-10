@@ -89,6 +89,8 @@ void init(){
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
+    sprintf(baseline_measurements_logfile_name, "%s/baseline_measurements.csv", folder_name);
+
    
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
@@ -101,6 +103,8 @@ void init(){
     fclose(max_a_posteriori_logfile);
     trajectory_logfile = fopen(trajectory_logfile_name, "w");
     fclose(trajectory_logfile);
+    baseline_measurements_logfile = fopen(baseline_measurements_logfile_name, "w");
+    fclose(baseline_measurements_logfile);
 
     // get the configuration
     //default values for the simulation parameters
@@ -152,6 +156,13 @@ void init(){
        fclose(sim_param_file);
     }
 
+    if(access("/home/root/wanting/source_location.txt", F_OK) != -1 ){
+       sim_param_file = fopen("/home/root/wanting/source_location.txt", "r");
+       ok = fscanf(sim_param_file, "%f %f", &simulation_parameters.source_position[0], &simulation_parameters.source_position[1]);
+       if(ok) printf("source position : %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1]);
+       fclose(sim_param_file);
+    }
+
 	printf("Number of robots : %d - scenario : %d \n", simulation_parameters.number_of_robots, simulation_parameters.scenario);
 
 	//write the simulation parameters
@@ -166,7 +177,7 @@ void init(){
     fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-    fprintf(sim_param_file, "source_position %f %f %f\n", 12.9, 2.0, 0.1);
+    fprintf(sim_param_file, "source_position %f %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1], 0.1);
     fprintf(sim_param_file, "robot's ID %d\n", ID);
 	fclose(sim_param_file);
 }
@@ -302,7 +313,7 @@ void establish_baseline(){
     khepera4_drive_set_speed(0,0);
     odor_baseline_value = (max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
     printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
-
+    log_baseline(min, max, odor_baseline_value);
     //starting point of the actuall algorithm random on Y
     goal_position.x = 3 + (ID-101)/5;
     goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
@@ -635,4 +646,10 @@ void cleaning_up(){
 
 void next_iteration_time(){
 	usleep(SLEEP_PERIOD * 200);
+}
+
+void log_baseline(double min_c, double max_c, double baseline_c){
+	baseline_measurements_logfile = fopen(baseline_measurements_logfile_name, "a");
+	fprintf(baseline_measurements_logfile,"%f, %f, %f\n", min_c, max_c, baseline_c);
+	fclose(baseline_measurements_logfile);
 }
