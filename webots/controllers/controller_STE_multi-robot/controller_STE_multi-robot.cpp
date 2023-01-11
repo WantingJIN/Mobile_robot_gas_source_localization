@@ -822,13 +822,13 @@ void state_estimating(){
 	}
 	
 	printf("sum posterior : %f \n", posterior.sum);
-	printf("Before process. \n");
+	//printf("Before process. \n");
 	posterior.process();
-	printf("After Process. Start logging.\n");
+	//printf("After Process. Start logging.\n");
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
-	printf("Finish logging.\n");
+	//printf("Finish logging.\n");
 	posterior.log_pdf("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/current/101/posterior.csv",'a');
 
 	FSM.n_cycles++;

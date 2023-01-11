@@ -252,7 +252,7 @@ void webots_physics_step() {
 	double simulation_time = dWebotsGetTime() / 1000.;
 	simulation->mSimulationTimeStep = simulation_time - simulation->mSimulationTime;
 	simulation->mSimulationTime = simulation_time;
-	std::cout << simulation->mSimulationTime << std::endl;
+	//std::cout << simulation->mSimulationTime << std::endl;
 	simulation->OnSimulationStep();
 
 	// Store an odor profile after 20 seconds

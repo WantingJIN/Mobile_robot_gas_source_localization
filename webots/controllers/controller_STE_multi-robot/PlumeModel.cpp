@@ -2,12 +2,12 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "PlumeModel.h"
+#include "controller_STE_multi-robot.h"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 #include <stdexcept>
-#include "controller_STE_multi-robot.h"
 
 /********************************************************/
 //						PlumeModel 						//
