@@ -59,12 +59,12 @@ int main(int argc, const char* argv[]) {
      
 
 
-      //convert to torch tensor
+    //convert to torch tensor
     torch::Tensor x = torch::from_blob(py_x->data, {(long long)py_x->dims[0], (long long)py_x->dims[1], (long long)py_x->dims[2], (long long)py_x->dims[3]}, torch::TensorOptions().dtype(torch::kDouble));
     //double * ptr = (double *) r->data;
     //  std::cout<< ptr << std::endl;
      torch::Tensor r_torch = torch::from_blob(r->data, {(long long)r->dims[0], (long long)r->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
-   
+    // Compare the original data and the tensor data
     //  for (int i = 0; i < r->dims[0]; i++) {
     //     for (int j = 0; j < r->dims[1]; j++) {
     //     std::cout << "Original data: " << ptr[i * r->dims[1] + j] << " Tensor value: " <<r_torch[i][j].item<double>() << std::endl;
@@ -74,20 +74,19 @@ int main(int argc, const char* argv[]) {
     //std::cout << r_torch << std::endl;
     
     // Calculate the revert distance to the estimated gas source
-    //  x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
-    // //Create a vector of inputs.
-    // std::vector<torch::jit::IValue> inputs;
-    // inputs.push_back(x.to(device));
-    // //std::cout << x[0][2] << std::endl;
-    // //std::cout << DeepCFD(inputs) << std::endl;
-    // // Execute the model and turn its output into a tensor.
-    // at::Tensor output = DeepCFD(inputs).toTensor();
-    // std::cout << output << std::endl;
+    x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
+    std::vector<torch::jit::IValue> inputs;
+    // NOTE: The input tensor must be a float tensor
+    inputs.push_back(x.to(torch::kFloat).to(device));
+    //std::cout << DeepCFD(inputs) << std::endl;
+    // Execute the model and turn its output into a tensor.
+    at::Tensor output = DeepCFD(inputs).toTensor();
+    //std::cout << output << std::endl;
   
-    // Mat_VarFree(py_x);
-    // Mat_VarFree(r);
-    // Mat_VarFree(c);
-    // Mat_Close(mat);
-    // return 0;
+    Mat_VarFree(py_x);
+    Mat_VarFree(r);
+    Mat_VarFree(c);
+    Mat_Close(mat);
+    return 0;
 
 }
