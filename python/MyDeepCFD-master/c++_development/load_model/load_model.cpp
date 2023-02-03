@@ -8,6 +8,7 @@
 #include <memory>
 //#include <opencv2/opencv.hpp>
 #include <matio.h>
+#include <cmath>
 //#include <Eigen/Dense>
 
 // NOTE: I downloaded the matio library from https://sourceforge.net/projects/matio/files/matio/1.5.17/matio-1.5.17.tar.gz/download
@@ -82,6 +83,23 @@ int main(int argc, const char* argv[]) {
     // Execute the model and turn its output into a tensor.
     at::Tensor output = DeepCFD(inputs).toTensor();
     //std::cout << output << std::endl;
+
+    std::vector<float> lpx = {9.0, 3.5};
+    std::vector<float> lpy = {2.4, 1};
+    std::vector<float> concentration;
+    for (int i=0; i < lpx.size(); i++) {
+        int idx_x = round((lpx[i] - min(r_torch[0]).item<float>()))/(r_torch[1][0] - r_torch[0][0]).item<float>();
+        int idx_y = round((lpy[i] - min(c_torch[0]).item<float>()))/(c_torch[0][1] - c_torch[0][0]).item<float>();
+        std::cout<< "idx_x is"<<idx_x << std::endl;
+        std::cout<< "idx_y is"<<idx_y << std::endl;
+
+        //std::cout<< "idx_y is"<<idx_y << std::endl;
+        std::cout << "The estimated concentration at (" << lpx[i] << ", " << lpy[i] << ") is " << output[0][0][idx_x][idx_y].item<float>() << std::endl;
+    }
+    
+
+  return 0;
+
   
     Mat_VarFree(py_x);
     Mat_VarFree(r);
