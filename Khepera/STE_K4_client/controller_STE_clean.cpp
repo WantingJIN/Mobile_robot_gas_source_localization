@@ -242,7 +242,7 @@ int init_TCP_socket(){
 	//serv_addr.sin_addr.s_addr = INADDR_ANY; 
 	
 	// Convert IPv4 and IPv6 addresses from text to binary form 
-	if(inet_pton(AF_INET, "192.168.141.11", &serv_addr.sin_addr)<=0) { //Server's IP
+	if(inet_pton(AF_INET, "192.168.1.247", &serv_addr.sin_addr)<=0) { //Server's IP
 		printf("\nInvalid address/ Address not supported \n"); 
 		return -1; 
 	} 
@@ -413,8 +413,11 @@ void state_moving(){
 	//verify if arrived to the goal if applicable
 	if(dist_to_goal(goal_position) > 0.05){
 		//move
-		if(dist_to_goal(*i) <= 0.05 && i != path.end())
+		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
 			i++;
+			printf("current goal is: %f, %f\n", i->x, i->y);
+
+		}
 		go_to_goal(*i);
 		//obstacle avoidance if necessary
 		if(obstacle_or_not() == 1){

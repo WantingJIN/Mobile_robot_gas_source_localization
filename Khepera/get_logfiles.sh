@@ -21,11 +21,12 @@ ID=102
 
 # start the client
 # k4put STE_K4_client/STE_K4_client +$ID
-# ssh -t root@192.168.141.$ID 'cd rahbar; ./STE_K4_client'
+# ssh -t root@192.168.1.$ID 'cd rahbar; ./STE_K4_client'
 
 # gather log files
 current_time=$(date +"%Y-%m-%d_%H-%M")
 mkdir Results/$current_time
+cp /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt log_STE_multi/
 mv /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/log_STE_multi Results/$current_time/pc
 k4get log_STE_multi +$ID
-mv /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/k4-192.168.141."$ID"/log_STE_multi Results/$current_time/k4
+mv /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/k4-192.168.1."$ID"/log_STE_multi Results/$current_time/k4

@@ -2,10 +2,10 @@
 
 
 # robot's ID
-ID=102
+ID=106
 
 # set the map number
-map=11
+map=2
 echo "+++ Map number $map +++"
 # echo $map > "/home/rahbar/Projects/DDPM_K4/Data/params/map_nbr.txt"
 # environment map
@@ -22,11 +22,11 @@ k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/sour
 
 # start the client
 k4put STE_K4_client/STE_K4_client +$ID
-ssh -t root@192.168.141.$ID 'cd wanting; ./STE_K4_client'
+ssh -t root@192.168.1.$ID 'cd wanting; ./STE_K4_client'
 
 # gather log files
 # current_time=$(date +"%Y-%m-%d_%H-%M")
 # mkdir Results/$current_time
 # mv -r /home/rahbar/Projects/DDPM_K4/log_STE_multi Results/$"current_time"/pc
 # k4get log_STE_multi +$ID
-# mv -r /home/rahbar/Projects/DDPM_K4/k4-192.168.141."$ID"/log_STE_multi Results/$"current_time"/k4
+# mv -r /home/rahbar/Projects/DDPM_K4/k4-192.168.1."$ID"/log_STE_multi Results/$"current_time"/k4

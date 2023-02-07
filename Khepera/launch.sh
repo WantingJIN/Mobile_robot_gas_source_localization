@@ -20,12 +20,12 @@ export PYTHONPATH=/home/rahbar/Projects/DDPM_K4/STE_PC_server
 
 # start the client
 k4put STE_K4_client/STE_K4_client +$ID
-ssh -t root@192.168.141.$ID 'rm /home/root/rahbar/log_STE_multi/*'
-ssh -t root@192.168.141.$ID 'cd rahbar; ./STE_K4_client'
+ssh -t root@192.168.1.$ID 'rm /home/root/rahbar/log_STE_multi/*'
+ssh -t root@192.168.1.$ID 'cd rahbar; ./STE_K4_client'
 
 # gather log files
 current_time=$(date +"%Y-%m-%d_%H-%M")
 mkdir Results/$current_time
 mv /home/rahbar/Projects/DDPM_K4/log_STE_multi Results/"$current_time"/pc
 k4get log_STE_multi +$ID
-mv /home/rahbar/Projects/DDPM_K4/k4-192.168.141."$ID"/log_STE_multi Results/"$current_time"/k4
+mv /home/rahbar/Projects/DDPM_K4/k4-192.168.1."$ID"/log_STE_multi Results/"$current_time"/k4
