@@ -4,6 +4,9 @@ Results*/**
 webots/wb_output.txt
 webots_*/
 *.wbproj
+webots/plugins/**
+
+WIRE_Lab/**
 
 # openfoam
 openfoam/training_random/training_random_win*/*
@@ -16,7 +19,10 @@ openfoam/AutoGDM
 
 # khepera
 
-Khepera/Results/**
+Khepera/Results*/**
+Khepera/bad/**
+Khepera/log_STE_multi/**
+Khepera/STE_PC_server/log_STE_multi/**
 
 # executable file 
 **/build/
