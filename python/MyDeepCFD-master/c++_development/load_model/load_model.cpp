@@ -11,10 +11,10 @@
 #include <cmath>
 //#include <Eigen/Dense>
 
-// NOTE: I downloaded the matio library from https://sourceforge.net/projects/matio/files/matio/1.5.17/matio-1.5.17.tar.gz/download
-// and compiled it following the ReadME.txt file in the downloaded folder.
+// NOTE: Download the matio library from https://sourceforge.net/projects/matio/files/matio/1.5.17/matio-1.5.17.tar.gz/download
+// and compile it following the ReadME.txt file in the downloaded folder.
 // The FindMATIO.cmake file is required for the CMAKE to find the matio library.
-// I downloaded it from https://github.com/ami-iit/matio-cpp/blob/master/cmake/FindMATIO.cmake
+// Downloaded it from https://github.com/ami-iit/matio-cpp/blob/master/cmake/FindMATIO.cmake
 
 
 int main(int argc, const char* argv[]) {
@@ -36,13 +36,13 @@ int main(int argc, const char* argv[]) {
     float sx = 3.224360, sy = 2.772563;
 
     // Load mat file
-    std::string mat_address = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "_flowdef_sdf_emptysourcepos.mat";
+    std::string mat_address = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
     //convert string to char*
     std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];
     strcpy(mat_adr, mat_address.c_str());
     mat_t *mat;
-    matvar_t *py_x = NULL, *r = NULL, *c = NULL;
+    matvar_t *r = NULL, *c = NULL, *flow_def = NULL, *sdf = NULL, *reverse_sd= NULL;
     mat = Mat_Open(mat_adr, MAT_ACC_RDONLY);
     if (mat == NULL) {
         std::cout << "Error opening MAT file" << std::endl;
@@ -50,21 +50,29 @@ int main(int argc, const char* argv[]) {
     }
     //std::cout << mat-> << std::endl;
     //std::cout << mat<< std::endl;
-    py_x = Mat_VarRead(mat, "py_x");
+    flow_def = Mat_VarRead(mat, "flow_def");
+    sdf = Mat_VarRead(mat, "sdf");
+    reverse_sd = Mat_VarRead(mat, "source_pos");
     r = Mat_VarRead(mat, "X");
     c = Mat_VarRead(mat, "Y");
-    if (py_x == NULL || r == NULL || c == NULL) {
+    if (flow_def == NULL || sdf == NULL || reverse_sd == NULL ||r == NULL || c == NULL) {
         std::cout << "Error reading MAT file" << std::endl;
         return 1;
     }
-     
-
+    // declare the tensor of dimension 1x3x64x64
+    torch::Tensor x = torch::zeros({1, 3, 64, 64}, torch::TensorOptions().dtype(torch::kDouble));
 
     //convert to torch tensor
-    torch::Tensor x = torch::from_blob(py_x->data, {(long long)py_x->dims[0], (long long)py_x->dims[1], (long long)py_x->dims[2], (long long)py_x->dims[3]}, torch::TensorOptions().dtype(torch::kDouble));
-    //double * ptr = (double *) r->data;
-    //  std::cout<< ptr << std::endl;
-     torch::Tensor r_torch = torch::from_blob(r->data, {(long long)r->dims[0], (long long)r->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+   
+    torch:: Tensor flow_def_torch = torch::from_blob(flow_def->data, {(long long)flow_def->dims[0], (long long)flow_def->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+    torch:: Tensor sdf_torch = torch::from_blob(sdf->data, {(long long)sdf->dims[0], (long long)sdf->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+    torch:: Tensor reverse_sd_torch = torch::from_blob(reverse_sd->data, {(long long)reverse_sd->dims[0], (long long)reverse_sd->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+    
+    x[0][0].slice(/*dim=*/0, /*start=*/0, /*end=*/flow_def_torch.size(0)).copy_(flow_def_torch);
+    x[0][1].slice(/*dim=*/0, /*start=*/0, /*end=*/sdf_torch.size(0)).copy_(sdf_torch);
+    x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/reverse_sd_torch.size(0)).copy_(reverse_sd_torch);
+
+    torch::Tensor r_torch = torch::from_blob(r->data, {(long long)r->dims[0], (long long)r->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
     // Compare the original data and the tensor data
     //  for (int i = 0; i < r->dims[0]; i++) {
     //     for (int j = 0; j < r->dims[1]; j++) {
@@ -77,31 +85,28 @@ int main(int argc, const char* argv[]) {
     // Calculate the revert distance to the estimated gas source
     x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
     std::vector<torch::jit::IValue> inputs;
+    //transpose the tensor
+    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
     // NOTE: The input tensor must be a float tensor
-    inputs.push_back(x.to(torch::kFloat).to(device));
-    //std::cout << DeepCFD(inputs) << std::endl;
+    inputs.push_back(x_trans.to(torch::kFloat).to(device));
+    //std::cout << x_trans[0][1] << std::endl;
     // Execute the model and turn its output into a tensor.
     at::Tensor output = DeepCFD(inputs).toTensor();
     //std::cout << output << std::endl;
 
-    std::vector<float> lpx = {9.0, 3.5};
-    std::vector<float> lpy = {2.4, 1};
+    std::vector<float> lpx = {9.0, 3.5, 3.0};
+    std::vector<float> lpy = {2.4, 1, 2.7};
     std::vector<float> concentration;
     for (int i=0; i < lpx.size(); i++) {
-        int idx_x = round((lpx[i] - min(r_torch[0]).item<float>()))/(r_torch[1][0] - r_torch[0][0]).item<float>();
-        int idx_y = round((lpy[i] - min(c_torch[0]).item<float>()))/(c_torch[0][1] - c_torch[0][0]).item<float>();
-        std::cout<< "idx_x is"<<idx_x << std::endl;
-        std::cout<< "idx_y is"<<idx_y << std::endl;
-
-        //std::cout<< "idx_y is"<<idx_y << std::endl;
-        std::cout << "The estimated concentration at (" << lpx[i] << ", " << lpy[i] << ") is " << output[0][0][idx_x][idx_y].item<float>() << std::endl;
+        int idx_x = round((lpx[i] - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+        int idx_y = round((lpy[i] - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+        std::cout<< "idx_x is: "<<idx_x;
+        std::cout<< " idx_y is: "<<idx_y << std::endl;
+        std::vector<float> c_avg;
+        c_avg.push_back(output[0][0][idx_y][idx_x].item<float>());
+        std::cout << "The estimated concentration at (" << lpx[i] << ", " << lpy[i] << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
     }
     
-
-  return 0;
-
-  
-    Mat_VarFree(py_x);
     Mat_VarFree(r);
     Mat_VarFree(c);
     Mat_Close(mat);

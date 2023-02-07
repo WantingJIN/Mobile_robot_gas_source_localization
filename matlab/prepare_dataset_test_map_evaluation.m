@@ -24,7 +24,7 @@ y = round(0.01:0.0632:3.9916, 4);
 counter = 0;
 
 %% create 3D grid sets
-for i=1:length(plume_data_list)-1
+for i=0 %:length(plume_data_list)-1
     
     % map number
     mapN = ['map' num2str(i)];
@@ -41,37 +41,40 @@ for i=1:length(plume_data_list)-1
     empty_source_pos = zeros(size(flow_def.flow_def));
     
     % putting everything together
-    ds1_x(1,1,:,:) = flow_def.flow_def;
-    ds1_x(1,2,:,:) = SDF.sdf;
-    ds1_x(1,3,:,:) = empty_source_pos;
+%     ds1_x(1,1,:,:) = flow_def.flow_def;
+%     ds1_x(1,2,:,:) = SDF.sdf;
+%     ds1_x(1,3,:,:) = empty_source_pos;
+    flow_def = flow_def.flow_def;
+    sdf = SDF.sdf;
+    source_pos = empty_source_pos;
     
     % save it
-    py_x = ds1_x;
-    save([plume_data_folder mapN '/test_' mapN '_flowdef_sdf_emptysourcepos.mat'], 'py_x', 'X', 'Y');
-    clear py_x;
+    %py_x = ds1_x;
+    save([plume_data_folder mapN '/test_' mapN 'test_flowdef_sdf_emptysourcepos.mat'],'flow_def','sdf','source_pos', 'X', 'Y');
+    %clear py_x;
     
     %% dataset #2 (one dataset for each possible source position)
     
-    counter = 0;
-    
-    % source position map
-    for sx = 2.75+0.25:0.5:12.75
-        for sy = 0+0.1:0.2:4
-            % distance from source
-            dist_to_source = zeros(size(flow_def.flow_def));
-            dist_to_source = sqrt((X-sx).^2 + (Y-sy).^2);
-            
-            % put everything together
-            counter = counter + 1;
-            ds2_x(counter,1,:,:) = flow_def.flow_def;
-            ds2_x(counter,2,:,:) = SDF.sdf;
-            ds2_x(counter,3,:,:) = 1./dist_to_source;
-        end
-    end
-    
-    % save it
-    py_x = ds2_x;
-    save([plume_data_folder mapN '/test_' mapN '_flowdef_sdf_allsourcepos.mat'], 'py_x', 'X', 'Y');
-    clear py_x;
+%     counter = 0;
+%     
+%     % source position map
+%     for sx = 2.75+0.25:0.5:12.75
+%         for sy = 0+0.1:0.2:4
+%             % distance from source
+%             dist_to_source = zeros(size(flow_def.flow_def));
+%             dist_to_source = sqrt((X-sx).^2 + (Y-sy).^2);
+%             
+%             % put everything together
+%             counter = counter + 1;
+%             ds2_x(counter,1,:,:) = flow_def.flow_def;
+%             ds2_x(counter,2,:,:) = SDF.sdf;
+%             ds2_x(counter,3,:,:) = 1./dist_to_source;
+%         end
+%     end
+%     
+%     % save it
+%     py_x = ds2_x;
+%     save([plume_data_folder mapN '/test_' mapN '_flowdef_sdf_allsourcepos.mat'], 'py_x', 'X', 'Y');
+%     clear py_x;
 
 end
