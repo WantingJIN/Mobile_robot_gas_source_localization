@@ -66,8 +66,10 @@ for i=1:number
     max_a_post = dlmread([folder_name_pc, '/max_a_posteriori.csv']);
     if(isnan(expected_a_posteriori(i,1))), expected_a_posteriori(i,1) = max_a_post(end,2); end
     if(isnan(expected_a_posteriori(i,2))), expected_a_posteriori(i,2) = max_a_post(end,3); end
-    error_list(i,1) = params.source_position(1) - expected_a_posteriori(i,1);
-    error_list(i,2) = params.source_position(2) - expected_a_posteriori(i,2);
+    fileID = fopen([folder_name_pc '/source_position.txt'],'r');
+    source_real_position=fscanf(fileID, '%f %f');
+    error_list(i,1) = source_real_position(1) - expected_a_posteriori(i,1);
+    error_list(i,2) = source_real_position(2) - expected_a_posteriori(i,2);
     entropy = dlmread([folder_name_pc, '/entropy.csv']);
     entropy_list(i,1) = entropy(end,1);
     
@@ -78,29 +80,60 @@ end
 %% boxplots
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 subplot(5,1,1)
+custom_color = [44,136,217]./255;
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,1), map_nbr_list);
+boxplot(error_list(:,1), map_nbr_list, 'Colors',custom_color);
 grid on;
 title('error on x');
 subplot(5,1,2);
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,2), map_nbr_list);
+boxplot(error_list(:,2), map_nbr_list, 'Colors',custom_color);
 grid on;
 title('error on y');
 subplot(5,1,3);
-boxplot(iteration_nbr_list, map_nbr_list);
+boxplot(iteration_nbr_list, map_nbr_list, 'Colors',custom_color);
 grid on;
 title('nbr iterations');
 subplot(5,1,4);
-boxplot(entropy_list, map_nbr_list);
+boxplot(entropy_list, map_nbr_list,'Colors',custom_color);
 grid on;
 title('final entropy');
 subplot(5,1,5);
-boxplot(convergence_list, map_nbr_list);
+boxplot(convergence_list, map_nbr_list,'Colors',custom_color);
 grid on;
 title('convergence');
 
 %% save
 saveas(f,[general_folder '/test_maps_results_comparison.png']);
+
+%%
+f = figure();
+subplot(1,3,1)
+plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+hold on;
+boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
+set(findobj(gca,'type','line'),'linew',1.5);
+grid on;
+xlabel('Map number');
+ylabel('Distance Error(m)');
+title('Error on x');
+subplot(1,3,2);
+plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+hold on;
+boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
+set(findobj(gca,'type','line'),'linew',1.5);
+grid on;
+xlabel('Map number');
+ylabel('Distance Error(m)')
+title('Error on y');
+subplot(1,3,3);
+boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
+set(findobj(gca,'type','line'),'linew',1.5);
+grid on;
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+xlabel('Map number');
+title('nbr iterations');
+

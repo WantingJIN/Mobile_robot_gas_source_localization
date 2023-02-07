@@ -1,7 +1,8 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/10');
+folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2');
+%folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/bad/2_backup/');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -30,8 +31,11 @@ for i=1:exp_number
         if(isnan(expected_a_posteriori(end,3))), expected_a_posteriori(end,3) = max_a_posteriori(end,3); end
         % ground truth and other params
         params = my_text2struct([folder_name_pc, '/param_log.csv']);
+        fileID = fopen([folder_name_pc '/source_position.txt'],'r');
+        source_real_position=fscanf(fileID, '%f %f');
+        source_real_position(3) = 0.1;
         %source_real_position = params.source_position;
-        source_real_position = [10, 1.5 , 0.1];
+        %source_real_position = [params.source_position(0), params.source_position(1) , 0.1];
         Q_min = params.min_maxs(1); Q_max = params.min_maxs(2);
         source_position_min = [params.min_maxs(3),params.min_maxs(5)];
         source_position_max = [params.min_maxs(4),params.min_maxs(6)];
@@ -108,6 +112,7 @@ for i=1:exp_number
         axes0 = axes('Parent',f2all,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
         hold on;
         scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName','Measurements','MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);
+        %scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth','showlegend', 'False', 0.05);
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
         plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',10,'LineWidth',2,'DisplayName','Source real position'); %real source position
         plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',10,'LineWidth',2,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
@@ -116,14 +121,14 @@ for i=1:exp_number
         patch(obstacles_x,obstacles_y ,[0.6 0.8 1],'DisplayName','Obstacle', 'LineStyle', 'none');
         hold off;
         set(axes0,'Ytick',0:1:4)
-        grid on; axis equal; axis([2.25 13.25 0 4 0 2]);
+        grid on; axis equal; axis([2.25 12.7 0 4 0 2]);
         c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]); load MyColormap.mat; colormap(mymap); %colormap jet;
         xlabel('X (m)');ylabel('Y (m)');
         view(180,90);
         legend1 = legend(axes0,'show');
         set(legend1,'Position',[0.469773299748109 0.0272789076115389 0.413937271835497 0.221351976214818]);
         annotation(f2all,'textbox',[0.234287457153379 0.185796129034299 0.104365076491284 0.0473684201637904],'String',{'Concentration'},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold');
-        title('Trajectory and measurements');
+        %title('Trajectory and measurements');
         a = get(gca,'XTickLabel'); set(gca,'XTickLabel',a,'FontName','Times','fontweight','bold','fontsize',9);
         hold off;
         
@@ -274,6 +279,7 @@ for i=1:exp_number
     % save
     saveas(f1all,[folder_name '/measurements_entropy.png']);
     saveas(f2all,[folder_name '/trajectory.png']);
+     saveas(f2all,[folder_name '/trajectory.svg']);
     
     close(f1all); close(f2all);
 end
