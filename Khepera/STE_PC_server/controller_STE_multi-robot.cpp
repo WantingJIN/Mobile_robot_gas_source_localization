@@ -367,7 +367,7 @@ void log_history(){
     fclose(measurement_history_logfile);
    
 	//posterior 3D
-	posterior.log_pdf(posterior_pdf_3D_name, 'w');
+	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
 }
 
 void log_trajectory(Position p){
@@ -382,11 +382,12 @@ void log_trajectory(Position p){
 
 //ASSUMPTION : Using the history of measurements, but only one robot is operating
 double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose){ 
-	float sigmaE = simulation_parameters.likelihood_error;
+	//float sigmaE = simulation_parameters.likelihood_error;
+	float sigmaE = 775;
 	//float sigmaD = 250; //125;
 	double sum_tmp = 0;
 
-	double true_source_location[2] = {10,2};
+	double true_source_location[2] = {11.0,1.0};
 
 	// if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
@@ -404,7 +405,11 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg);
 	//model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, true_source_location, true_model_c_avg);
 	for (int i = 0; i < history.size; i++){
-		float sigmaD = history.measurement_std[i];
+		// float sigmaD = history.measurement_std[i];
+		// if (sigmaD > 125){
+		// 	sigmaD = 125;
+		// }
+		float sigmaD = 0;
 		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i][0], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 		if (verbose){
 			//printf("Parameters is : %f, %f\n", parameters[0], parameters[1]);
@@ -417,7 +422,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 
 double likelihood(struct history history, double *parameters, vector<float> model_c_avg){ 
 	float sigmaE = simulation_parameters.likelihood_error;
-	float sigmaD = 125; //125;
+	float sigmaD = 0; //125;
 	double sum_tmp = 0;
 	// if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
@@ -440,7 +445,7 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
 	// verify the x and y elements of the parameters are not inside obstacles
 	Position tmp_p(parameters[0], parameters[1], 0);
 	if(tmp_p.is_in_obstacle_list(obstacles, nbr_obs) != -1){
-		printf("point %f %f is in obstacle\n", parameters[0], parameters[1]);
+		//printf("point %f %f is in obstacle\n", parameters[0], parameters[1]);
 		output = 0;
 	}
 
@@ -784,7 +789,7 @@ void goal_outside_obstacles(Position * goal){
 	// is the goal position in an obstacle?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
 	// if not, then back to business
-	if(idx == -1 && !position_outside_arena(goal)){
+	if(idx == -1 && !position_outside_arena(*goal)){
 		// printf(">>> the goal is not in any obstacles\n");
 		return;
 	}
@@ -822,8 +827,9 @@ void goal_outside_obstacles(Position * goal){
 				}
 			}
 			//change the goal position using the pointer
-			printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-			goal->copy_position(nearest_position);
+			//printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+	    }
+		goal->copy_position(nearest_position);
 	}
 	if (position_outside_arena(*goal)){
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
@@ -837,22 +843,26 @@ void goal_outside_obstacles(Position * goal){
 
 		for(int i=0; i<4; i++){
 			//check if the distance to candidate is smaller than others
+			//printf("XMIN :%f, XMAX:%f, YMIN:%f, YMAX:%f\n", XMIN, XMAX, YMIN, YMAX);
+			printf("candidates x: %f, y:%f\n", candidates[i].x, candidates[i].y);
+			printf("goal is: %f, %f\n", goal->x, goal->y);
+			printf("distance is %f\n", goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
-				// printf(">>> best sor far\n");
+				printf(">>> best sor far\n");
 				//if so, then check if that position is not in another obstacle and it's inside the arena
-				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
-				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
+				printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
+				printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
-					// printf(">>> chose it as new position !!! \n");
+					printf(">>> chose it as new position !!! \n");
 				}
 			}
 			//change the goal position using the pointer
-			printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-			goal->copy_position(nearest_position);
 	    }
+		printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		goal->copy_position(nearest_position);
 	}
 }
 
@@ -919,32 +929,44 @@ void state_estimating(){
 void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
 
-	//find the best point to move to 
-	switch(simulation_parameters.scenario){
-		case NO_COM_NO_COOR :
-			information_gain_navigation_approx(current_position);
-			printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
-    		//information_gain_navigation_predictive();
-    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(0.75);
-    		printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
-    		break;
-    	case COM_NO_COOR :
-    		information_gain_navigation_approx(current_position);
-    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(0.75);
-    		break;
-	    case COM_COOR :
-	    	information_gain_navigation_approx(current_position);
-	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-	    	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-	    	DKL_MAP_distance(0.75);
-	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    		joint_planning();
-    		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    		break;
-    }
-    goal_outside_obstacles(&goal_position);
+	// //find the best point to move to 
+	// switch(simulation_parameters.scenario){
+	// 	case NO_COM_NO_COOR :
+	// 		information_gain_navigation_approx(current_position);
+	// 		printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
+    // 		//information_gain_navigation_predictive();
+    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+    // 		DKL_MAP_distance(0.75);
+    // 		printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
+    // 		break;
+    // 	case COM_NO_COOR :
+    // 		information_gain_navigation_approx(current_position);
+    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+    // 		DKL_MAP_distance(0.75);
+    // 		break;
+	//     case COM_COOR :
+	//     	information_gain_navigation_approx(current_position);
+	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+	//     	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+	//     	DKL_MAP_distance(0.75);
+	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+    // 		joint_planning();
+    // 		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+    // 		break;
+    // }
+    // goal_outside_obstacles(&goal_position);
+	 int d;
+	 float f1, f2, f3;
+     if (access(experiment_position_logfile_name, F_OK) != -1 && fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3) == 4){
+        if (d == 0){
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
+		}
+		goal_position.x = f1;
+		goal_position.y = f2;
+	 
+
+
+
     // printf("goal position here %f %f 3\n", goal_position.x, goal_position.y);
     //heterogeneous_navigation();
 
@@ -991,6 +1013,10 @@ void state_updategoal(){
 	//move to listen
 	FSM.state = STATE_LISTEN;
 	FSM.hook = state_listen;
+	 } else {
+		 FSM.state = STATE_FINISHED;
+
+	 }
 }
 
 void state_listen(){
@@ -1023,6 +1049,7 @@ void state_listen(){
 			printf("Something wrong in history...\n");
 
 		//move to estimating
+		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
 	}
@@ -1038,9 +1065,11 @@ void state_read(){
 	char line[256];
 
 	// NOTE Read from an experiment
-	fscanf(experiment_measurements_logfile, "%d, %f %f", &d, &f1, &f2);
+	if (history.size < 7){
+		fscanf(experiment_measurements_logfile, "%d, %f %f", &d, &f1, &f2);
     history.size = d;
 	history.measurement_avg[history.size] = f1;
+	if (history.measurement_avg[history.size] < 0) history.measurement_avg[history.size]=0;
 	history.measurement_std[history.size] = f2;
 	//history.measurement_std[history.size] = 0;
 
@@ -1061,10 +1090,13 @@ void state_read(){
 	// history.position[history.size].x = f1;
 	// history.position[history.size].y = f2;
 
-    // Move to estimating
-    history_print(history);
-    FSM.state = STATE_ESTIMATING;
-    FSM.hook = state_estimating;
+    // // Move to estimating
+     history_print(history);
+     FSM.state = STATE_ESTIMATING;
+     FSM.hook = state_estimating;
+
+	}
+	
 
 }
 

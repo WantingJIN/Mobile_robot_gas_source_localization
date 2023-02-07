@@ -79,9 +79,9 @@
 #define COM_COOR 		2
 #define SCENARIO 		NO_COM_NO_COOR
 // Working mode
-#define EXPERIMENT 0
-#define OFFLINE 1
-#define WORKING_MODE   OFFLINE
+#define EXPERIMENT 1
+#define OFFLINE 0
+#define WORKING_MODE   EXPERIMENT
 
 #define TIMEOUT         1000*1000 // miliseconds
 
@@ -108,6 +108,7 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
+	double source_position[2];
 };
 extern struct simulation_parameters simulation_parameters;
 
