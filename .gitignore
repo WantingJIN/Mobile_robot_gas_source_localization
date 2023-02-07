@@ -3,6 +3,7 @@ webots/plugins/physics/odor_physics/results/SENSOR_*
 Results*/**
 webots/wb_output.txt
 webots_*/
+result_backup
 *.wbproj
 webots/controllers/controller_STE_video
 
@@ -36,7 +37,7 @@ Khepera/STE_PC_server/**
 **/output/
 **/output*/
 **/ReadmeFile/
-**/c++*/
+#**/c++*/
 
 # some figures
 **feature**.png
