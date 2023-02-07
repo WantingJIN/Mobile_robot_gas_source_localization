@@ -9,7 +9,7 @@ map_nbr_filename="/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webo
 
 
 #{0..8}
-for m in {7..8}
+for m in 2
 do
 	echo $m > $map_nbr_filename
 
@@ -19,7 +19,7 @@ do
 	cp /home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 	#for k in {1..3}
-    for k in {1..8}
+    for k in {1..20}
 	do
 		$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' # >wb_output.txt
 		now=$(date +"%T")

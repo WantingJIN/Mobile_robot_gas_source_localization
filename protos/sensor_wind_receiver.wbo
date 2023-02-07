@@ -1,0 +1,2301 @@
+#VRML_OBJ R2019b utf8
+DEF SENSOR_WIND_0 Receiver {
+        translation 0.816748 3.520251 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_0"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 100
+        }
+DEF SENSOR_WIND_1 Receiver {
+        translation 7.565019 1.957681 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_1"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 101
+        }
+DEF SENSOR_WIND_2 Receiver {
+        translation 15.167994 1.855745 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_2"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 102
+        }
+DEF SENSOR_WIND_3 Receiver {
+        translation 8.596346 1.194532 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_3"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 103
+        }
+DEF SENSOR_WIND_4 Receiver {
+        translation 17.876232 2.634853 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_4"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 104
+        }
+DEF SENSOR_WIND_5 Receiver {
+        translation 1.052668 2.293849 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_5"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 105
+        }
+DEF SENSOR_WIND_6 Receiver {
+        translation 0.044732 2.692643 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_6"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 106
+        }
+DEF SENSOR_WIND_7 Receiver {
+        translation 2.580922 3.056863 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_7"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 107
+        }
+DEF SENSOR_WIND_8 Receiver {
+        translation 16.920401 3.231489 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_8"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 108
+        }
+DEF SENSOR_WIND_9 Receiver {
+        translation 10.287643 1.947001 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_9"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 109
+        }
+DEF SENSOR_WIND_10 Receiver {
+        translation 6.336217 0.970102 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_10"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 110
+        }
+DEF SENSOR_WIND_11 Receiver {
+        translation 17.323436 1.487622 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_11"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 111
+        }
+DEF SENSOR_WIND_12 Receiver {
+        translation 17.023408 0.252370 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_12"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 112
+        }
+DEF SENSOR_WIND_13 Receiver {
+        translation 10.383790 3.865012 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_13"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 113
+        }
+DEF SENSOR_WIND_14 Receiver {
+        translation 4.802615 2.160542 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_14"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 114
+        }
+DEF SENSOR_WIND_15 Receiver {
+        translation 8.403965 0.303103 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_15"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 115
+        }
+DEF SENSOR_WIND_16 Receiver {
+        translation 11.303921 1.123873 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_16"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 116
+        }
+DEF SENSOR_WIND_17 Receiver {
+        translation 14.898087 3.193797 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_17"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 117
+        }
+DEF SENSOR_WIND_18 Receiver {
+        translation 1.941643 1.294383 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_18"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 118
+        }
+DEF SENSOR_WIND_19 Receiver {
+        translation 19.646179 0.698887 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_19"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 119
+        }
+DEF SENSOR_WIND_20 Receiver {
+        translation 14.963680 3.963575 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_20"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 120
+        }
+DEF SENSOR_WIND_21 Receiver {
+        translation 13.281091 0.139769 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_21"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 121
+        }
+DEF SENSOR_WIND_22 Receiver {
+        translation 15.983164 3.001682 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_22"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 122
+        }
+DEF SENSOR_WIND_23 Receiver {
+        translation 11.165856 3.172402 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_23"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 123
+        }
+DEF SENSOR_WIND_24 Receiver {
+        translation 5.597018 2.580713 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_24"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 124
+        }
+DEF SENSOR_WIND_25 Receiver {
+        translation 17.754077 0.290700 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_25"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 125
+        }
+DEF SENSOR_WIND_26 Receiver {
+        translation 8.891610 2.386647 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_26"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 126
+        }
+DEF SENSOR_WIND_27 Receiver {
+        translation 13.195085 3.015502 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_27"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 127
+        }
+DEF SENSOR_WIND_28 Receiver {
+        translation 14.402575 1.183004 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_28"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 128
+        }
+DEF SENSOR_WIND_29 Receiver {
+        translation 16.717726 0.715775 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_29"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 129
+        }
+DEF SENSOR_WIND_30 Receiver {
+        translation 5.094389 3.841038 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_30"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 130
+        }
+DEF SENSOR_WIND_31 Receiver {
+        translation 4.824552 1.024338 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_31"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 131
+        }
+DEF SENSOR_WIND_32 Receiver {
+        translation 1.090675 3.279662 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_32"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 132
+        }
+DEF SENSOR_WIND_33 Receiver {
+        translation 2.870224 3.944528 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_33"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 133
+        }
+DEF SENSOR_WIND_34 Receiver {
+        translation 3.217072 0.606463 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_34"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 134
+        }
+DEF SENSOR_WIND_35 Receiver {
+        translation 2.850192 0.503281 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_35"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 135
+        }
+DEF SENSOR_WIND_36 Receiver {
+        translation 3.215251 3.636150 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_36"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 136
+        }
+DEF SENSOR_WIND_37 Receiver {
+        translation 13.189163 3.226257 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_37"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 137
+        }
+DEF SENSOR_WIND_38 Receiver {
+        translation 11.993295 3.839683 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_38"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 138
+        }
+DEF SENSOR_WIND_39 Receiver {
+        translation 12.101980 0.871004 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_39"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 139
+        }
+DEF SENSOR_WIND_40 Receiver {
+        translation 5.808517 3.518063 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_40"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 140
+        }
+DEF SENSOR_WIND_41 Receiver {
+        translation 9.523547 1.971211 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_41"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 141
+        }
+DEF SENSOR_WIND_42 Receiver {
+        translation 4.933569 2.940025 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_42"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 142
+        }
+DEF SENSOR_WIND_43 Receiver {
+        translation 0.615145 0.543726 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_43"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 143
+        }
+DEF SENSOR_WIND_44 Receiver {
+        translation 6.297506 3.867229 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_44"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 144
+        }
+DEF SENSOR_WIND_45 Receiver {
+        translation 18.541333 3.466574 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_45"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 145
+        }
+DEF SENSOR_WIND_46 Receiver {
+        translation 2.454561 2.278379 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_46"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 146
+        }
+DEF SENSOR_WIND_47 Receiver {
+        translation 7.790206 0.673177 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_47"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 147
+        }
+DEF SENSOR_WIND_48 Receiver {
+        translation 3.088524 0.709047 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_48"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 148
+        }
+DEF SENSOR_WIND_49 Receiver {
+        translation 6.577553 2.132086 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_49"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 149
+        }
+DEF SENSOR_WIND_50 Receiver {
+        translation 13.176834 1.261119 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_50"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 150
+        }
+DEF SENSOR_WIND_51 Receiver {
+        translation 4.486348 1.885549 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_51"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 151
+        }
+DEF SENSOR_WIND_52 Receiver {
+        translation 5.559028 3.278417 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_52"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 152
+        }
+DEF SENSOR_WIND_53 Receiver {
+        translation 15.590501 3.535102 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_53"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 153
+        }
+DEF SENSOR_WIND_54 Receiver {
+        translation 2.030531 3.510465 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_54"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 154
+        }
+DEF SENSOR_WIND_55 Receiver {
+        translation 15.142635 1.538496 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_55"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 155
+        }
+DEF SENSOR_WIND_56 Receiver {
+        translation 17.548538 1.567810 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_56"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 156
+        }
+DEF SENSOR_WIND_57 Receiver {
+        translation 2.539175 0.933237 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_57"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 157
+        }
+DEF SENSOR_WIND_58 Receiver {
+        translation 7.384815 0.496421 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_58"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 158
+        }
+DEF SENSOR_WIND_59 Receiver {
+        translation 1.818250 0.630864 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_59"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 159
+        }
+DEF SENSOR_WIND_60 Receiver {
+        translation 0.487190 2.736464 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_60"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 160
+        }
+DEF SENSOR_WIND_61 Receiver {
+        translation 5.074217 0.071917 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_61"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 161
+        }
+DEF SENSOR_WIND_62 Receiver {
+        translation 3.725468 0.588350 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_62"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 162
+        }
+DEF SENSOR_WIND_63 Receiver {
+        translation 6.486988 2.572885 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_63"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 163
+        }
+DEF SENSOR_WIND_64 Receiver {
+        translation 3.524854 1.362799 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_64"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 164
+        }
+DEF SENSOR_WIND_65 Receiver {
+        translation 13.119590 2.612908 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_65"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 165
+        }
+DEF SENSOR_WIND_66 Receiver {
+        translation 2.492286 3.340338 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_66"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 166
+        }
+DEF SENSOR_WIND_67 Receiver {
+        translation 13.093774 3.521188 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_67"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 167
+        }
+DEF SENSOR_WIND_68 Receiver {
+        translation 15.281450 1.610263 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_68"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 168
+        }
+DEF SENSOR_WIND_69 Receiver {
+        translation 5.603637 1.736855 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_69"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 169
+        }
+DEF SENSOR_WIND_70 Receiver {
+        translation 16.376756 3.462396 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_70"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 170
+        }
+DEF SENSOR_WIND_71 Receiver {
+        translation 5.151028 0.149254 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_71"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 171
+        }
+DEF SENSOR_WIND_72 Receiver {
+        translation 5.412454 2.785059 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_72"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 172
+        }
+DEF SENSOR_WIND_73 Receiver {
+        translation 16.407401 1.538041 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_73"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 173
+        }
+DEF SENSOR_WIND_74 Receiver {
+        translation 10.844523 2.559454 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_74"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 174
+        }
+DEF SENSOR_WIND_75 Receiver {
+        translation 6.479590 3.645130 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_75"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 175
+        }
+DEF SENSOR_WIND_76 Receiver {
+        translation 18.585235 2.266343 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_76"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 176
+        }
+DEF SENSOR_WIND_77 Receiver {
+        translation 14.273465 2.310761 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_77"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 177
+        }
+DEF SENSOR_WIND_78 Receiver {
+        translation 4.418231 0.462141 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_78"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 178
+        }
+DEF SENSOR_WIND_79 Receiver {
+        translation 9.124697 0.152091 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_79"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 179
+        }
+DEF SENSOR_WIND_80 Receiver {
+        translation 13.824994 1.588617 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_80"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 180
+        }
+DEF SENSOR_WIND_81 Receiver {
+        translation 4.644773 0.448857 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_81"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 181
+        }
+DEF SENSOR_WIND_82 Receiver {
+        translation 19.850224 3.263456 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_82"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 182
+        }
+DEF SENSOR_WIND_83 Receiver {
+        translation 4.368594 3.547709 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_83"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 183
+        }
+DEF SENSOR_WIND_84 Receiver {
+        translation 6.422822 3.026335 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_84"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 184
+        }
+DEF SENSOR_WIND_85 Receiver {
+        translation 12.443654 1.994446 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_85"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 185
+        }
+DEF SENSOR_WIND_86 Receiver {
+        translation 10.718503 0.559916 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_86"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 186
+        }
+DEF SENSOR_WIND_87 Receiver {
+        translation 16.724873 3.518936 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_87"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 187
+        }
+DEF SENSOR_WIND_88 Receiver {
+        translation 5.284885 3.226191 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_88"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 188
+        }
+DEF SENSOR_WIND_89 Receiver {
+        translation 8.928226 2.626455 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_89"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 189
+        }
+DEF SENSOR_WIND_90 Receiver {
+        translation 11.357926 3.225882 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_90"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 190
+        }
+DEF SENSOR_WIND_91 Receiver {
+        translation 7.461121 3.081563 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_91"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 191
+        }
+DEF SENSOR_WIND_92 Receiver {
+        translation 6.961624 1.988632 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_92"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 192
+        }
+DEF SENSOR_WIND_93 Receiver {
+        translation 12.253865 0.346917 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_93"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 193
+        }
+DEF SENSOR_WIND_94 Receiver {
+        translation 2.495039 2.275971 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_94"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 194
+        }
+DEF SENSOR_WIND_95 Receiver {
+        translation 19.322939 0.275712 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_95"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 195
+        }
+DEF SENSOR_WIND_96 Receiver {
+        translation 3.622847 3.264007 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_96"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 196
+        }
+DEF SENSOR_WIND_97 Receiver {
+        translation 12.637314 0.793542 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_97"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 197
+        }
+DEF SENSOR_WIND_98 Receiver {
+        translation 1.706259 0.694614 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_98"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 198
+        }
+DEF SENSOR_WIND_99 Receiver {
+        translation 18.604745 3.401182 0.2
+        rotation 1 0 0 -1.5708
+        children [
+            Shape {
+                appearance Appearance {
+                    material Material {
+                        diffuseColor 1 0 0
+                        emissiveColor 1 0 0
+                    }
+                }
+                geometry DEF CYLINDER_WIND Cylinder {
+                    height 0.02
+                    radius 0.02
+                }
+            }
+        ]
+        name "sensor_wind_99"
+        boundingObject USE CYLINDER_WIND
+        physics Physics {
+        }
+        channel 199
+        }

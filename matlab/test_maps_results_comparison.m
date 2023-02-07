@@ -24,7 +24,7 @@ for i=1:exp_number
     file_list = dir([folder_name '/**']);
     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
     entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
-    if(entropy(end,1) > 0.1 && size(entropy,1) < 200), rmdir(folder_name,'s'); continue; end
+    if(entropy(end,1) > 0.1 && size(entropy,1) < 30), rmdir(folder_name,'s'); continue; end
     
     % get simulation's parameter values
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
@@ -108,28 +108,43 @@ grid on;
 title('convergence');
 
 %% save
-% saveas(f,[general_folder '/test_maps_results_comparison.png']);
+saveas(f,[general_folder '/test_maps_results_comparison_all.png']);
 
 
 %% plot for thesis
 f = figure();
-
+custom_color = [44,136,217]./255;
 subplot(1,3,1)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,1), map_nbr_list);
+boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
+ylim([-1,10])
 xlabel('Map number');
+ylabel('Error (m)');
 title('Error on x');
 subplot(1,3,2);
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,2), map_nbr_list);
+boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
+ylim([-3,4])
 xlabel('Map number');
 title('Error on y');
+ylabel('Error (m)');
 subplot(1,3,3);
-boxplot(iteration_nbr_list, map_nbr_list);
+boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
+ylim([0,50])
 xlabel('Map number');
 title('nbr iterations');
+saveas(f,[general_folder '/test_maps_results_comparison.png']);

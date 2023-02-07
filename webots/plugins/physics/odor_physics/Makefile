@@ -35,7 +35,7 @@ CFLAGS = -std=c++11 #for random normal numbers
 space :=
 space +=
 CXX_SOURCES = $(wildcard *.cpp)
-WEBOTS_HOME = /home/rahbar/Downloads/webots_R2019b
+WEBOTS_HOME = /home/wjin/Softwares/webots-R2021b/webots
 WEBOTS_HOME_PATH=$(subst $(space),\ ,$(strip $(subst \,/,$(WEBOTS_HOME))))
 #WEBOTS_HOME_PATH=/home/ercolani/webots2018a/webots
 include $(WEBOTS_HOME_PATH)/resources/Makefile.include

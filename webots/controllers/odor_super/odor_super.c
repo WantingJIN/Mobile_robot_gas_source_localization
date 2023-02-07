@@ -11,7 +11,7 @@
 #include <webots/supervisor.h>
 #include <webots/receiver.h>
 
-#define PARTICLE_NUM 600
+#define PARTICLE_NUM 800
 
 WbDeviceTag receiver; // Handle for the receiver node for odor information from physics plugin
 

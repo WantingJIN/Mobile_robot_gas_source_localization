@@ -2,8 +2,9 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "PlumeModel.h"
+#include "controller_STE_multi-robot.h"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 #include <stdexcept>
@@ -84,15 +85,15 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	
 	//hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	//source_x
-	param_list[0] = parameter {"source_x", 		2.75, 	12.75, 	0.5, 	20, 	0, 0};
+	param_list[0] = parameter {"source_x", 		source_x_min,  source_x_max, 	x_resol, 	x_nbins, 	0, 0};
 	//source_y
-	param_list[1] = parameter {"source_y", 		0,  	4, 		0.2, 	20, 	0, 0};
+	param_list[1] = parameter {"source_y", 		source_y_min,  	source_y_max, 		y_resol, 	y_nbins, 	0, 0};
 	//Q
-	param_list[2] = parameter {"Q", 			1, 		20, 	1.9, 	10, 	0, 0};
+	param_list[2] = parameter {"Q", 			Q_min, 		Q_max, 	  Q_resol, 	Q_nbins, 	0, 0};
 	//sigma_a
-	param_list[3] = parameter {"sigma_y_a", 	0.01,  	0.05, 	0.004, 	10, 	0, 0};
+	param_list[3] = parameter {"sigma_y_a", 	a_y_min,  	a_y_max, 	a_y_resol, 	a_y_nbins, 	0, 0};
 	//sigma_b
-	param_list[4] = parameter {"sigma_y_b",  	0.1,   	0.5,  	0.04, 	10, 	0, 0};
+	param_list[4] = parameter {"sigma_y_b",  	b_y_min,   	b_y_max,  	b_y_resol, 	a_y_nbins, 	0, 0};
 
 	//initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
@@ -368,9 +369,9 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(){
 	
 	//hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	//source_x
-	param_list[0] = parameter {"source_x", 		2.75, 	12.75, 	0.5, 	20, 	0, 0};
+	param_list[0] = parameter {"source_x", 		source_x_min, 	source_x_max, 	x_resol, 	x_nbins, 	0, 0};
 	//source_y
-	param_list[1] = parameter {"source_y", 		0,  	4, 		0.2, 	20, 	0, 0};
+	param_list[1] = parameter {"source_y", 		source_y_min,  	source_y_max, 	y_resol, 	y_nbins, 	0, 0};
 
 	//initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];

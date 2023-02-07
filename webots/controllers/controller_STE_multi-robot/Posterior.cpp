@@ -286,13 +286,11 @@ void Posterior::process(){
 	}
 	entropy = -1 * entropy;
 	//printf("\n");
-    printf("here4\n");
 	//log
 	//const char* str = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/pdf.csv";
 	//log_pdf(str, 'a');
 	// const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
 	// log_marginal_pdf(str2, 'a');
-	printf("here5\n");
 	//print on screen
 	if(VERBOSE) model->print_expected_val();
 	if(VERBOSE) model->print_max_a_post_val();

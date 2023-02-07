@@ -1,8 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2');
-%folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/bad/2_backup/');
+folder_list = dir('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Results/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -31,11 +30,13 @@ for i=1:exp_number
         if(isnan(expected_a_posteriori(end,3))), expected_a_posteriori(end,3) = max_a_posteriori(end,3); end
         % ground truth and other params
         params = my_text2struct([folder_name_pc, '/param_log.csv']);
-        fileID = fopen([folder_name_pc '/source_position.txt'],'r');
-        source_real_position=fscanf(fileID, '%f %f');
+        
+        source_postion_file_name = [folder_name_pc '/source_position.txt'];
+        source_file = fopen(source_postion_file_name, 'r');
+        source_real_position = fscanf(source_file,'%f %f');
         source_real_position(3) = 0.1;
         %source_real_position = params.source_position;
-        %source_real_position = [params.source_position(0), params.source_position(1) , 0.1];
+        %source_real_position = [12.7, 3 , 0.1];
         Q_min = params.min_maxs(1); Q_max = params.min_maxs(2);
         source_position_min = [params.min_maxs(3),params.min_maxs(5)];
         source_position_max = [params.min_maxs(4),params.min_maxs(6)];
@@ -49,7 +50,7 @@ for i=1:exp_number
         % obstacles
         obstacles_x=[];
         obstacles_y=[];
-        obst_file = ['/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
+        obst_file = ['/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
         obst_fileID = fopen(obst_file);
         C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
         for k=1:length(C{1,1})

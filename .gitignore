@@ -4,14 +4,19 @@ Results*/**
 webots/wb_output.txt
 webots_*/
 *.wbproj
+<<<<<<< HEAD
 webots/plugins/**
 
 WIRE_Lab/**
+=======
+webots/controllers/controller_STE_video
+>>>>>>> d5329cfe6dc83fc6a77513773263146aec5ff284
 
 # openfoam
 openfoam/training_random/training_random_win*/*
 !openfoam/training_random/training_random_win*/0
-openfoam/test_maps/map*/map*_wind1
+openfoam/test_maps/map*/map*_wind*
+!openfoam/test_maps/map*/map*_wind0
 openfoam/simulation_comparision/*
 openfoam/simscale
 openfoam/AutoGDM
@@ -19,10 +24,16 @@ openfoam/AutoGDM
 
 # khepera
 
+<<<<<<< HEAD
 Khepera/Results*/**
 Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
+=======
+Khepera/Results/**
+Khepera/STE_PC_server/**
+
+>>>>>>> d5329cfe6dc83fc6a77513773263146aec5ff284
 
 # executable file 
 **/build/
@@ -40,3 +51,6 @@ Khepera/STE_PC_server/log_STE_multi/**
 **/ReadmeFile/
 **/c++*/
 
+# some figures
+**feature**.png
+**truth**.png
