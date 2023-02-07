@@ -5,6 +5,7 @@
 #include "PlumeModel.h"
 #include "Position.h"
 
+extern char posterior_pdf_3D_name[256];
 class Posterior{ 
     public: 
     

@@ -157,7 +157,7 @@ void init(){
     }
 
     if(access("/home/root/wanting/source_location.txt", F_OK) != -1 ){
-       sim_param_file = fopen("/home/root/wanting/source_location.txt", "r");
+       sim_param_file = fopen("/home/root/wanting/source_position.txt", "r");
        ok = fscanf(sim_param_file, "%f %f", &simulation_parameters.source_position[0], &simulation_parameters.source_position[1]);
        if(ok) printf("source position : %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1]);
        fclose(sim_param_file);
@@ -195,8 +195,8 @@ int initCortexComm(){
 
     printf("****** Cortex_Initialize ******\n");
     char K4_IP[16]; 
-    sprintf(K4_IP, "192.168.141.%d", ID);
-    retval = Cortex_Initialize(K4_IP, "192.168.141.40");
+    sprintf(K4_IP, "192.168.1.%d", ID);
+    retval = Cortex_Initialize(K4_IP, "192.168.1.251");
 
     if (retval != RC_Okay) {
         printf("Error: Unable to initialize ethernet communication\n");
@@ -257,7 +257,7 @@ void initCommRobot(){
   	memset(&udp_msgR.snd.address, 0, sizeof (udp_msgR.snd.address));
   	udp_msgR.snd.address.sin_family = AF_INET;
   	udp_msgR.snd.address.sin_port = htons(3010);
-  	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.141.255");
+  	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
   	udp_msgR.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
 
   	if (setsockopt(udp_msgR.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcastR, sizeof (broadcastR)) < 0)
@@ -273,10 +273,9 @@ void establish_baseline(){
 
     //starting point at the begining of the map to establish the baseline
     goal_position.x = 3 + float(ID-101)/5.0;
-    goal_position.y = 0.15;
 
     //stop every 35 cm to make a measurement 
-    for (goal_position.y = 0.15; goal_position.y < 3.9; goal_position.y += 0.35){
+    for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.35){
     	//move until reached
     	 while (dist_to_goal(goal_position)>0.05){
         	//updateSwisTrack(current_position);
@@ -316,8 +315,11 @@ void establish_baseline(){
     log_baseline(min, max, odor_baseline_value);
     //starting point of the actuall algorithm random on Y
     goal_position.x = 3 + (ID-101)/5;
-    goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
-        
+    //goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
+    goal_position.y = 2;
+
+    printf("find the path using visibility graph \n");
+    printf("[%d] Current posotion : %f, %f\n",ID, current_position.x, current_position.y);    
     //find the path using visibility graph
         VisiLibity::Point start(current_position.x, current_position.y);
         VisiLibity::Point finish(goal_position.x, goal_position.y);
@@ -328,7 +330,7 @@ void establish_baseline(){
             path.push_back(p);
         }
         i = path.begin();
-
+     printf("[%d] Goal posotiom : %f, %f\n",ID, i->x, i->y);
     //keep receiving the position until you reach the starting point
     // while (dist_to_goal()>0.05){
     //     updateSwisTrack(current_position);

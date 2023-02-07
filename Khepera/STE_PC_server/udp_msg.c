@@ -33,7 +33,7 @@ void udp_msg_init(int port, int id) {
   memset(&udp_msg.snd.address, 0, sizeof (udp_msg.snd.address));
   udp_msg.snd.address.sin_family = AF_INET;
   udp_msg.snd.address.sin_port = htons(port);
-  udp_msg.snd.address.sin_addr.s_addr = inet_addr("192.168.141.255");
+  udp_msg.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
   udp_msg.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
 
   if (setsockopt(udp_msg.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcast, sizeof (broadcast)) < 0)

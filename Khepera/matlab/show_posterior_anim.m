@@ -1,0 +1,43 @@
+clear all; close all; clc;
+
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2022-09-21_20-37/pc';
+pdf = dlmread([general_folder,'/posterior_pdf_3D.csv']);
+positions = dlmread([general_folder, '/position_history.csv']);
+anim_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/ani'
+obst_file = ['/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacle_lists/2_obstacles.txt'];
+obst_fileID = fopen(obst_file);
+C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
+for k=1:length(C{1,1})
+            obstacles_x(:,k) = [C{1,1}(k) , C{1,3}(k), C{1,3}(k) , C{1,1}(k)];
+            obstacles_y(:,k) = [C{1,2}(k) , C{1,2}(k), C{1,4}(k) , C{1,4}(k)];
+end
+measurements = dlmread([general_folder, '/measurement_history.csv']); %measurement_history
+entropy = dlmread([general_folder, '/entropy.csv']);
+real_source_position = [12.7, 1];
+
+x=linspace(2.75,12.75,20);
+y=linspace(0,4,20);
+for i=1:size(pdf,1)
+    f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
+    imagesc(y,x,reshape(pdf(i,:),20,20))
+    hold on
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    hold on
+    patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
+    axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
+    title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
+    xlabel('Y(m)'); ylabel('X(m)');
+    load MyColormap2; colormap(mymap); colorbar;
+    annotation(f,'textbox',[0.254287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Measurement:', num2str(measurements(i,2))},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',24);
+    annotation(f,'textbox',[0.60287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Entropy:', num2str(entropy(i,1))},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',24);
+    hold off;
+    xlim([0 4])
+    ylim([3 13])
+    ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
+    ax = gca;
+    ax.TitleFontSizeMultiplier = 3;
+    pause(1);
+    drawnow
+    saveas(f, [anim_folder,'/',num2str(i),'.png']);
+end

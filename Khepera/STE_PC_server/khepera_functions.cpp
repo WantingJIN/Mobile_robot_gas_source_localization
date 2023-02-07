@@ -62,6 +62,7 @@ void init(){
 		case EXPERIMENT:
 		    FSM.state = STATE_LISTEN;
 	        FSM.hook  = state_listen;
+			break;
 		case OFFLINE:
 			FSM.state = STATE_READ;
 	        FSM.hook  = state_read;
@@ -96,11 +97,11 @@ void init(){
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     // log name of the experiment and scan
-    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/fail/2022-08-22_19-38");
+    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2/2022-09-11_21-55");
 	sprintf(experiment_measurements_logfile_name, "%s/k4/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/k4/position_history.csv", logfile_folder_name);
 
-    sprintf(scan_folder_name, "/home/wanting/Workspace/windtunnel/K4_code_scan_WT/result/map10_wind_200_source_10_1.5_3rd");
+    sprintf(scan_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/log_K4_scan_map5_11_2");
 	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
 	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
 
@@ -170,6 +171,12 @@ void init(){
        if(ok) printf("map number : %d\n", simulation_parameters.map_nbr);
        fclose(sim_param_file);
    }
+   if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt", F_OK) != -1 ){
+       sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt", "r");
+       ok = fscanf(sim_param_file, "%f %f", &simulation_parameters.source_position[0], &simulation_parameters.source_position[1]);
+       if(ok) printf("source position : %f %f\n", &simulation_parameters.source_position[0], &simulation_parameters.source_position[1]);
+       fclose(sim_param_file);
+   }
 
 	printf("Number of robots : %d - scenario : %d \n", simulation_parameters.number_of_robots, simulation_parameters.scenario);
 
@@ -185,7 +192,7 @@ void init(){
     fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-    fprintf(sim_param_file, "source_position %f %f %f\n", 12.9, 2.0, 0.1);
+    fprintf(sim_param_file, "source_position %f %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1], 0.1);
 	fclose(sim_param_file);
 }
 /*
@@ -202,8 +209,8 @@ int initCortexComm(){
 
     printf("****** Cortex_Initialize ******\n");
     char K4_IP[16]; 
-    sprintf(K4_IP, "192.168.141.%d", ID);
-    retval = Cortex_Initialize(K4_IP, "192.168.141.40");
+    sprintf(K4_IP, "192.168.1.%d", ID);
+    retval = Cortex_Initialize(K4_IP, "192.168.1.40");
 
     if (retval != RC_Okay) {
         printf("Error: Unable to initialize ethernet communication\n");
@@ -264,7 +271,7 @@ void initCommRobot(){
   	memset(&udp_msgR.snd.address, 0, sizeof (udp_msgR.snd.address));
   	udp_msgR.snd.address.sin_family = AF_INET;
   	udp_msgR.snd.address.sin_port = htons(3010);
-  	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.141.255");
+  	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
   	udp_msgR.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
 
   	if (setsockopt(udp_msgR.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcastR, sizeof (broadcastR)) < 0)

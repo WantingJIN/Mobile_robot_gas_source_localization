@@ -286,8 +286,9 @@ void Posterior::process(){
 	//printf("\n");
 
 	//log
-	const char* str = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/pdf.csv";
-	log_pdf(str, 'a');
+	//const char* str = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/pdf.csv";
+	//log_pdf(str, 'a');
+	log_pdf(posterior_pdf_3D_name, 'a');
 	/*const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
 	log_marginal_pdf(str2, 'a');
 	*/
@@ -383,7 +384,7 @@ void Posterior::MCMC_evaluation(struct history history){
 		posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 		update(posterior_value, sample);
 	}
-    printf("*************After MCMC, sample is:%f, %f; sample_likelihood is: %f\n", sample[0], sample[1], sample_likelihood);
+    //printf("*************After MCMC, sample is:%f, %f; sample_likelihood is: %f\n", sample[0], sample[1], sample_likelihood);
 	memcpy(last_sample, sample, sizeof(double)*nbr_dimension);
 	
 	//print of screen
@@ -403,7 +404,7 @@ void Posterior::exhaustive_evaluation(struct history history){
 		//convert index 'i' to set of parameter values 'sample'
 		index_to_param_values(i, sample);
 		//calculate the posterior of 'sample'
-		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model,1);
+		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model,0);
 		//printf("%f, ", pdf[i]);
 		//add the new value to the sum
 		sum += pdf[i];
@@ -477,7 +478,7 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 			    // Keep some distance from the estimated gas source location
 				// FIXME use the downwind direction, now with the assumption that the wind is along x-axis    
 				value = tmp_value;
-				best_point[0] = tmp_position[0] - 1.5; 
+				best_point[0] = tmp_position[0]; 
 				best_point[1] = tmp_position[1]; 
 			}
 		}
