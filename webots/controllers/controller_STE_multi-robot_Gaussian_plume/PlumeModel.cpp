@@ -83,7 +83,7 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	//allocate memory for the parameters
 	param_list = new parameter[nbr_param];
 	
-	printf("y_min: %f, y_max: %f, y_resol:%f \n", source_y_min, source_y_max, y_resol);
+	//printf("y_min: %f, y_max: %f, y_resol:%f \n", source_y_min, source_y_max, y_resol);
 	//hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	//source_x
 	param_list[0] = parameter {"source_x", 		source_x_min,  source_x_max, 	x_resol, 	x_nbins, 	0, 0};

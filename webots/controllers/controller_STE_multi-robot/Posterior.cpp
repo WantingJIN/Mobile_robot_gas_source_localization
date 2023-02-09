@@ -5,6 +5,7 @@
 #include <vector>
 #include "nvwa/debug_new.h"
 #include "Posterior.h"
+#include <random>
 
 struct normal_random_variable{
     normal_random_variable(Eigen::MatrixXd const& covar)
@@ -25,8 +26,12 @@ struct normal_random_variable{
     {
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
-
-        return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
+        
+		Eigen::VectorXd vec(mean.size());
+        vec.setRandom();
+        vec = (vec.array() * dist(gen)).matrix();
+        return mean + transform * vec;
+        //return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
     }
 };
 
