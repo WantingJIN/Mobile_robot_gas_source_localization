@@ -3,7 +3,7 @@
 #include <iterator>
 #include <fstream>
 #include <vector>
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include <random>
 

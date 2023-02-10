@@ -10,13 +10,12 @@
 #include <fstream>
 #include <iostream>
 #include "controller_STE_multi-robot.h"
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include "Message.h"
 #include "webots_functions.h"
-#include "aStar.h"
+//#include "aStar.h"
 #include "visilibity.hpp"
-
 #include <webots/supervisor.h>
 
 using namespace std;
@@ -39,19 +38,19 @@ FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
-char goalposition_logfile_name[256];
-char measurements_logfile_name[256];
-char posterior_logfile_name[256];
-char posteriorpdf_logfile_name[256];
-char expected_a_posteriori_logfile_name[256];
-char max_a_posteriori_logfile_name[256];
-char likelihood_logfile_name[256];
-char measurement_history_logfile_name[256];
-char position_history_logfile_name[256];
-char posterior_pdf_3D_name[256];
-char entropy_logfile_name[256];
-char config_logfile_name[256];
-char trajectory_logfile_name[256];
+char goalposition_logfile_name[512];
+char measurements_logfile_name[512];
+char posterior_logfile_name[512];
+char posteriorpdf_logfile_name[512];
+char expected_a_posteriori_logfile_name[512];
+char max_a_posteriori_logfile_name[512];
+char likelihood_logfile_name[512];
+char measurement_history_logfile_name[512];
+char position_history_logfile_name[512];
+char posterior_pdf_3D_name[512];
+char entropy_logfile_name[512];
+char config_logfile_name[512];
+char trajectory_logfile_name[512];
 
 // finite state machine
 struct FSM FSM;
@@ -315,11 +314,11 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
-	vector<vector<float>> model_c_avg(history.size, vector<float> (1)); 
-	vector<vector<float>> model_c_std(history.size, vector<float> (1)); 
+	vector<float> model_c_avg(history.size); 
+	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 	for (int i = 0; i < history.size; i++)
-		sum_tmp += pow(history.measurement[i] - model_c_avg[i][0], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 	
 	return (exp(-0.5 * sum_tmp));
 }
@@ -967,7 +966,7 @@ int main(int argc, char **argv){
 	//CPyInstance hInstance;
 	init();
 	read_obstacle_list();
-
+    //load_model_c();
 	//visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
   	if(  my_environment.is_valid( epsilon )  )

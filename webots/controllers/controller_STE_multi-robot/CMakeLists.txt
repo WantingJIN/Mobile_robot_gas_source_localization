@@ -9,6 +9,16 @@ get_filename_component(PROJECT ${CMAKE_SOURCE_DIR} NAME)  # controller directory
 project(${PROJECT})
 
 set(WEBOTS_HOME "/home/wjin/Softwares/webots-R2021b/webots")
+# compile with libtorch
+set(CMAKE_PREFIX_PATH /home/wjin/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
+# set(MatIO_DIR "/home/wjin/Softwares/matio-1.5.23")
+# The FindMATIO.cmake file is required for the CMAKE to find the matio library.
+# I downloaded it from https://github.com/ami-iit/matio-cpp/blob/master/cmake/FindMATIO.cmake
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};/home/wjin/Softwares")
+
+find_package(MatIO REQUIRED)
+include_directories(${MATIO_INCLUDE_DIRS})
+find_package(Torch REQUIRED NO_DEFAULT_PATH PATHS ${CMAKE_PREFIX_PATH})
 
 include_directories(../../libraries/khepera4)
 include_directories(/usr/include/eigen3)
@@ -22,10 +32,7 @@ link_directories(${Python3_LIBRARY_DIRS})
 # find_library(NVWA_LIBRARY NAMES nvwa)
 
 link_directories($ENV{WEBOTS_HOME}/lib/controller)
-
-
 link_directories("../../libraries/khepera4" "/usr/lib/python3.8/" "/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/")
-
 
 file(GLOB C_SOURCES *.c)
 file(GLOB CPP_SOURCES *.cpp)
@@ -34,15 +41,17 @@ set(SOURCES ${C_SOURCES} ${CPP_SOURCES} "nvwa/debug_new.cpp")
 set (LIBRARIES m ${CMAKE_SHARED_LIBRARY_PREFIX}Controller${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_SHARED_LIBRARY_PREFIX}CppController${CMAKE_SHARED_LIBRARY_SUFFIX})
 include_directories($ENV{WEBOTS_HOME}/include/controller/c $ENV{WEBOTS_HOME}/include/controller/cpp)
 
-
-
 #set(CMAKE_EXE_LINKER_FLAGS "-lController")
 add_executable(${PROJECT} ${SOURCES})
 
 target_link_libraries(${PROJECT} ${LIBRARIES})
 target_link_libraries(${PROJECT} ${PYTHON3_LIBRARIES})
-#target_link_libraries(${PROJECT} -g -L"/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/libraries/khepera4")
 target_link_libraries(${PROJECT} -g -lk4_webots -lgsl -lgslcblas)
+target_link_libraries(${PROJECT} "${TORCH_LIBRARIES}")
+target_link_libraries(${PROJECT} ${MATIO_LIBRARIES})
+
+set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 14)
+
 # Copy the controller to the project directory
 add_custom_command(TARGET ${PROJECT} POST_BUILD COMMAND ${CMAKE_COMMAND} -E
   copy ${CMAKE_BINARY_DIR}/${PROJECT} ${CMAKE_SOURCE_DIR}
