@@ -5,8 +5,8 @@
 //#include "nvwa/debug_new.h"
 #include "PlumeModel.h"
 #include "controller_STE_multi-robot.h"
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include <numpy/arrayobject.h>
+//#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+//#include <numpy/arrayobject.h>
 #include <stdexcept>
 
 /********************************************************/
@@ -428,113 +428,113 @@ void DeepCFDPlumeModel2D::get_source_position_params(parameter * source_position
 //returns concentration for ONE set of parameters and ONE position
 double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_list[]){
 	// std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-	float sx = param_list[0];
-	float sy = param_list[1];
-	float px = robot_position.x;
-	float py = robot_position.y;
-	double c_avg = 0;
+	// float sx = param_list[0];
+	// float sy = param_list[1];
+	// float px = robot_position.x;
+	// float py = robot_position.y;
+	// double c_avg = 0;
 
-	// the name of the python file that will be used
-	CPyObject pName = PyUnicode_FromString("Myapply_DeepCFD");
-	// import that file as a module
-	CPyObject pModule = PyImport_Import(pName);
-	// make the argument list that will be fed to the function
-	CPyObject args = Py_BuildValue("(ffff)", sx, sy, px, py);
+	// // the name of the python file that will be used
+	// CPyObject pName = PyUnicode_FromString("Myapply_DeepCFD");
+	// // import that file as a module
+	// CPyObject pModule = PyImport_Import(pName);
+	// // make the argument list that will be fed to the function
+	// CPyObject args = Py_BuildValue("(ffff)", sx, sy, px, py);
 
-	// if the module is well imported
-	if(pModule){
-		// find the function
-		CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
-		// in the function is found and is callable
-		if(pFunc && PyCallable_Check(pFunc)){
-			// call the function with the argument list and get the output
-			CPyObject pValue = PyObject_CallObject(pFunc, args);
-			// printf("Model values C_avg = %f, C_std = %f\n", PyFloat_AsDouble(PyTuple_GetItem(pValue,0)), PyFloat_AsDouble(PyTuple_GetItem(pValue,1)));
-			// convert the output to c++-readable values and set in the pointers
-			c_avg = PyFloat_AsDouble(PyTuple_GetItem(pValue,0));
-			//c_std = PyFloat_AsDouble(PyTuple_GetItem(pValue,1));
-		}
-		else
-			printf("ERROR: function DeepCFD_output()\n");
-	}else
-		printf("ERROR: apply_DeepCFD Module not imported\n");
+	// // if the module is well imported
+	// if(pModule){
+	// 	// find the function
+	// 	CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
+	// 	// in the function is found and is callable
+	// 	if(pFunc && PyCallable_Check(pFunc)){
+	// 		// call the function with the argument list and get the output
+	// 		CPyObject pValue = PyObject_CallObject(pFunc, args);
+	// 		// printf("Model values C_avg = %f, C_std = %f\n", PyFloat_AsDouble(PyTuple_GetItem(pValue,0)), PyFloat_AsDouble(PyTuple_GetItem(pValue,1)));
+	// 		// convert the output to c++-readable values and set in the pointers
+	// 		c_avg = PyFloat_AsDouble(PyTuple_GetItem(pValue,0));
+	// 		//c_std = PyFloat_AsDouble(PyTuple_GetItem(pValue,1));
+	// 	}
+	// 	else
+	// 		printf("ERROR: function DeepCFD_output()\n");
+	// }else
+	// 	printf("ERROR: apply_DeepCFD Module not imported\n");
 	
-	// return the average concentration predicted by the model
-	// std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-	// std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-	return c_avg;
+	// // return the average concentration predicted by the model
+	// // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+	// // std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+	return 0.0;
 }
 
 // helper function for the one bellow
-vector<float> listTupleToVector_Int(PyObject* incoming) {
-	vector<float> data;
-	if (PyTuple_Check(incoming)) {
-		for(Py_ssize_t i = 0; i < PyTuple_Size(incoming); i++) {
-			PyObject *value = PyTuple_GetItem(incoming, i);
-			data.push_back( PyFloat_AsDouble(value) );
-		}
-	} else {
-		if (PyList_Check(incoming)) {
-			for(Py_ssize_t i = 0; i < PyList_Size(incoming); i++) {
-				PyObject *value = PyList_GetItem(incoming, i);
-				data.push_back( PyFloat_AsDouble(value) );
-			}
-		} else {
-			throw logic_error("Passed PyObject pointer was not a list or tuple!");
-		}
-	}
-	return data;
-}
+// vector<float> listTupleToVector_Int(PyObject* incoming) {
+// 	vector<float> data;
+// 	if (PyTuple_Check(incoming)) {
+// 		for(Py_ssize_t i = 0; i < PyTuple_Size(incoming); i++) {
+// 			PyObject *value = PyTuple_GetItem(incoming, i);
+// 			data.push_back( PyFloat_AsDouble(value) );
+// 		}
+// 	} else {
+// 		if (PyList_Check(incoming)) {
+// 			for(Py_ssize_t i = 0; i < PyList_Size(incoming); i++) {
+// 				PyObject *value = PyList_GetItem(incoming, i);
+// 				data.push_back( PyFloat_AsDouble(value) );
+// 			}
+// 		} else {
+// 			throw logic_error("Passed PyObject pointer was not a list or tuple!");
+// 		}
+// 	}
+// 	return data;
+// }
 
 //returns a list of concentrations for ONE set of parameters and A LIST of positions
 void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg, vector<vector<float>> &c_std){
 	// nbr here stands for the number of gathered measurements instead of the number of robots
 
-	float sx = param_list[0];
-	float sy = param_list[1];
-	float px[nbr];
-	float py[nbr];
+	// float sx = param_list[0];
+	// float sy = param_list[1];
+	// float px[nbr];
+	// float py[nbr];
 
-	for(int i=0; i<nbr; i++){
-		px[i] = robot_position[i].x;
-		py[i] = robot_position[i].y;
-	}
+	// for(int i=0; i<nbr; i++){
+	// 	px[i] = robot_position[i].x;
+	// 	py[i] = robot_position[i].y;
+	// }
 
-	// import the python file as a module
-	CPyObject pModule = PyImport_Import(PyUnicode_FromString("Myapply_DeepCFD"));
-	// make the arguments with the provided values
-	npy_intp dims[1] = {nbr};
-    import_array(); 
-	CPyObject pArgs = PyTuple_New(4);
-    PyTuple_SetItem(pArgs, 0, PyFloat_FromDouble(sx));
-    PyTuple_SetItem(pArgs, 1, PyFloat_FromDouble(sy));
-    PyTuple_SetItem(pArgs, 2, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, px));
-    PyTuple_SetItem(pArgs, 3, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, py));
+	// // import the python file as a module
+	// CPyObject pModule = PyImport_Import(PyUnicode_FromString("Myapply_DeepCFD"));
+	// // make the arguments with the provided values
+	// npy_intp dims[1] = {nbr};
+    // import_array(); 
+	// CPyObject pArgs = PyTuple_New(4);
+    // PyTuple_SetItem(pArgs, 0, PyFloat_FromDouble(sx));
+    // PyTuple_SetItem(pArgs, 1, PyFloat_FromDouble(sy));
+    // PyTuple_SetItem(pArgs, 2, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, px));
+    // PyTuple_SetItem(pArgs, 3, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, py));
 
-	// if the module is well imported
-	if(pModule){
-		// find the function
-		CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
-		// in the function is found and is callable
-		if(pFunc && PyCallable_Check(pFunc)){
-			// call the function with the argument list and get the output
-			CPyObject pValue = PyObject_CallObject(pFunc, pArgs);
-			// convert the output to c++-readable values and set in the pointers
-			for(int i = 0; i < nbr; i++){
-				//printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
-				c_avg[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,0),i));
-				c_std[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,1),i));
-				// printf("Model values C_avg[i]=");
-				// for (auto c_avg_iter : c_avg[i])
-                // {
-                //   printf("%f", c_avg_iter);
-                // }
-				// printf("\n");
-			}
-		}else
-			printf("ERROR: function DeepCFD_output()\n");
-	}else
-		printf("ERROR: apply_DeepCFD Module not imported\n");
+	// // if the module is well imported
+	// if(pModule){
+	// 	// find the function
+	// 	CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
+	// 	// in the function is found and is callable
+	// 	if(pFunc && PyCallable_Check(pFunc)){
+	// 		// call the function with the argument list and get the output
+	// 		CPyObject pValue = PyObject_CallObject(pFunc, pArgs);
+	// 		// convert the output to c++-readable values and set in the pointers
+	// 		for(int i = 0; i < nbr; i++){
+	// 			//printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
+	// 			c_avg[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,0),i));
+	// 			c_std[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,1),i));
+	// 			// printf("Model values C_avg[i]=");
+	// 			// for (auto c_avg_iter : c_avg[i])
+    //             // {
+    //             //   printf("%f", c_avg_iter);
+    //             // }
+	// 			// printf("\n");
+	// 		}
+	// 	}else
+	// 		printf("ERROR: function DeepCFD_output()\n");
+	// }else
+	// 	printf("ERROR: apply_DeepCFD Module not imported\n");
 }
 
 //returns a list of concentrations for A LIST of parameters sets and A LIST of positions

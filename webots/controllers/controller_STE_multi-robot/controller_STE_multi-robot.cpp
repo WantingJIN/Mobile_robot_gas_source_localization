@@ -964,7 +964,7 @@ void state_obstacle_avoidance(){
 
 int main(int argc, char **argv){
 	// python instance (should be called ONLY ONCE and only in main)
-	CPyInstance hInstance;
+	//CPyInstance hInstance;
 	init();
 	read_obstacle_list();
 

@@ -9,9 +9,8 @@ get_filename_component(PROJECT ${CMAKE_SOURCE_DIR} NAME)  # controller directory
 project(${PROJECT})
 
 set(WEBOTS_HOME "/home/wjin/Softwares/webots-R2021b/webots")
-set(K4_Lib "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/libraries/khepera4")
 
-include_directories(/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/libraries/khepera4)
+include_directories(../../libraries/khepera4)
 include_directories(/usr/include/eigen3)
 include_directories(/usr/include/python3.8)
 
@@ -22,10 +21,10 @@ link_directories(${Python3_LIBRARY_DIRS})
 
 # find_library(NVWA_LIBRARY NAMES nvwa)
 
- link_directories($ENV{WEBOTS_HOME}/lib/controller)
+link_directories($ENV{WEBOTS_HOME}/lib/controller)
 
 
-link_directories("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/libraries/khepera4" "/usr/lib/python3.8/" "/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/")
+link_directories("../../libraries/khepera4" "/usr/lib/python3.8/" "/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/")
 
 
 file(GLOB C_SOURCES *.c)
@@ -42,7 +41,7 @@ add_executable(${PROJECT} ${SOURCES})
 
 target_link_libraries(${PROJECT} ${LIBRARIES})
 target_link_libraries(${PROJECT} ${PYTHON3_LIBRARIES})
-target_link_libraries(${PROJECT} -g -L"/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/libraries/khepera4")
+#target_link_libraries(${PROJECT} -g -L"/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/libraries/khepera4")
 target_link_libraries(${PROJECT} -g -lk4_webots -lgsl -lgslcblas)
 # Copy the controller to the project directory
 add_custom_command(TARGET ${PROJECT} POST_BUILD COMMAND ${CMAKE_COMMAND} -E

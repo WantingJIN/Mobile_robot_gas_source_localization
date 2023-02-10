@@ -6,7 +6,7 @@
 #include <vector>
 #include "Position.h"
 #include <Python.h>
-#include "pyhelper.hpp"
+//#include "pyhelper.hpp"
 using namespace std;
 
 #define PI 	3.14159265358979
