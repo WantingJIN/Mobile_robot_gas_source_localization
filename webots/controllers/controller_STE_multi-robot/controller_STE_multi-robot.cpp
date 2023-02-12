@@ -319,7 +319,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 	for (int i = 0; i < history.size; i++){
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-		std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
 	}
 	
 	return (exp(-0.5 * sum_tmp));
@@ -424,7 +424,7 @@ void information_gain_navigation_approx(Position current_position){
 			//calculate the expected concentration on position
 			// FIXME: possible bug here, we are caluculating the futhyre posterior with accumulated sampling fake history
 			fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
+			//std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
 			fake_history.position[fake_history.size].copy_position(tmp_position);
 			(fake_history.size)++;
 			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);

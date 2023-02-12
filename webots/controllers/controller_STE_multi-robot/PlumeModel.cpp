@@ -506,7 +506,7 @@ double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_i
     //std::cout<< " idx_y is: "<<idx_y << std::endl;
    
     c_avg = output[0][0][idx_y][idx_x].item<float>();
-    std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
+    //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
     
     return c_avg;
 
