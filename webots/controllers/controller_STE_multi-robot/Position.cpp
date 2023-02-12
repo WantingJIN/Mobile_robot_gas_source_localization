@@ -1,5 +1,5 @@
 #include <math.h>
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "Position.h"
 
 Position::Position(){

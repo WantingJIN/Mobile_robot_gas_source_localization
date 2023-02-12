@@ -432,10 +432,11 @@ void DeepCFDPlumeModel2D::initialize_model_features(){
     f.close();
 
     // Load the model
+	//std::cout << "Loading model..." << std::endl;
     DeepCFD = torch::jit::load("DeepCFD_libtorch_model.pt", device);
 	std::string mat_address = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
     //convert string to char*
-    std::cout << mat_address << std::endl;
+    //std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];
     strcpy(mat_adr, mat_address.c_str());
     mat_t *mat;
@@ -499,14 +500,13 @@ double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_i
     at::Tensor output = DeepCFD(inputs).toTensor();
     //std::cout << output << std::endl;
     
-	
     int idx_x = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
     int idx_y = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-    std::cout<< "idx_x is: "<<idx_x;
-    std::cout<< " idx_y is: "<<idx_y << std::endl;
+    //std::cout<< "idx_x is: "<<idx_x;
+    //std::cout<< " idx_y is: "<<idx_y << std::endl;
    
     c_avg = output[0][0][idx_y][idx_x].item<float>();
-    std::cout << "The estimated concentration at (" << px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
+    std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
     
     return c_avg;
 
@@ -588,10 +588,10 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 	for (int i=0; i < nbr; i++) {
         int idx_x = round((px[i] - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
         int idx_y = round((py[i] - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-        std::cout << "idx_x is: "<<idx_x;
-        std::cout << " idx_y is: "<<idx_y << std::endl;
-        c_avg.push_back(output[0][0][idx_y][idx_x].item<float>());
-        std::cout << "The estimated concentration at (" << px[i] << ", " << py[i] << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
+        //std::cout << "idx_x is: "<<idx_x;
+        //std::cout << " idx_y is: "<<idx_y << std::endl;
+        c_avg[i] = output[0][0][idx_y][idx_x].item<float>();
+        //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px[i] << ", " << py[i] << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
     }
 
 

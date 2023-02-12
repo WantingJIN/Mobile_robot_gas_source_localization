@@ -317,8 +317,10 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	vector<float> model_c_avg(history.size); 
 	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
-	for (int i = 0; i < history.size; i++)
+	for (int i = 0; i < history.size; i++){
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+		std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+	}
 	
 	return (exp(-0.5 * sum_tmp));
 }
@@ -420,12 +422,15 @@ void information_gain_navigation_approx(Position current_position){
 			//printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
+			// FIXME: possible bug here, we are caluculating the futhyre posterior with accumulated sampling fake history
 			fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
 			fake_history.position[fake_history.size].copy_position(tmp_position);
 			(fake_history.size)++;
 			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
 			//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
 			//future_posterior.sum = 0;
+			// TODO: Improve the way regenrate fake plume; at least use the same plume model for different positions
 			DeepCFDPlumeModel2D plume_model_fake;
 			Posterior future_posterior(&plume_model_fake, 0);
 			//future_posterior.copy_posterior(zero);
