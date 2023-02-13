@@ -354,8 +354,8 @@ void Posterior::MCMC_evaluation(struct history history){
 	//error detection
 	double sample_likelihood = likelihood(history, sample, model);
 	if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f %f %f %f\n", 
-			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1], sample[2], sample[3], sample[4]);
+		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f\n", 
+			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
 		dirac_flag = 1;
 		return;
 	}

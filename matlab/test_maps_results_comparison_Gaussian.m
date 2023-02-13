@@ -20,14 +20,15 @@ for i=1:exp_number
     
     % skip if it's not a job folder
     if(~exist([folder_name, '/', num2str(ID(1)), '/param_log.csv'],'file')), continue; end
+    
+    % get simulation's parameter values
+    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
+
     % remove folders with unfinished jobs
     file_list = dir([folder_name '/**']);
     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
     entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
-    if(entropy(end,1) > 0.1 && size(entropy,1) < 200), rmdir(folder_name,'s'); continue; end
-    
-    % get simulation's parameter values
-    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
+    if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
     new_path = [general_folder '/' num2str(params.map_nbr)];
@@ -60,7 +61,6 @@ for i=1:number
     file_list = dir([folder_name '/**']);
     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
     entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
-    if(entropy(end,1) > 0.1 && size(entropy,1) < 200), rmdir(folder_name,'s'); continue; end
     % ground truth and other params
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
     map_nbr_list(i,1) = params.map_nbr;
