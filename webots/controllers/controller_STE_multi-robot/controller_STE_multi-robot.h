@@ -32,7 +32,8 @@
 #define WHEEL_RADIUS	        0.021  	//K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	50 
+//#define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
+#define MAX_SAMPLE_NUMBER 	100 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
@@ -137,8 +138,10 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
-	Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	//Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	//double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	vector<Position> position;
+	vector<double> measurement;
 };
 
 // message structure

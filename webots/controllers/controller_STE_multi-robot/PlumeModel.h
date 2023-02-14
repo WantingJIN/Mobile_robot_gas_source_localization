@@ -67,7 +67,7 @@ public:
 
 	//function that returns concentration using parameters
 	virtual double concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
-	virtual void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
+	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 
@@ -105,7 +105,7 @@ public:
 
     //returns concentration for a set of parameters and a position
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<float> &c_avg);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
@@ -178,7 +178,7 @@ public:
 	torch::Tensor c_torch;
     //returns concentration for a set of parameters and a position
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);

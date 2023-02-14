@@ -64,7 +64,7 @@ Position current_position;
 double speed[2] = {0};
 // robot's position and measurement history
 struct history history;
-
+int sample_counter = 0;
 //plume model
 DeepCFDPlumeModel2D plume_model;
 
@@ -396,12 +396,12 @@ double posterior_predictive(double concentration, double position[][3]){
 */
 void information_gain_navigation_approx(Position current_position){
 	float p0 = 0.5; //50 cm
-	double DKL=0, max_DKL=-100;
+	double DKL=0, max_DKL=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
-	memcpy(fake_history.position, history.position, (sizeof(Position))*history.size);
-	memcpy(fake_history.measurement, history.measurement, (sizeof(double))*history.size);
+	fake_history.position = history.position;
+	fake_history.measurement = history.measurement;
 	fake_history.size = history.size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
@@ -423,29 +423,49 @@ void information_gain_navigation_approx(Position current_position){
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
 			// FIXME: possible bug here, we are caluculating the futhyre posterior with accumulated sampling fake history
-			fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			//fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
 			//std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
-			fake_history.position[fake_history.size].copy_position(tmp_position);
-			(fake_history.size)++;
+			//fake_history.position[fake_history.size].copy_position(tmp_position);
+			//(fake_history.size)++;
 			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
 			//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
 			//future_posterior.sum = 0;
 			// TODO: Improve the way regenrate fake plume; at least use the same plume model for different positions
-			DeepCFDPlumeModel2D plume_model_fake;
-			Posterior future_posterior(&plume_model_fake, 0);
-			//future_posterior.copy_posterior(zero);
-			future_posterior.MCMC_evaluation(fake_history);
-			//calculate the expected information gain
-			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// printf("DKL: %f _______________________\n", DKL);
-			if(DKL > max_DKL ){
-				max_DKL = DKL;
-				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
+			// TODO: Test the performance of the fake plume model
+			// DeepCFDPlumeModel2D plume_model_fake;
+			// Posterior future_posterior(&plume_model_fake, 0);
+			// //future_posterior.copy_posterior(zero);
+			// future_posterior.MCMC_evaluation(fake_history);
+			// //calculate the expected information gain
+			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// // printf("DKL: %f _______________________\n", DKL);
+			// if(DKL > max_DKL ){
+			// 	max_DKL = DKL;
+			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
+			// 	goal_position.y = tmp_position.y;
+			// 	goal_position.heading = 0;
+			// }
+			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			if(fake_concentration > max_meas){
+				max_meas = fake_concentration;
+				goal_position.x = tmp_position.x; 
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
 			}
 		}
 	}
+	// for(int i =- 1; i <= 1; i++){
+	// 	for (int j = -1; j <= 1; j++){
+	// 		tmp_position.x = current_position.x + i*p0;
+	//  		tmp_position.y = current_position.y + j*p0;
+	// 		if(!position_outside_arena(tmp_position)){
+	// 			goal_position.x = tmp_position.x ; // + (randu()-0.5)/5.0
+	// 			goal_position.y = tmp_position.y ;
+	// 			goal_position.heading = 0;
+	// 			break;
+	// 		}
+	// 	}
+	// }
 }
 /*
 void information_gain_navigation_predictive(){
@@ -686,11 +706,11 @@ void goal_outside_obstacles(Position * goal){
 	}
 
 	//set concentration to 0 in the original goal position
-	history.position[history.size].x = goal->x;
-	history.position[history.size].y = goal->y;
-	history.position[history.size].heading = 0;
-	history.measurement[history.size] = 0;
-	history.size++;
+	// history.position[history.size].x = goal->x;
+	// history.position[history.size].y = goal->y;
+	// history.position[history.size].heading = 0;
+	// history.measurement[history.size] = 0;
+	// history.size++;
     
 	if (idx != -1){
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
@@ -785,12 +805,13 @@ void state_measuring(){
 		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
-		history.position[history.size].x = current_position.x;
-		history.position[history.size].y = current_position.y;
-		history.position[history.size].heading = 0;
-		history.measurement[history.size] = sampleBuffer.average_concentration;
-		history.size++;
-		history_print(history);
+		if (!position_outside_arena(current_position)){
+			history.position.push_back({current_position.x, current_position.y, 0});
+			//history.measurement[history.size] = sampleBuffer.average_concentration;
+			history.measurement.push_back(sampleBuffer.average_concentration);
+			history.size++;
+			history_print(history);
+		}
 
 		// send it to friends
 		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
@@ -926,7 +947,23 @@ void state_updategoal(){
 
 void state_moving(){
 	//printf("moving toward the goal\n");
+    // FIXME: temporary attemp for continous sampling
+    if (sample_counter<10){
+		sample_counter++;
+	}
+	else{
+		double instant_concentration = odor_read();
+		if (!position_outside_arena(current_position)){
+			history.position.push_back({current_position.x, current_position.y, 0});
+		    //history.measurement[history.size] = instant_concentration;
+		    history.measurement.push_back(instant_concentration);
+		    history.size++;
+		}
+        
+		sample_counter = 0;
+	}
 
+	
 	//verify if arrived to the goal if applicable
 	if(dist_to_goal(goal_position) > 0.05){
 		//move

@@ -157,7 +157,7 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
 }
 
 //returns a list of concentrations for ONE set of parameters and A LIST of positions
-void GaussianPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<float> &c_avg){
+void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg){
 	//ASSUMPTION : enough memory is already is already allocated for c_avg
 	for(int i = 0; i < nbr; i++){
 		c_avg[i]= concentration(robot_position[i], wind_intensity, param_list);
@@ -405,6 +405,7 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D & another_mod
 		max_a_post_value[i] = another_model.max_a_post_value[i];
 		covar_sig_ii[i] = another_model.covar_sig_ii[i];
 	}
+	DeepCFD = another_model.DeepCFD.clone();
 }
 
 //destructor
@@ -562,7 +563,7 @@ double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_i
 // }
 
 //returns a list of concentrations for ONE set of parameters and A LIST of positions
-void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std){
+void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std){
 	// nbr here stands for the number of gathered measurements instead of the number of robots
 
 	float sx = param_list[0];
