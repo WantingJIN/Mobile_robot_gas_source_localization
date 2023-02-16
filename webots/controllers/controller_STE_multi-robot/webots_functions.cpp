@@ -211,7 +211,20 @@ double odor_read(){
 		wb_receiver_next_packet(odor_tag);
 	}
 	//printf("odor measurement : %f \n",odor_measurement);
-	return odor_sample;
+	// FIXME: temporary hack to smooth the odor sensor reading
+	double Ts = TIME_STEP / 1000.0; // sampling frequency
+	double tau_r = 1.3; // time constant for the rise
+	double tau_d = 2.0; // time constant for the decay
+	// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
+	// where wc is the cut-off frequency and Ts is the sampling period
+	double alpha;
+	if (odor_sample > previous_sensor_value)   //rising phase
+		alpha = Ts / (tau_r + Ts);
+	else                                       //decaying phase
+		alpha = Ts / (tau_d + Ts);
+	double sensor_reading = alpha * odor_sample + previous_sensor_value * (1 - alpha);
+	previous_sensor_value = sensor_reading;
+	return sensor_reading;
 }
 
 void wind_read(double* intensity, double* angle){

@@ -69,6 +69,8 @@ extern char entropy_logfile_name[512];
 extern char config_logfile_name[512];
 extern char trajectory_logfile_name[512];
 
+extern double previous_sensor_value;
+
 // finite state machine
 extern struct FSM FSM;
 // robot's measurements

@@ -64,6 +64,7 @@ Position current_position;
 double speed[2] = {0};
 // robot's position and measurement history
 struct history history;
+struct history sample_in_motion;
 int sample_counter = 0;
 //plume model
 DeepCFDPlumeModel2D plume_model;
@@ -83,6 +84,12 @@ struct friends friends[MAX_NB_ROBOTS];
 int n_time_step = 0;
 
 struct simulation_parameters simulation_parameters;
+
+double previous_sensor_value = 0;
+
+// gas map
+// param: sigma, gamma, scaling_param, wind_speed, rco
+GasMap2D gas_map(0.1, 83, 1, 0, 0.3);
 
 // obstacles definitions
 int nbr_obs = 4;
@@ -790,6 +797,21 @@ void state_waiting(){
 
 void state_measuring(){
 	//printf("measuring sample number %d\n", measurements.n_samples);
+	vector<double> sample_from_map;
+    if (CONTINOUS_SAMPLING){
+		gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
+		for(int i=0; i<sample_in_motion.size; i++){
+			printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+			printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+			history.position.push_back(sample_in_motion.position[i]);
+			history.measurement.push_back(sample_from_map[i]);
+			history.size++;
+		}
+		sample_in_motion.position.clear();
+		sample_in_motion.measurement.clear();
+		sample_in_motion.size = 0;
+		sample_from_map.clear();
+	}
 	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
 		//continue measuring odor concentration
         sampleBuffer.instant_concentration = odor_read();
@@ -948,22 +970,25 @@ void state_updategoal(){
 void state_moving(){
 	//printf("moving toward the goal\n");
     // FIXME: temporary attemp for continous sampling
-    if (sample_counter<10){
-		sample_counter++;
-	}
-	else{
-		double instant_concentration = odor_read();
-		if (!position_outside_arena(current_position)){
-			history.position.push_back({current_position.x, current_position.y, 0});
-		    //history.measurement[history.size] = instant_concentration;
-		    history.measurement.push_back(instant_concentration);
-		    history.size++;
+	if (CONTINOUS_SAMPLING){
+		if (sample_counter<10){
+			sample_counter++;
 		}
-        
-		sample_counter = 0;
-	}
+		else{
+			double instant_concentration = odor_read();
+			if (!position_outside_arena(current_position)){
+				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+		    	sample_in_motion.measurement.push_back(instant_concentration);
+		    	sample_in_motion.size++;
+		    	
+				//history.position.push_back({current_position.x, current_position.y, 0});
+		    	//history.measurement.push_back(instant_concentration);
+		    	//history.size++;
+			}
+			sample_counter = 0;
+		}
 
-	
+	}
 	//verify if arrived to the goal if applicable
 	if(dist_to_goal(goal_position) > 0.05){
 		//move
@@ -1062,6 +1087,11 @@ int main(int argc, char **argv){
 			//printf("[%d] my history size is %d\n", ID, history.size);
 		}
 	   	//change state
+		if (CONTINOUS_SAMPLING){
+			//sample and run kernel 
+			double instant_concentration = odor_read();
+			gas_map.runKernelAlgorithm(current_position, instant_concentration);
+		}
     	FSM.hook();
     	//next
     	next_iteration_time();

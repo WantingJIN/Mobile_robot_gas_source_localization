@@ -1,9 +1,6 @@
 #ifndef CONTROLLER_STE_CLEAN_H
 #define CONTROLLER_STE_CLEAN_H
 
-
-
-
 //C libraries
 #include <assert.h>
 #include <math.h>
@@ -22,6 +19,7 @@
 #include "PlumeModel.h"
 #include "SampleBuffer.h"
 #include "Position.h"
+#include "gasMap2D.h"
 
 
 //Constant variables
@@ -44,6 +42,7 @@
 //#define ZMIN 0.1
 #define XMAX 12.5
 #define YMAX 3.8
+
 //#define ZMAX 1.9
 // min and max for each parameter
 #define Q_min  1.0
@@ -87,6 +86,8 @@
 #define SCENARIO 		NO_COM_NO_COOR
 
 #define TIMEOUT         1000*1000 // miliseconds
+
+#define CONTINOUS_SAMPLING 1
 
 extern int nbr_obs;
 extern float margin;
