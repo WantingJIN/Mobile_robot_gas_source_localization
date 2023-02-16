@@ -36,7 +36,7 @@ link_directories("../../libraries/khepera4" "/usr/lib/python3.8/" "/usr/lib/pyth
 
 file(GLOB C_SOURCES *.c)
 file(GLOB CPP_SOURCES *.cpp)
-set(SOURCES ${C_SOURCES} ${CPP_SOURCES} "nvwa/debug_new.cpp")
+set(SOURCES ${C_SOURCES} ${CPP_SOURCES})
 
 set (LIBRARIES m ${CMAKE_SHARED_LIBRARY_PREFIX}Controller${CMAKE_SHARED_LIBRARY_SUFFIX} ${CMAKE_SHARED_LIBRARY_PREFIX}CppController${CMAKE_SHARED_LIBRARY_SUFFIX})
 include_directories($ENV{WEBOTS_HOME}/include/controller/c $ENV{WEBOTS_HOME}/include/controller/cpp)
