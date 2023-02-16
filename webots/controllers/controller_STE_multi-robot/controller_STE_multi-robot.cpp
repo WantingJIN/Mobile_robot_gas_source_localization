@@ -89,7 +89,7 @@ double previous_sensor_value = 0;
 
 // gas map
 // param: sigma, gamma, scaling_param, wind_speed, rco
-GasMap2D gas_map(0.1, 83, 1, 0, 0.3);
+GasMap2D gas_map(0.1, 83, 1, 0, 0.05);
 
 // obstacles definitions
 int nbr_obs = 4;
@@ -814,7 +814,8 @@ void state_measuring(){
 	}
 	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
 		//continue measuring odor concentration
-        sampleBuffer.instant_concentration = odor_read();
+		double odor_concentration = 0.0;
+        odor_read(sampleBuffer.instant_concentration, &odor_concentration);
 		//measuring wind
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 		//add samples to buffers
@@ -975,7 +976,9 @@ void state_moving(){
 			sample_counter++;
 		}
 		else{
-			double instant_concentration = odor_read();
+			double instant_concentration = 0.0;
+			double odor_concentration = 0.0;
+			odor_read(instant_concentration, &odor_concentration);
 			if (!position_outside_arena(current_position)){
 				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 		    	sample_in_motion.measurement.push_back(instant_concentration);
@@ -1089,7 +1092,9 @@ int main(int argc, char **argv){
 	   	//change state
 		if (CONTINOUS_SAMPLING){
 			//sample and run kernel 
-			double instant_concentration = odor_read();
+			double instant_concentration = 0.0;
+			double odor_concentration = 0.0;
+			odor_read(instant_concentration, &odor_concentration);
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
     	FSM.hook();

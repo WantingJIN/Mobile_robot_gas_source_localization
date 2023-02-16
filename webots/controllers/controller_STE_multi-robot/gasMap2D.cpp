@@ -99,7 +99,6 @@ void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_posi
   for(int i=0; i<history_position.size(); i++){
     int idx_x = round((history_position[i].x - x_min) / x_resol);
     int idx_y = round((history_position[i].y - y_min) / y_resol);
-    printf("measurement at the position (%d,%d) is %f\n",idx_x,idx_y,gasAverConMap(idx_x,idx_y));
     concentrations_from_map.push_back(gasAverConMap(idx_x,idx_y));
   }
 }

@@ -203,7 +203,7 @@ void init(){
 	}
 }
 
-double odor_read(){
+void odor_read(double &sensor_reading, double *odor_concentration){
 	double odor_sample=0;
 	while (wb_receiver_get_queue_length(odor_tag) > 0) {
 		assert(wb_receiver_get_data_size(odor_tag) == sizeof(double));
@@ -222,9 +222,9 @@ double odor_read(){
 		alpha = Ts / (tau_r + Ts);
 	else                                       //decaying phase
 		alpha = Ts / (tau_d + Ts);
-	double sensor_reading = alpha * odor_sample + previous_sensor_value * (1 - alpha);
+	sensor_reading = alpha * odor_sample + previous_sensor_value * (1 - alpha);
 	previous_sensor_value = sensor_reading;
-	return sensor_reading;
+	*odor_concentration = odor_sample;
 }
 
 void wind_read(double* intensity, double* angle){

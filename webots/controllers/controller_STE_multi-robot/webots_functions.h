@@ -98,7 +98,7 @@ extern int n_time_step;
 extern struct simulation_parameters simulation_parameters;
 
 void init();
-double odor_read();
+void odor_read(double &sensor_reading, double * odor_concentration);
 void wind_read(double* intensity, double* angle);
 void get_gps_position(Position* external_gps_position);
 void update_position();
