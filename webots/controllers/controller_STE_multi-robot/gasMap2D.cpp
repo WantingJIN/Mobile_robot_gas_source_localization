@@ -30,11 +30,6 @@ void GasMap2D::configureKernelAlgorithm(double sigma, double gamma, double scali
   gasWeightMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
   gasConfidenceMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
   gasWeightConMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
-  for (int i=0; i< map_x_nbins; i++){
-    for (int j=0; j< map_y_nbins; j++){
-      printf("gasAverConMap(%d,%d) = %f\n", i, j, gasAverConMap(i,j));
-    }
-  }
   
   setGaussianDivisor();
 }
@@ -50,20 +45,21 @@ void GasMap2D::runKernelAlgorithm(Position current_position, float current_odor)
   int idx_x_end = (idx_x + x_update_range < map_x_nbins) ? (idx_x + x_update_range) : map_x_nbins;
   int idx_y_start = (idx_y - y_update_range > 0) ? (idx_y - y_update_range) : 0;
   int idx_y_end = (idx_y + y_update_range < map_y_nbins) ? (idx_y + y_update_range) : map_y_nbins;
+  //printf("x_pos is %f, y_pos is %f, odor_con is %f \n", current_position.x, current_position.y, current_odor);
   //printf("idx x start is %d, idx x end is %d, idx y start is %d, idx y end is %d \n", idx_x_start, idx_x_end, idx_y_start, idx_y_end);
   for(int i = idx_x_start; i < idx_x_end; i++){
     for(int j = idx_y_start; j < idx_y_end; j++){
       x_dist = i * x_resol + x_min - current_position.x;
       y_dist = j * y_resol + y_min - current_position.y;
       float wcells = compute_gaussian(x_dist, y_dist);
-      //printf("gasWeightMap(i,j) is %f ", gasWeightMap(i,j));
+      //printf("gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap(i,j));
       gasWeightMap(i,j) += wcells;
-      //printf("Upodated gasWeightMap(i,j) is %f \n", gasWeightMap(i,j));
+      //printf(" Upodated gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap(i,j));
       gasWeightConMap(i,j) += current_odor * wcells;
-      //printf("Upodated gasWeightConMap(i,j) is %f \n", gasWeightConMap(i,j));
+      //printf(" Upodated gasWeightConMap(%d,%d) is %f ", i, j, gasWeightConMap(i,j));
       gasConfidenceMap(i,j) = 1 - exp(-gasWeightMap(i,j) / pow(kp.scaling_param,2));
       gasAverConMap(i,j) = gasWeightConMap(i,j) / gasWeightMap(i,j);
-      //printf("Upodated gasAverConMap(i,j) is %f \n", gasAverConMap(i,j));
+      //printf(" Upodated gasAverConMap(%d,%d) is %f \n", i, j, gasAverConMap(i,j));
     }
   }
 }
