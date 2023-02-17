@@ -10,13 +10,12 @@
 #include <fstream>
 #include <iostream>
 #include "controller_STE_multi-robot.h"
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include "Message.h"
 #include "webots_functions.h"
-#include "aStar.h"
+//#include "aStar.h"
 #include "visilibity.hpp"
-
 #include <webots/supervisor.h>
 
 using namespace std;
@@ -39,19 +38,19 @@ FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
-char goalposition_logfile_name[256];
-char measurements_logfile_name[256];
-char posterior_logfile_name[256];
-char posteriorpdf_logfile_name[256];
-char expected_a_posteriori_logfile_name[256];
-char max_a_posteriori_logfile_name[256];
-char likelihood_logfile_name[256];
-char measurement_history_logfile_name[256];
-char position_history_logfile_name[256];
-char posterior_pdf_3D_name[256];
-char entropy_logfile_name[256];
-char config_logfile_name[256];
-char trajectory_logfile_name[256];
+char goalposition_logfile_name[512];
+char measurements_logfile_name[512];
+char posterior_logfile_name[512];
+char posteriorpdf_logfile_name[512];
+char expected_a_posteriori_logfile_name[512];
+char max_a_posteriori_logfile_name[512];
+char likelihood_logfile_name[512];
+char measurement_history_logfile_name[512];
+char position_history_logfile_name[512];
+char posterior_pdf_3D_name[512];
+char entropy_logfile_name[512];
+char config_logfile_name[512];
+char trajectory_logfile_name[512];
 
 // finite state machine
 struct FSM FSM;
@@ -65,7 +64,8 @@ Position current_position;
 double speed[2] = {0};
 // robot's position and measurement history
 struct history history;
-
+struct history sample_in_motion;
+int sample_counter = 0;
 //plume model
 DeepCFDPlumeModel2D plume_model;
 
@@ -84,6 +84,12 @@ struct friends friends[MAX_NB_ROBOTS];
 int n_time_step = 0;
 
 struct simulation_parameters simulation_parameters;
+
+double previous_sensor_value = 0;
+
+// gas map
+// param: sigma, gamma, scaling_param, wind_speed, rco
+GasMap2D gas_map(0.1, 83, 1, 0, 0.05);
 
 // obstacles definitions
 int nbr_obs = 4;
@@ -315,11 +321,13 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
-	vector<vector<float>> model_c_avg(history.size, vector<float> (1)); 
-	vector<vector<float>> model_c_std(history.size, vector<float> (1)); 
+	vector<float> model_c_avg(history.size); 
+	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
-	for (int i = 0; i < history.size; i++)
-		sum_tmp += pow(history.measurement[i] - model_c_avg[i][0], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+	for (int i = 0; i < history.size; i++){
+		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+	}
 	
 	return (exp(-0.5 * sum_tmp));
 }
@@ -395,12 +403,12 @@ double posterior_predictive(double concentration, double position[][3]){
 */
 void information_gain_navigation_approx(Position current_position){
 	float p0 = 0.5; //50 cm
-	double DKL=0, max_DKL=-100;
+	double DKL=0, max_DKL=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
-	memcpy(fake_history.position, history.position, (sizeof(Position))*history.size);
-	memcpy(fake_history.measurement, history.measurement, (sizeof(double))*history.size);
+	fake_history.position = history.position;
+	fake_history.measurement = history.measurement;
 	fake_history.size = history.size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
@@ -421,27 +429,50 @@ void information_gain_navigation_approx(Position current_position){
 			//printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
-			fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			fake_history.position[fake_history.size].copy_position(tmp_position);
-			(fake_history.size)++;
+			// FIXME: possible bug here, we are caluculating the futhyre posterior with accumulated sampling fake history
+			//fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			//std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
+			//fake_history.position[fake_history.size].copy_position(tmp_position);
+			//(fake_history.size)++;
 			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
 			//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
 			//future_posterior.sum = 0;
-			DeepCFDPlumeModel2D plume_model_fake;
-			Posterior future_posterior(&plume_model_fake, 0);
-			//future_posterior.copy_posterior(zero);
-			future_posterior.MCMC_evaluation(fake_history);
-			//calculate the expected information gain
-			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// printf("DKL: %f _______________________\n", DKL);
-			if(DKL > max_DKL ){
-				max_DKL = DKL;
-				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
+			// TODO: Improve the way regenrate fake plume; at least use the same plume model for different positions
+			// TODO: Test the performance of the fake plume model
+			// DeepCFDPlumeModel2D plume_model_fake;
+			// Posterior future_posterior(&plume_model_fake, 0);
+			// //future_posterior.copy_posterior(zero);
+			// future_posterior.MCMC_evaluation(fake_history);
+			// //calculate the expected information gain
+			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// // printf("DKL: %f _______________________\n", DKL);
+			// if(DKL > max_DKL ){
+			// 	max_DKL = DKL;
+			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
+			// 	goal_position.y = tmp_position.y;
+			// 	goal_position.heading = 0;
+			// }
+			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			if(fake_concentration > max_meas){
+				max_meas = fake_concentration;
+				goal_position.x = tmp_position.x; 
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
 			}
 		}
 	}
+	// for(int i =- 1; i <= 1; i++){
+	// 	for (int j = -1; j <= 1; j++){
+	// 		tmp_position.x = current_position.x + i*p0;
+	//  		tmp_position.y = current_position.y + j*p0;
+	// 		if(!position_outside_arena(tmp_position)){
+	// 			goal_position.x = tmp_position.x ; // + (randu()-0.5)/5.0
+	// 			goal_position.y = tmp_position.y ;
+	// 			goal_position.heading = 0;
+	// 			break;
+	// 		}
+	// 	}
+	// }
 }
 /*
 void information_gain_navigation_predictive(){
@@ -682,11 +713,11 @@ void goal_outside_obstacles(Position * goal){
 	}
 
 	//set concentration to 0 in the original goal position
-	history.position[history.size].x = goal->x;
-	history.position[history.size].y = goal->y;
-	history.position[history.size].heading = 0;
-	history.measurement[history.size] = 0;
-	history.size++;
+	// history.position[history.size].x = goal->x;
+	// history.position[history.size].y = goal->y;
+	// history.position[history.size].heading = 0;
+	// history.measurement[history.size] = 0;
+	// history.size++;
     
 	if (idx != -1){
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
@@ -766,9 +797,25 @@ void state_waiting(){
 
 void state_measuring(){
 	//printf("measuring sample number %d\n", measurements.n_samples);
+	vector<double> sample_from_map;
+    if (CONTINOUS_SAMPLING){
+		gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
+		for(int i=0; i<sample_in_motion.size; i++){
+			printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+			printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+			history.position.push_back(sample_in_motion.position[i]);
+			history.measurement.push_back(sample_from_map[i]);
+			history.size++;
+		}
+		sample_in_motion.position.clear();
+		sample_in_motion.measurement.clear();
+		sample_in_motion.size = 0;
+		sample_from_map.clear();
+	}
 	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
 		//continue measuring odor concentration
-        sampleBuffer.instant_concentration = odor_read();
+		double odor_concentration = 0.0;
+        odor_read(sampleBuffer.instant_concentration, &odor_concentration);
 		//measuring wind
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 		//add samples to buffers
@@ -781,12 +828,13 @@ void state_measuring(){
 		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
-		history.position[history.size].x = current_position.x;
-		history.position[history.size].y = current_position.y;
-		history.position[history.size].heading = 0;
-		history.measurement[history.size] = sampleBuffer.average_concentration;
-		history.size++;
-		history_print(history);
+		if (!position_outside_arena(current_position)){
+			history.position.push_back({current_position.x, current_position.y, 0});
+			//history.measurement[history.size] = sampleBuffer.average_concentration;
+			history.measurement.push_back(sampleBuffer.average_concentration);
+			history.size++;
+			history_print(history);
+		}
 
 		// send it to friends
 		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
@@ -922,7 +970,28 @@ void state_updategoal(){
 
 void state_moving(){
 	//printf("moving toward the goal\n");
+    // FIXME: temporary attemp for continous sampling
+	if (CONTINOUS_SAMPLING){
+		if (sample_counter<10){
+			sample_counter++;
+		}
+		else{
+			double instant_concentration = 0.0;
+			double odor_concentration = 0.0;
+			odor_read(instant_concentration, &odor_concentration);
+			if (!position_outside_arena(current_position)){
+				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+		    	sample_in_motion.measurement.push_back(instant_concentration);
+		    	sample_in_motion.size++;
+		    	
+				//history.position.push_back({current_position.x, current_position.y, 0});
+		    	//history.measurement.push_back(instant_concentration);
+		    	//history.size++;
+			}
+			sample_counter = 0;
+		}
 
+	}
 	//verify if arrived to the goal if applicable
 	if(dist_to_goal(goal_position) > 0.05){
 		//move
@@ -964,10 +1033,10 @@ void state_obstacle_avoidance(){
 
 int main(int argc, char **argv){
 	// python instance (should be called ONLY ONCE and only in main)
-	CPyInstance hInstance;
+	//CPyInstance hInstance;
 	init();
 	read_obstacle_list();
-
+    //load_model_c();
 	//visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
   	if(  my_environment.is_valid( epsilon )  )
@@ -1021,6 +1090,13 @@ int main(int argc, char **argv){
 			//printf("[%d] my history size is %d\n", ID, history.size);
 		}
 	   	//change state
+		if (CONTINOUS_SAMPLING){
+			//sample and run kernel 
+			double instant_concentration = 0.0;
+			double odor_concentration = 0.0;
+			odor_read(instant_concentration, &odor_concentration);
+			gas_map.runKernelAlgorithm(current_position, instant_concentration);
+		}
     	FSM.hook();
     	//next
     	next_iteration_time();

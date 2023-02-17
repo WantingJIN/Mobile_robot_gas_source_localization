@@ -1,9 +1,6 @@
 #ifndef CONTROLLER_STE_CLEAN_H
 #define CONTROLLER_STE_CLEAN_H
 
-
-
-
 //C libraries
 #include <assert.h>
 #include <math.h>
@@ -11,7 +8,7 @@
 #include <stdlib.h> //srand
 #include <sys/stat.h> // mkdir
 #include <sys/time.h>
-#include <time.h> //time
+#include <time.h> //time 
 #include <string.h>
 #include <unistd.h>
 #include <iostream>
@@ -22,6 +19,7 @@
 #include "PlumeModel.h"
 #include "SampleBuffer.h"
 #include "Position.h"
+#include "gasMap2D.h"
 
 
 //Constant variables
@@ -32,7 +30,8 @@
 #define WHEEL_RADIUS	        0.021  	//K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	50 
+//#define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
+#define MAX_SAMPLE_NUMBER 	100 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
@@ -43,6 +42,7 @@
 //#define ZMIN 0.1
 #define XMAX 12.5
 #define YMAX 3.8
+
 //#define ZMAX 1.9
 // min and max for each parameter
 #define Q_min  1.0
@@ -86,6 +86,8 @@
 #define SCENARIO 		NO_COM_NO_COOR
 
 #define TIMEOUT         1000*1000 // miliseconds
+
+#define CONTINOUS_SAMPLING 1
 
 extern int nbr_obs;
 extern float margin;
@@ -137,8 +139,10 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
-	Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	//Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	//double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	vector<Position> position;
+	vector<double> measurement;
 };
 
 // message structure

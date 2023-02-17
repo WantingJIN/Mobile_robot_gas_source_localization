@@ -1,5 +1,5 @@
 #include "webots_functions.h"
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 
 
 //webots libraries
@@ -194,6 +194,7 @@ void init(){
 	fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){
@@ -202,7 +203,7 @@ void init(){
 	}
 }
 
-double odor_read(){
+void odor_read(double &sensor_reading, double *odor_concentration){
 	double odor_sample=0;
 	while (wb_receiver_get_queue_length(odor_tag) > 0) {
 		assert(wb_receiver_get_data_size(odor_tag) == sizeof(double));
@@ -210,7 +211,20 @@ double odor_read(){
 		wb_receiver_next_packet(odor_tag);
 	}
 	//printf("odor measurement : %f \n",odor_measurement);
-	return odor_sample;
+	// FIXME: temporary hack to smooth the odor sensor reading
+	double Ts = TIME_STEP / 1000.0; // sampling frequency
+	double tau_r = 1.3; // time constant for the rise
+	double tau_d = 2.0; // time constant for the decay
+	// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
+	// where wc is the cut-off frequency and Ts is the sampling period
+	double alpha;
+	if (odor_sample > previous_sensor_value)   //rising phase
+		alpha = Ts / (tau_r + Ts);
+	else                                       //decaying phase
+		alpha = Ts / (tau_d + Ts);
+	sensor_reading = alpha * odor_sample + previous_sensor_value * (1 - alpha);
+	previous_sensor_value = sensor_reading;
+	*odor_concentration = odor_sample;
 }
 
 void wind_read(double* intensity, double* angle){

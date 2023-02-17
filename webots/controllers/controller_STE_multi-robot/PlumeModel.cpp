@@ -5,8 +5,8 @@
 //#include "nvwa/debug_new.h"
 #include "PlumeModel.h"
 #include "controller_STE_multi-robot.h"
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include <numpy/arrayobject.h>
+//#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+//#include <numpy/arrayobject.h>
 #include <stdexcept>
 
 /********************************************************/
@@ -157,15 +157,15 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
 }
 
 //returns a list of concentrations for ONE set of parameters and A LIST of positions
-void GaussianPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg){
+void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg){
 	//ASSUMPTION : enough memory is already is already allocated for c_avg
 	for(int i = 0; i < nbr; i++){
-		c_avg[i][0] = concentration(robot_position[i], wind_intensity, param_list);
+		c_avg[i]= concentration(robot_position[i], wind_intensity, param_list);
 	}
 }
 
 //returns a list of concentrations for A LIST of parameters sets and A LIST of positions
-// void GaussianPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg){
+// void GaussianPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg){
 // 	//for all source positions
 	
 // }
@@ -385,6 +385,10 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(){
 	covar_sig_ii = new double[nbr_param];
 	covar_sig_ii[0] = 2;	//x
 	covar_sig_ii[1] = 0.1;	//y
+
+	//initialize the trained neural network
+	initialize_model_features();
+
 }
 
 DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D & another_model){
@@ -401,6 +405,7 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D & another_mod
 		max_a_post_value[i] = another_model.max_a_post_value[i];
 		covar_sig_ii[i] = another_model.covar_sig_ii[i];
 	}
+	DeepCFD = another_model.DeepCFD.clone();
 }
 
 //destructor
@@ -420,6 +425,56 @@ void DeepCFDPlumeModel2D::get_source_position_params(parameter * source_position
 	source_position_param_list[1] = param_list[1]; //y
 }
 
+void DeepCFDPlumeModel2D::initialize_model_features(){
+	// Load the number of maps
+    int m;
+    std::ifstream f("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/data/map_nbr.txt");
+    f >> m;
+    f.close();
+
+    // Load the model
+	//std::cout << "Loading model..." << std::endl;
+    DeepCFD = torch::jit::load("DeepCFD_libtorch_model.pt", device);
+	std::string mat_address = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
+    //convert string to char*
+    //std::cout << mat_address << std::endl;
+    char *mat_adr = new char[mat_address.length() + 1];
+    strcpy(mat_adr, mat_address.c_str());
+    mat_t *mat;
+    matvar_t *r = NULL, *c = NULL, *flow_def = NULL, *sdf = NULL, *reverse_sd= NULL;
+    mat = Mat_Open(mat_adr, MAT_ACC_RDONLY);
+    if (mat == NULL) {
+        std::cout << "Error opening MAT file" << std::endl;
+        //return 1;
+    }
+    //std::cout << mat-> << std::endl;
+    //std::cout << mat<< std::endl;
+    flow_def = Mat_VarRead(mat, "flow_def");
+    sdf = Mat_VarRead(mat, "sdf");
+    reverse_sd = Mat_VarRead(mat, "source_pos");
+    r = Mat_VarRead(mat, "X");
+    c = Mat_VarRead(mat, "Y");
+    if (flow_def == NULL || sdf == NULL || reverse_sd == NULL ||r == NULL || c == NULL) {
+        std::cout << "Error reading MAT file" << std::endl;
+        //return 1;
+    }
+    // declare the tensor of dimension 1x3x64x64
+    x = torch::zeros({1, 3, 64, 64}, torch::TensorOptions().dtype(torch::kDouble));
+
+    //convert to torch tensor
+   
+    torch:: Tensor flow_def_torch = torch::from_blob(flow_def->data, {(long long)flow_def->dims[0], (long long)flow_def->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+    torch:: Tensor sdf_torch = torch::from_blob(sdf->data, {(long long)sdf->dims[0], (long long)sdf->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+    torch:: Tensor reverse_sd_torch = torch::from_blob(reverse_sd->data, {(long long)reverse_sd->dims[0], (long long)reverse_sd->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+    x[0][0].slice(/*dim=*/0, /*start=*/0, /*end=*/flow_def_torch.size(0)).copy_(flow_def_torch);
+    x[0][1].slice(/*dim=*/0, /*start=*/0, /*end=*/sdf_torch.size(0)).copy_(sdf_torch);
+    x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/reverse_sd_torch.size(0)).copy_(reverse_sd_torch);
+	r_torch = torch::from_blob(r->data, {(long long)r->dims[0], (long long)r->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+	c_torch = torch::from_blob(c->data, {(long long)c->dims[0], (long long)c->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
+}
+
+
+
 // void DeepCFDPlumeModel2D::random_params(double * rnd_params){
 // 	for(int i = 0; i < nbr_param; i++)
 // 		rnd_params[i] = ((double)rand() / (double)RAND_MAX) * (param_list[i].upper_limit - param_list[i].lower_limit) + param_list[i].lower_limit;
@@ -427,67 +482,88 @@ void DeepCFDPlumeModel2D::get_source_position_params(parameter * source_position
 
 //returns concentration for ONE set of parameters and ONE position
 double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_list[]){
-	// std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	float sx = param_list[0];
 	float sy = param_list[1];
 	float px = robot_position.x;
 	float py = robot_position.y;
 	double c_avg = 0;
 
-	// the name of the python file that will be used
-	CPyObject pName = PyUnicode_FromString("Myapply_DeepCFD");
-	// import that file as a module
-	CPyObject pModule = PyImport_Import(pName);
-	// make the argument list that will be fed to the function
-	CPyObject args = Py_BuildValue("(ffff)", sx, sy, px, py);
+	// Calculate the revert distance to the estimated gas source
+    x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
+    std::vector<torch::jit::IValue> inputs;
+    //transpose the tensor
+    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
+    // NOTE: The input tensor must be a float tensor
+    inputs.push_back(x_trans.to(torch::kFloat).to(device));
+    //std::cout << x_trans[0][1] << std::endl;
+    // Execute the model and turn its output into a tensor.
+    at::Tensor output = DeepCFD(inputs).toTensor();
+    //std::cout << output << std::endl;
+    
+    int idx_x = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+    int idx_y = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+    //std::cout<< "idx_x is: "<<idx_x;
+    //std::cout<< " idx_y is: "<<idx_y << std::endl;
+   
+    c_avg = output[0][0][idx_y][idx_x].item<float>();
+    //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
+    
+    return c_avg;
 
-	// if the module is well imported
-	if(pModule){
-		// find the function
-		CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
-		// in the function is found and is callable
-		if(pFunc && PyCallable_Check(pFunc)){
-			// call the function with the argument list and get the output
-			CPyObject pValue = PyObject_CallObject(pFunc, args);
-			// printf("Model values C_avg = %f, C_std = %f\n", PyFloat_AsDouble(PyTuple_GetItem(pValue,0)), PyFloat_AsDouble(PyTuple_GetItem(pValue,1)));
-			// convert the output to c++-readable values and set in the pointers
-			c_avg = PyFloat_AsDouble(PyTuple_GetItem(pValue,0));
-			//c_std = PyFloat_AsDouble(PyTuple_GetItem(pValue,1));
-		}
-		else
-			printf("ERROR: function DeepCFD_output()\n");
-	}else
-		printf("ERROR: apply_DeepCFD Module not imported\n");
+	// // the name of the python file that will be used
+	// CPyObject pName = PyUnicode_FromString("Myapply_DeepCFD");
+	// // import that file as a module
+	// CPyObject pModule = PyImport_Import(pName);
+	// // make the argument list that will be fed to the function
+	// CPyObject args = Py_BuildValue("(ffff)", sx, sy, px, py);
+
+	// // if the module is well imported
+	// if(pModule){
+	// 	// find the function
+	// 	CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
+	// 	// in the function is found and is callable
+	// 	if(pFunc && PyCallable_Check(pFunc)){
+	// 		// call the function with the argument list and get the output
+	// 		CPyObject pValue = PyObject_CallObject(pFunc, args);
+	// 		// printf("Model values C_avg = %f, C_std = %f\n", PyFloat_AsDouble(PyTuple_GetItem(pValue,0)), PyFloat_AsDouble(PyTuple_GetItem(pValue,1)));
+	// 		// convert the output to c++-readable values and set in the pointers
+	// 		c_avg = PyFloat_AsDouble(PyTuple_GetItem(pValue,0));
+	// 		//c_std = PyFloat_AsDouble(PyTuple_GetItem(pValue,1));
+	// 	}
+	// 	else
+	// 		printf("ERROR: function DeepCFD_output()\n");
+	// }else
+	// 	printf("ERROR: apply_DeepCFD Module not imported\n");
 	
-	// return the average concentration predicted by the model
-	// std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-	// std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-	return c_avg;
+	// // return the average concentration predicted by the model
+	// // std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+	// // std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 }
 
 // helper function for the one bellow
-vector<float> listTupleToVector_Int(PyObject* incoming) {
-	vector<float> data;
-	if (PyTuple_Check(incoming)) {
-		for(Py_ssize_t i = 0; i < PyTuple_Size(incoming); i++) {
-			PyObject *value = PyTuple_GetItem(incoming, i);
-			data.push_back( PyFloat_AsDouble(value) );
-		}
-	} else {
-		if (PyList_Check(incoming)) {
-			for(Py_ssize_t i = 0; i < PyList_Size(incoming); i++) {
-				PyObject *value = PyList_GetItem(incoming, i);
-				data.push_back( PyFloat_AsDouble(value) );
-			}
-		} else {
-			throw logic_error("Passed PyObject pointer was not a list or tuple!");
-		}
-	}
-	return data;
-}
+// vector<float> listTupleToVector_Int(PyObject* incoming) {
+// 	vector<float> data;
+// 	if (PyTuple_Check(incoming)) {
+// 		for(Py_ssize_t i = 0; i < PyTuple_Size(incoming); i++) {
+// 			PyObject *value = PyTuple_GetItem(incoming, i);
+// 			data.push_back( PyFloat_AsDouble(value) );
+// 		}
+// 	} else {
+// 		if (PyList_Check(incoming)) {
+// 			for(Py_ssize_t i = 0; i < PyList_Size(incoming); i++) {
+// 				PyObject *value = PyList_GetItem(incoming, i);
+// 				data.push_back( PyFloat_AsDouble(value) );
+// 			}
+// 		} else {
+// 			throw logic_error("Passed PyObject pointer was not a list or tuple!");
+// 		}
+// 	}
+// 	return data;
+// }
 
 //returns a list of concentrations for ONE set of parameters and A LIST of positions
-void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg, vector<vector<float>> &c_std){
+void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std){
 	// nbr here stands for the number of gathered measurements instead of the number of robots
 
 	float sx = param_list[0];
@@ -500,45 +576,65 @@ void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, doub
 		py[i] = robot_position[i].y;
 	}
 
-	// import the python file as a module
-	CPyObject pModule = PyImport_Import(PyUnicode_FromString("Myapply_DeepCFD"));
-	// make the arguments with the provided values
-	npy_intp dims[1] = {nbr};
-    import_array(); 
-	CPyObject pArgs = PyTuple_New(4);
-    PyTuple_SetItem(pArgs, 0, PyFloat_FromDouble(sx));
-    PyTuple_SetItem(pArgs, 1, PyFloat_FromDouble(sy));
-    PyTuple_SetItem(pArgs, 2, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, px));
-    PyTuple_SetItem(pArgs, 3, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, py));
+	x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
+    std::vector<torch::jit::IValue> inputs;
+    //transpose the tensor
+    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
+    // NOTE: The input tensor must be a float tensor
+    inputs.push_back(x_trans.to(torch::kFloat).to(device));
+    //std::cout << x_trans[0][1] << std::endl;
+    // Execute the model and turn its output into a tensor.
+    at::Tensor output = DeepCFD(inputs).toTensor();
+    //std::cout << output << std::endl;
+	for (int i=0; i < nbr; i++) {
+        int idx_x = round((px[i] - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+        int idx_y = round((py[i] - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+        //std::cout << "idx_x is: "<<idx_x;
+        //std::cout << " idx_y is: "<<idx_y << std::endl;
+        c_avg[i] = output[0][0][idx_y][idx_x].item<float>();
+        //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px[i] << ", " << py[i] << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
+    }
 
-	// if the module is well imported
-	if(pModule){
-		// find the function
-		CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
-		// in the function is found and is callable
-		if(pFunc && PyCallable_Check(pFunc)){
-			// call the function with the argument list and get the output
-			CPyObject pValue = PyObject_CallObject(pFunc, pArgs);
-			// convert the output to c++-readable values and set in the pointers
-			for(int i = 0; i < nbr; i++){
-				//printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
-				c_avg[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,0),i));
-				c_std[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,1),i));
-				// printf("Model values C_avg[i]=");
-				// for (auto c_avg_iter : c_avg[i])
-                // {
-                //   printf("%f", c_avg_iter);
-                // }
-				// printf("\n");
-			}
-		}else
-			printf("ERROR: function DeepCFD_output()\n");
-	}else
-		printf("ERROR: apply_DeepCFD Module not imported\n");
+
+	// // import the python file as a module
+	// CPyObject pModule = PyImport_Import(PyUnicode_FromString("Myapply_DeepCFD"));
+	// // make the arguments with the provided values
+	// npy_intp dims[1] = {nbr};
+    // import_array(); 
+	// CPyObject pArgs = PyTuple_New(4);
+    // PyTuple_SetItem(pArgs, 0, PyFloat_FromDouble(sx));
+    // PyTuple_SetItem(pArgs, 1, PyFloat_FromDouble(sy));
+    // PyTuple_SetItem(pArgs, 2, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, px));
+    // PyTuple_SetItem(pArgs, 3, PyArray_SimpleNewFromData(1, dims, NPY_FLOAT, py));
+
+	// // if the module is well imported
+	// if(pModule){
+	// 	// find the function
+	// 	CPyObject pFunc = PyObject_GetAttrString(pModule, "DeepCFD_output_eval");
+	// 	// in the function is found and is callable
+	// 	if(pFunc && PyCallable_Check(pFunc)){
+	// 		// call the function with the argument list and get the output
+	// 		CPyObject pValue = PyObject_CallObject(pFunc, pArgs);
+	// 		// convert the output to c++-readable values and set in the pointers
+	// 		for(int i = 0; i < nbr; i++){
+	// 			//printf("We are in here %f \n", PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(pValue,0),i)));
+	// 			c_avg[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,0),i));
+	// 			c_std[i] = listTupleToVector_Int(PyList_GetItem(PyTuple_GetItem(pValue,1),i));
+	// 			// printf("Model values C_avg[i]=");
+	// 			// for (auto c_avg_iter : c_avg[i])
+    //             // {
+    //             //   printf("%f", c_avg_iter);
+    //             // }
+	// 			// printf("\n");
+	// 		}
+	// 	}else
+	// 		printf("ERROR: function DeepCFD_output()\n");
+	// }else
+	// 	printf("ERROR: apply_DeepCFD Module not imported\n");
 }
 
 //returns a list of concentrations for A LIST of parameters sets and A LIST of positions
-// void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg){
+// void DeepCFDPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg){
 // 	//source position
 // 	float sx = -1;
 // 	float sy = -1;

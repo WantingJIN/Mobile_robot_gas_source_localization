@@ -6,7 +6,21 @@
 #include <vector>
 #include "Position.h"
 #include <Python.h>
-#include "pyhelper.hpp"
+
+#include <torch/script.h> // One-stop header.
+#include <torch/torch.h>
+//#include <numpy/ndarrayobject.h>
+#include <fstream>
+#include <string>
+
+#include <iostream>
+#include <memory>
+//#include <opencv2/opencv.hpp>
+#include <matio.h>
+#include <cmath>
+//#include <Eigen/Dense>
+
+//#include "pyhelper.hpp"
 using namespace std;
 
 #define PI 	3.14159265358979
@@ -53,8 +67,8 @@ public:
 
 	//function that returns concentration using parameters
 	virtual double concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
-	virtual void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg,vector<vector<float>> &c_std) = 0;
-	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg) = 0;
+	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
+	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
@@ -91,8 +105,8 @@ public:
 
     //returns concentration for a set of parameters and a position
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg);
+	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 
@@ -150,11 +164,22 @@ public:
 
     //destructor
     ~DeepCFDPlumeModel2D();
+    
+	//model
+	torch::Device device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;;
+	torch::jit::script::Module DeepCFD;
 
+	//load pytorch model
+    void initialize_model_features();
+
+	//feature
+	torch::Tensor x;
+	torch::Tensor r_torch;
+	torch::Tensor c_torch;
     //returns concentration for a set of parameters and a position
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg, vector<vector<float>> &c_std);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
+	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 

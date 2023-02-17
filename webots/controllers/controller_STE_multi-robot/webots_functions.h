@@ -55,19 +55,21 @@ extern FILE* entropy_logfile;
 extern FILE* tmp_file;
 extern FILE* config_logfile;
 extern FILE* trajectory_logfile;
-extern char goalposition_logfile_name[256];
-extern char measurements_logfile_name[256];
-extern char posterior_logfile_name[256];
-extern char posteriorpdf_logfile_name[256];
-extern char expected_a_posteriori_logfile_name[256];
-extern char max_a_posteriori_logfile_name[256];
-extern char likelihood_logfile_name[256];
-extern char measurement_history_logfile_name[256];
-extern char position_history_logfile_name[256];
-extern char posterior_pdf_3D_name[256];
-extern char entropy_logfile_name[256];
-extern char config_logfile_name[256];
-extern char trajectory_logfile_name[256];
+extern char goalposition_logfile_name[512];
+extern char measurements_logfile_name[512];
+extern char posterior_logfile_name[512];
+extern char posteriorpdf_logfile_name[512];
+extern char expected_a_posteriori_logfile_name[512];
+extern char max_a_posteriori_logfile_name[512];
+extern char likelihood_logfile_name[512];
+extern char measurement_history_logfile_name[512];
+extern char position_history_logfile_name[512];
+extern char posterior_pdf_3D_name[512];
+extern char entropy_logfile_name[512];
+extern char config_logfile_name[512];
+extern char trajectory_logfile_name[512];
+
+extern double previous_sensor_value;
 
 // finite state machine
 extern struct FSM FSM;
@@ -96,7 +98,7 @@ extern int n_time_step;
 extern struct simulation_parameters simulation_parameters;
 
 void init();
-double odor_read();
+void odor_read(double &sensor_reading, double * odor_concentration);
 void wind_read(double* intensity, double* angle);
 void get_gps_position(Position* external_gps_position);
 void update_position();

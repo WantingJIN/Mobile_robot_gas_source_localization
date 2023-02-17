@@ -3,8 +3,9 @@
 #include <iterator>
 #include <fstream>
 #include <vector>
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "Posterior.h"
+#include <random>
 
 struct normal_random_variable{
     normal_random_variable(Eigen::MatrixXd const& covar)
@@ -25,8 +26,12 @@ struct normal_random_variable{
     {
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
-
-        return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
+        
+		Eigen::VectorXd vec(mean.size());
+        vec.setRandom();
+        vec = (vec.array() * dist(gen)).matrix();
+        return mean + transform * vec;
+        //return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
     }
 };
 
@@ -349,8 +354,8 @@ void Posterior::MCMC_evaluation(struct history history){
 	//error detection
 	double sample_likelihood = likelihood(history, sample, model);
 	if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f %f %f %f\n", 
-			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1], sample[2], sample[3], sample[4]);
+		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f\n", 
+			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
 		dirac_flag = 1;
 		return;
 	}
