@@ -91,7 +91,7 @@ double previous_sensor_value = 0;
 
 // gas map
 // param: sigma, gamma, scaling_param, wind_speed, rco
-GasMap2D gas_map(0.1, 83, 1, 0, 0.3);
+GasMap2D gas_map(0.1, 0.1, 1, 0.75, 0.3);
 
 // obstacles definitions
 int nbr_obs = 4;

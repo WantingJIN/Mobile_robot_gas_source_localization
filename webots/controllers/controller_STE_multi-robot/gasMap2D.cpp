@@ -87,7 +87,10 @@ void GasMap2D::setGaussianDivisor(){
 }
 
 float GasMap2D::compute_gaussian(const double x_dist, const double y_dist){
-    float num= (pow(x_dist,2)+ pow(y_dist,2))/ (2 * pow(kp.sigma,2));
+    float a  = kp.sigma + kp.gamma*kp.wind_speed;
+    float b  = kp.sigma/(1 + kp.gamma*kp.wind_speed/kp.sigma);
+    //float num= (pow(x_dist,2)+ pow(y_dist,2))/ (2 * pow(kp.sigma,2));
+    float num= (pow(x_dist,2)/ (2 * pow(a,2)) + pow(y_dist,2)/ (2 * pow(b,2)));
     return exp(-num)/_gaussian_divisor;
 }
 
