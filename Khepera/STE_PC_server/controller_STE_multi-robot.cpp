@@ -23,7 +23,7 @@ using namespace std;
 #define SA struct sockaddr 
 
 // log files
-char folder_name[256];
+char folder_name[25];
 FILE* goalposition_logfile;
 FILE* measurements_logfile;
 FILE* posterior_logfile;
@@ -56,15 +56,15 @@ char trajectory_logfile_name[256];
 // read data from file
 char logfile_folder_name[256];
 FILE* experiment_measurements_logfile;
-char experiment_measurements_logfile_name[256];
+char experiment_measurements_logfile_name[300];
 FILE* experiment_position_logfile;
-char experiment_position_logfile_name[256];
+char experiment_position_logfile_name[300];
 
 char scan_folder_name[256];
 FILE* scan_measurements_logfile;
-char scan_measurements_logfile_name[256];
+char scan_measurements_logfile_name[300];
 FILE* scan_position_logfile;
-char scan_position_logfile_name[256];
+char scan_position_logfile_name[300];
 
 // finite state machine
 struct FSM FSM;
@@ -78,6 +78,7 @@ Position current_position;
 double speed[2] = {0};
 // robot's position and measurement history
 struct history history;
+struct history sample_in_motion;
 
 //plume model
 DeepCFDPlumeModel2D plume_model;
@@ -158,6 +159,7 @@ int init_TCP_socket(){
         exit(EXIT_FAILURE); 
     } 
 	printf("After accept\n");
+	return 1;
 }
 
 //random value sampled from a nromal distribution
@@ -400,7 +402,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
-	vector<vector<float>> model_c_avg(history.size, vector<float> (1)); 
+	vector<float> model_c_avg(history.size); 
 	//vector<vector<float>> true_model_c_avg(history.size, vector<float> (1)); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg);
 	//model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, true_source_location, true_model_c_avg);
@@ -410,7 +412,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 		// 	sigmaD = 125;
 		// }
 		float sigmaD = 0;
-		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i][0], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 		if (verbose){
 			//printf("Parameters is : %f, %f\n", parameters[0], parameters[1]);
 			//printf("For %d, estimation: %f, measurement: %f \n", i, true_model_c_avg[i][0], history.measurement_avg[i]);
@@ -470,48 +472,16 @@ bool position_outside_arena(Position p){
 	//if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
 }
-/*
-double posterior_predictive(double concentration, double position[][3]){ 
-	int i=0, j=0, l=0,m=0,n=0;
-	struct parameters_set source_param;
-	struct history fake_history = {1, {{0}}, {0}};
-	double predictive = 0;
 
-	for (i=0; i<x_nbins; i++){
-		for (j=0; j<y_nbins; j++){
-			//for (k=0; k<z_nbins; k++){
-				for (l=0; l<Q_nbins; l++){
-					for(m=0; m<a_y_nbins; m++){
-						for(n=0; n<b_y_nbins; n++){
-							source_param = (struct parameters_set) {(float)((Q_max-Q_min)*(2*l+1))/(float)(2*Q_nbins) + Q_min, {
-								(float)((source_x_max-source_x_min)*(2*i+1))/(float)(2*x_nbins) + source_x_min, 
-								(float)((source_y_max-source_y_min)*(2*j+1))/(float)(2*y_nbins) + source_y_min}, 
-								//(float)((source_z_max-source_z_min)*(2*k+1))/(float)(2*z_nbins) + source_z_min}, 
-								//(float)((a_y_max-a_y_min)*(2*m+1))/(float)(2*a_y_nbins) + a_y_min,
-								//(float)((b_y_max-b_y_min)*(2*n+1))/(float)(2*b_y_nbins) + b_y_min,
-								(float)((a_y_max-a_y_min)*(2*m+1))/(float)(2*a_y_nbins) + a_y_min,
-								(float)((b_y_max-b_y_min)*(2*n+1))/(float)(2*b_y_nbins) + b_y_min};
-								memcpy(fake_history.position, position, sizeof *position); fake_history.measurement[0] = concentration;
-							predictive += likelihood(fake_history, source_param) * posterior.pdf[i][j][l][m][n];
-
-						}
-					}
-				}
-			//}
-		}
-	}
-	return predictive;
-}
-*/
 void information_gain_navigation_approx(Position current_position){
 	float p0 = 0.5; //50 cm
 	double DKL=0, max_DKL=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
-	memcpy(fake_history.position, history.position, (sizeof(Position))*history.size);
-	memcpy(fake_history.measurement_avg, history.measurement_avg, (sizeof(double))*history.size);
-	memcpy(fake_history.measurement_std, history.measurement_std, (sizeof(double))*history.size);
+	fake_history.position = history.position;
+	fake_history.measurement_avg = history.measurement_avg;
+	fake_history.measurement_std = history.measurement_std;
 	fake_history.size = history.size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
@@ -519,7 +489,7 @@ void information_gain_navigation_approx(Position current_position){
 		if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
 		fake_history.position[fake_history.size].copy_position(friends[i].goal);
 		fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
-		fake_history.measurement_std[fake_history.size] = 300; //TODO: to fix later
+		fake_history.measurement_std[fake_history.size] = 300; //FIXME: to fix later
 		(fake_history.size)++;
 	}
 
@@ -556,77 +526,7 @@ void information_gain_navigation_approx(Position current_position){
 		}
 	}
 }
-/*
-void information_gain_navigation_predictive(){
-	int s=0, c=0;
-	float p0 = 0.5; //50 cm
-	double reward=0, max_reward = -100;
-	double position[1][3] = {{0}};
-	
-	for(c=0; c<3; c++){
-		for(s=-1; s<=1; s=s+2){
-			position[0][0] = current_position[0];
-			position[0][1] = current_position[1];
-			position[0][2] = current_position[2];
-			position[0][c] += s*p0;
-			if(VERBOSE) printf("[%d] position : %f %f %f\n", ID, position[0][0],position[0][1],position[0][2]);
-			if(position_outside_arena(position[0])) continue;
-			reward = target_evaluation(position);
-			if(VERBOSE) printf("[%d] reward: %f _______________________\n", ID, reward);
-			if(reward > max_reward ){
-				max_reward = reward;
-				goal_position[0] = position[0][0];
-				goal_position[1] = position[0][1];
-				goal_position[2] = position[0][2];
-			}
-		}
-	}
-	if(VERBOSE) printf("[%d] goal_position : %f %f %f\n", ID, goal_position[0],goal_position[1],goal_position[2]);
-}
 
-double target_evaluation(double position[][3]){
-	int i = 0;
-	double predictive[N_CONCENTRATION_LEVEL] = {0};
-	double sum_predictive = 0;
-	double DKLs[N_CONCENTRATION_LEVEL] = {0};
-	double reward = 0;
-	//double entropy_values[N_CONCENTRATION_LEVEL] = {0};
-	//double reward2 = 0;
-
-	//calculate max concentration value based on current estimation
-	float max_concentration = pseudo_gaussian_plume_model(posterior.expected_value.source_position, measurements.wind_intensity, posterior.expected_value);
-	if(VERBOSE) printf("[%d] max_concentration : %f\n", ID, max_concentration);
-	//for each level of concentration
-	for(i=0; i<N_CONCENTRATION_LEVEL; i++){
-		history.measurement_avg[FSM.n_cycles] = i*max_concentration/(N_CONCENTRATION_LEVEL-1);
-		//printf("measurement level %d: %f\n", i, measurement_history[FSM.n_cycles]);
-		//calculate the predictive posterior and it's expected value P(i*max_concentration/(N_CONCENTRATION_LEVEL-1))
-		predictive[i] = posterior_predictive(history.measurement_avg[FSM.n_cycles], position);
-		//printf("P(x~) = %f\n", predictive[i]);
-		sum_predictive += predictive[i];
-		//calculate posterior
-		//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf);//memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
-		//future_posterior.sum = 0;
-		future_posterior.copy_posterior(zero);
-		//posterior_fct(future_posterior, measurement_history, FSM.n_cycles); //future_posterior_3D, &sum_future_posterior,
-		future_posterior.MCMC_evaluation(history);
-		//log_posterior_pdf_3D(future_posterior_3D, "../../../Results/tmp_future_posterior.csv", "a");
-		//DKL of each posterior
-		//DKLs[i] = Kullback_Leibler_divergence(posterior.pdf, posterior.sum, future_posterior.pdf, future_posterior.sum);
-		DKLs[i] = posterior.Kullback_Leibler_divergence(future_posterior);
-		//printf("DKL: %f \n",DKLs[i]);
-		//entropy_values[i] = entropy(future_posterior_3D, sum_future_posterior);
-	}
-	for(i=0; i<N_CONCENTRATION_LEVEL; i++){
-		//weighted DKL with predictive expected value
-		reward += (predictive[i]/sum_predictive) * DKLs[i];
-		//reward2 += (predictive[i]/sum_predictive) * entropy_values[i];
-		//printf("predictive: %f, DKL: %f, reward: %f   ---   predictive: %f, entropy: %f, reward: %f\n", 
-			//predictive[i]/sum_predictive,DKLs[i],reward, predictive[i]/sum_predictive,entropy_values[i],reward2);
-	}
-	return reward;
-}
-*/
 void balance_exploration_exploitation(float gloabl_local_search_ratio){
 	float ratio = gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
@@ -795,11 +695,12 @@ void goal_outside_obstacles(Position * goal){
 	}
 
 	//set concentration to 0 in the original goal position
-	history.position[history.size].x = goal->x;
-	history.position[history.size].y = goal->y;
-	history.position[history.size].heading = 0;
-	history.measurement_avg[history.size] = 0;
-	history.size++;
+	//FIXME: sometime the goal position is nan; which cost problem in the estimation
+	// history.position[history.size].x = goal->x;
+	// history.position[history.size].y = goal->y;
+	// history.position[history.size].heading = 0;
+	// history.measurement_avg[history.size] = 0;
+	// history.size++;
 
 	// otherwise, lets try 4 different candidates
 	// for each candidate position
@@ -1027,16 +928,15 @@ void state_listen(){
     success = read(sock, buffer, sizeof(double)*5); 
     //printf("received Gas value %f %f %f %f\n", buffer[0], buffer[1], buffer[2], buffer[3]); 
     // printf("listening..\n");
-
+     
+	//TODO - extend current version to receive multiple measurements
     if(success > 0){
     	printf("received Gas value %f: (%f, %f) %f +- %f\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]); 
 
     	// save in history
-	    history.position[history.size].x = buffer[1];
-		history.position[history.size].y = buffer[2];
-		history.position[history.size].heading = 0;
-		history.measurement_avg[history.size] = buffer[3];
-		history.measurement_std[history.size] = buffer[4];
+		history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
+		history.measurement_avg.push_back(buffer[3]);
+		history.measurement_std.push_back(buffer[4]);
 		history.size++;
 
 		//save current position
@@ -1106,7 +1006,7 @@ void state_read(){
 
 int main(int argc, char **argv){
 	// python instance (should be called ONLY ONCE and only in main)
-	CPyInstance hInstance;
+	//CPyInstance hInstance;
 
 	init();
 	if (WORKING_MODE == EXPERIMENT){

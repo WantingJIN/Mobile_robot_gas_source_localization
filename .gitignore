@@ -5,13 +5,11 @@ webots/wb_output.txt
 webots_*/
 result_backup
 *.wbproj
-<<<<<<< HEAD
-webots/plugins/**
 
+webots/plugins/**
 WIRE_Lab/**
-=======
 webots/controllers/controller_STE_video
->>>>>>> d5329cfe6dc83fc6a77513773263146aec5ff284
+
 
 # openfoam
 openfoam/training_random/training_random_win*/*
@@ -25,16 +23,12 @@ openfoam/AutoGDM
 
 # khepera
 
-<<<<<<< HEAD
 Khepera/Results*/**
 Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
-=======
 Khepera/Results/**
-Khepera/STE_PC_server/**
 
->>>>>>> d5329cfe6dc83fc6a77513773263146aec5ff284
 
 # executable file 
 **/build/
