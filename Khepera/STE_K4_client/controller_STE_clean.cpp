@@ -66,6 +66,8 @@ Position current_position;
 double speed[2] = {0};
 // robot's position and measurement history
 struct history history;
+// robot's postion and meausrement during motion
+struct history sample_in_motion;
 //wind vector
 sVector3d wind_vect;
 // current posterior distribution 
@@ -91,6 +93,8 @@ int n_time_step = 0;
 struct simulation_parameters simulation_parameters;
 
 int msg_counter = 0;
+
+double sample_counter = 0;
 
 std::vector<Message> ack_msg_vec;
 std::vector<int> received_msgs;
@@ -315,6 +319,24 @@ void state_waiting(){
 
 void state_measuring(){
 	// printf("measuring sample number %d\n", sampleBuffer.n_samples);
+	vector<double> sample_from_map;
+	int history_size_before_sampling = history.size;
+    if (CONTINOUS_SAMPLING){
+		gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
+		for(int i=0; i<sample_in_motion.size; i++){
+			printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+			printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+			history.position.push_back(sample_in_motion.position[i]);
+			history.measurement_avg.push_back(sample_from_map[i]);
+			//FIXME: temporary solution
+			history.measurement_std.push_back(0.0);
+			history.size++;
+		}
+		sample_in_motion.position.clear();
+		sample_in_motion.measurement_std.clear();
+		sample_in_motion.size = 0;
+		sample_from_map.clear();
+	}
 	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
 		//continue measuring odor concentration
         sampleBuffer.instant_concentration = odor_read();
@@ -351,20 +373,36 @@ void state_measuring(){
 		int success = -1;
 
     	//send the message
-		m_buffer[0] = history.size;
-		m_buffer[1] = current_position.x;
-		m_buffer[2] = current_position.y;
-		m_buffer[3] = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : sampleBuffer.average_concentration - odor_baseline_value;
-		m_buffer[4] = sampleBuffer.stdDev_concentration;
-		//variable = (condition) ? expressionTrue : expressionFalse;
-		do{
-			success = send(sock, m_buffer, sizeof(m_buffer), 0);
+        int history_size_after_sampling = history.size;
+
+		// first send the size of the message
+		int measurement_size = history_size_after_sampling -  history_size_before_sampling;
+        do{
+			success = send(sock, measurement_size, sizeof(measurement_size), 0);
 			--timeout;
 		} while(success == -1 && timeout > 0);
 		if(success > 0)
-			printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+			printf("successfully sent measurement_size %d \n", measurement_size);
 		else
-			printf("sending failed with timeout!\n");
+			printf("failed to send measurement_size %d \n", measurement_size);
+
+
+        for (int i = history_size_before_sampling; i < history_size_after_sampling; i++) {
+			m_buffer[0] = i;
+			m_buffer[1] = history.position[i].x;
+			m_buffer[2] = history.position[i].y;
+			m_buffer[3] = history.measurement_avg[i];
+			m_buffer[4] = history.measurement_std[i];
+			//variable = (condition) ? expressionTrue : expressionFalse;
+			do{
+				success = send(sock, m_buffer, sizeof(m_buffer), 0);
+				--timeout;
+			} while(success == -1 && timeout > 0);
+			if(success > 0)
+				printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+			else
+				printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+		}
 
 		// send the measurement to the server and wait for new orders
 		FSM.state = STATE_LISTEN;
@@ -411,12 +449,24 @@ void state_listen(){
 void state_moving(){
 	//printf("moving toward the goal\n");
 	//verify if arrived to the goal if applicable
+	if (CONTINOUS_SAMPLING){
+		sample_counter++;
+		//sample and run Kernel
+		double instant_concentration = odor_read();
+		double reverse_sensor_reading = 0.0;
+		gas_map.run_kernel(current_position, instant_concentration);
+		if (sample_counter > 10){
+			sample_counter = 0;
+			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+			sample_in_motion.measurement_avg.push_back(instant_concentration);
+			sample_in_motion.size++;
+		}
+	}
 	if(dist_to_goal(goal_position) > 0.05){
 		//move
 		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
 			i++;
 			printf("current goal is: %f, %f\n", i->x, i->y);
-
 		}
 		go_to_goal(*i);
 		//obstacle avoidance if necessary
