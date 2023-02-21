@@ -409,7 +409,7 @@ void DeepCFDPlumeModel2D::initialize_model_features(){
 	// Load the number of maps
     int m;
 	// FIXME: change the path here
-    std::ifstream f("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/data/map_nbr.txt");
+    std::ifstream f("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/map_nbr.txt");
     f >> m;
     f.close();
 
@@ -417,7 +417,7 @@ void DeepCFDPlumeModel2D::initialize_model_features(){
 	//std::cout << "Loading model..." << std::endl;
 	// FIXME: change the path here
     DeepCFD = torch::jit::load("DeepCFD_libtorch_model.pt", device);
-	std::string mat_address = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
+	std::string mat_address = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_/map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
     //convert string to char*
     //std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];

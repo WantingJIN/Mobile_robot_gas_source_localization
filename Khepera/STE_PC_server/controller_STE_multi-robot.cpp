@@ -475,23 +475,23 @@ bool position_outside_arena(Position p){
 
 void information_gain_navigation_approx(Position current_position){
 	float p0 = 0.5; //50 cm
-	double DKL=0, max_DKL=-100;
+	double DKL=0, max_DKL=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
-	struct history fake_history;
-	fake_history.position = history.position;
-	fake_history.measurement_avg = history.measurement_avg;
-	fake_history.measurement_std = history.measurement_std;
-	fake_history.size = history.size;
+	// struct history fake_history;
+	// fake_history.position = history.position;
+	// fake_history.measurement_avg = history.measurement_avg;
+	// fake_history.measurement_std = history.measurement_std;
+	// fake_history.size = history.size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
-	for(int i = 0; i < simulation_parameters.number_of_robots; i++){
-		if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
-		fake_history.position[fake_history.size].copy_position(friends[i].goal);
-		fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
-		fake_history.measurement_std[fake_history.size] = 300; //FIXME: to fix later
-		(fake_history.size)++;
-	}
+	// for(int i = 0; i < simulation_parameters.number_of_robots; i++){
+	// 	if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
+	// 	fake_history.position[fake_history.size].copy_position(friends[i].goal);
+	// 	fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
+	// 	fake_history.measurement_std[fake_history.size] = 300; //FIXME: to fix later
+	// 	(fake_history.size)++;
+	// }
 
 	for(int i =- 1; i <= 1; i++){
 		for (int j = -1; j <= 1; j++){
@@ -503,23 +503,30 @@ void information_gain_navigation_approx(Position current_position){
 			//printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
-			fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			fake_history.measurement_std[fake_history.size] = 300;
-			fake_history.position[fake_history.size].copy_position(tmp_position);
-			(fake_history.size)++;
+			// fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			// fake_history.measurement_std[fake_history.size] = 300;
+			// fake_history.position[fake_history.size].copy_position(tmp_position);
+			// (fake_history.size)++;
 			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
 			//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
 			//future_posterior.sum = 0;
-			DeepCFDPlumeModel2D plume_model_fake;
-			Posterior future_posterior(&plume_model_fake, 0);
-			//future_posterior.copy_posterior(zero);
-			future_posterior.MCMC_evaluation(fake_history);
-			//calculate the expected information gain
-			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// printf("DKL: %f _______________________\n", DKL);
-			if(DKL > max_DKL ){
-				max_DKL = DKL;
-				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
+			// DeepCFDPlumeModel2D plume_model_fake;
+			// Posterior future_posterior(&plume_model_fake, 0);
+			// //future_posterior.copy_posterior(zero);
+			// future_posterior.MCMC_evaluation(fake_history);
+			// //calculate the expected information gain
+			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// // printf("DKL: %f _______________________\n", DKL);
+			// if(DKL > max_DKL ){
+			// 	max_DKL = DKL;
+			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
+			// 	goal_position.y = tmp_position.y;
+			// 	goal_position.heading = 0;
+			// }
+			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			if(fake_concentration > max_meas){
+				max_meas = fake_concentration;
+				goal_position.x = tmp_position.x; 
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
 			}
@@ -921,33 +928,36 @@ void state_updategoal(){
 }
 
 void state_listen(){
-	int success = -1;
-    double buffer[5] = {0}; 
-
-	// wait for gas measurements
-    success = read(sock, buffer, sizeof(double)*5); 
-    //printf("received Gas value %f %f %f %f\n", buffer[0], buffer[1], buffer[2], buffer[3]); 
-    // printf("listening..\n");
-     
-	//TODO - extend current version to receive multiple measurements
-    if(success > 0){
-    	printf("received Gas value %f: (%f, %f) %f +- %f\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]); 
-
-    	// save in history
-		history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
-		history.measurement_avg.push_back(buffer[3]);
-		history.measurement_std.push_back(buffer[4]);
-		history.size++;
-
-		//save current position
-		current_position.x = buffer[1];
-		current_position.y = buffer[2];
-		current_position.heading = 0;
-		 
-		// check if all was received so far
-		if(history.size != buffer[0])
-			printf("Something wrong in history...\n");
-
+	int success_recv_meas = -1;
+	int success_recv_size = -1;
+    double buffer[5] = {0};
+	int measurement_size = 0; 
+    // first recive the size of the message queue
+	success_recv_size = read(sock, &measurement_size, sizeof(int));
+	if (success_recv_size > 0){
+		//TODO - check here: whether should be > 0 or > -1
+		while (measurement_size-- > -1){
+			// wait for gas measurements
+			success_recv_meas = read(sock, buffer, sizeof(double)*5); 
+			//printf("received Gas value %f %f %f %f\n", buffer[0], buffer[1], buffer[2], buffer[3]); 
+			// printf("listening..\n");
+			 
+			if(success_recv_meas > 0){
+				printf("received Gas value %f: (%f, %f) %f +- %f\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]); 
+				// save in history
+				history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
+				history.measurement_avg.push_back(buffer[3]);
+				history.measurement_std.push_back(buffer[4]);
+				history.size++;
+				// check if all was received so far
+				if(history.size != buffer[0])
+					printf("Something wrong in history...\n");
+			}
+			//save current position
+			current_position.x = buffer[1];
+			current_position.y = buffer[2];
+			current_position.heading = 0;
+	    } 
 		//move to estimating
 		history_print(history);
 		FSM.state = STATE_ESTIMATING;
