@@ -87,7 +87,7 @@ int n_time_step = 0;
 
 struct simulation_parameters simulation_parameters;
 
-double previous_sensor_value = 0;
+double previous_sensor_reading = 0.0;
 
 // gas map
 // param: sigma, gamma, scaling_param, wind_speed, rco
@@ -801,14 +801,24 @@ void state_measuring(){
 	//printf("measuring sample number %d\n", measurements.n_samples);
 	vector<double> sample_from_map;
     if (CONTINOUS_SAMPLING){
-		gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
-		for(int i=0; i<sample_in_motion.size; i++){
-			printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
-			printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
-			printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
-			history.position.push_back(sample_in_motion.position[i]);
-			history.measurement.push_back(sample_from_map[i]);
-			history.size++;
+		if (KEREL_INTERPOLATION){
+			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
+			for(int i=0; i<sample_in_motion.size; i++){
+				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+				printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
+				history.position.push_back(sample_in_motion.position[i]);
+				history.measurement.push_back(sample_from_map[i]);
+				history.size++;
+			}
+		} else {
+			for(int i=0; i<sample_in_motion.size; i++){
+				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
+				history.position.push_back(sample_in_motion.position[i]);
+				history.measurement.push_back(sample_in_motion.measurement[i]);
+				history.size++;
+			}
 		}
 		sample_in_motion.position.clear();
 		sample_in_motion.measurement.clear();
@@ -975,26 +985,41 @@ void state_moving(){
 	//printf("moving toward the goal\n");
     // FIXME: temporary attemp for continous sampling
 	if (CONTINOUS_SAMPLING){
-			sample_counter++;
-			//sample and run kernel 
-			double instant_concentration = 0.0;
-			double odor_concentration = 0.0;
-			odor_read(instant_concentration, odor_concentration);
+		sample_counter++;
+		//sample and run kernel 
+		double instant_concentration = 0.0;
+		double odor_concentration = 0.0;
+		double reverse_sensor_reading = 0.0;
+		odor_read(instant_concentration, odor_concentration);
+		if (REVERSE_SENSOR_MODEL){
+			// FIXME: temporary attemp for reverse sensor model
+			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double tau_r = 1.3; // time constant for the rise
+			double tau_d = 2.0;
+			double alpha = 0.0;
+			if (instant_concentration > previous_sensor_reading)   //rising phase
+				alpha = tau_r / Ts;
+			else                                       //decaying phase
+				alpha = tau_d / Ts;
+			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
+			previous_sensor_reading = reverse_sensor_reading;
+			instant_concentration = reverse_sensor_reading;
+		}
+		if (KEREL_INTERPOLATION){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
+		}
 		if (sample_counter > 10){
 			if (!position_outside_arena(current_position)){
 				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-		    	sample_in_motion.measurement.push_back(instant_concentration);
-		    	sample_in_motion.size++;
+				sample_in_motion.measurement.push_back(instant_concentration);
+				sample_in_motion.size++;
 				ground_truth_in_motion.push_back(odor_concentration);
-		    	
 				//history.position.push_back({current_position.x, current_position.y, 0});
-		    	//history.measurement.push_back(instant_concentration);
-		    	//history.size++;
+				//history.measurement.push_back(instant_concentration);
+				//history.size++;
 			}
 			sample_counter = 0;
 		}
-
 	}
 	//verify if arrived to the goal if applicable
 	if(dist_to_goal(goal_position) > 0.05){

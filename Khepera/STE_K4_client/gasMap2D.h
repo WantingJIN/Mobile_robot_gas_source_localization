@@ -1,15 +1,9 @@
 #ifndef KERNEL3D_H_
 #define KERNEL3D_H_
 
-#include <eigen3/Eigen/Geometry>
-using namespace Eigen;
-
-//#include "Utils.h"
-//#include "GasMap.h"
 #include "Position.h"
 #include <vector>
-// #include <torch/script.h> // One-stop header.
-// #include <torch/torch.h>
+#include <math.h>
 
 using namespace std;
 
@@ -35,10 +29,10 @@ struct KernelParameters {
 
 class GasMap2D{
   public:
-    Eigen::Matrix<double,map_x_nbins,map_y_nbins> gasWeightConMap;
-    Eigen::Matrix<double,map_x_nbins,map_y_nbins> gasAverConMap;
-    Eigen::Matrix<double,map_x_nbins,map_y_nbins> gasWeightMap;
-    Eigen::Matrix<double,map_x_nbins,map_y_nbins> gasConfidenceMap;
+    double gasWeightConMap[map_x_nbins][map_y_nbins];
+    double gasAverConMap[map_x_nbins][map_y_nbins];
+    double gasWeightMap[map_x_nbins][map_y_nbins];
+    double gasConfidenceMap[map_x_nbins][map_y_nbins];
 
     double x_min;
     double y_min;
@@ -59,7 +53,8 @@ class GasMap2D{
 
     
   private:
-    Eigen::Matrix2f _sigma_matrix;
+    //Eigen::Matrix2f _sigma_matrix;
+    double _sigma_matrix[2][2];
     float _gaussian_divisor;
     float avg_WRt;
     float counter_WRt;
