@@ -95,6 +95,7 @@ struct simulation_parameters simulation_parameters;
 int msg_counter = 0;
 
 double sample_counter = 0;
+double previous_sensor_reading = 0.0
 
 std::vector<Message> ack_msg_vec;
 std::vector<int> received_msgs;
@@ -322,15 +323,24 @@ void state_measuring(){
 	vector<double> sample_from_map;
 	int history_size_before_sampling = history.size;
     if (CONTINOUS_SAMPLING){
-		gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
-		for(int i=0; i<sample_in_motion.size; i++){
-			printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
-			printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
-			history.position.push_back(sample_in_motion.position[i]);
-			history.measurement_avg.push_back(sample_from_map[i]);
-			//FIXME: temporary solution
-			history.measurement_std.push_back(0.0);
-			history.size++;
+		if (KERNEL_INTERPOLATION){
+			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
+			for(int i=0; i<sample_in_motion.size; i++){
+				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+				history.position.push_back(sample_in_motion.position[i]);
+				history.measurement_avg.push_back(sample_from_map[i]);
+				//FIXME: temporary solution
+				history.measurement_std.push_back(0.0);
+				history.size++;
+			}
+		} else {
+			for(int i=0; i<sample_in_motion.size; i++){
+				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				history.position.push_back(sample_in_motion.position[i]);
+				history.measurement.push_back(sample_in_motion.measurement_avg[i]);
+				history.size++;
+			}
 		}
 		sample_in_motion.position.clear();
 		sample_in_motion.measurement_std.clear();
@@ -454,7 +464,23 @@ void state_moving(){
 		//sample and run Kernel
 		double instant_concentration = odor_read();
 		double reverse_sensor_reading = 0.0;
-		gas_map.run_kernel(current_position, instant_concentration);
+		if (REVERSE_SENSOR_MODEL){
+			// FIXME: temporary attemp for reverse sensor model
+			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double tau_r = 1.3; // time constant for the rise
+			double tau_d = 2.0;
+			double alpha = 0.0;
+			if (instant_concentration > previous_sensor_reading)   //rising phase
+				alpha = tau_r / Ts;
+			else                                       //decaying phase
+				alpha = tau_d / Ts;
+			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
+			previous_sensor_reading = reverse_sensor_reading;
+			instant_concentration = reverse_sensor_reading;
+		}
+		if (KEREL_INTERPOLATION){
+			gas_map.runKernelAlgorithm(current_position, instant_concentration);
+		}
 		if (sample_counter > 10){
 			sample_counter = 0;
 			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
