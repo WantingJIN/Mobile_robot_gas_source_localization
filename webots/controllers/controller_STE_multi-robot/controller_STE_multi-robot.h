@@ -88,7 +88,7 @@
 #define TIMEOUT         1000*1000 // miliseconds
 
 #define CONTINOUS_SAMPLING 1
-#define KEREL_INTERPOLATION 0
+#define KEREL_INTERPOLATION 1
 #define REVERSE_SENSOR_MODEL 1
 
 

@@ -854,12 +854,6 @@ void state_measuring(){
 			Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
     		send_msg(msg);
     	}
-		char label[255];
-        sprintf(label,"Iteration: %d\n",history.size);
-        wb_supervisor_set_label(2,label,0.1,0.8,0.1,0x61A8E8,0,"Impact");
-	    char label2[255];
-        sprintf(label2,"Reading: %.3f\n",sampleBuffer.average_concentration);
-        wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
 
 		// go to estimation
 		FSM.state = STATE_ESTIMATING;
@@ -895,6 +889,17 @@ void state_estimating(){
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
 	if(VERBOSE) printf("[%d] entropy : %f\n", ID, posterior.entropy);
+
+	char label[255];
+	sprintf(label,"Iteration: %d\n",FSM.n_cycles);
+	wb_supervisor_set_label(2,label,0.1,0.8,0.1,0x61A8E8,0,"Impact");
+	char label2[255];
+	sprintf(label2,"Reading: %f\n",sampleBuffer.average_concentration);
+	wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
+	char label3[255];
+	sprintf(label3,"Entropy: %.3f\n",posterior.entropy);
+	wb_supervisor_set_label(3,label3,0.1,0.9,0.1,0xFFD966,0,"Impact");
+	
 	
 	//check if time is up
 	//if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1 || posterior.dirac_flag){
@@ -1002,7 +1007,10 @@ void state_moving(){
 			else                                       //decaying phase
 				alpha = tau_d / Ts;
 			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
-			previous_sensor_reading = reverse_sensor_reading;
+			// printf("reverse_sensor_reading %f\n", reverse_sensor_reading);
+			// printf("instant_concentration %f\n", instant_concentration);
+			// printf("odor_concentration %f\n", odor_concentration);
+			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
 		if (KEREL_INTERPOLATION){

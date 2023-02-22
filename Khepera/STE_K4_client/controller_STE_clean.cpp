@@ -475,7 +475,7 @@ void state_moving(){
 			else                                       //decaying phase
 				alpha = tau_d / Ts;
 			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
-			previous_sensor_reading = reverse_sensor_reading;
+			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
 		if (KEREL_INTERPOLATION){
