@@ -38,6 +38,9 @@
 #define SENSOR_NUMBER  		8
 #define MAX_NB_ROBOTS       3
 
+#define CONTINOUS_SAMPLING 1
+#define REVERSE_SENSOR_MODEL 1
+
 //wind tunnel boundaries
 #define XMIN 0.25
 #define YMIN 0.15

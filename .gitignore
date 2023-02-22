@@ -7,7 +7,6 @@ result_backup
 *.wbproj
 
 webots/plugins/**
-
 WIRE_Lab/**
 webots/controllers/controller_STE_video
 
@@ -28,6 +27,8 @@ Khepera/Results*/**
 Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
+Khepera/Results/**
+
 
 # executable file 
 **/build/

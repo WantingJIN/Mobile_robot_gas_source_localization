@@ -45,13 +45,13 @@
 #define YMAX 3.8
 //#define ZMAX 1.9
 // min and max for each parameter
-#define Q_min  1
-#define Q_max  20
+#define Q_min  1.0
+#define Q_max  101.0
 #define source_x_min  2.75
-#define source_y_min  0
+#define source_y_min  0.0
 //#define source_z_min  0
 #define source_x_max  12.75
-#define source_y_max  4
+#define source_y_max  4.0
 //#define source_z_max  2
 #define a_y_min  0.01
 #define a_y_max  0.05
@@ -62,14 +62,20 @@
 //#define b_z_min  0.1
 //#define b_z_max  0.5
 // number of bins for posterior PDF
-#define Q_nbins 	10 //(Q_max - Q_min) /20
-#define x_nbins 	40 //(source_x_max - source_x_min)/0.1 //0.1 m is the granuality
+#define Q_nbins 	20 //(Q_max - Q_min) /20
+#define x_nbins 	20 //(source_x_max - source_x_min)/0.1 //0.1 m is the granuality
 #define y_nbins 	20 //(source_y_max - source_y_min)/0.1 //0.1 m is the granuality
 //#define z_nbins 	10 //(source_z_max - source_z_min)/0.1 //0.1 m is the granuality
 #define a_y_nbins 	10 //(a_y_max - a_y_min) / 0.0025
 #define b_y_nbins 	10 //(b_y_max - b_y_min) / 0.025
 //#define a_z_nbins 	10 //(a_z_max - a_z_min) / 0.0025
 //#define b_z_nbins 	10 //(b_z_max - b_z_min) / 0.025
+//resolution of the estimated terms
+#define Q_resol    (Q_max-Q_min)/Q_nbins
+#define x_resol    (source_x_max-source_x_min)/x_nbins
+#define y_resol    (source_y_max-source_y_min)/y_nbins
+#define a_y_resol  (a_y_max-a_y_min)/a_y_nbins
+#define b_y_resol  (b_y_max-b_y_min)/b_y_nbins
 #define MAX_DISTANCE 10.77 //from (2.75,0) to (12.75,4)
 
 #define VERBOSE 		1
@@ -137,9 +143,9 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
-	Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement_avg[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement_std[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	vector<Position> position;
+	vector<double> measurement_avg;
+	vector<double> measurement_std;
 };
 
 // message structure
