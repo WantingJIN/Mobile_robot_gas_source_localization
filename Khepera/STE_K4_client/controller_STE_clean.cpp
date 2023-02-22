@@ -95,7 +95,11 @@ struct simulation_parameters simulation_parameters;
 int msg_counter = 0;
 
 double sample_counter = 0;
-double previous_sensor_reading = 0.0
+double previous_sensor_reading = 0.0;
+
+// gas map initialization
+// param: sigma, gamma, scaling_param, wind_speed, rco
+GasMap2D gas_map(0.1, 0.1, 1, 0.75, 0.3);
 
 std::vector<Message> ack_msg_vec;
 std::vector<int> received_msgs;
@@ -320,7 +324,7 @@ void state_waiting(){
 
 void state_measuring(){
 	// printf("measuring sample number %d\n", sampleBuffer.n_samples);
-	vector<double> sample_from_map;
+	std::vector<double> sample_from_map;
 	int history_size_before_sampling = history.size;
     if (CONTINOUS_SAMPLING){
 		if (KERNEL_INTERPOLATION){
@@ -336,14 +340,14 @@ void state_measuring(){
 			}
 		} else {
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
 				history.position.push_back(sample_in_motion.position[i]);
-				history.measurement.push_back(sample_in_motion.measurement_avg[i]);
+				history.measurement_avg.push_back(sample_in_motion.measurement_avg[i]);
 				history.size++;
 			}
 		}
 		sample_in_motion.position.clear();
-		sample_in_motion.measurement_std.clear();
+		sample_in_motion.measurement_avg.clear();
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 	}
@@ -388,11 +392,13 @@ void state_measuring(){
 		// first send the size of the message
 		int measurement_size = history_size_after_sampling -  history_size_before_sampling;
         do{
-			success = send(sock, measurement_size, sizeof(measurement_size), 0);
+			success = send(sock, &measurement_size, sizeof(measurement_size), 0);
 			--timeout;
 		} while(success == -1 && timeout > 0);
-		if(success > 0)
+		if(success > 0){
 			printf("successfully sent measurement_size %d \n", measurement_size);
+			timeout = 10;
+		}
 		else
 			printf("failed to send measurement_size %d \n", measurement_size);
 
@@ -408,8 +414,11 @@ void state_measuring(){
 				success = send(sock, m_buffer, sizeof(m_buffer), 0);
 				--timeout;
 			} while(success == -1 && timeout > 0);
-			if(success > 0)
+			if(success > 0){
 				printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+				timeout = 10;
+
+			}
 			else
 				printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
 		}
@@ -478,7 +487,7 @@ void state_moving(){
 			previous_sensor_reading = reverse_sensor_reading;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (KEREL_INTERPOLATION){
+		if (KERNEL_INTERPOLATION){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > 10){

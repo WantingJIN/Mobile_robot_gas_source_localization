@@ -23,6 +23,7 @@
 #include "Message.h"
 #include "SampleBuffer.h"
 #include "visilibity.hpp"
+#include "gasMap2D.h"
 
 //Constant variables
 #define BOUND(x, a, b) (((x)<(a))?(a):((x)>(b))?(b):(x))
@@ -135,9 +136,9 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
-	Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement_avg[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement_std[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	vector<Position> position;
+	vector<double> measurement_avg;
+	vector<double> measurement_std;
 
 };
 
