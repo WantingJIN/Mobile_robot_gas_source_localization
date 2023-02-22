@@ -15,6 +15,8 @@ WbDeviceTag left_motor, right_motor;
 
 long long start_time;
 
+double previous_sensor_value;
+
 void init(){
 	if(VERBOSE) printf("initialization\n");
 	char* pPath;
@@ -87,7 +89,8 @@ void init(){
 	FSM.hook  = state_waiting;
 	FSM.n_cycles = 0;
 
-	
+	// previous reading initialization 
+	previous_sensor_value = 0.0;
 
 	//initialize the current position
 	get_gps_position(&current_position);

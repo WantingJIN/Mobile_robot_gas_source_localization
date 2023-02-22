@@ -26,10 +26,15 @@ void GasMap2D::configureKernelAlgorithm(double sigma, double gamma, double scali
   kp.scaling_param = scaling_param;
   kp.wind_speed = wind_speed;
   kp.rco = rco;
-  gasAverConMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
-  gasWeightMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
-  gasConfidenceMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
-  gasWeightConMap = Eigen::Matrix<double,map_x_nbins,map_y_nbins>::Zero();
+
+  for (int i = 0; i < map_x_nbins; i++){
+    for (int j = 0; j < map_y_nbins; j++){
+      gasWeightConMap[i][j] = 0;
+      gasAverConMap[i][j] = 0;
+      gasWeightMap[i][j] = 0;
+      gasConfidenceMap[i][j] = 0;
+    }
+  }
   
   setGaussianDivisor();
 }
@@ -53,12 +58,12 @@ void GasMap2D::runKernelAlgorithm(Position current_position, float current_odor)
       y_dist = j * y_resol + y_min - current_position.y;
       float wcells = compute_gaussian(x_dist, y_dist);
       //printf("gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap(i,j));
-      gasWeightMap(i,j) += wcells;
+      gasWeightMap[i][j] += wcells;
       //printf(" Upodated gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap(i,j));
-      gasWeightConMap(i,j) += current_odor * wcells;
+      gasWeightConMap[i][j] += current_odor * wcells;
       //printf(" Upodated gasWeightConMap(%d,%d) is %f ", i, j, gasWeightConMap(i,j));
-      gasConfidenceMap(i,j) = 1 - exp(-gasWeightMap(i,j) / pow(kp.scaling_param,2));
-      gasAverConMap(i,j) = gasWeightConMap(i,j) / gasWeightMap(i,j);
+      gasConfidenceMap[i][j] = 1 - exp(-gasWeightMap[i][j] / pow(kp.scaling_param,2));
+      gasAverConMap[i][j] = gasWeightConMap[i][j] / gasWeightMap[i][j];
       //printf(" Upodated gasAverConMap(%d,%d) is %f \n", i, j, gasAverConMap(i,j));
     }
   }
@@ -98,6 +103,6 @@ void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_posi
   for(int i=0; i<history_position.size(); i++){
     int idx_x = round((history_position[i].x - x_min) / x_resol);
     int idx_y = round((history_position[i].y - y_min) / y_resol);
-    concentrations_from_map.push_back(gasAverConMap(idx_x,idx_y));
+    concentrations_from_map.push_back(gasAverConMap[idx_x][idx_y]);
   }
 }
