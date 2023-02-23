@@ -272,7 +272,7 @@ void establish_baseline(){
     printf("[%d] Establishing the odor baseline ... \n", ID);
 
     //starting point at the begining of the map to establish the baseline
-    goal_position.x = 3 + float(ID-101)/5.0;
+    goal_position.x = 3; //+ float(ID-101)/5.0;
 
     //stop every 35 cm to make a measurement 
     for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.35){

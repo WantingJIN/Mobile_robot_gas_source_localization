@@ -478,7 +478,7 @@ void state_moving(){
 		double reverse_sensor_reading = 0.0;
 		if (REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model
-			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double Ts = 0.1; // sampling frequency
 			double tau_r = 1.3; // time constant for the rise
 			double tau_d = 2.0;
 			double alpha = 0.0;
@@ -487,8 +487,11 @@ void state_moving(){
 			else                                       //decaying phase
 				alpha = tau_d / Ts;
 			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
-			//printf("instant measurement is : %f, reverse sensor reading is: %f \n", reverse_sensor_reading, instant_concentration);
-			previous_sensor_reading = reverse_sensor_reading;
+			if (reverse_sensor_reading < 0){
+				printf("instant measurement is %f, previous sensor reading is %f \n", sensor_reading, odor_baseline_value);
+			}
+			printf("instant measurement is : %f, reverse sensor reading is: %f \n", instant_concentration, reverse_sensor_reading);
+			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
 		if (KERNEL_INTERPOLATION){
