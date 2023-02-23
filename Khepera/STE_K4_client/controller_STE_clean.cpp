@@ -340,9 +340,10 @@ void state_measuring(){
 			}
 		} else {
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement_avg.push_back(sample_in_motion.measurement_avg[i]);
+				history.measurement_std.push_back(0.0);
 				history.size++;
 			}
 		}
@@ -351,15 +352,17 @@ void state_measuring(){
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 	}
-	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
+	while(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
 		//continue measuring odor concentration
         sampleBuffer.instant_concentration = odor_read();
 		//measuring wind
 		//wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 		//add samples to buffers
 		sampleBuffer.add_all_to_buffer();
+		next_iteration_time();
 		//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
-	}else{
+	}
+
 		//average all samples
 		sampleBuffer.average_all();
 
@@ -367,12 +370,10 @@ void state_measuring(){
 		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
-		history.position[history.size].x = current_position.x;
-		history.position[history.size].y = current_position.y;
-		history.position[history.size].heading = 0;
-		history.measurement_avg[history.size] = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : sampleBuffer.average_concentration - odor_baseline_value;
+		history.position.push_back({current_position.x, current_position.y, 0.0});
+		history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : sampleBuffer.average_concentration - odor_baseline_value);
 		// if(history.measurement_avg[history.size] < 0) history.measurement_avg[history.size] = 0;
-		history.measurement_std[history.size] = sampleBuffer.stdDev_concentration;
+		history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
 		history.size++;
 		history_print(history);
 
@@ -389,6 +390,7 @@ void state_measuring(){
     	//send the message
         int history_size_after_sampling = history.size;
 
+        printf("history size before : %d, after ; %d \n", history_size_before_sampling, history_size_after_sampling);
 		// first send the size of the message
 		int measurement_size = history_size_after_sampling -  history_size_before_sampling;
         do{
@@ -421,7 +423,7 @@ void state_measuring(){
 			}
 			else
 				printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
-		}
+		
 
 		// send the measurement to the server and wait for new orders
 		FSM.state = STATE_LISTEN;
@@ -471,7 +473,8 @@ void state_moving(){
 	if (CONTINOUS_SAMPLING){
 		sample_counter++;
 		//sample and run Kernel
-		double instant_concentration = odor_read();
+		double sensor_reading = odor_read();
+		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : sensor_reading - odor_baseline_value;
 		double reverse_sensor_reading = 0.0;
 		if (REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model
@@ -484,6 +487,7 @@ void state_moving(){
 			else                                       //decaying phase
 				alpha = tau_d / Ts;
 			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
+			//printf("instant measurement is : %f, reverse sensor reading is: %f \n", reverse_sensor_reading, instant_concentration);
 			previous_sensor_reading = reverse_sensor_reading;
 			instant_concentration = reverse_sensor_reading;
 		}

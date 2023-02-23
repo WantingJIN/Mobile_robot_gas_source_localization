@@ -837,43 +837,41 @@ void state_estimating(){
 void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
 
-	// //find the best point to move to 
-	// switch(simulation_parameters.scenario){
-	// 	case NO_COM_NO_COOR :
-	// 		information_gain_navigation_approx(current_position);
-	// 		printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
-    // 		//information_gain_navigation_predictive();
-    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    // 		DKL_MAP_distance(0.75);
-    // 		printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
-    // 		break;
-    // 	case COM_NO_COOR :
-    // 		information_gain_navigation_approx(current_position);
-    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    // 		DKL_MAP_distance(0.75);
-    // 		break;
-	//     case COM_COOR :
-	//     	information_gain_navigation_approx(current_position);
-	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-	//     	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-	//     	DKL_MAP_distance(0.75);
-	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    // 		joint_planning();
-    // 		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    // 		break;
-    // }
-    // goal_outside_obstacles(&goal_position);
-	 int d;
-	 float f1, f2, f3;
-     if (access(experiment_position_logfile_name, F_OK) != -1 && fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3) == 4){
-        if (d == 0){
-			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
-		}
-		goal_position.x = f1;
-		goal_position.y = f2;
+	//find the best point to move to 
+	switch(simulation_parameters.scenario){
+		case NO_COM_NO_COOR :
+			information_gain_navigation_approx(current_position);
+			printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
+    		//information_gain_navigation_predictive();
+    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+    		DKL_MAP_distance(0.75);
+    		printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
+    		break;
+    	case COM_NO_COOR :
+    		information_gain_navigation_approx(current_position);
+    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+    		DKL_MAP_distance(0.75);
+    		break;
+	    case COM_COOR :
+	    	information_gain_navigation_approx(current_position);
+	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+	    	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+	    	DKL_MAP_distance(0.75);
+	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+    		joint_planning();
+    		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+    		break;
+    }
+    goal_outside_obstacles(&goal_position);
+	//  int d;
+	//  float f1, f2, f3;
+    //  if (access(experiment_position_logfile_name, F_OK) != -1 && fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3) == 4){
+    //     if (d == 0){
+	// 		fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
+	// 	}
+	// 	goal_position.x = f1;
+	// 	goal_position.y = f2;
 	 
-
-
 
     // printf("goal position here %f %f 3\n", goal_position.x, goal_position.y);
     //heterogeneous_navigation();
@@ -902,7 +900,7 @@ void state_updategoal(){
     // for(unsigned k=0; k<Polyline_path.size(); k++){
     // 	Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
     //     path.push_back(p);
-    //		log_trajectory(p);
+    // 		log_trajectory(p);
     // }
     // i = path.begin();
 
@@ -921,11 +919,9 @@ void state_updategoal(){
 	//move to listen
 	FSM.state = STATE_LISTEN;
 	FSM.hook = state_listen;
-	 } else {
-		 FSM.state = STATE_FINISHED;
+	 
+} 
 
-	 }
-}
 
 void state_listen(){
 	int success_recv_meas = -1;
@@ -934,9 +930,10 @@ void state_listen(){
 	int measurement_size = 0; 
     // first recive the size of the message queue
 	success_recv_size = read(sock, &measurement_size, sizeof(int));
+	printf("received Gas measurement size is: %d \n", measurement_size);
 	if (success_recv_size > 0){
 		//TODO - check here: whether should be > 0 or > -1
-		while (measurement_size-- > -1){
+		while (measurement_size-- > 0){
 			// wait for gas measurements
 			success_recv_meas = read(sock, buffer, sizeof(double)*5); 
 			//printf("received Gas value %f %f %f %f\n", buffer[0], buffer[1], buffer[2], buffer[3]); 
@@ -950,8 +947,10 @@ void state_listen(){
 				history.measurement_std.push_back(buffer[4]);
 				history.size++;
 				// check if all was received so far
-				if(history.size != buffer[0])
+				if(history.size != buffer[0] + 1){
 					printf("Something wrong in history...\n");
+					printf("history size is %d, buffer[0] is %f \n", history.size, buffer[0]);
+				}
 			}
 			//save current position
 			current_position.x = buffer[1];
