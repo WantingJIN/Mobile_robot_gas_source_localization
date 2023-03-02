@@ -409,17 +409,17 @@ void DeepCFDPlumeModel2D::initialize_model_features(){
 	// Load the number of maps
     int m;
 	// FIXME: change the path here
-    std::ifstream f("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/map_nbr.txt");
+    std::ifstream f("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt");
     f >> m;
     f.close();
 
     // Load the model
 	//std::cout << "Loading model..." << std::endl;
 	// FIXME: change the path here
-    DeepCFD = torch::jit::load("DeepCFD_libtorch_model.pt", device);
-	std::string mat_address = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_/map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
+    DeepCFD = torch::jit::load("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/STE_PC_server/DeepCFD_libtorch_model.pt", device);
+	std::string mat_address = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
     //convert string to char*
-    //std::cout << mat_address << std::endl;
+    std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];
     strcpy(mat_adr, mat_address.c_str());
     mat_t *mat;
