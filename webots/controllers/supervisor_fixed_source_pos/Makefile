@@ -45,19 +45,19 @@
 ###-----------------------------------------------------------------------------
 
 ### Do not modify: this includes Webots global Makefile.include
-CXX_SOURCES = nvwa/debug_new.cpp Position.cpp Message.cpp PlumeModel.cpp Posterior.cpp webots_functions.cpp visilibity.cpp SampleBuffer.cpp controller_STE_multi-robot.cpp
+CXX_SOURCES = ../controller_STE_clean/Message.cpp supervisor_target.cpp
 
 WEBOTS_HOME = /home/wjin/Softwares/webots-R2021b/webots
 WK4T_LIB = -lk4_webots
 
 USE_C_API = true
 
-INCLUDE = -I"../../libraries/khepera4" -I"$(WEBOTS_HOME)/include/controller/c/" -I"/usr/include/python3.8" -I"/usr/include/eigen3"
-LIBRARIES = -g -L"../../libraries/khepera4"  -L"/usr/lib/python3.8/" -L"/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/" -L"$(WEBOTS_HOME)/lib" -lpython3.8 -lk4_webots -lm -lController -lgsl -lgslcblas  
+INCLUDE = -I"../../libraries/khepera4" -I"$(WEBOTS_HOME)/include/controller/c/"
+LIBRARIES = -g -L"../../libraries/khepera4" -lk4_webots -lm -L"$(WEBOTS_HOME)/lib" -lController -lgsl -lgslcblas  
 
-CFLAGS = -std=c++11 -g -fpermissive
-
-space :=
+CFLAGS = -std=c++11 -Wno-write-strings
+space := 
 space +=
 WEBOTS_HOME_PATH=$(subst $(space),\ ,$(strip $(subst \,/,$(WEBOTS_HOME))))
 include $(WEBOTS_HOME_PATH)/resources/Makefile.include
+#include /home/rahbar/Downloads/webots-R2019a-rev1-x86-64/webots/resources/Makefile.include 
