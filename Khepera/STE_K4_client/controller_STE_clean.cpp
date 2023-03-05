@@ -371,7 +371,8 @@ void state_measuring(){
 		log_position();
 		log_measurements();
 		history.position.push_back({current_position.x, current_position.y, 0.0});
-		history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : sampleBuffer.average_concentration - odor_baseline_value);
+		// FIXME: temporay fix of gas measurement
+		history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value, 3.0, 66));
 		// if(history.measurement_avg[history.size] < 0) history.measurement_avg[history.size] = 0;
 		history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
 		history.size++;
@@ -474,7 +475,7 @@ void state_moving(){
 		sample_counter++;
 		//sample and run Kernel
 		double sensor_reading = odor_read();
-		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : sensor_reading - odor_baseline_value;
+		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value, 3.0, 66);
 		double reverse_sensor_reading = 0.0;
 		if (REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model

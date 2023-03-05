@@ -655,3 +655,8 @@ void log_baseline(double min_c, double max_c, double baseline_c){
 	fprintf(baseline_measurements_logfile,"%f, %f, %f\n", min_c, max_c, baseline_c);
 	fclose(baseline_measurements_logfile);
 }
+
+double calibrate_sensor_reading (double raw_reading, double a, double b){
+    double calibrated_reading = (raw_reading - b) * a;
+    return calibrated_reading;
+}
