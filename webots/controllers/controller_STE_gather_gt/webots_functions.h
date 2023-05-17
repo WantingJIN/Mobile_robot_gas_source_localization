@@ -40,7 +40,7 @@ extern struct sObject source;
 extern struct sOdometryTrack ot;
 
 // log files
-extern char folder_name[512];
+extern char folder_name[256];
 extern FILE* goalposition_logfile;
 extern FILE* measurements_logfile;
 extern FILE* posterior_logfile;
@@ -104,7 +104,7 @@ extern int n_time_step;
 extern struct simulation_parameters simulation_parameters;
 
 void init();
-void odor_read(double &sensor_reading, double &odor_concentration);
+void odor_read(double *sensor_reading, double &odor_concentration);
 void wind_read(double* intensity, double* angle);
 void get_gps_position(Position* external_gps_position);
 void update_position();

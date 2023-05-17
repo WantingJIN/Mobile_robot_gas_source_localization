@@ -150,6 +150,7 @@ Posterior::~Posterior(){
 //copy the pdf of a posterior in this one
 void Posterior::pdf_reset(){
 	int i=0;
+	// FIXME - Check here if sum needs to be calulated differently
 	sum = 0; 
     max = 0;
     entropy = 0;

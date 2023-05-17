@@ -800,8 +800,10 @@ void state_waiting(){
 void state_measuring(){
 	//printf("measuring sample number %d\n", measurements.n_samples);
 	vector<double> sample_from_map;
-    if (CONTINOUS_SAMPLING){
-		if (KEREL_INTERPOLATION){
+    // if robot is sensing while moving, saving the measurement in motion 
+    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
+		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
+		if (simulation_parameters.processingMode == KERNEL_MAPPING){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
 				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
@@ -812,6 +814,7 @@ void state_measuring(){
 				history.size++;
 			}
 		} else {
+			// if else, save the instant measurement directly
 			for(int i=0; i<sample_in_motion.size; i++){
 				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
 				printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
@@ -825,39 +828,53 @@ void state_measuring(){
 		sample_in_motion.size = 0;
 		ground_truth_in_motion.clear();
 		sample_from_map.clear();
-	}
-	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
-		//continue measuring odor concentration
+
+		// save the instant reading at the goal position as well; we only care about the ground truth here
 		double odor_concentration = 0.0;
-        odor_read(sampleBuffer.instant_concentration, odor_concentration);
-		//measuring wind
+        odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
-		//add samples to buffers
-		sampleBuffer.add_all_to_buffer();
-		//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
-	}else{
-		//average all samples
-		sampleBuffer.average_all();
-		//log and save
-		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+        if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
-		if (!position_outside_arena(current_position)){
-			history.position.push_back({current_position.x, current_position.y, 0});
-			//history.measurement[history.size] = sampleBuffer.average_concentration;
-			history.measurement.push_back(sampleBuffer.average_concentration);
-			history.size++;
-			history_print(history);
-		}
-		// send it to friends
-		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-			Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
-    		send_msg(msg);
-    	}
-
 		// go to estimation
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
+	}
+	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING){
+		// Sample for several seconds and take the average value
+		if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
+			//continue measuring odor concentration
+			double odor_concentration = 0.0;
+			odor_read(&sampleBuffer.instant_concentration, odor_concentration);
+			//measuring wind
+			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			//add samples to buffers
+			sampleBuffer.add_all_to_buffer();
+			//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
+		}else{
+			//average all samples
+			sampleBuffer.average_all();
+			//log and save
+			if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+			log_position();
+			log_measurements();
+			if (!position_outside_arena(current_position)){
+				history.position.push_back({current_position.x, current_position.y, 0});
+				//history.measurement[history.size] = sampleBuffer.average_concentration;
+				history.measurement.push_back(sampleBuffer.average_concentration);
+				history.size++;
+				history_print(history);
+			}
+			// send it to friends
+			if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
+				Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
+				send_msg(msg);
+			}
+
+			// go to estimation
+			FSM.state = STATE_ESTIMATING;
+			FSM.hook  = state_estimating;
+		}
 	}
 }
 
@@ -988,15 +1005,14 @@ void state_updategoal(){
 
 void state_moving(){
 	//printf("moving toward the goal\n");
-    // FIXME: temporary attemp for continous sampling
-	if (CONTINOUS_SAMPLING){
+	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
 		sample_counter++;
 		//sample and run kernel 
 		double instant_concentration = 0.0;
 		double odor_concentration = 0.0;
 		double reverse_sensor_reading = 0.0;
-		odor_read(instant_concentration, odor_concentration);
-		if (REVERSE_SENSOR_MODEL){
+		odor_read(&instant_concentration, odor_concentration);
+		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
 			double tau_r = 1.3; // time constant for the rise
@@ -1013,7 +1029,7 @@ void state_moving(){
 			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (KEREL_INTERPOLATION){
+		if (simulation_parameters.processingMode == KERNEL_MAPPING){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > 10){

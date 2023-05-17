@@ -87,15 +87,34 @@
 
 #define TIMEOUT         1000*1000 // miliseconds
 
-#define CONTINOUS_SAMPLING 0
-#define KEREL_INTERPOLATION 1
-#define REVERSE_SENSOR_MODEL 0
+// #define CONTINOUS_SAMPLING 0
+// #define KEREL_INTERPOLATION 0
+// #define REVERSE_SENSOR_MODEL 0
 
 
 extern int nbr_obs;
 extern float margin;
 extern float ** obstacles;
 // extern float obstacles[][4];
+
+// Mode of sampling 
+typedef enum samplingMode {
+	CONTINOUS_SAMPLING = 0,
+	STOP_AND_GO_SAMPLING = 1,
+}eSamplingMode;
+
+// Mode of Processing; 
+// in order to composente the slow reaction/recovery time of sensing
+typedef enum processingMode {
+	NO_PROCESSING = 0,
+	KERNEL_MAPPING = 1,
+	REVERSE_SENSOR_MODEL = 2,
+}eProcessingMode;
+
+typedef enum gasSensor{
+	PID = 0,
+	MOX = 1,
+}eGasSensor;
 
 //parameters to estimate
 struct parameters_set{
@@ -116,6 +135,9 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
+	eSamplingMode samplingMode;
+	eProcessingMode processingMode;
+	eGasSensor gasSensor;
 };
 extern struct simulation_parameters simulation_parameters;
 

@@ -23,7 +23,7 @@ using namespace std;
 //Global Variables
 
 // log files
-char folder_name[512];
+char folder_name[256];
 FILE* goalposition_logfile;
 FILE* measurements_logfile;
 FILE* posterior_logfile;
@@ -810,9 +810,11 @@ void state_waiting(){
 void state_measuring(){
 	//printf("measuring sample number %d\n", measurements.n_samples);
 	vector<double> sample_from_map;
-    if (CONTINOUS_SAMPLING){
-		if (KEREL_INTERPOLATION){
-			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
+	// if robot is sensing while moving, saving the measurement in motion 
+    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
+		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
+		if (simulation_parameters.processingMode == KERNEL_MAPPING){
+			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
 				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
 				printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
@@ -822,6 +824,7 @@ void state_measuring(){
 				history.size++;
 			}
 		} else {
+		// if else, save the instant measurement directly
 			for(int i=0; i<sample_in_motion.size; i++){
 				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
 				printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
@@ -835,39 +838,50 @@ void state_measuring(){
 		sample_in_motion.size = 0;
 		ground_truth_in_motion.clear();
 		sample_from_map.clear();
-	}
-	if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
-		//continue measuring odor concentration
-		double odor_concentration = 0.0;
-        odor_read(odor_concentration, sampleBuffer.instant_concentration);
-		//measuring wind
+
+		// save the instant reading at the goal position as well; we only care about the ground truth here
+        odor_read(nullptr, sampleBuffer.instant_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
-		//add samples to buffers
-		sampleBuffer.add_all_to_buffer();
-		//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
-	}else{
-		//average all samples
-		sampleBuffer.average_all();
-		//log and save
-		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+        if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
-		if (!position_outside_arena(current_position)){
-			history.position.push_back({current_position.x, current_position.y, 0});
-			//history.measurement[history.size] = sampleBuffer.average_concentration;
-			history.measurement.push_back(sampleBuffer.average_concentration);
-			history.size++;
-			history_print(history);
-		}
-		// send it to friends
-		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-			Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
-    		send_msg(msg);
-    	}
-
 		// go to estimation
 		FSM.state = STATE_READ;
 		FSM.hook  = state_read;
+	}
+    if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING){
+		// Sample for several seconds and take the average value
+		if(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
+			//continue measuring odor concentration
+			odor_read(nullptr, sampleBuffer.instant_concentration);
+			//measuring wind
+			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			//add samples to buffers
+			sampleBuffer.add_all_to_buffer();
+			//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
+		}else{
+			//average all samples
+			sampleBuffer.average_all();
+			//log and save
+			if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+			log_position();
+			log_measurements();
+			if (!position_outside_arena(current_position)){
+				history.position.push_back({current_position.x, current_position.y, 0});
+				//history.measurement[history.size] = sampleBuffer.average_concentration;
+				history.measurement.push_back(sampleBuffer.average_concentration);
+				history.size++;
+				history_print(history);
+			}
+			// send it to friends
+			if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
+				Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
+				send_msg(msg);
+			}
+			// go to estimation
+			FSM.state = STATE_READ;
+			FSM.hook  = state_read;
+		}
 	}
 }
 
@@ -894,7 +908,7 @@ void state_estimating(){
 	log_max_a_posteriori();
 	log_entropy();
 	//printf("Finish logging.\n");
-	posterior.log_pdf("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/current/101/posterior.csv",'a');
+	//posterior.log_pdf("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/current/101/posterior.csv",'a');
 
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
@@ -925,58 +939,6 @@ void state_estimating(){
 }
 
 void state_updategoal(){
-	//if(VERBOSE) printf("[%d] updating the goal\n", ID);
-
-	//find the best point to move to 
-	// switch(simulation_parameters.scenario){
-	// 	case NO_COM_NO_COOR :
-	// 		information_gain_navigation_approx(current_position);
-	// 		// printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
-    // 		//information_gain_navigation_predictive();
-    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    // 		DKL_MAP_distance(0.75);
-    // 		// printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
-    // 		break;
-    // 	case COM_NO_COOR :
-    // 		information_gain_navigation_approx(current_position);
-    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    // 		DKL_MAP_distance(0.75);
-    // 		break;
-	//     case COM_COOR :
-	//     	information_gain_navigation_approx(current_position);
-	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-	//     	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-	//     	DKL_MAP_distance(0.75);
-	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    // 		joint_planning();
-    // 		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    // 		break;
-    // }
-    // goal_outside_obstacles(&goal_position);
-    // // printf("goal position here %f %f 3\n", goal_position.x, goal_position.y);
-    // //heterogeneous_navigation();
-
-    // printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-  //   aStar as;
-  //   if(as.search(current_position, goal_position, astar_map, 0)){
-		// as.path( path );
-		// i = path.begin();
-		// std::ofstream myfile;
-		// myfile.open("aStar_paths.txt", ios::app);
-		// for( std::list<Position>::iterator i = path.begin(); i != path.end(); i++ )
-	 //    	myfile<< " " << i->x << ", " << i->y << ";";
-  //   	myfile<< std::endl;
-  //   	myfile.close();
-  //   }else{
-  //   	printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> aStar could not find a way!\n");
-  //   	as.search(current_position, goal_position, astar_map, 1);
-  //   }
-
-    //find the path using visibility graph
-	// current_position.x = 4.095615;
-	// current_position.y = 3.351716;
-	// goal_position.x = 8.228684;
-	// goal_position.y = 3.885515;
     VisiLibity::Point start(current_position.x, current_position.y);
     VisiLibity::Point finish(goal_position.x, goal_position.y);
     VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
@@ -997,16 +959,14 @@ void state_updategoal(){
 }
 
 void state_moving(){
-    // FIXME: temporary attemp for continous sampling
-	if (CONTINOUS_SAMPLING){
+	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
 		sample_counter++;
 		//sample and run kernel 
 		double instant_concentration = 0.0;
 		double odor_concentration = 0.0;
 		double reverse_sensor_reading = 0.0;
-		odor_read(instant_concentration, odor_concentration);
-		if (REVERSE_SENSOR_MODEL){
-			// FIXME: temporary attemp for reverse sensor model
+		odor_read(&instant_concentration, odor_concentration);
+		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL){
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
 			double tau_r = 1.3; // time constant for the rise
 			double tau_d = 2.0;
@@ -1022,7 +982,7 @@ void state_moving(){
 			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (KEREL_INTERPOLATION){
+		if (simulation_parameters.processingMode == KERNEL_MAPPING){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > 10){
@@ -1079,10 +1039,12 @@ void state_read(){
 	unsigned long t;
 	char line[256];
     //Read measurement from csv file
-	if (!CONTINOUS_SAMPLING) {
+	printf("reading from file\n");
+	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING) {
 		if (!feof(experiment_position_logfile) && !feof(experiment_measurements_logfile)){
 			fscanf(experiment_measurements_logfile, "%d, %f %f", &d, &f1, &f2);
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f3, &f4, &f5);
+			printf("read from file: %f %f %f %f\n", f1, f2, f3, f4);
 			if (f2 > 0){
 				// history.measurement_avg.push_back(f1*6.5);
 			    // history.measurement_std.push_back(f2);
@@ -1098,9 +1060,18 @@ void state_read(){
 			printf("End of experiment measurements file\n");
 			FSM.state = STATE_FINISHED;
 		}
-	} else {
-		if (!feof(experiment_measurements_logfile) && !feof(experiment_position_logfile)){
-			// fscanf(experiment_measurements_logfile, "%d, %f %f", &d, &f1, &f2);
+	}
+	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING) {
+		if (!feof(experiment_position_logfile) && !feof(experiment_measurements_logfile)){
+			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f1, &f2);
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f3, &f4, &f5);
+			printf("read from file: %f %f %f %f\n", f1, f2, f3, f4);
+			if (f2 > 0){
+				goal_position.x = f3;
+				goal_position.y = f4;
+				FSM.state = STATE_UPDATEGOAL;
+				FSM.hook  = state_updategoal;
+			}
 			// odor_baseline_value = 10864.0;
 			// float U0 = 33000 - odor_baseline_value;
 			// float U1 = 33000 - f1 + odor_baseline_value;
