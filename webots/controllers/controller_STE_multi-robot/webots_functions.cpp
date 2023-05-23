@@ -138,7 +138,7 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, STOP_AND_GO_SAMPLING, NO_PROCESSING, MOX};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -179,6 +179,35 @@ void init(){
 		if(ok) printf("scenario : %d\n", simulation_parameters.scenario);
 		fclose(sim_param_file);
 	}
+	// read sampling mode
+	// 1: continous sampling; 2: stop and sense sampling
+    if(access("../../data/simulation_parameters/sampling_mode.txt", F_OK) != -1 ){
+		int samplingModeType = 0;
+		sim_param_file = fopen("../../data/simulation_parameters/sampling_mode.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &samplingModeType);
+		simulation_parameters.samplingMode = static_cast<eSamplingMode>(samplingModeType);
+		if(ok) printf("sampling mode : %d\n", simulation_parameters.samplingMode);
+		fclose(sim_param_file);
+	}
+	// read data post-processing mode
+	// 1: kernel mapping; 2: reverse sensor model
+	if(access("../../data/simulation_parameters/data_processing_mode.txt", F_OK) != -1 ){
+		int processingModeType = 0;
+		sim_param_file = fopen("../../data/simulation_parameters/data_processing_mode.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &processingModeType);
+		simulation_parameters.processingMode = static_cast<eProcessingMode>(processingModeType);
+		if(ok) printf("data processing mode : %d\n", simulation_parameters.processingMode);
+		fclose(sim_param_file);
+	}
+	// read sensor type
+	if(access("../../data/simulation_parameters/gas_sensor_type.txt", F_OK) != -1 ){
+		int gasSensortype = 0;
+		sim_param_file = fopen("../../data/simulation_parameters/gas_sensor_type.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &gasSensortype);
+		simulation_parameters.gasSensor = static_cast<eGasSensor>(gasSensortype);
+		if(ok) printf("gas sensor : %d\n", simulation_parameters.gasSensor);
+		fclose(sim_param_file);
+	}
 	if(access("../../data/map_nbr.txt", F_OK) != -1 ){
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
@@ -198,6 +227,9 @@ void init(){
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
+	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
+	fprintf(sim_param_file, "data_processing_mode %d\n", simulation_parameters.processingMode);
+	fprintf(sim_param_file, "gas_sensor_type %d\n", simulation_parameters.gasSensor);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){
@@ -206,29 +238,41 @@ void init(){
 	}
 }
 
-void odor_read(double &sensor_reading, double &odor_concentration){
-	double odor_sample=0;
+/* Return value
+ * sensor_reading: the reading of the sensor (by taking into account the sensor model)
+ * odor_concentration: the concentration of the odor at the robot's position (ground truth)
+ */
+
+void odor_read(double *sensor_reading, double &odor_concentration){
 	while (wb_receiver_get_queue_length(odor_tag) > 0) {
 		assert(wb_receiver_get_data_size(odor_tag) == sizeof(double));
-		odor_sample = *(const double *)wb_receiver_get_data(odor_tag);
+		odor_concentration = *(const double *)wb_receiver_get_data(odor_tag);
 		wb_receiver_next_packet(odor_tag);
 	}
-	//printf("odor measurement : %f \n",odor_measurement);
-	// FIXME: temporary hack to smooth the odor sensor reading
-	double Ts = TIME_STEP / 1000.0; // sampling frequency
-	double tau_r = 1.3; // time constant for the rise
-	double tau_d = 2.0; // time constant for the decay
-	// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
-	// where wc is the cut-off frequency and Ts is the sampling period
-	double alpha;
-	if (odor_sample > previous_sensor_value)   //rising phase
-		alpha = Ts / (tau_r + Ts);
-	else                                       //decaying phase
-		alpha = Ts / (tau_d + Ts);
-	sensor_reading = alpha * odor_sample + previous_sensor_value * (1 - alpha);
-	previous_sensor_value = sensor_reading;
-	odor_concentration = odor_sample;
+	if (sensor_reading !=nullptr){
+		//printf("odor measurement : %f \n",odor_measurement);
+		// For PID sensor, the sensor reading is equal to the odor concentration
+		if (simulation_parameters.gasSensor == PID){
+			*sensor_reading = odor_concentration;
+		}
+        // For the MOX sensor, the sensor properties are modeled as a first-order system
+		if (simulation_parameters.gasSensor == MOX){
+			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double tau_r = 1.3; // time constant for the rise
+			double tau_d = 2.0; // time constant for the decay
+			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
+			// where wc is the cut-off frequency and Ts is the sampling period
+			double alpha;
+			if (odor_concentration > previous_sensor_value)   //rising phase
+				alpha = Ts / (tau_r + Ts);
+			else                                       //decaying phase
+				alpha = Ts / (tau_d + Ts);
+			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
+			previous_sensor_value = *sensor_reading;
+		}
+	}
 }
+
 
 void wind_read(double* intensity, double* angle){
 	struct vect3D{

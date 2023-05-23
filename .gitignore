@@ -27,7 +27,8 @@ Khepera/Results*/**
 Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
-Khepera/STE_PC_offline/log_STE_multi/**
+Khepera/STE_offline/log_STE_multi/**
+Khepera/STE_offline/log_STE_**/**
 Khepera/Results/**
 
 
