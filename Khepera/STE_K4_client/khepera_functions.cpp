@@ -179,7 +179,12 @@ void init(){
 	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
     fprintf(sim_param_file, "source_position %f %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1], 0.1);
     fprintf(sim_param_file, "robot's ID %d\n", ID);
-	fclose(sim_param_file);
+    fprintf(sim_param_file, "stop_and_sense %d\n", STOP_AND_SENSE);
+    fprintf(sim_param_file, "odor_filter_length %d\n", ODOR_FILTER_LENGTH);
+    fprintf(sim_param_file, "continous_sampling %d\n", CONTINOUS_SAMPLING);
+    fprintf(sim_param_file, "kernel_mapping %d\n", KERNEL_INTERPOLATION);
+    fprintf(sim_param_file, "reverse_sensor_model %d\n", REVERSE_SENSOR_MODEL);
+    fclose(sim_param_file);
 }
 
 int initCortexComm(){
@@ -315,8 +320,9 @@ void establish_baseline(){
     log_baseline(min, max, odor_baseline_value);
     //starting point of the actuall algorithm random on Y
     goal_position.x = 3 + (ID-101)/5;
-    //goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
-    goal_position.y = 2;
+    //NOTE - Khepera start position
+    goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
+    //goal_position.y = 2;
 
     printf("find the path using visibility graph \n");
     printf("[%d] Current posotion : %f, %f\n",ID, current_position.x, current_position.y);    
@@ -656,7 +662,20 @@ void log_baseline(double min_c, double max_c, double baseline_c){
 	fclose(baseline_measurements_logfile);
 }
 
-double calibrate_sensor_reading (double raw_reading, double a, double b){
+double calibrate_sensor_reading (double raw_reading){
+    // first degree calibration -0310
+    // double a = 2.0;
+    // double b = 99;
+    double a = 2.9;
+    double b = 297.6;
     double calibrated_reading = (raw_reading - b) * a;
+    
+    
+    // second degree calibration
+    //double a = 0.0008376;
+    //double calibrated_reading = a* raw_reading*raw_reading;
+    if (calibrated_reading < 0){
+        calibrated_reading = 0.0;
+    }
     return calibrated_reading;
 }

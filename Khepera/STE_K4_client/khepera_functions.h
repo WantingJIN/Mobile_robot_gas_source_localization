@@ -151,7 +151,7 @@ void set_wheels_speed(double speed1, double speed2);
 void cleaning_up();
 void next_iteration_time();
 void log_baseline(double min_c, double max_c, double baseline_c);
-double calibrate_sensor_reading (double raw_reading, double a, double b);
+double calibrate_sensor_reading (double raw_reading);
 
 
 #endif

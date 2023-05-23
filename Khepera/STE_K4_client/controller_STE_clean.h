@@ -25,6 +25,13 @@
 #include "visilibity.hpp"
 #include "gasMap2D.h"
 
+// Sampling mode
+
+#define CONTINOUS_SAMPLING 1
+#define KERNEL_INTERPOLATION 0
+#define REVERSE_SENSOR_MODEL 0
+#define STOP_AND_SENSE 0
+
 //Constant variables
 #define BOUND(x, a, b) (((x)<(a))?(a):((x)>(b))?(b):(x))
 #define PI 					3.14159265358979
@@ -32,7 +39,7 @@
 #define SAFETY_MARGIN 		.2 // how far in meters are you ready to approach the walls
 #define WHEEL_RADIUS	        0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH             0.08841 
-//#define ODOR_FILTER_LENGTH 	100 //~10sec //number of measurements before averaging
+//#define ODOR_FILTER_LENGTH 	50 //~10sec //number of measurements before averaging
 #define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
 #define MAX_SAMPLE_NUMBER 	50
 #define N_CONCENTRATION_LEVEL 4
@@ -40,9 +47,6 @@
 #define SENSOR_NUMBER  		8
 #define MAX_NB_ROBOTS       3
 
-#define CONTINOUS_SAMPLING 1
-#define KERNEL_INTERPOLATION 1
-#define REVERSE_SENSOR_MODEL 0
 
 //wind tunnel boundaries
 #define XMIN 0.25

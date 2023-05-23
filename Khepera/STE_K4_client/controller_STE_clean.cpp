@@ -372,7 +372,9 @@ void state_measuring(){
 		log_measurements();
 		history.position.push_back({current_position.x, current_position.y, 0.0});
 		// FIXME: temporay fix of gas measurement
-		history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value, 3.0, 66));
+		double calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
+		if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
+		history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value));
 		// if(history.measurement_avg[history.size] < 0) history.measurement_avg[history.size] = 0;
 		history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
 		history.size++;
@@ -475,13 +477,14 @@ void state_moving(){
 		sample_counter++;
 		//sample and run Kernel
 		double sensor_reading = odor_read();
-		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value, 3.0, 66);
+		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
+		if (instant_concentration < 0) instant_concentration = 0;
 		double reverse_sensor_reading = 0.0;
 		if (REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model
 			double Ts = 0.1; // sampling frequency
-			double tau_r = 1.3; // time constant for the rise
-			double tau_d = 2.0;
+			double tau_r = 0.5; // time constant for the rise
+			double tau_d = 0.7;
 			double alpha = 0.0;
 			if (instant_concentration > previous_sensor_reading)   //rising phase
 				alpha = tau_r / Ts;
@@ -489,7 +492,7 @@ void state_moving(){
 				alpha = tau_d / Ts;
 			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
 			if (reverse_sensor_reading < 0){
-				printf("instant measurement is %f, previous sensor reading is %f \n", sensor_reading, odor_baseline_value);
+				reverse_sensor_reading = 0;
 			}
 			printf("instant measurement is : %f, reverse sensor reading is: %f \n", instant_concentration, reverse_sensor_reading);
 			previous_sensor_reading = instant_concentration;
