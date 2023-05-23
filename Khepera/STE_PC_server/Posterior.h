@@ -18,6 +18,7 @@ class Posterior{
     double * pdf; 
     int nbr_element_marginal;
     double * source_marginal_pdf;
+    double * cell_visit_list;
     PlumeModel * model;
 
 
@@ -64,6 +65,11 @@ class Posterior{
     //log the posterior pdf
     void log_pdf(const char * file_name, char writing_mode);
     void log_marginal_pdf(const char * file_name, char writing_mode);
+
+    //record the cell that is visited, by giving its location
+    void mark_cell_as_visited(Position current_pos);
+    //check if this cell is visited before, by giving its location
+    bool check_if_cell_visited(Position cell_pos); 
 }; 
 
 #endif

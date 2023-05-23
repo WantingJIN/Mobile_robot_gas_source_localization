@@ -31,7 +31,7 @@
 #define SAFETY_MARGIN 		.2 // how far in meters are you ready to approach the walls
 #define WHEEL_RADIUS	        0.021  	//K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
-#define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
+#define ODOR_FILTER_LENGTH 	50 //~10sec //number of measurements before averaging
 #define MAX_SAMPLE_NUMBER 	30 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
@@ -84,10 +84,6 @@
 #define COM_NO_COOR		1
 #define COM_COOR 		2
 #define SCENARIO 		NO_COM_NO_COOR
-// Working mode
-#define EXPERIMENT 1
-#define OFFLINE 0
-#define WORKING_MODE   EXPERIMENT
 
 #define TIMEOUT         1000*1000 // miliseconds
 

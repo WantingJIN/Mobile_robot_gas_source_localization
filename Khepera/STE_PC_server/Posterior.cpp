@@ -74,6 +74,9 @@ Posterior::Posterior(PlumeModel *input_model){
 	source_marginal_pdf = new double[nbr_element_marginal];
 	for(i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 1/(float)nbr_element_marginal;
+	cell_visit_list = new double[nbr_element_marginal];
+	for (i =0; i<nbr_element_marginal; i++)
+	    cell_visit_list[i] = 0;
 
     //printf("expected_value: %f %f %f %f %f\n", 
 	//	model->expected_value[0], model->expected_value[1], model->expected_value[2], model->expected_value[3], model->expected_value[4]);
@@ -513,4 +516,19 @@ void Posterior::log_marginal_pdf(const char * file_name, char writing_mode){
 	fprintf(posterior_pdf_marginal, "%f\n", source_marginal_pdf[i]);
 
 	fclose(posterior_pdf_marginal);
+}
+
+void Posterior::mark_cell_as_visited(Position current_position){
+	//find the current cell number based on the current position
+	int current_cell[2] = {	(int)( (current_position.x-model->param_list[0].lower_limit) / ((float)model->param_list[0].resolution) ), 
+							(int)( (current_position.y-model->param_list[1].lower_limit) / ((float)model->param_list[1].resolution) )};
+    cell_visit_list[indices_to_index(current_cell, model->get_source_position_params_nbr(), nbr_element_marginal)] = 1;
+
+
+}
+bool Posterior::check_if_cell_visited(Position goal_position){
+	int goal_cell[2] = {	(int)( (goal_position.x-model->param_list[0].lower_limit) / ((float)model->param_list[0].resolution) ), 
+							(int)( (goal_position.y-model->param_list[1].lower_limit) / ((float)model->param_list[1].resolution) )};
+    bool visit = cell_visit_list[indices_to_index(goal_cell, model->get_source_position_params_nbr(), nbr_element_marginal)];
+	return visit;
 }

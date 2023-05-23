@@ -15,16 +15,9 @@ void init(){
 	srand(time(NULL));
 
 	//set the state to wait for stationary plume
-	switch (WORKING_MODE){
-		case EXPERIMENT:
-		    FSM.state = STATE_LISTEN;
-	        FSM.hook  = state_listen;
-			break;
-		case OFFLINE:
-			FSM.state = STATE_READ;
-	        FSM.hook  = state_read;
-			break;
-	}
+	FSM.state = STATE_LISTEN;
+	FSM.hook  = state_listen;
+	
 	
 	FSM.n_cycles = 0;
 
