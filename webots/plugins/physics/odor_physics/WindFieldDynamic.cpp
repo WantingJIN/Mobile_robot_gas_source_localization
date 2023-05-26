@@ -79,9 +79,9 @@ void THISCLASS::OnSimulationEnd() {
 void THISCLASS::OnSimulationStep() {
 //std::cout << "OnSimulationStep START" << std::endl;
 	// Read next file if necessary
-	std::cout << "mSimulation->mSimulationTime " << mSimulation->mSimulationTime << std::endl;
+	//std::cout << "mSimulation->mSimulationTime " << mSimulation->mSimulationTime << std::endl;
 //	std::cout << "mWindFieldSnapshot[1]->mTime " << mWindFieldSnapshot[1]->mTime << std::endl;
-	std::cout << "mWindFieldSnapshot[0]->mTime " << mWindFieldSnapshot[0]->mTime << std::endl;
+	//std::cout << "mWindFieldSnapshot[0]->mTime " << mWindFieldSnapshot[0]->mTime << std::endl;
 	while (mSimulation->mSimulationTime > mWindFieldSnapshot[1]->mTime) {
 		bool ok = ReadNextFile();
 		if (! ok) {
