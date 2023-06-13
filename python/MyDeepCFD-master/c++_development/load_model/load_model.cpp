@@ -25,7 +25,7 @@ int main(int argc, const char* argv[]) {
 
     // Load the number of maps
     int m;
-    std::ifstream f("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/data/map_nbr.txt");
+    std::ifstream f("/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt");
     f >> m;
     f.close();
 
@@ -36,7 +36,7 @@ int main(int argc, const char* argv[]) {
     float sx = 3.224360, sy = 2.772563;
 
     // Load mat file
-    std::string mat_address = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
+    std::string mat_address = "/home/wjin/Workspace/continuous_STE/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
     //convert string to char*
     std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];

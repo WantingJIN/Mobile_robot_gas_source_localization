@@ -833,6 +833,8 @@ void state_measuring(){
 		double odor_concentration = 0.0;
         odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+		sampleBuffer.add_all_to_buffer();
+		sampleBuffer.average_all();
         if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
@@ -848,6 +850,7 @@ void state_measuring(){
 			odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 			//measuring wind
 			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			//printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
 			//add samples to buffers
 			sampleBuffer.add_all_to_buffer();
 			//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
@@ -901,7 +904,7 @@ void state_estimating(){
 	log_max_a_posteriori();
 	log_entropy();
 	//printf("Finish logging.\n");
-	posterior.log_pdf("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/current/101/posterior.csv",'a');
+	posterior.log_pdf("/home/wjin/Workspace/continuous_STE/Results/current/101/posterior.csv",'a');
 
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);

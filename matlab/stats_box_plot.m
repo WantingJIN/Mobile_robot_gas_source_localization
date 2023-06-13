@@ -23,7 +23,7 @@ for a=1
 %     if(a==0), folder_list = dir('/data/FaezehRahbar/Projects/OSL_STE_multi-robot/Results/new_braitenberg_internal_timeout'); end
     
     % choose the folders
-    folder_list = dir('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/results_test_maps_4000_dataset/2');
+    folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/results_test_maps_4000_dataset/2');
     folder_list = folder_list(~ismember({folder_list.name},{'.','..','current'}));
     folder_list = folder_list([folder_list.isdir]);
     exp_number = length(folder_list);

@@ -14,7 +14,7 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 	
 	# map number 
 	#print(device)
-	f = open('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/webots/data/map_nbr.txt', 'r')
+	f = open('/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt', 'r')
 	m = int(f.read())
 	f.close()
 	# print("map nbr {}".format(m))
@@ -28,7 +28,7 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 	
 	# when no source position is given
 	if(sx==-1 and sy==-1):
-		adr = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map{}/test_maps_x_for_MCMC.mat".format(m)
+		adr = "/home/wjin/Workspace/continuous_STE/Results/test_maps/map{}/test_maps_x_for_MCMC.mat".format(m)
 		mat_x = sio.loadmat(adr)
 		array_x = mat_x.get('py_x')
 		double_x = torch.from_numpy(array_x)
@@ -39,7 +39,7 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 	else:
 		# make the input tensors using sx sy
 		# mat_x = sio.loadmat('/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/training_set_map1/dataset_mat/input_stationary_channels.mat')
-		adr = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps/map{}/test_map{}_flowdef_sdf_emptysourcepos.mat".format(m,m)
+		adr = "/home/wjin/Workspace/continuous_STE/Results/test_maps/map{}/test_map{}_flowdef_sdf_emptysourcepos.mat".format(m,m)
 		mat_x = sio.loadmat(adr)
 		array_x = mat_x.get('py_x')
 		double_x = torch.from_numpy(array_x)

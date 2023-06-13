@@ -15,13 +15,13 @@ if __name__ == "__main__":
     # x = torch.FloatTensor(x)
     # y = torch.FloatTensor(y)
        
-    mat_x = sio.loadmat('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps_papers/test_maps_x_for_torch.mat')
+    mat_x = sio.loadmat('/home/wjin/Workspace/continuous_STE/Results/test_maps_papers/test_maps_x_for_torch.mat')
     array_x = mat_x.get('py_x')
     double_x = torch.from_numpy(array_x)
     x = double_x.float()
     x=x[:,:3,:,:]
     # x=x[:,1:4:,:]
-    mat_y = sio.loadmat('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/test_maps_papers/test_maps_y_for_torch.mat')
+    mat_y = sio.loadmat('/home/wjin/Workspace/continuous_STE/Results/test_maps_papers/test_maps_y_for_torch.mat')
     # mat_y = sio.loadmat('/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/training_random2/my_y_for_torch.mat')
     array_y = mat_y.get('py_y')
     double_y = torch.from_numpy(array_y)

@@ -18,12 +18,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # input data x and the ground truth y
-    mat_x = sio.loadmat('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/training_random/my_x_for_torch_200.mat')
+    mat_x = sio.loadmat('/home/wjin/Workspace/continuous_STE/Results/training_random/my_x_for_torch_200.mat')
     array_x = mat_x.get('py_x')
     double_x = torch.from_numpy(array_x)
     x = double_x.float()
     x=x[:,:3,:,:]
-    mat_y = sio.loadmat('/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/training_random/my_y_for_torch_200.mat')
+    mat_y = sio.loadmat('/home/wjin/Workspace/continuous_STE/Results/training_random/my_y_for_torch_200.mat')
     array_y = mat_y.get('py_y')
     double_y = torch.from_numpy(array_y)
     y = double_y.float()

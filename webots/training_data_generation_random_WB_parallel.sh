@@ -1,7 +1,7 @@
 #!/bin/bash
 
 wb_folder=`pwd`
-project_folder=/home/wjin/Workspace/plume_model_learning_wind_speed_0.75
+project_folder=/home/wjin/Workspace/continuous_STE
 # The number of core you plan to use for the parallel dataset generation
 core=8
 

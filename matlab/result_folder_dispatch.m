@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % the general folder
-general_folder = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -28,7 +28,7 @@ for i=1:exp_number
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
 
     % the right path of the folder
-    new_path = [general_folder '/results_test_maps_video/' num2str(params.map_nbr)];
+    new_path = [general_folder '/results_stopsense_PID/' num2str(params.map_nbr)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))

@@ -17,7 +17,7 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 1%0:length(folder_list)-1
+for maps = 0:length(folder_list)-1
     close all;
     folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind1/'];
     

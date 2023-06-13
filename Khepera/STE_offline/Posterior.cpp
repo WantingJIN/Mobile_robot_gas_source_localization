@@ -292,7 +292,7 @@ void Posterior::process(){
 	//printf("\n");
 
 	//log
-	//const char* str = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Results/pdf.csv";
+	//const char* str = "/home/wjin/Workspace/continuous_STE/Khepera/Results/pdf.csv";
 	//log_pdf(str, 'a');
 	log_pdf(posterior_pdf_3D_name, 'a');
 	/*const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
@@ -416,7 +416,7 @@ void Posterior::exhaustive_evaluation(struct history history){
 		sum += pdf[i];
 	}
 	//printf("\n");
-	const char* str = "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/STE_offline/log_STE_multi/pdf.csv";
+	const char* str = "/home/wjin/Workspace/continuous_STE/Khepera/STE_offline/log_STE_multi/pdf.csv";
 	log_pdf(str, 'a');
 }
 

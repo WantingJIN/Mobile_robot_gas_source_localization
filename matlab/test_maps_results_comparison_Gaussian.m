@@ -2,7 +2,7 @@ clear all; clc; close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/results_test_maps_4000_dataset';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/results_test_maps_4000_dataset';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -83,7 +83,7 @@ for i=1:number
 end
 
 %% Get the result from Gaussian model folder
-baseline_folder = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/results_test_maps_Gaussian_5D';
+baseline_folder = '/home/wjin/Workspace/continuous_STE/Results/results_test_maps_Gaussian_5D';
 % choose the folders
 baseline_folder_list = dir([baseline_folder '/**']);
 baseline_folder_list = baseline_folder_list(~ismember({baseline_folder_list.name},{'.','..', '101', '102','103'}));

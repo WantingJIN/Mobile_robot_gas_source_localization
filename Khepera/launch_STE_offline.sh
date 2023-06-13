@@ -8,11 +8,11 @@
 map=0
 read -r source_x source_y <<<"12.7 2"
 
-echo $map > "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/params/map_nbr.txt"
-echo $source_x $source_y > "/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/source_position.txt"
+echo $map > "/home/wjin/Workspace/continuous_STE/Khepera/Data/params/map_nbr.txt"
+echo $source_x $source_y > "/home/wjin/Workspace/continuous_STE/Khepera/Data/source_position.txt"
 # environment map
 # add the source position to the environment map to avoid collision with source location
-cp /home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/Env_map/test_map"$map".environment /home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/test_map.environment
+cp /home/wjin/Workspace/continuous_STE/Khepera/Data/Env_map/test_map"$map".environment /home/wjin/Workspace/continuous_STE/Khepera/Data/test_map.environment
 # MarginY=0.2
 # MarginX=0.05
 # MINX=`echo $source_x - $MarginX | bc`
@@ -24,7 +24,7 @@ cp /home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/Env_ma
 # # add the source 
 # # k4put /home/rahbar/Projects/DDPM_K4/Data/test_map.environment +$ID
 # # obstacle list
-cp /home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt //home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/obstacle_list.txt
+cp /home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt //home/wjin/Workspace/continuous_STE/Khepera/Data/obstacle_list.txt
 # # k4put /home/rahbar/Projects/DDPM_K4/Data/obstacle_list.txt +$ID
 # read -r obstacle_nbr<"/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt"
 # obstacle_nbr_new=`echo $obstacle_nbr + 1 |tr -d $'\r'| bc`
@@ -40,7 +40,7 @@ cp /home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Data/Obstac
 # echo $obstacle_source >> /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
 #sed -i -e '$a>obstacle_source>' /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
 # start the server
-export PYTHONPATH=/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/STE_PC_server
+export PYTHONPATH=/home/wjin/Workspace/continuous_STE/Khepera/STE_PC_server
 ./STE_offline/STE_offline
 
 # start the client

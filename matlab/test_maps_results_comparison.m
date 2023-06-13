@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/results_test_0_no_informative_planning';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/results_stopsense_PID';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -119,6 +119,7 @@ subplot(1,3,1)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
+error_x = error_list(:,1);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
@@ -131,6 +132,7 @@ subplot(1,3,2);
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
+error_y = error_list(:,2);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
@@ -149,3 +151,7 @@ ylim([0,50])
 xlabel('Map number');
 title('nbr iterations');
 saveas(f,[general_folder '/test_maps_results_comparison.png']);
+
+
+%% save the statistical result for t-test
+save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list');

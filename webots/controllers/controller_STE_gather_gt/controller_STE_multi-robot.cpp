@@ -908,7 +908,7 @@ void state_estimating(){
 	log_max_a_posteriori();
 	log_entropy();
 	//printf("Finish logging.\n");
-	//posterior.log_pdf("/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Results/current/101/posterior.csv",'a');
+	//posterior.log_pdf("/home/wjin/Workspace/continuous_STE/Results/current/101/posterior.csv",'a');
 
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);

@@ -24,7 +24,7 @@ y = round(0.01:0.0632:3.9916, 4);
 counter = 0;
 
 %% create 3D grid sets
-for i=0 %:length(plume_data_list)-1
+for i=0:length(plume_data_list)-1
     
     % map number
     mapN = ['map' num2str(i)];
@@ -50,7 +50,7 @@ for i=0 %:length(plume_data_list)-1
     
     % save it
     %py_x = ds1_x;
-    save([plume_data_folder mapN '/test_' mapN 'test_flowdef_sdf_emptysourcepos.mat'],'flow_def','sdf','source_pos', 'X', 'Y');
+    save([plume_data_folder mapN '/test_' mapN '_flowdef_sdf_sourcepos.mat'],'flow_def','sdf','source_pos', 'X', 'Y');
     %clear py_x;
     
     %% dataset #2 (one dataset for each possible source position)
