@@ -879,6 +879,37 @@ void state_measuring(){
 			FSM.hook  = state_estimating;
 		}
 	}
+	if (simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
+		//continue measuring odor concentration
+		double odor_concentration = 0.0;
+		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
+		//measuring wind
+		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+		//printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
+		//add samples to buffers
+		sampleBuffer.add_all_to_buffer();
+		sampleBuffer.average_all();
+		//log and save
+		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+		log_position();
+		log_measurements();
+		if (!position_outside_arena(current_position)){
+			history.position.push_back({current_position.x, current_position.y, 0});
+			//history.measurement[history.size] = sampleBuffer.average_concentration;
+			history.measurement.push_back(sampleBuffer.average_concentration);
+			history.size++;
+			history_print(history);
+		}
+		// send it to friends
+		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
+			Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
+			send_msg(msg);
+		}
+
+		// go to estimation
+		FSM.state = STATE_ESTIMATING;
+		FSM.hook  = state_estimating;
+	}
 }
 
 void state_estimating(){
