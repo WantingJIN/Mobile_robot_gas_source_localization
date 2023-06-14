@@ -432,35 +432,38 @@ void information_gain_navigation_approx(Position current_position){
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
 			// FIXME: possible bug here, we are caluculating the futhyre posterior with accumulated sampling fake history
-			//fake_history.measurement[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			//std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
-			//fake_history.position[fake_history.size].copy_position(tmp_position);
-			//(fake_history.size)++;
+			fake_history.measurement.push_back(plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
+			std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
+			fake_history.position.push_back(tmp_position);
+			(fake_history.size)++;
 			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
-			//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
-			//future_posterior.sum = 0;
+			// memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
+			// future_posterior.sum = 0;
 			// TODO: Improve the way regenrate fake plume; at least use the same plume model for different positions
 			// TODO: Test the performance of the fake plume model
-			// DeepCFDPlumeModel2D plume_model_fake;
-			// Posterior future_posterior(&plume_model_fake, 0);
-			// //future_posterior.copy_posterior(zero);
-			// future_posterior.MCMC_evaluation(fake_history);
-			// //calculate the expected information gain
-			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// // printf("DKL: %f _______________________\n", DKL);
-			// if(DKL > max_DKL ){
-			// 	max_DKL = DKL;
-			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
-			// 	goal_position.y = tmp_position.y;
-			// 	goal_position.heading = 0;
-			// }
-			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			if(fake_concentration > max_meas){
-				max_meas = fake_concentration;
-				goal_position.x = tmp_position.x; 
+			DeepCFDPlumeModel2D plume_model_fake;
+			Posterior future_posterior(&plume_model_fake, 0);
+			//future_posterior.copy_posterior(zero);
+			future_posterior.MCMC_evaluation(fake_history);
+			//calculate the expected information gain
+			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// printf("DKL: %f _______________________\n", DKL);
+			if(DKL > max_DKL ){
+				max_DKL = DKL;
+				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
 			}
+            fake_history.measurement.pop_back();
+			fake_history.position.pop_back();
+			fake_history.size--;
+			// double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
+			// if(fake_concentration > max_meas){
+			// 	max_meas = fake_concentration;
+			// 	goal_position.x = tmp_position.x; 
+			// 	goal_position.y = tmp_position.y;
+			// 	goal_position.heading = 0;
+			// }
 		}
 	}
 	// for(int i =- 1; i <= 1; i++){
