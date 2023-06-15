@@ -1,13 +1,18 @@
 %% run t-test between different experiment to determine if there is a statistical difference
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-experiment_1 = 'results_stopsense_PID';
-experiment_2 = 're-evulate_ICRA';
+experiment_1 = 'results_stop_sense_PID';
+experiment_2 = 'results_continuous_sample_MOX';
 experiment_1_folder = [general_folder experiment_1];
 experiment_2_folder = [general_folder experiment_2];
 
 % load error list
 statistics_experiment_1 = load([experiment_1_folder '/error_statistics.mat']);
 statistics_experiment_2 = load([experiment_2_folder '/error_statistics.mat']);
+
+%% load success rate
+success_rate_1 = statistics_experiment_1.success_rate;
+success_rate_2 = statistics_experiment_2.success_rate;
+fprintf('success rate 1 is: %d, success rate 2 is:%d \n', success_rate_1, success_rate_2);
 
 %% run the t-test for error_x
 x_error_exp_1 = statistics_experiment_1.error_x;
