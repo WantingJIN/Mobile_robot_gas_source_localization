@@ -50,20 +50,24 @@ void GasMap2D::runKernelAlgorithm(Position current_position, float current_odor)
   int idx_y_start = (idx_y - y_update_range > 0) ? (idx_y - y_update_range) : 0;
   int idx_y_end = (idx_y + y_update_range < map_y_nbins) ? (idx_y + y_update_range) : map_y_nbins;
   //printf("x_pos is %f, y_pos is %f, odor_con is %f \n", current_position.x, current_position.y, current_odor);
+  //printf("idx x is %d, idx y is %d \n", idx_x, idx_y);
   //printf("idx x start is %d, idx x end is %d, idx y start is %d, idx y end is %d \n", idx_x_start, idx_x_end, idx_y_start, idx_y_end);
   for(int i = idx_x_start; i < idx_x_end; i++){
     for(int j = idx_y_start; j < idx_y_end; j++){
       x_dist = i * x_resol + x_min - current_position.x;
       y_dist = j * y_resol + y_min - current_position.y;
       float wcells = compute_gaussian(x_dist, y_dist);
-      //printf("gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap(i,j));
+      //printf("distance from cell (%d, %d) to current position is (%f, %f)", i, j, x_dist, y_dist);
+      //printf("weight is %f \n", wcells);
       gasWeightMap[i][j] += wcells;
-      //printf(" Upodated gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap(i,j));
+      //printf("Weight of the measurement of cell (%d, %d) is %f \n", i, j, wcells);
+      //printf(" Updated gasWeightMap(%d,%d) is %f ", i, j, gasWeightMap[i][j]);
       gasWeightConMap[i][j] += current_odor * wcells;
-      //printf(" Upodated gasWeightConMap(%d,%d) is %f ", i, j, gasWeightConMap(i,j));
+      //printf(" Updated gasWeightConMap(%d,%d) is %f ", i, j, gasWeightConMap[i][j]);
       gasConfidenceMap[i][j] = 1 - exp(-gasWeightMap[i][j] / pow(kp.scaling_param,2));
+      //printf(" gasAverConMap(%d,%d) is %f \n", i, j, gasAverConMap[i][j]);
       gasAverConMap[i][j] = gasWeightConMap[i][j] / gasWeightMap[i][j];
-      //printf(" Upodated gasAverConMap(%d,%d) is %f \n", i, j, gasAverConMap(i,j));
+      //printf(" Updated gasAverConMap(%d,%d) is %f \n", i, j, gasAverConMap[i][j]);
     }
   }
 }
@@ -93,8 +97,10 @@ void GasMap2D::setGaussianDivisor(){
 float GasMap2D::compute_gaussian(const double x_dist, const double y_dist){
     float a  = kp.sigma + kp.gamma*kp.wind_speed;
     float b  = kp.sigma/(1 + kp.gamma*kp.wind_speed/kp.sigma);
+    //printf("a is %f, b is %f \n", a, b);
     //float num= (pow(x_dist,2)+ pow(y_dist,2))/ (2 * pow(kp.sigma,2));
     float num= (pow(x_dist,2)/ (2 * pow(a,2)) + pow(y_dist,2)/ (2 * pow(b,2)));
+    //printf("num is %f \n", num);
     return exp(-num)/_gaussian_divisor;
 }
 

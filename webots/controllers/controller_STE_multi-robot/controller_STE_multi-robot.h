@@ -110,6 +110,7 @@ typedef enum processingMode {
 	NO_PROCESSING = 0,
 	KERNEL_MAPPING = 1,
 	REVERSE_SENSOR_MODEL = 2,
+	MAPPING_AND_REVERSE_SENSOR_MODEL = 3,
 }eProcessingMode;
 
 typedef enum gasSensor{

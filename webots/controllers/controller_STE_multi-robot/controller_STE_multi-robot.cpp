@@ -91,7 +91,7 @@ double previous_sensor_reading = 0.0;
 
 // gas map
 // param: sigma, gamma, scaling_param, wind_speed, rco
-GasMap2D gas_map(0.1, 0.1, 1, 0.75, 0.3);
+GasMap2D gas_map(0.2, 2, 1, 0.75, 0.3);
 
 // obstacles definitions
 int nbr_obs = 4;
@@ -294,7 +294,7 @@ void log_history(){
     fclose(measurement_history_logfile);
    
 	//posterior 3D
-	posterior.log_pdf(posterior_pdf_3D_name, 'w');
+	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
 }
 
 void log_trajectory(Position p){
@@ -817,7 +817,7 @@ void state_measuring(){
     // if robot is sensing while moving, saving the measurement in motion 
     if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
 		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
-		if (simulation_parameters.processingMode == KERNEL_MAPPING){
+		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
 				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
@@ -949,7 +949,8 @@ void state_estimating(){
 	log_max_a_posteriori();
 	log_entropy();
 	//printf("Finish logging.\n");
-	posterior.log_pdf("/home/wjin/Workspace/continuous_STE/Results/current/101/posterior.csv",'a');
+	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	//posterior.log_pdf("/home/wjin/Workspace/continuous_STE/Results/current/101/posterior.csv",'a');
 
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
@@ -1060,7 +1061,7 @@ void state_moving(){
 		double odor_concentration = 0.0;
 		double reverse_sensor_reading = 0.0;
 		odor_read(&instant_concentration, odor_concentration);
-		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL){
+		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
 			double tau_r = 1.3; // time constant for the rise
@@ -1077,7 +1078,7 @@ void state_moving(){
 			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (simulation_parameters.processingMode == KERNEL_MAPPING){
+		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > 10){
