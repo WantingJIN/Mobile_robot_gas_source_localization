@@ -365,8 +365,8 @@ void random_navigation(){
 
 bool position_outside_arena(Position p){
 	bool outside = 0;
-	if(p.x < XMIN || p.x > XMAX) outside = 1;
-	if(p.y < YMIN || p.y > YMAX) outside = 1;
+	if(p.x < float(XMIN) || p.x > float(XMAX)) outside = 1;
+	if(p.y < float(YMIN) || p.y > float(YMAX)) outside = 1;
 	//if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
 }
@@ -702,9 +702,10 @@ void joint_planning(){
 void DKL_MAP_distance(float gloabl_local_search_ratio){
 	double best_point[2]={0};
 	posterior.XYmarginal_distance_combined(current_position, gloabl_local_search_ratio, best_point);
+	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-	float ratio = 0.3;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float ratio = 0;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
 	//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
 	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
@@ -717,6 +718,7 @@ void DKL_MAP_distance(float gloabl_local_search_ratio){
 	goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
 	goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
 	goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
+
 }
 
 void goal_outside_obstacles(Position * goal){
@@ -830,8 +832,11 @@ void state_measuring(){
 		} else {
 			// if else, save the instant measurement directly
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
-				printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
+				if (simulation_parameters.gasSensor == MOX){
+					printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				    printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
+				}
+				
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement.push_back(sample_in_motion.measurement[i]);
 				history.size++;
@@ -930,12 +935,16 @@ void state_estimating(){
 	if(VERBOSE) printf("[%d] estimating...\n", ID);
 	//reinitialize
 	posterior.pdf_reset();
-	printf("going for MCMC\n");
 	//estimation
-	if(simulation_parameters.MCMC_or_exhaustive_eval)
+	if(simulation_parameters.MCMC_or_exhaustive_eval){
+		printf("going for MCMC\n");
 		posterior.MCMC_evaluation(history);
-	else
+	}
+	else{
+		printf("going for exhaustive\n");
 		posterior.exhaustive_evaluation(history);
+	}
+	// only when using MCMC
 	if(posterior.dirac_flag){
 		if(VERBOSE) printf("[%d] exhaustive search!\n", ID);
 		posterior.exhaustive_evaluation(history);
@@ -990,7 +999,7 @@ void state_updategoal(){
 			// printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
     		//information_gain_navigation_predictive();
     		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(0.75);
+    		DKL_MAP_distance(1.0);
     		// printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
     		break;
     	case COM_NO_COOR :
