@@ -138,7 +138,7 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, STOP_AND_GO_SAMPLING, NO_PROCESSING, PID};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX};
 
 	//read simulation parameters
 	FILE* sim_param_file;

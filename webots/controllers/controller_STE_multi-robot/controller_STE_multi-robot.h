@@ -47,7 +47,7 @@
 // min and max for each parameter
 #define Q_min  1.0
 #define Q_max  101.0
-#define source_x_min  2.75
+#define source_x_min  3.0
 #define source_y_min  0.0
 //#define source_z_min  0
 #define source_x_max  12.75
@@ -118,6 +118,11 @@ typedef enum gasSensor{
 	MOX = 1,
 }eGasSensor;
 
+typedef enum planningStrategy{
+	GREEDY = 0,
+	INFORMATIVE = 1,
+	BALANCE_MAXIMAL_EXPECTED = 2,
+}ePlanningStrategy;
 
 //parameters to estimate
 struct parameters_set{
