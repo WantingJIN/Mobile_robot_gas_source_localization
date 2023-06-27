@@ -1,19 +1,22 @@
 clear all; close all; clc;
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2022-09-21_20-37/pc';
-pdf = dlmread([general_folder,'/posterior_pdf_3D.csv']);
-positions = dlmread([general_folder, '/position_history.csv']);
-anim_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/ani'
-obst_file = ['/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacle_lists/2_obstacles.txt'];
+root_folder='/home/wjin/Workspace/continuous_STE/Results/Experimental_Results/Results_0623/2023-06-23_16-02';
+
+pc_folder=[root_folder '/pc'];
+k4_folder=[root_folder '/k4'];
+pdf = dlmread([pc_folder,'/posterior_pdf_3D.csv']);
+positions = dlmread([k4_folder, '/goal_position.csv']);
+%anim_folder='/home//Workspace/continuous_STE/Khepera/DataKhepera/Results/ani'
+obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/5_obstacles.txt'];
 obst_fileID = fopen(obst_file);
 C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
 for k=1:length(C{1,1})
             obstacles_x(:,k) = [C{1,1}(k) , C{1,3}(k), C{1,3}(k) , C{1,1}(k)];
             obstacles_y(:,k) = [C{1,2}(k) , C{1,2}(k), C{1,4}(k) , C{1,4}(k)];
 end
-measurements = dlmread([general_folder, '/measurement_history.csv']); %measurement_history
-entropy = dlmread([general_folder, '/entropy.csv']);
-real_source_position = [12.7, 1];
+measurements = dlmread([pc_folder, '/measurement_history.csv']); %measurement_history
+entropy = dlmread([pc_folder, '/entropy.csv']);
+real_source_position = [12.7, 2];
 
 x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
@@ -33,11 +36,11 @@ for i=1:size(pdf,1)
     annotation(f,'textbox',[0.60287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Entropy:', num2str(entropy(i,1))},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',24);
     hold off;
     xlim([0 4])
-    ylim([3 13])
+    ylim([2 13])
     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
     ax = gca;
     ax.TitleFontSizeMultiplier = 3;
-    pause(1);
+    pause;
     drawnow
-    saveas(f, [anim_folder,'/',num2str(i),'.png']);
+    %saveas(f, [anim_folder,'/',num2str(i),'.png']);
 end

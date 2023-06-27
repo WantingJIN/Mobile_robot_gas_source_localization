@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Khepera/STE_offline/log_STE_ICRA_video';
+general_folder='/home/wjin/Workspace/continuous_STE/Khepera/results_continuous_sample_PID_fixed_8_source_pos/log_STE_ICRA_video';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -29,7 +29,7 @@ x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
 
 % plot the initial pdf for video
-f =figure('Position',[601.0000  111.4000  670.6000  1450.6000]);
+f =figure('Position',[601.0000  111.4000  67 0.6000  1450.6000]);
 imagesc(y,x,reshape(pdf(1,:),20,20))
 hold on
 plot(positions(1,3),positions(1,2),'ko','MarkerSize',25,'MarkerFaceColor','m');

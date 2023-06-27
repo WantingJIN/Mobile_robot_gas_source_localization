@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/results_test_maps/3/');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/results_continuous_MOX_no_processing_greedy/6/');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -23,8 +23,8 @@ for i=1:exp_number
     for j=1:params.number_of_robots
         % data :
         folder_name_ID = [folder_name, '/', num2str(ID(j))];
-        %         position_history = dlmread([folder_name_ID, '/position_history.csv']); %position_history
-        %         measurement_history = dlmread([folder_name_ID, '/measurement_history.csv']); %measurement_history
+        position_history = dlmread([folder_name_ID, '/position_history.csv']); %position_history
+        measurement_history = dlmread([folder_name_ID, '/measurement_history.csv']); %measurement_history
         positions = dlmread([folder_name_ID, '/goal_position.csv']); %position_history
         positions(:,4) = 0;
         trajectory = dlmread([folder_name_ID, '/trajectory.csv']);
@@ -117,6 +117,7 @@ for i=1:exp_number
         figure(f2all);
         axes0 = axes('Parent',f2all,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
         hold on;
+        scatter3(position_history(:,2),position_history(:,3),position_history(:,4),10,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
         scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
         plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',10,'LineWidth',2,'DisplayName','Source real position'); %real source position

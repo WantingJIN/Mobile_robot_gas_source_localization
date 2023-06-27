@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Khepera/STE_offline/log_STE_multi';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/results_continuous_MOX_no_processing_greedy/1/1687274906178/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -11,8 +11,8 @@ experiment_file_path = general_folder;
 pdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 %pdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
-anim_folder=[general_folder '/ani']
-params = my_text2struct([experiment_file_path,'/param_log.csv']);
+anim_folder=[general_folder '/ani'] 
+params = my_text2struct([experiment_file_path,'/param_log.csv']); 
 map_nbr = params.map_nbr;
 obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/' num2str(map_nbr) '_obstacles.txt'];
 obst_fileID = fopen(obst_file);
@@ -29,7 +29,7 @@ x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
 for i=1:size(pdf,1)
     f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-    imagesc(y,x,reshape(pdf(i,:),20,20))
+    imagesc(y,x,reshape(pdf(i,:),40,20))
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
@@ -43,7 +43,7 @@ for i=1:size(pdf,1)
     annotation(f,'textbox',[0.60287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Entropy:', num2str(entropy(i,1))},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',24);
     hold off;
     xlim([0 4])
-    ylim([3 13])
+    ylim([2 13])
     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
     ax = gca;
     ax.TitleFontSizeMultiplier = 3;

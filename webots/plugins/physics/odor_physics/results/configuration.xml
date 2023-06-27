@@ -15,7 +15,7 @@
 	<GridSize>(0, 0, 0)</GridSize>
 </WindFieldSnapshot>
 <FilamentList>
-	<Size>900</Size>
+	<Size>2400</Size>
 </FilamentList>
 <FilamentPropagation>
 	<StdDev>0.3</StdDev>
