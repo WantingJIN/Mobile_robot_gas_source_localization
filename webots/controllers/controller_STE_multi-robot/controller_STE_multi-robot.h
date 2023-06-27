@@ -87,11 +87,6 @@
 
 #define TIMEOUT         1000*1000 // miliseconds
 
-// #define CONTINOUS_SAMPLING 1
-// #define KEREL_INTERPOLATION 1
-// #define REVERSE_SENSOR_MODEL 0
-
-
 extern int nbr_obs;
 extern float margin;
 extern float ** obstacles;
@@ -146,6 +141,7 @@ struct simulation_parameters{
 	eSamplingMode samplingMode;
 	eProcessingMode processingMode;
 	eGasSensor gasSensor;
+	ePlanningStrategy planningStrategy;
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -203,6 +199,7 @@ void state_obstacle_avoidance();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model);
+double likelihood_gas_hit(struct history history, double *parameters, PlumeModel *model);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();

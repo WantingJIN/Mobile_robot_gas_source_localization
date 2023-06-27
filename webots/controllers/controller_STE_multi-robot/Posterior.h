@@ -4,6 +4,7 @@
 #include "controller_STE_multi-robot.h"
 #include "PlumeModel.h"
 #include "Position.h"
+#include "CellMeasurements.h"
 
 class Posterior{ 
     public: 
@@ -59,6 +60,9 @@ class Posterior{
     //log the posterior pdf
     void log_pdf(const char * file_name, char writing_mode);
     void log_marginal_pdf(const char * file_name, char writing_mode);
+
+    // calculate the variance of possible cell measurements
+    void calculate_cell_measure_variance_for_all_possible_source(vector<CellMeasurements> &cell_measurements_list);
 }; 
 
 #endif

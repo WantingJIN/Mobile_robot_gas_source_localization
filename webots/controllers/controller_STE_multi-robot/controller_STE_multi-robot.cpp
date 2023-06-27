@@ -17,6 +17,7 @@
 //#include "aStar.h"
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
+#include "CellMeasurements.h"
 
 using namespace std;
 
@@ -70,6 +71,10 @@ vector<double> ground_truth_in_motion;
 int sample_counter = 0;
 //plume model
 DeepCFDPlumeModel2D plume_model;
+
+// creat the vector for the cell_measurements
+vector<CellMeasurements> cell_measurements_list; 
+// initialize the cell_measurements_list
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -330,6 +335,49 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
 	}
+	return (exp(-0.5 * sum_tmp));
+	
+}
+
+double likelihood_gas_hit(struct history history, double *parameters, PlumeModel *model){
+	float sigmaE = 0.1;
+	float sigmaD = 0; //125;
+	double sum_tmp = 0;
+	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
+	
+	// for each sample, getting the model concentration and calculate the likelihood
+	// double model_concentration = 0;
+	// for (int i = 0; i < history.size; i++){
+	// 	model_concentration = model->concentration(history.position[i], sampleBuffer.average_wind_intensity, parameters);
+	// 	sum_tmp += pow(history.measurement[i] - model_concentration, 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+	// }
+
+	// getting all model concentrations for all sample positions and then calculate the likelihood
+	// printf("likelihood... history size %d\n", history.size);
+	vector<float> model_c_avg(history.size); 
+	vector<float> model_c_std(history.size); 
+	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
+	// for (int i = 0; i < history.size; i++){
+	// 	sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+	// 	//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+	// }
+	//return (exp(-0.5 * sum_tmp));
+
+	// FIXME - temporary solution
+	for (int i = 0; i < history.size; i++){
+		if (history.measurement[i] > 200 && model_c_avg[i] > 200){
+			 sum_tmp += sigmaE;
+		}
+		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+	}
+	for (int i = 0; i < history.size; i++){
+		if (history.measurement[i] < 200 && model_c_avg[i] < 200){
+             sum_tmp += sigmaE;
+		}
+		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+	}
+	sum_tmp = 1/sum_tmp;
+    printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
 	
 	return (exp(-0.5 * sum_tmp));
 }
@@ -605,6 +653,33 @@ void heterogeneous_navigation(){
 	}
 }*/
 
+void greedy_planning(){
+	double best_point[2]={0};
+	// FIXME - temperoy solution; the code is kind of confusing
+	// global_local_ratio = 1; only use the factor of the marginal posterior, not considersing the distance
+	if (posterior.entropy > 4){
+		posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
+	} else {
+		posterior.XYmarginal_distance_combined(current_position, 0.75, best_point);
+	}
+	goal_position.x = best_point[0];
+	goal_position.y = best_point[1];
+	goal_position.heading = 0;
+
+}
+void balance_expected_maximal_pdf(){
+	double maximal_pdf_point[2]={0};
+	double expected_pdf_point[2]={0};
+	maximal_pdf_point[0] = plume_model.max_a_post_value[0];
+	maximal_pdf_point[1] = plume_model.max_a_post_value[1];
+	expected_pdf_point[0] = plume_model.expected_value[0];
+	expected_pdf_point[1] = plume_model.expected_value[1];
+	goal_position.x = (maximal_pdf_point[0] + expected_pdf_point[0])/2;
+	goal_position.y = (maximal_pdf_point[1] + expected_pdf_point[1])/2;
+	goal_position.heading = 0;
+
+}
+
 void joint_planning(){
 	//std::cout<<"joint_planning"<<std::endl;
 	// 2 robots, 2 possibilities
@@ -854,6 +929,11 @@ void state_measuring(){
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
+		// FIXME - add the case for reverse sensor model
+		history.position.push_back({current_position.x, current_position.y, 0});
+		//history.measurement[history.size] = sampleBuffer.average_concentration;
+		history.measurement.push_back(sampleBuffer.average_concentration);
+		history.size++;
         if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
@@ -993,30 +1073,43 @@ void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
 
 	//find the best point to move to 
-	switch(simulation_parameters.scenario){
-		case NO_COM_NO_COOR :
-			information_gain_navigation_approx(current_position);
-			// printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
-    		//information_gain_navigation_predictive();
-    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(1.0);
-    		// printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
-    		break;
-    	case COM_NO_COOR :
-    		information_gain_navigation_approx(current_position);
-    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(0.75);
-    		break;
-	    case COM_COOR :
-	    	information_gain_navigation_approx(current_position);
-	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-	    	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-	    	DKL_MAP_distance(0.75);
-	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    		joint_planning();
-    		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    		break;
-    }
+
+	// switch(simulation_parameters.scenario){
+	// 	case NO_COM_NO_COOR :
+	// 		information_gain_navigation_approx(current_position);
+	// 		// printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
+    // 		//information_gain_navigation_predictive();
+    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+    // 		DKL_MAP_distance(1.0);
+    // 		// printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
+    // 		break;
+    // 	case COM_NO_COOR :
+    // 		information_gain_navigation_approx(current_position);
+    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+    // 		DKL_MAP_distance(0.75);
+    // 		break;
+	//     case COM_COOR :
+	//     	information_gain_navigation_approx(current_position);
+	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+	//     	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
+	//     	DKL_MAP_distance(0.75);
+	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+    // 		joint_planning();
+    // 		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
+    // 		break;
+    // }
+    switch (simulation_parameters.planningStrategy)
+	{
+	case GREEDY:
+		greedy_planning();
+		break;
+	case BALANCE_MAXIMAL_EXPECTED:
+	    balance_expected_maximal_pdf();
+		break;
+	default:
+
+		break;
+	}
     goal_outside_obstacles(&goal_position);
     // printf("goal position here %f %f 3\n", goal_position.x, goal_position.y);
     //heterogeneous_navigation();
@@ -1173,6 +1266,15 @@ int main(int argc, char **argv){
 	char label2[255];
     sprintf(label2,"Reading: %d\n",0);
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
+
+	for (int i = 0; i < x_nbins; i++)
+	{
+		for (int j = 0; j < y_nbins; j++)
+		{
+			CellMeasurements cell_measurements(i,j);
+			cell_measurements_list.push_back(cell_measurements);
+		}
+	}
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED){
