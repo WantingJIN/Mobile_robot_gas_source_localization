@@ -63,7 +63,7 @@
 //#define b_z_max  0.5
 // number of bins for posterior PDF
 #define Q_nbins 	20 //(Q_max - Q_min) /20
-#define x_nbins 	40 //(source_x_max - source_x_min)/0.1 //0.1 m is the granuality
+#define x_nbins 	20 //(source_x_max - source_x_min)/0.1 //0.1 m is the granuality
 #define y_nbins 	20 //(source_y_max - source_y_min)/0.1 //0.1 m is the granuality
 //#define z_nbins 	10 //(source_z_max - source_z_min)/0.1 //0.1 m is the granuality
 #define a_y_nbins 	10 //(a_y_max - a_y_min) / 0.0025

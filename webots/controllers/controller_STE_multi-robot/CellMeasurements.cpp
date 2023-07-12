@@ -1,6 +1,8 @@
 #include <math.h>
 //#include "nvwa/debug_new.h"
 #include "CellMeasurements.h"
+#include <fstream>
+#include "controller_STE_multi-robot.h"
 
 CellMeasurements::CellMeasurements(){
 	idx_x = 0;
@@ -11,9 +13,11 @@ CellMeasurements::CellMeasurements(){
 	meas_num = 0;
 }
 
-CellMeasurements::CellMeasurements(int idx_x, int idx_y){
-	idx_x = idx_x;
-	idx_y = idx_y;
+CellMeasurements::CellMeasurements(int idx, int idy){
+	idx_x = idx;
+	idx_y = idy;
+	px = source_x_min + idx_x * x_resol;
+	py = source_y_min + idx_y * y_resol;
 	meas_sum = 0.0;
 	meas_std = 0.0;
 	meas_mean = 0.0;

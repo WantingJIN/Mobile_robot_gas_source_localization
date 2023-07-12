@@ -551,8 +551,11 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 }
 
 void DeepCFDPlumeModel2D::concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list){
+	//printf("Enter in the plume model concentration_variance_for_allpossiblesource\n");
 	float sx = param_list[0];
 	float sy = param_list[1];
+
+	//time_t start, end;
 
 	x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
     std::vector<torch::jit::IValue> inputs;
@@ -562,18 +565,25 @@ void DeepCFDPlumeModel2D::concentration_variance_for_allpossiblesource(double pa
     inputs.push_back(x_trans.to(torch::kFloat).to(device));
     //std::cout << x_trans[0][1] << std::endl;
     // Execute the model and turn its output into a tensor.
+
+	//time(&start);
     at::Tensor output = DeepCFD(inputs).toTensor();
+
+	//time(&end);
+    
+	//printf("The time taken by loading model is : %f\n", double(end - start));
+
+	//time(&start);
     //std::cout << output << std::endl;
-	for (int idx_x = 0; idx_x < x_nbins; idx_x++) {
-		for (int idx_y = 0; idx_y < y_nbins; idx_y++) {
-        	//std::cout << "idx_x is: "<<idx_x;
-        	//std::cout << " idx_y is: "<<idx_y << std::endl;
-			int idx = idx_x * x_nbins + idx_y;
-			float con = output[0][0][idx_y][idx_x].item<float>();
-			cell_data_list[idx].add_measurement(con);
-        	//std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px[i] << ", " << py[i] << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
-		}
+    for (auto &cell : cell_data_list){
+		int idx = round((cell.px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+		int idy = round((cell.py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+		float con = output[0][0][idx][idy].item<float>();
+		cell.add_measurement(con);
 	}
+
+	//time(&end);
+	//printf("The time taken by extract the result is : %f\n", double(end - start));
 
 }
 

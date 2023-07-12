@@ -1033,6 +1033,8 @@ void state_estimating(){
 	printf("sum posterior : %f \n", posterior.sum);
 	//printf("Before process. \n");
 	posterior.process();
+	// calculate the variance of reading for each cell
+	posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
 	//printf("After Process. Start logging.\n");
 	log_expected_a_posteriori();
 	log_max_a_posteriori();

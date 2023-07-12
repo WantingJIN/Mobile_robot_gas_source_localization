@@ -2,13 +2,17 @@
 #define CELLMEASUREMENTS_H
 
 #include <vector>
+#include <condition_variable>
 using std::vector;
 
 class CellMeasurements{ 
     public: 
-    
+        // idx of the cell   
         int idx_x;
         int idx_y;
+        // position of the cell center
+        double px;
+        double py;
         vector<float> measurements;
         float meas_sum;
         float meas_std;
