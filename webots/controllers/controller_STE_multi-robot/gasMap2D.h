@@ -36,14 +36,14 @@ class GasMap2D{
     double gasWeightMap[map_x_nbins][map_y_nbins];
     double gasConfidenceMap[map_x_nbins][map_y_nbins];
 
-    double x_min;
-    double y_min;
-    double x_max;
-    double y_max;
-    double x_resol;
-    double y_resol;
-    double x_update_range;
-    double y_update_range;
+    double mx_min;
+    double my_min;
+    double mx_max;
+    double my_max;
+    double mx_resol;
+    double my_resol;
+    double mx_update_range;
+    double my_update_range;
 
     
     GasMap2D(double sigma, double gamma, double scaling_param, double wind_speed, double rco);

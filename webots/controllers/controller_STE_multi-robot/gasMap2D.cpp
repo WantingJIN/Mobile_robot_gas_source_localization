@@ -10,14 +10,14 @@ GasMap2D::GasMap2D(double sigma, double gamma, double scaling_param, double wind
 }
 
 void GasMap2D::initialize_gas_map_features(){
-  x_min = map_x_min;
-  x_max = map_x_max;
-  y_min = map_y_min;
-  y_max = map_y_max;
-  x_resol = (x_max - x_min) / map_x_nbins;
-  y_resol = (y_max - y_min) / map_y_nbins;
-  x_update_range = kp.rco / x_resol;
-  y_update_range = kp.rco / y_resol;
+  mx_min = map_x_min;
+  mx_max = map_x_max;
+  my_min = map_y_min;
+  my_max = map_y_max;
+  mx_resol = (mx_max - mx_min) / map_x_nbins;
+  my_resol = (my_max - my_min) / map_y_nbins;
+  mx_update_range = kp.rco / mx_resol;
+  my_update_range = kp.rco / my_resol;
 }
 
 void GasMap2D::configureKernelAlgorithm(double sigma, double gamma, double scaling_param, double wind_speed, double rco){
@@ -43,19 +43,19 @@ void GasMap2D::runKernelAlgorithm(Position current_position, float current_odor)
   double x_dist = 0, y_dist = 0; //distance from sampled point from center of cells
   //normalize received odor sample
   int close_coord[3]= {0};
-  int idx_x = round((current_position.x - x_min) / x_resol);
-  int idx_y = round((current_position.y - y_min) / y_resol);
-  int idx_x_start = (idx_x - x_update_range > 0) ? (idx_x - x_update_range) : 0;
-  int idx_x_end = (idx_x + x_update_range < map_x_nbins) ? (idx_x + x_update_range) : map_x_nbins;
-  int idx_y_start = (idx_y - y_update_range > 0) ? (idx_y - y_update_range) : 0;
-  int idx_y_end = (idx_y + y_update_range < map_y_nbins) ? (idx_y + y_update_range) : map_y_nbins;
+  int idx_x = round((current_position.x - mx_min) / mx_resol);
+  int idx_y = round((current_position.y - my_min) / my_resol);
+  int idx_x_start = (idx_x - mx_update_range > 0) ? (idx_x - mx_update_range) : 0;
+  int idx_x_end = (idx_x + mx_update_range < map_x_nbins) ? (idx_x + mx_update_range) : map_x_nbins;
+  int idx_y_start = (idx_y - my_update_range > 0) ? (idx_y - my_update_range) : 0;
+  int idx_y_end = (idx_y + my_update_range < map_y_nbins) ? (idx_y + my_update_range) : map_y_nbins;
   //printf("x_pos is %f, y_pos is %f, odor_con is %f \n", current_position.x, current_position.y, current_odor);
   //printf("idx x is %d, idx y is %d \n", idx_x, idx_y);
   //printf("idx x start is %d, idx x end is %d, idx y start is %d, idx y end is %d \n", idx_x_start, idx_x_end, idx_y_start, idx_y_end);
   for(int i = idx_x_start; i < idx_x_end; i++){
     for(int j = idx_y_start; j < idx_y_end; j++){
-      x_dist = i * x_resol + x_min - current_position.x;
-      y_dist = j * y_resol + y_min - current_position.y;
+      x_dist = i * mx_resol + mx_min - current_position.x;
+      y_dist = j * my_resol + my_min - current_position.y;
       float wcells = compute_gaussian(x_dist, y_dist);
       //printf("distance from cell (%d, %d) to current position is (%f, %f)", i, j, x_dist, y_dist);
       //printf("weight is %f \n", wcells);
@@ -106,8 +106,8 @@ float GasMap2D::compute_gaussian(const double x_dist, const double y_dist){
 
 void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_position, vector<double> &concentrations_from_map){
   for(int i=0; i<history_position.size(); i++){
-    int idx_x = round((history_position[i].x - x_min) / x_resol);
-    int idx_y = round((history_position[i].y - y_min) / y_resol);
+    int idx_x = round((history_position[i].x - mx_min) / mx_resol);
+    int idx_y = round((history_position[i].y - my_min) / my_resol);
     concentrations_from_map.push_back(gasAverConMap[idx_x][idx_y]);
   }
 }

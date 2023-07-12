@@ -2,7 +2,7 @@
 //#include "nvwa/debug_new.h"
 #include "CellMeasurements.h"
 #include <fstream>
-#include "controller_STE_multi-robot.h"
+#include "Constant.h"
 
 CellMeasurements::CellMeasurements(){
 	idx_x = 0;

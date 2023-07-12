@@ -18,6 +18,7 @@
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
 #include "CellMeasurements.h"
+#include "GasDispersionMap.h"
 
 using namespace std;
 
@@ -72,9 +73,10 @@ int sample_counter = 0;
 //plume model
 DeepCFDPlumeModel2D plume_model;
 
-// creat the vector for the cell_measurements
+// vector of the cell_measurements
 vector<CellMeasurements> cell_measurements_list; 
-// initialize the cell_measurements_list
+// vector of the gas_dispersion_model
+vector<GasDispersionMap> gas_dispersion_map_list;
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -1034,7 +1036,7 @@ void state_estimating(){
 	//printf("Before process. \n");
 	posterior.process();
 	// calculate the variance of reading for each cell
-	posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
+	//posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
 	//printf("After Process. Start logging.\n");
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
@@ -1268,13 +1270,24 @@ int main(int argc, char **argv){
 	char label2[255];
     sprintf(label2,"Reading: %d\n",0);
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
-
+    
+	// initialize cell meausurements list
 	for (int i = 0; i < x_nbins; i++)
 	{
 		for (int j = 0; j < y_nbins; j++)
 		{
 			CellMeasurements cell_measurements(i,j);
 			cell_measurements_list.push_back(cell_measurements);
+		}
+	}
+	// initialize gas dispersion list
+	for (int i = 0; i < x_nbins; i++)
+	{
+		for (int j = 0; j < y_nbins; j++)
+		{
+			GasDispersionMap gas_map(i,j);
+			plume_model.calculate_gas_concentration_map(gas_map);
+			gas_dispersion_map_list.push_back(gas_map);
 		}
 	}
 

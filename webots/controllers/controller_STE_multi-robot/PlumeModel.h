@@ -19,6 +19,7 @@
 #include <matio.h>
 #include <cmath>
 #include "CellMeasurements.h"
+#include "GasDispersionMap.h"	
 //#include <Eigen/Dense>
 
 //#include "pyhelper.hpp"
@@ -81,6 +82,7 @@ public:
 	virtual int get_source_position_params_nbr() = 0;
 	virtual void get_source_position_params(parameter * source_position_param_list) = 0;
 	virtual void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list) = 0;
+	virtual void calculate_gas_concentration_map(GasDispersionMap &gas_map) = 0;
 	void random_params(double * random_params);
 
 	void get_expected_value(double* container);
@@ -120,6 +122,7 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
+	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 };
 
 
@@ -152,6 +155,7 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
+	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 };
 
 
@@ -184,6 +188,8 @@ public:
 	torch::Tensor c_torch;
     //returns concentration for a set of parameters and a position
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
+	// resturns gas concentration map for a set of parameters
+	void calculate_gas_concentration_map(GasDispersionMap &gas_con_map);
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);

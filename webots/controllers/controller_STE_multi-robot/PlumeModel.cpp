@@ -5,7 +5,8 @@
 //#include "nvwa/debug_new.h"
 #include "PlumeModel.h"
 #include "CellMeasurements.h"
-#include "controller_STE_multi-robot.h"
+#include "Constant.h"
+#include "GasDispersionMap.h"
 //#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 //#include <numpy/arrayobject.h>
 #include <stdexcept>
@@ -195,6 +196,7 @@ void GaussianPlumeModel2D::print_max_a_post_val(){
 		max_a_post_value[2], max_a_post_value[0], max_a_post_value[1], max_a_post_value[3], max_a_post_value[4]);
 }
 
+void GaussianPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){}
 
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
@@ -358,6 +360,7 @@ void NNGaussianPlumeModel2D::print_max_a_post_val(){
 }
 
 void NNGaussianPlumeModel2D::concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list){}
+void NNGaussianPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -587,6 +590,33 @@ void DeepCFDPlumeModel2D::concentration_variance_for_allpossiblesource(double pa
 
 }
 
+void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
+	float sx = gas_map.idx_sx;
+	float sy = gas_map.idx_sy;
+	x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
+    std::vector<torch::jit::IValue> inputs;
+    //transpose the tensor
+    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
+    // NOTE: The input tensor must be a float tensor
+    inputs.push_back(x_trans.to(torch::kFloat).to(device));
+    //std::cout << x_trans[0][1] << std::endl;
+    // Execute the model and turn its output into a tensor.
+
+	//time(&start);
+    at::Tensor output = DeepCFD(inputs).toTensor();
+
+	for (int i = 0; i < x_nbins; i++){
+		for (int j = 0; j < y_nbins; j++){
+			double px = i * x_resol + source_x_min;
+			double py = j * y_resol + source_y_min; 
+			int idx = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+		    int idy = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+			float con = output[0][0][idx][idy].item<float>();
+			gas_map.gasConcentrationMap[i][j] = con;
+		}
+	}
+
+}
 double DeepCFDPlumeModel2D::approx_concentration(Position robot_position, double wind_intensity){
 	return concentration(robot_position, wind_intensity, expected_value);
 }
