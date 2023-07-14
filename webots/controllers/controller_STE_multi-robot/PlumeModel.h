@@ -82,7 +82,8 @@ public:
 	virtual int get_source_position_params_nbr() = 0;
 	virtual void get_source_position_params(parameter * source_position_param_list) = 0;
 	virtual void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list) = 0;
-	virtual void calculate_gas_concentration_map(GasDispersionMap &gas_map) = 0;
+	//virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
+	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
 	void random_params(double * random_params);
 
 	void get_expected_value(double* container);
@@ -122,7 +123,8 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
-	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	//void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map);
 };
 
 
@@ -155,7 +157,9 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
-	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+	//void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map);
+
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 };
 
 
@@ -186,10 +190,17 @@ public:
 	torch::Tensor x;
 	torch::Tensor r_torch;
 	torch::Tensor c_torch;
+	vector<GasDispersionMap> gas_con_map_list;
+	vector<CellMeasurements> cell_lists;
     //returns concentration for a set of parameters and a position
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
 	// resturns gas concentration map for a set of parameters
-	void calculate_gas_concentration_map(GasDispersionMap &gas_con_map);
+	void initialize_gas_concentration_map_list();
+	void initialize_cell_measurement_list();
+	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
+    void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);

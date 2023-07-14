@@ -121,6 +121,8 @@ void init(){
     sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
     sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
+	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
+	sprintf(gas_concentration_variance_map_logfile_name, "%s/gas_concentration_variance_map.csv", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
@@ -135,6 +137,10 @@ void init(){
     fclose(entropy_logfile);
     trajectory_logfile = fopen(trajectory_logfile_name, "w");
     fclose(trajectory_logfile);
+	gas_concentration_map_logfile = fopen(gas_concentration_map_logfile_name, "w");
+	fclose(gas_concentration_map_logfile);
+	gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "w");
+	fclose(gas_concentration_variance_map_logfile);
 
     // get the configuration
     //default values for the simulation parameters

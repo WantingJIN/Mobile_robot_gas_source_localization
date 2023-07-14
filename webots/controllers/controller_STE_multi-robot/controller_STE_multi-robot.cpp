@@ -40,6 +40,8 @@ FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
+FILE* gas_concentration_map_logfile;
+FILE* gas_concentration_variance_map_logfile;
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
 char posterior_logfile_name[512];
@@ -53,6 +55,8 @@ char posterior_pdf_3D_name[512];
 char entropy_logfile_name[512];
 char config_logfile_name[512];
 char trajectory_logfile_name[512];
+char gas_concentration_map_logfile_name[512];
+char gas_concentration_variance_map_logfile_name[512];
 
 // finite state machine
 struct FSM FSM;
@@ -75,8 +79,8 @@ DeepCFDPlumeModel2D plume_model;
 
 // vector of the cell_measurements
 vector<CellMeasurements> cell_measurements_list; 
-// vector of the gas_dispersion_model
-vector<GasDispersionMap> gas_dispersion_map_list;
+// gas concentration variance map
+double gas_concentration_variance_map[x_nbins*y_nbins] = {0};
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -284,6 +288,16 @@ void log_entropy(){
 	fclose(entropy_logfile);
 }
 
+void log_gas_concentration_variance_map(){
+	gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "a");
+
+	for(int i = 0; i < x_nbins * y_nbins; i++)
+		fprintf(gas_concentration_variance_map_logfile, "%.9f, ", gas_concentration_variance_map[i]);
+
+	fprintf(gas_concentration_variance_map_logfile, "\n");
+
+	fclose(gas_concentration_variance_map_logfile);
+}
 void log_history(){
 	// position
 	//FILE* position_history_logfile;
@@ -899,9 +913,9 @@ void state_measuring(){
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position,sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
-				printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
-				printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
+				// printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				// printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+				// printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement.push_back(sample_from_map[i]);
 				history.size++;
@@ -910,8 +924,8 @@ void state_measuring(){
 			// if else, save the instant measurement directly
 			for(int i=0; i<sample_in_motion.size; i++){
 				if (simulation_parameters.gasSensor == MOX){
-					printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
-				    printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
+					// printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
+				    // printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
 				}
 				
 				history.position.push_back(sample_in_motion.position[i]);
@@ -1035,6 +1049,8 @@ void state_estimating(){
 	printf("sum posterior : %f \n", posterior.sum);
 	//printf("Before process. \n");
 	posterior.process();
+	plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
+	log_gas_concentration_variance_map();
 	// calculate the variance of reading for each cell
 	//posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
 	//printf("After Process. Start logging.\n");
@@ -1271,25 +1287,6 @@ int main(int argc, char **argv){
     sprintf(label2,"Reading: %d\n",0);
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
     
-	// initialize cell meausurements list
-	for (int i = 0; i < x_nbins; i++)
-	{
-		for (int j = 0; j < y_nbins; j++)
-		{
-			CellMeasurements cell_measurements(i,j);
-			cell_measurements_list.push_back(cell_measurements);
-		}
-	}
-	// initialize gas dispersion list
-	for (int i = 0; i < x_nbins; i++)
-	{
-		for (int j = 0; j < y_nbins; j++)
-		{
-			GasDispersionMap gas_map(i,j);
-			plume_model.calculate_gas_concentration_map(gas_map);
-			gas_dispersion_map_list.push_back(gas_map);
-		}
-	}
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED){

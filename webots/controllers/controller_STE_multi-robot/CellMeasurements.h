@@ -30,6 +30,8 @@ class CellMeasurements{
         void calculate_mean();
 
         void calculate_variance();
+        // calculate the variance by taking in the pdf of the source location
+        void calculate_weighted_variance(double *pdf);
 }; 
 
 #endif
