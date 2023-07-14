@@ -683,6 +683,26 @@ void greedy_planning(){
 	goal_position.heading = 0;
 
 }
+void informative_path_planning_based_on_variance(){
+	double best_point[2]={0};
+	// find the maximal variance in gas variance map
+	double max_variance = 0;
+	int max_variance_index = 0;
+	for (int i = 0; i< x_nbins*y_nbins; i++){
+		if (gas_concentration_variance_map[i] > max_variance){
+			max_variance = gas_concentration_variance_map[i];
+			max_variance_index = i;
+		}
+	}
+	posterior.index_to_param_values(max_variance_index, best_point);
+
+	goal_position.x = best_point[0];
+	goal_position.y = best_point[1];
+	goal_position.heading = 0;
+	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+
+}
+
 void balance_expected_maximal_pdf(){
 	double maximal_pdf_point[2]={0};
 	double expected_pdf_point[2]={0};
@@ -1126,8 +1146,10 @@ void state_updategoal(){
 	case BALANCE_MAXIMAL_EXPECTED:
 	    balance_expected_maximal_pdf();
 		break;
+    case INFORMATIVE:
+	    informative_path_planning_based_on_variance();
+		break;
 	default:
-
 		break;
 	}
     goal_outside_obstacles(&goal_position);
