@@ -144,7 +144,7 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, NOISY_MOX, GREEDY};
     
 	// cell_measurements each_cell;
 	// for (int i = 0; i <plume_model.x_bins; i++){
@@ -287,6 +287,29 @@ void odor_read(double *sensor_reading, double &odor_concentration){
 				alpha = Ts / (tau_d + Ts);
 			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
 			previous_sensor_value = *sensor_reading;
+		}
+		if (simulation_parameters.gasSensor == NOISY_MOX){
+			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double tau_r = 1.3; // time constant for the rise
+			double tau_d = 2.0; // time constant for the decay
+			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
+			// where wc is the cut-off frequency and Ts is the sampling period
+			double alpha;
+			if (odor_concentration > previous_sensor_value)   //rising phase
+				alpha = Ts / (tau_r + Ts);
+			else                                       //decaying phase
+				alpha = Ts / (tau_d + Ts);
+			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
+			previous_sensor_value = *sensor_reading;
+
+			// add some random noise to the sensor reading
+			// define the sensor noise as a Gaussian distribution with mean 0 and variance 100
+			// double mean = 0.0;
+			// double variance = 1000000;
+			// double sensor_noise = generateGaussianNoise(mean, variance);
+			// *sensor_reading += sensor_noise;
+			// if (*sensor_reading < 0)
+			// 	*sensor_reading = 0;
 		}
 	}
 }
@@ -637,4 +660,11 @@ void next_iteration_time(){
 	//check for timeout
 	// if(current_timestamp()-start_time > TIMEOUT)
 	// 	FSM.state = STATE_FINISHED;
+}
+
+double generateGaussianNoise(double mean, double variance) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::normal_distribution<double> dist(mean, std::sqrt(variance));
+    return dist(gen);
 }

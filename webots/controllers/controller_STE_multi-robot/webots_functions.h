@@ -9,6 +9,7 @@
 #include <webots/compass.h>
 #include <webots/receiver.h>
 #include <webots/emitter.h>
+#include <random>
 
 extern "C" {
 	//#include "odor_filter.h"
@@ -114,5 +115,7 @@ void next_iteration_time();
 void obstacle_avoidance_k3();
 void obstacle_avoidance_k4();
 void obstacle_avoidance_k4_fa();
+
+double generateGaussianNoise(double mean, double variance);
 
 #endif

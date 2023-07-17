@@ -46,6 +46,7 @@ typedef enum processingMode {
 typedef enum gasSensor{
 	PID = 0,
 	MOX = 1,
+	NOISY_MOX = 2,
 }eGasSensor;
 
 typedef enum planningStrategy{
