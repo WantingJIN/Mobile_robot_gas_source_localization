@@ -55,6 +55,7 @@ extern FILE* posterior_pdf_3D;
 extern FILE* entropy_logfile;
 extern FILE* tmp_file;
 extern FILE* config_logfile;
+extern FILE* gas_concentration_variance_map_logfile;
 extern char goalposition_logfile_name[256];
 extern char measurements_logfile_name[256];
 extern char posterior_logfile_name[256];
@@ -67,6 +68,7 @@ extern char position_history_logfile_name[256];
 extern char posterior_pdf_3D_name[256];
 extern char entropy_logfile_name[256];
 extern char config_logfile_name[256];
+extern char gas_concentration_variance_map_logfile_name[256];
 // read logfile from the experiment
 extern char logfile_folder_name[256];
 extern FILE* experiment_measurements_logfile;

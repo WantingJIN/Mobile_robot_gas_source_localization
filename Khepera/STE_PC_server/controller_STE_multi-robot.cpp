@@ -15,6 +15,9 @@
 #include "udp_msg.h"
 #include "tcp_msg.h"
 #include "khepera_functions.h"
+#include "CellMeasurements.h"
+#include "GasDispersionMap.h"
+
 
 using namespace std;
 
@@ -38,6 +41,7 @@ FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
+FILE* gas_concentration_variance_map_logfile;
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
 char posterior_logfile_name[256];
@@ -51,6 +55,7 @@ char posterior_pdf_3D_name[256];
 char entropy_logfile_name[256];
 char config_logfile_name[256];
 char trajectory_logfile_name[256];
+char gas_concentration_variance_map_logfile_name[256];
 
 
 // read data from file
@@ -82,6 +87,11 @@ struct history sample_in_motion;
 
 //plume model
 DeepCFDPlumeModel2D plume_model;
+
+// vector of the cell_measurements
+vector<CellMeasurements> cell_measurements_list; 
+// gas concentration variance map
+double gas_concentration_variance_map[x_nbins*y_nbins] = {0};
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -352,6 +362,17 @@ void log_entropy(){
 	fclose(entropy_logfile);
 }
 
+void log_gas_concentration_variance_map(){
+	gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "a");
+
+	for(int i = 0; i < x_nbins * y_nbins; i++)
+		fprintf(gas_concentration_variance_map_logfile, "%.9f, ", gas_concentration_variance_map[i]);
+
+	fprintf(gas_concentration_variance_map_logfile, "\n");
+
+	fclose(gas_concentration_variance_map_logfile);
+}
+
 void log_history(){
 	// position
 	//FILE* position_history_logfile;
@@ -585,6 +606,44 @@ void heterogeneous_navigation(){
 			break;
 	}
 }*/
+void greedy_planning(){
+	double best_point[2]={0};
+	// FIXME - temperoy solution; the code is kind of confusing
+	// global_local_ratio = 1; only use the factor of the marginal posterior, not considersing the distance
+	if (posterior.entropy > 4){
+		posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
+	} else {
+		posterior.XYmarginal_distance_combined(current_position, 0.75, best_point);
+	}
+	goal_position.x = best_point[0];
+	goal_position.y = best_point[1];
+	goal_position.heading = 0;
+
+}
+void informative_path_planning_based_on_variance(){
+	double best_point[2]={0};
+	// find the maximal variance in gas variance map
+	double max_variance = 0;
+	int max_variance_index = 0;
+	for (int i = 0; i< x_nbins*y_nbins; i++){
+		if (gas_concentration_variance_map[i] > max_variance){
+			max_variance = gas_concentration_variance_map[i];
+			max_variance_index = i;
+		}
+	}
+	posterior.index_to_param_values(max_variance_index, best_point);
+
+	goal_position.x = best_point[0];
+	goal_position.y = best_point[1];
+	goal_position.heading = 0;
+    // The goal position is very close to current postion, swith to greedy planning
+	if(dist_to_goal(goal_position) < 0.05){
+		printf("The goal position is very close to current postion, switch to greedy planning \n");
+		greedy_planning();
+	}
+	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+
+}
 
 void joint_planning(){
 	//std::cout<<"joint_planning"<<std::endl;
@@ -830,6 +889,8 @@ void state_estimating(){
 	
 	printf("sum posterior : %f \n", posterior.sum);
 	posterior.process();
+	plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
+	log_gas_concentration_variance_map();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
@@ -855,71 +916,21 @@ void state_estimating(){
 void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
 
-	//find the best point to move to 
-	switch(simulation_parameters.scenario){
-		case NO_COM_NO_COOR :
-			information_gain_navigation_approx(current_position);
-    		//information_gain_navigation_predictive();
-    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(0.75);
-    		printf("goal position %f %f\n", goal_position.x, goal_position.y);
-    		break;
-    	case COM_NO_COOR :
-    		information_gain_navigation_approx(current_position);
-    		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    		DKL_MAP_distance(0.75);
-    		break;
-	    case COM_COOR :
-	    	information_gain_navigation_approx(current_position);
-	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-	    	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-	    	DKL_MAP_distance(0.75);
-	    	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    		joint_planning();
-    		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    		break;
-    }
+    switch (simulation_parameters.planningStrategy)
+	{
+	case GREEDY:
+		greedy_planning();
+		break;
+    case INFORMATIVE:
+	    informative_path_planning_based_on_variance();
+		break;
+	default:
+		break;
+	}
     goal_outside_obstacles(&goal_position);
-	//  int d;
-	//  float f1, f2, f3;
-    //  if (access(experiment_position_logfile_name, F_OK) != -1 && fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3) == 4){
-    //     if (d == 0){
-	// 		fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
-	// 	}
-	// 	goal_position.x = f1;
-	// 	goal_position.y = f2;
-	 
-
-    // printf("goal position here %f %f 3\n", goal_position.x, goal_position.y);
-    //heterogeneous_navigation();
 
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-  //   aStar as;
-  //   if(as.search(current_position, goal_position, astar_map, 0)){
-		// as.path( path );
-		// i = path.begin();
-		// std::ofstream myfile;
-		// myfile.open("aStar_paths.txt", ios::app);
-		// for( std::list<Position>::iterator i = path.begin(); i != path.end(); i++ )
-	 //    	myfile<< " " << i->x << ", " << i->y << ";";
-  //   	myfile<< std::endl;
-  //   	myfile.close();
-  //   }else{
-  //   	printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> aStar could not find a way!\n");
-  //   	as.search(current_position, goal_position, astar_map, 1);
-  //   }
 
-    //find the path using visibility graph
-    // VisiLibity::Point start(current_position.x, current_position.y);
-    // VisiLibity::Point finish(goal_position.x, goal_position.y);
-    // VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-    // // copy the path in another variable
-    // for(unsigned k=0; k<Polyline_path.size(); k++){
-    // 	Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-    //     path.push_back(p);
-    // 		log_trajectory(p);
-    // }
-    // i = path.begin();
 
     //send the goal to the supervisor
     Message msg(ID, 0, goal_position, -1, goal_position, 0);

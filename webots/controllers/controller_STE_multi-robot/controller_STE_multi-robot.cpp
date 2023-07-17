@@ -699,6 +699,11 @@ void informative_path_planning_based_on_variance(){
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
+    // The goal position is very close to current postion, swith to greedy planning
+	if(dist_to_goal(goal_position) < 0.05){
+		printf("The goal position is very close to current postion, switch to greedy planning \n");
+		greedy_planning();
+	}
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 
 }
@@ -1173,10 +1178,6 @@ void state_updategoal(){
   //   }
 
     //find the path using visibility graph
-	// current_position.x = 4.095615;
-	// current_position.y = 3.351716;
-	// goal_position.x = 8.228684;
-	// goal_position.y = 3.885515;
     VisiLibity::Point start(current_position.x, current_position.y);
     VisiLibity::Point finish(goal_position.x, goal_position.y);
     VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);

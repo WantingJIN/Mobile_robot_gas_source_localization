@@ -173,7 +173,7 @@ void GaussianPlumeModel2D::print_max_a_post_val(){
 	printf("MaxApost value: Q=%f @(%f %f) sigma y: %f %f  \n", 
 		max_a_post_value[2], max_a_post_value[0], max_a_post_value[1], max_a_post_value[3], max_a_post_value[4]);
 }
-
+void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
 
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
@@ -335,7 +335,7 @@ void NNGaussianPlumeModel2D::print_max_a_post_val(){
 	printf("MaxApost value: Q=%f @(%f %f)  \n", 
 		max_a_post_value[2], max_a_post_value[0], max_a_post_value[1]);
 }
-
+void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
 
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
@@ -370,6 +370,12 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(){
 	covar_sig_ii[1] = 0.1;	//y
     //initialize the trained neural network
 	initialize_model_features();
+
+	//initialize the dispersion map list
+	initialize_gas_concentration_map_list();
+
+	//initialize the cell measurements list
+	initialize_cell_measurement_list();
 }
 
 DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D & another_model){
@@ -520,6 +526,74 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
         c_avg[i] = output[0][0][idx_y][idx_x].item<float>();
         //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px[i] << ", " << py[i] << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
     }
+}
+
+void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
+// initialize gas dispersion list
+	for (int i = 0; i < x_nbins; i++)
+	{
+		for (int j = 0; j < y_nbins; j++)
+		{
+			GasDispersionMap gas_map(i,j);
+			calculate_gas_concentration_map(gas_map);
+			gas_con_map_list.push_back(gas_map);
+			//gas_map.log_map(gas_concentration_map_logfile_name, 'a');
+		}
+	}
+}
+// TODO - possible improvement: only store the variance of the gas concentration map
+void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
+	// initialize cell meausurements list
+	for (int j = 0; j < y_nbins; j++)
+	{
+		for (int i = 0; i < x_nbins; i++)
+		{
+			CellMeasurements cell_measurements(i,j);
+			cell_lists.push_back(cell_measurements);
+		}
+	}
+	for (auto &cell : cell_lists){
+		for (auto &gas_map : gas_con_map_list){
+			float con = gas_map.get_concentration(cell.idx_x, cell.idx_y);
+			cell.add_measurement(con);
+		}
+		cell.calculate_mean();
+	}
+}
+
+void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){
+	for (int i = 0; i < cell_lists.size(); i++){
+		cell_lists[i].calculate_weighted_variance(pdf);
+		gas_con_variance_map[i] = cell_lists[i].meas_std;
+	}
+}
+
+void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
+	float sx = gas_map.sx;
+	float sy = gas_map.sy;
+	x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
+    std::vector<torch::jit::IValue> inputs;
+    //transpose the tensor
+    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
+    // NOTE: The input tensor must be a float tensor
+    inputs.push_back(x_trans.to(torch::kFloat).to(device));
+    //std::cout << x_trans[0][1] << std::endl;
+    // Execute the model and turn its output into a tensor.
+
+	//time(&start);
+    at::Tensor output = DeepCFD(inputs).toTensor();
+
+	for (int i = 0; i < x_nbins; i++){
+		for (int j = 0; j < y_nbins; j++){
+			double px = i * x_resol + source_x_min;
+			double py = j * y_resol + source_y_min; 
+			int idx = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+		    int idy = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+			float con = output[0][0][idx][idy].item<float>();
+			gas_map.gasConcentrationMap[i][j] = con;
+		}
+	}
+
 }
 
 

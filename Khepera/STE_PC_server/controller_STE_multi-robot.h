@@ -100,6 +100,10 @@ struct parameters_set{
 	//double a_z;
 	//double b_z;
 };
+typedef enum planningStrategy{
+	GREEDY = 0,
+	INFORMATIVE = 1,
+}ePlanningStrategy;
 
 // simulation paramters
 struct simulation_parameters{
@@ -110,7 +114,7 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
-	double source_position[2];
+	ePlanningStrategy planningStrategy;
 };
 extern struct simulation_parameters simulation_parameters;
 

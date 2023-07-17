@@ -13,6 +13,9 @@ using namespace std;
 #include <matio.h>
 #include <cmath>
 
+#include "CellMeasurements.h"
+#include "GasDispersionMap.h"
+
 #define PI 	3.14159265358979
 
 //parameter structure defines properties of a parameter. A model has an array of parameters.
@@ -74,6 +77,8 @@ public:
 	void set_expected_value(double* container);
 	void set_max_a_post_value(double* container);
 
+	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
+
 };
 
 
@@ -103,6 +108,8 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
+
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 };
 
 
@@ -133,6 +140,8 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
+
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 };
 
 
@@ -163,6 +172,8 @@ public:
 	torch::Tensor x;
 	torch::Tensor r_torch;
 	torch::Tensor c_torch;
+	vector<GasDispersionMap> gas_con_map_list;
+	vector<CellMeasurements> cell_lists;
 
     //returns concentration for a set of parameters and a position
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
@@ -176,6 +187,13 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
+
+	// resturns gas concentration map for a set of parameters
+	void initialize_gas_concentration_map_list();
+	void initialize_cell_measurement_list();
+	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
+    void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 };
 
 #endif
