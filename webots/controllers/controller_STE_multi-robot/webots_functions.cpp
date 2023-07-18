@@ -123,6 +123,7 @@ void init(){
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
 	sprintf(gas_concentration_variance_map_logfile_name, "%s/gas_concentration_variance_map.csv", folder_name);
+    sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
@@ -141,6 +142,8 @@ void init(){
 	fclose(gas_concentration_map_logfile);
 	gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "w");
 	fclose(gas_concentration_variance_map_logfile);
+	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
+	fclose(gas_hit_variance_map_logfile);
 
     // get the configuration
     //default values for the simulation parameters

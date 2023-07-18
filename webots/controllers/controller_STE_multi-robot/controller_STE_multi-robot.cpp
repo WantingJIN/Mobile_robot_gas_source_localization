@@ -42,6 +42,7 @@ FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* gas_concentration_map_logfile;
 FILE* gas_concentration_variance_map_logfile;
+FILE* gas_hit_variance_map_logfile;
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
 char posterior_logfile_name[512];
@@ -57,6 +58,7 @@ char config_logfile_name[512];
 char trajectory_logfile_name[512];
 char gas_concentration_map_logfile_name[512];
 char gas_concentration_variance_map_logfile_name[512];
+char gas_hit_variance_map_logfile_name[512];
 
 // finite state machine
 struct FSM FSM;
@@ -298,6 +300,17 @@ void log_gas_concentration_variance_map(){
 	fprintf(gas_concentration_variance_map_logfile, "\n");
 
 	fclose(gas_concentration_variance_map_logfile);
+}
+
+void log_gas_hit_variance_map(){
+	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "a");
+
+	for(int i = 0; i < x_nbins * y_nbins; i++)
+		fprintf(gas_hit_variance_map_logfile, "%.9f, ", gas_hit_variance_map[i]);
+
+	fprintf(gas_hit_variance_map_logfile, "\n");
+
+	fclose(gas_hit_variance_map_logfile);
 }
 void log_history(){
 	// position
@@ -720,10 +733,20 @@ void informative_path_planning_based_on_variance(){
 	// find the maximal variance in gas variance map
 	double max_variance = 0;
 	int max_variance_index = 0;
-	for (int i = 0; i< x_nbins*y_nbins; i++){
-		if (gas_concentration_variance_map[i] > max_variance){
-			max_variance = gas_concentration_variance_map[i];
-			max_variance_index = i;
+	if (simulation_parameters.gasFeature == CONCENTRATION){
+		for (int i = 0; i< x_nbins*y_nbins; i++){
+			if (gas_concentration_variance_map[i] > max_variance){
+				max_variance = gas_concentration_variance_map[i];
+				max_variance_index = i;
+			}
+		}
+
+	} else if (simulation_parameters.gasFeature == GASHIT){
+		for (int i = 0; i< x_nbins*y_nbins; i++){
+			if (gas_hit_variance_map[i] > max_variance){
+				max_variance = gas_hit_variance_map[i];
+				max_variance_index = i;
+			}
 		}
 	}
 	posterior.index_to_param_values(max_variance_index, best_point);
@@ -1111,6 +1134,8 @@ void state_estimating(){
 	posterior.process();
 	plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
 	log_gas_concentration_variance_map();
+	plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
+	log_gas_hit_variance_map();
 	// calculate the variance of reading for each cell
 	//posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
 	//printf("After Process. Start logging.\n");
