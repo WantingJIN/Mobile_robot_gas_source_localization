@@ -81,6 +81,7 @@ DeepCFDPlumeModel2D plume_model;
 vector<CellMeasurements> cell_measurements_list; 
 // gas concentration variance map
 double gas_concentration_variance_map[x_nbins*y_nbins] = {0};
+double gas_hit_variance_map[x_nbins*y_nbins] = {0};
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -310,7 +311,8 @@ void log_history(){
     //FILE * measurement_history_logfile;
     measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
-		fprintf(measurement_history_logfile,"%d, %f\n", i, history.measurement[i]);
+		printf("history.measurement[%d] = %d\n", i, history.gas_hit_event[i]);
+		fprintf(measurement_history_logfile,"%d, %f, %d\n", i, history.measurement[i], history.gas_hit_event[i]);
 	}
     fclose(measurement_history_logfile);
    
@@ -355,46 +357,72 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	
 }
 
-double likelihood_gas_hit(struct history history, double *parameters, PlumeModel *model){
+double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model){
 	float sigmaE = 0.1;
-	float sigmaD = 0; //125;
+	float sigmaD = 0.01; //125;
 	double sum_tmp = 0;
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
-	// for each sample, getting the model concentration and calculate the likelihood
-	// double model_concentration = 0;
-	// for (int i = 0; i < history.size; i++){
-	// 	model_concentration = model->concentration(history.position[i], sampleBuffer.average_wind_intensity, parameters);
-	// 	sum_tmp += pow(history.measurement[i] - model_concentration, 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-	// }
-
-	// getting all model concentrations for all sample positions and then calculate the likelihood
-	// printf("likelihood... history size %d\n", history.size);
 	vector<float> model_c_avg(history.size); 
 	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
-	// for (int i = 0; i < history.size; i++){
-	// 	sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-	// 	//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
-	// }
-	//return (exp(-0.5 * sum_tmp));
 
-	// FIXME - temporary solution
+	//gas hit event: fixed threshold
+	//  int gas_hit_threshold  = 1000;
+	// 	int history_hit;
+	// 	int model_hit;
+
+	// for (int i = 0; i < history.size; i++){
+	// 	if (history.measurement[i] < gas_hit_threshold)
+	// 		history_hit = 0;
+	// 	else
+	// 		history_hit = 1;
+    //     history.gas_hit_event[i] = history_hit;
+	// 	if (model_c_avg[i] < gas_hit_threshold)
+	// 		model_hit = 0;
+	// 	else
+	// 		model_hit = 1; 
+	//     if (history_hit != model_hit)
+	// 	    sum_tmp += pow(2, 2);
+	// 	if (history_hit == 0 && model_hit == 0)
+	// 		sum_tmp += pow(0.5, 2);
+	// }
+
+	// gas hit event: dynamic threshold
+	double lamda = 0.5;
+	// threshold for history measurments
+	double his_thrs = 0.0;
+    double prev_his_thrs = 0.0;
+	// threshold for model measurements
+	double mod_thrs = 0.0;
+	double prev_mod_thrs = 0.0;
+	// hit event for history and model
+    int history_hit;
+	int model_hit;
 	for (int i = 0; i < history.size; i++){
-		if (history.measurement[i] > 200 && model_c_avg[i] > 200){
-			 sum_tmp += sigmaE;
+		if (i == 0){
+			prev_his_thrs = history.measurement[i];
+			his_thrs = history.measurement[i];
+			prev_mod_thrs = model_c_avg[i];
+			mod_thrs = model_c_avg[i];
+		}else{
+			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
+			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
 		}
-		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
+        // decide whether the gas hit event happens
+		history_hit = ((history.measurement[i] > prev_his_thrs) && (history.measurement[i] >2000)) ? 1 : 0;
+		history.gas_hit_event[i] = history_hit;
+		model_hit = ((model_c_avg[i] > prev_mod_thrs) && (model_c_avg[i] >2000)) ? 1 : 0;
+        // update the likelihood based on the similarity of the hit event
+	    if (history_hit != model_hit)
+		    sum_tmp += pow(2, 2);
+		if (history_hit == 0 && model_hit == 0)
+			sum_tmp += pow(0.5, 2);
+		prev_his_thrs = his_thrs;
+		prev_mod_thrs = mod_thrs;
 	}
-	for (int i = 0; i < history.size; i++){
-		if (history.measurement[i] < 200 && model_c_avg[i] < 200){
-             sum_tmp += sigmaE;
-		}
-		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
-	}
-	sum_tmp = 1/sum_tmp;
-    printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
-	
+
+    //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
 	return (exp(-0.5 * sum_tmp));
 }
 
@@ -673,17 +701,21 @@ void greedy_planning(){
 	double best_point[2]={0};
 	// FIXME - temperoy solution; the code is kind of confusing
 	// global_local_ratio = 1; only use the factor of the marginal posterior, not considersing the distance
-	if (posterior.entropy > 4){
-		posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
-	} else {
-		posterior.XYmarginal_distance_combined(current_position, 0.75, best_point);
-	}
+	// if (posterior.entropy > 4){
+	// 	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
+	// } else {
+	// 	posterior.XYmarginal_distance_combined(current_position, 0.75, best_point);
+	// }
+	printf("greedy planning \n");
+	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
+	//printf("best point: %f %f \n", best_point[0], best_point[1]);
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
 
 }
 void informative_path_planning_based_on_variance(){
+	printf("informative path planning based on variance \n");
 	double best_point[2]={0};
 	// find the maximal variance in gas variance map
 	double max_variance = 0;
@@ -718,7 +750,6 @@ void balance_expected_maximal_pdf(){
 	goal_position.x = (maximal_pdf_point[0] + expected_pdf_point[0])/2;
 	goal_position.y = (maximal_pdf_point[1] + expected_pdf_point[1])/2;
 	goal_position.heading = 0;
-
 }
 
 void joint_planning(){
@@ -943,6 +974,7 @@ void state_measuring(){
 				// printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement.push_back(sample_from_map[i]);
+				history.gas_hit_event.push_back(0);
 				history.size++;
 			}
 		} else {
@@ -952,9 +984,9 @@ void state_measuring(){
 					// printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
 				    // printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
 				}
-				
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement.push_back(sample_in_motion.measurement[i]);
+				history.gas_hit_event.push_back(0);
 				history.size++;
 			}
 		}
@@ -974,6 +1006,7 @@ void state_measuring(){
 		history.position.push_back({current_position.x, current_position.y, 0});
 		//history.measurement[history.size] = sampleBuffer.average_concentration;
 		history.measurement.push_back(sampleBuffer.average_concentration);
+		history.gas_hit_event.push_back(0);
 		history.size++;
         if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
@@ -1005,6 +1038,7 @@ void state_measuring(){
 				history.position.push_back({current_position.x, current_position.y, 0});
 				//history.measurement[history.size] = sampleBuffer.average_concentration;
 				history.measurement.push_back(sampleBuffer.average_concentration);
+				history.gas_hit_event.push_back(0);
 				history.size++;
 				history_print(history);
 			}
@@ -1037,6 +1071,7 @@ void state_measuring(){
 			history.position.push_back({current_position.x, current_position.y, 0});
 			//history.measurement[history.size] = sampleBuffer.average_concentration;
 			history.measurement.push_back(sampleBuffer.average_concentration);
+			history.gas_hit_event.push_back(0);
 			history.size++;
 			history_print(history);
 		}

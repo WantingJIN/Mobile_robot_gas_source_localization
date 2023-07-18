@@ -55,6 +55,12 @@ typedef enum planningStrategy{
 	BALANCE_MAXIMAL_EXPECTED = 2,
 }ePlanningStrategy;
 
+typedef enum gasFeature{
+	CONCENTRATION = 0,
+	GASHIT = 1,
+}eGasFeature;
+
+
 //parameters to estimate
 struct parameters_set{
 	double Q;
@@ -78,6 +84,7 @@ struct simulation_parameters{
 	eProcessingMode processingMode;
 	eGasSensor gasSensor;
 	ePlanningStrategy planningStrategy;
+	eGasFeature gasFeature;
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -108,6 +115,7 @@ struct history{
 	//double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
 	vector<Position> position;
 	vector<double> measurement;
+	vector<int> gas_hit_event;
 };
 
 // message structure
@@ -138,7 +146,7 @@ void informative_path_planning_based_on_variance();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model);
-double likelihood_gas_hit(struct history history, double *parameters, PlumeModel *model);
+double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();

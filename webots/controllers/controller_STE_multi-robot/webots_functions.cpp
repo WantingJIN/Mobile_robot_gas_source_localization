@@ -144,7 +144,7 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, NOISY_MOX, GREEDY};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, GREEDY, GASHIT};
     
 	// cell_measurements each_cell;
 	// for (int i = 0; i <plume_model.x_bins; i++){
@@ -248,6 +248,8 @@ void init(){
 	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
 	fprintf(sim_param_file, "data_processing_mode %d\n", simulation_parameters.processingMode);
 	fprintf(sim_param_file, "gas_sensor_type %d\n", simulation_parameters.gasSensor);
+	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
+	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){
@@ -303,13 +305,13 @@ void odor_read(double *sensor_reading, double &odor_concentration){
 			previous_sensor_value = *sensor_reading;
 
 			// add some random noise to the sensor reading
-			// define the sensor noise as a Gaussian distribution with mean 0 and variance 100
-			// double mean = 0.0;
-			// double variance = 1000000;
-			// double sensor_noise = generateGaussianNoise(mean, variance);
-			// *sensor_reading += sensor_noise;
-			// if (*sensor_reading < 0)
-			// 	*sensor_reading = 0;
+			//define the sensor noise as a Gaussian distribution with mean 0 and variance 100
+			double mean = 0.0;
+			double variance = 10000;
+			double sensor_noise = generateGaussianNoise(mean, variance);
+			*sensor_reading += sensor_noise;
+			if (*sensor_reading < 0)
+				*sensor_reading = 0;
 		}
 	}
 }

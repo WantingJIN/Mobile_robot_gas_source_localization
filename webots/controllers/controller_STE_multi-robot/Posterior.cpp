@@ -291,7 +291,11 @@ void Posterior::process(){
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
 	}
 	entropy = -1 * entropy;
-	//printf("\n");
+    printf("pdf is: ");
+	for (i = 0; i < nbr_element; i++){
+		printf("%f ", pdf[i]);
+	}
+	printf("\n");
 	//log
 	//const char* str = "/home/wjin/Workspace/continuous_STE/Results/pdf.csv";
 	//log_pdf(str, 'a');
@@ -423,7 +427,8 @@ void Posterior::MCMC_evaluation(struct history history){
 }
 
 //exhaustive evaluation of all the values of the posterior pdf
-void Posterior::exhaustive_evaluation(struct history history){
+void Posterior::exhaustive_evaluation(struct history &history){
+	printf("exhaustive evaluation\n");
 	int i=0;
 	double sample[nbr_dimension];
 
@@ -432,7 +437,13 @@ void Posterior::exhaustive_evaluation(struct history history){
 		//convert index 'i' to set of parameter values 'sample'
 		index_to_param_values(i, sample);
 		//calculate the posterior of 'sample'
-		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
+		// check the gas feature
+		if (simulation_parameters.gasFeature == CONCENTRATION){
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
+		}
+		if (simulation_parameters.gasFeature == GASHIT){
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model);
+		}
 		//printf("%f, ", pdf[i]);
 		//add the new value to the sum
 		sum += pdf[i];
@@ -512,7 +523,6 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 
 			//combined value
 			double tmp_value = (ratio * marginal) + ((1-ratio) * (inv_dist[i][j]/sum_inv_distance));//marginal - ratio*(distance/MAX_DISTANCE);
-			
 			//if the cell(i,j) is the best so far, its center is copied in best_point
 			if(tmp_value > value){
 				value = tmp_value;
@@ -521,6 +531,8 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 			}
 		}
 	}
+
+	printf("best mariginal: %f, %f\n", best_point[0], best_point[1]);
 }
 
 //log the posterior pdf

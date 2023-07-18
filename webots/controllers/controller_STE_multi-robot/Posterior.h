@@ -49,7 +49,7 @@ class Posterior{
     //efficient sampling through MCMC
     void MCMC_evaluation(struct history history);
     //exhaustive evaluation of all the values of the posterior pdf
-    void exhaustive_evaluation(struct history history);
+    void exhaustive_evaluation(struct history &history);
 
     //relative entropy calculation between one posterior pdf and another P
     double Kullback_Leibler_divergence(Posterior P);
