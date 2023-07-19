@@ -40,7 +40,6 @@ void CellMeasurements::add_gas_hit(float meas){
     gas_hit = meas > gas_hit_thres ? 1 : 0;
 	gas_hits.push_back(gas_hit);
 	hit_sum += gas_hit;
-	meas_num++;
 }
 
 void CellMeasurements::calculate_mean(){

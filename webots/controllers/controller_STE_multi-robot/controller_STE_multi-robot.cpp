@@ -727,6 +727,14 @@ void greedy_planning(){
 	goal_position.heading = 0;
 
 }
+void random_planning(){
+	do {
+		goal_position.heading = 0;
+        goal_position.x = (((double)rand() / (double)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;;
+        goal_position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
+    } while(goal_position.is_in_obstacle_list(obstacles, nbr_obs));
+
+}
 void informative_path_planning_based_on_variance(){
 	printf("informative path planning based on variance \n");
 	double best_point[2]={0};
@@ -744,6 +752,7 @@ void informative_path_planning_based_on_variance(){
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (gas_hit_variance_map[i] > max_variance){
+				printf("gas_hit_variance_map[i] %f \n", gas_hit_variance_map[i]);
 				max_variance = gas_hit_variance_map[i];
 				max_variance_index = i;
 			}
@@ -1214,6 +1223,9 @@ void state_updategoal(){
     case INFORMATIVE:
 	    informative_path_planning_based_on_variance();
 		break;
+	case RANDOM:
+		random_planning();
+		break;	
 	default:
 		break;
 	}
