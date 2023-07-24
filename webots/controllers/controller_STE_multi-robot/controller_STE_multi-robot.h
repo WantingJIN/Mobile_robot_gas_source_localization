@@ -54,6 +54,7 @@ typedef enum planningStrategy{
 	INFORMATIVE = 1,
 	BALANCE_MAXIMAL_EXPECTED = 2,
 	RANDOM = 3,
+	LAWNMOWER = 4,
 }ePlanningStrategy;
 
 typedef enum gasFeature{

@@ -750,6 +750,7 @@ void greedy_planning(){
 	goal_position.heading = 0;
 
 }
+
 void random_planning(){
 	do {
 		goal_position.heading = 0;
@@ -757,6 +758,26 @@ void random_planning(){
         goal_position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
     } while(goal_position.is_in_obstacle_list(obstacles, nbr_obs));
 
+}
+
+void lawnmower_planning(){
+	int static direction = 1;
+	double x_step = 1.0;
+	goal_position.y = (direction == 1)? YMAX - SAFETY_MARGIN: YMIN + + SAFETY_MARGIN ;
+	goal_position.x = current_position.x;
+	goal_position.heading = 0;
+	if (current_position.y > YMAX - SAFETY_MARGIN - 0.05 && direction == 1){
+		goal_position.x = current_position.x + x_step;
+		direction = -1;
+	}
+	if (current_position.y < YMIN + SAFETY_MARGIN + 0.05 && direction == -1){
+		goal_position.x = current_position.x + x_step;
+		direction = 1;
+	}
+	if (goal_position.x > XMAX){
+		FSM.state = STATE_FINISHED;
+		printf("FINISHED \n");
+	}
 }
 void informative_path_planning_based_on_variance(){
 	printf("informative path planning based on variance \n");
@@ -1248,6 +1269,9 @@ void state_updategoal(){
 		break;
 	case RANDOM:
 		random_planning();
+		break;
+	case LAWNMOWER:
+		lawnmower_planning();
 		break;	
 	default:
 		break;
