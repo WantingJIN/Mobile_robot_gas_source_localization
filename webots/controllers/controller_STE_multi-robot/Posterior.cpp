@@ -431,7 +431,10 @@ void Posterior::exhaustive_evaluation(struct history &history){
 	printf("exhaustive evaluation\n");
 	int i=0;
 	double sample[nbr_dimension];
-
+    double mean, stddev;
+	if (simulation_parameters.gasFeature == GASHIT){
+		calculate_history_distribution(history, mean, stddev);
+	}
 	//for each element of the pdf
 	for(i = 0; i < nbr_element; i++){
 		//convert index 'i' to set of parameter values 'sample'
@@ -442,7 +445,7 @@ void Posterior::exhaustive_evaluation(struct history &history){
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
 		}
 		if (simulation_parameters.gasFeature == GASHIT){
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model, mean, stddev);
 		}
 		//printf("%f, ", pdf[i]);
 		//add the new value to the sum

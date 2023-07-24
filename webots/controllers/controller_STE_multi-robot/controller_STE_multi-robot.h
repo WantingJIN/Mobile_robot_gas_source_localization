@@ -147,7 +147,7 @@ void informative_path_planning_based_on_variance();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model);
-double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model);
+double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();
@@ -160,5 +160,8 @@ void goal_outside_obstacles(Position * goal);
 int obstacle_or_not();
 void do_odometry();
 
+// calculate the Gaussian distribution of the history and the CDF of the data
+double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
+void calculate_history_distribution(struct history history, double &mean, double &stddev);
 
 #endif

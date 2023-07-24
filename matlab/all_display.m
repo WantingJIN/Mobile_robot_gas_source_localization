@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/results_continuous_MOX_no_processing_greedy/6/');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/results_continuous_MOX_greedy_gas_hit_dynamic_0.1_2_0.2_cdf/2');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -16,6 +16,7 @@ for i=1:exp_number
     robot_list = robot_list([robot_list.isdir]);
     ID = arrayfun(@(struct) str2num(struct.name),robot_list);
     params = my_text2struct([[folder_name, '/', num2str(ID(1))], '/param_log.csv']);
+    gas_feature = params.gas_feature;
     
     f1all = figure('Position',[-686   629   570   418]);
     f2all = figure('Name','measurements','Position',[-1561 656 794 415]); 
@@ -117,8 +118,15 @@ for i=1:exp_number
         figure(f2all);
         axes0 = axes('Parent',f2all,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
         hold on;
-        scatter3(position_history(:,2),position_history(:,3),position_history(:,4),10,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
-        scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);
+        if gas_feature == 0
+             scatter3(position_history(:,2),position_history(:,3),position_history(:,4),10,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
+             scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);
+             c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]); colormap(mymap); %colormap jet;
+        end
+        if gas_feature == 1
+            scatter3(position_history(:,2),position_history(:,3),position_history(:,4),10,measurement_history(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
+        end
+     
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
         plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',10,'LineWidth',2,'DisplayName','Source real position'); %real source position
         plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',10,'LineWidth',2,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
@@ -128,7 +136,6 @@ for i=1:exp_number
         hold off;
         set(axes0,'Ytick',0:1:4)
         grid on; axis equal; axis([2.25 13.25 0 4 0 2]);
-        c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]); colormap(mymap); %colormap jet;
         xlabel('X (m)');ylabel('Y (m)');
         view(180,90);
         legend1 = legend(axes0,'show');

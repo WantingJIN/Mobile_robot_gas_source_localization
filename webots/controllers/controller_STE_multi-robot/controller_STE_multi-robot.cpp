@@ -369,8 +369,25 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	return (exp(-0.5 * sum_tmp));
 	
 }
-
-double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model){
+void calculate_history_distribution(struct history history, double &mean, double &stddev){
+	double sum = 0;
+	double sum2 = 0;
+	for (int i = 0; i < history.size; i++){
+		sum += history.measurement[i];
+	}
+	mean = sum / history.size;
+	for (int i = 0; i< history.size; i++){
+		sum2 += pow(history.measurement[i] - mean, 2);
+	}
+	stddev = sqrt(sum2 / history.size);
+	//printf("mean: %f, variance: %f\n", mean, variance);
+}
+double calculate_measurement_gaussian_CDF(double data, double mean, double stddev){
+	double cdf = 0.5 * (1 + std::erf((data - mean) / (stddev * std::sqrt(2))));
+	//printf("data: %f, mean: %f, stddev: %f, cdf: %f\n", data, mean, stddev, cdf);
+	return cdf;
+}
+double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev){
 	float sigmaE = 0.1;
 	float sigmaD = 0.01; //125;
 	double sum_tmp = 0;
@@ -412,29 +429,35 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	// hit event for history and model
     int history_hit;
 	int model_hit;
+	double pdf_data = 0.0;
 	for (int i = 0; i < history.size; i++){
 		if (i == 0){
 			prev_his_thrs = history.measurement[i];
 			his_thrs = history.measurement[i];
 			prev_mod_thrs = model_c_avg[i];
 			mod_thrs = model_c_avg[i];
+			pdf_data = 1.0;
 		}else{
 			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
 			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+			if (stddev == 0)
+				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
+			else
+				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
 		}
         // decide whether the gas hit event happens
-		history_hit = ((history.measurement[i] > prev_his_thrs) && (history.measurement[i] >2000)) ? 1 : 0;
+		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
 		history.gas_hit_event[i] = history_hit;
-		model_hit = ((model_c_avg[i] > prev_mod_thrs) && (model_c_avg[i] >2000)) ? 1 : 0;
+		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
         // update the likelihood based on the similarity of the hit event
-	    if (history_hit != model_hit)
-		    sum_tmp += pow(2, 2);
+	    if ((history_hit != model_hit))
+		    sum_tmp += pdf_data * pow(2, 2);
 		if (history_hit == 0 && model_hit == 0)
-			sum_tmp += pow(0.5, 2);
-		prev_his_thrs = his_thrs;
+			sum_tmp += pdf_data * pow(0.5, 2);
+		prev_his_thrs = his_thrs; 
 		prev_mod_thrs = mod_thrs;
 	}
-
+    
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
 	return (exp(-0.5 * sum_tmp));
 }
