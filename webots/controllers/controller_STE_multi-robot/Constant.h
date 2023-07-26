@@ -10,7 +10,7 @@
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
 //#define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	50 
+#define MAX_SAMPLE_NUMBER 	30 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
@@ -50,11 +50,11 @@
 //#define a_z_nbins 	10 //(a_z_max - a_z_min) / 0.0025
 //#define b_z_nbins 	10 //(b_z_max - b_z_min) / 0.025
 //resolution of the estimated terms
-#define Q_resol    (Q_max-Q_min)/Q_nbins
-#define x_resol    (source_x_max-source_x_min)/x_nbins
-#define y_resol    (source_y_max-source_y_min)/y_nbins
-#define a_y_resol  (a_y_max-a_y_min)/a_y_nbins
-#define b_y_resol  (b_y_max-b_y_min)/b_y_nbins
+#define Q_resol    (static_cast<double>(Q_max-Q_min)/Q_nbins)
+#define x_resol    (static_cast<double>(source_x_max-source_x_min)/x_nbins)
+#define y_resol    (static_cast<double>(source_y_max-source_y_min)/y_nbins)
+#define a_y_resol  (static_cast<double>(a_y_max-a_y_min)/a_y_nbins)
+#define b_y_resol  (static_cast<double>(b_y_max-b_y_min)/b_y_nbins)
 #define MAX_DISTANCE 10.77 //from (2.75,0) to (12.75,4)
 
 #define VERBOSE 		1
