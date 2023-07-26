@@ -605,13 +605,14 @@ void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 			GasDispersionMap gas_map(i,j);
 			calculate_gas_concentration_map(gas_map);
 			gas_con_map_list.push_back(gas_map);
-			//gas_map.log_map(gas_concentration_map_logfile_name, 'a');
+			//gas_map.log_map("/home/wjin/Workspace/continuous_STE/Results/current/101/gas_concentration_variance_map.csv", 'a');
 		}
 	}
 }
 // TODO - possible improvement: only store the variance of the gas concentration map
 void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
 	// initialize cell meausurements list
+	// NOTE - first start with y axis and and then x axis, keep the same order as pdf
 	for (int j = 0; j < y_nbins; j++)
 	{
 		for (int i = 0; i < x_nbins; i++)

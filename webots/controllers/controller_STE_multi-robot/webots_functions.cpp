@@ -147,7 +147,7 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, GREEDY, GASHIT};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, GREEDY, CONCENTRATION, ON};
     
 	// cell_measurements each_cell;
 	// for (int i = 0; i <plume_model.x_bins; i++){

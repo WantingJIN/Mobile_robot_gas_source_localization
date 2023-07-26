@@ -62,6 +62,11 @@ typedef enum gasFeature{
 	GASHIT = 1,
 }eGasFeature;
 
+typedef enum visitedList{
+	ON = 0,
+	OFF = 1,
+}eVisitedList;
+
 
 //parameters to estimate
 struct parameters_set{
@@ -87,6 +92,7 @@ struct simulation_parameters{
 	eGasSensor gasSensor;
 	ePlanningStrategy planningStrategy;
 	eGasFeature gasFeature;
+	eVisitedList visitedList;
 };
 extern struct simulation_parameters simulation_parameters;
 

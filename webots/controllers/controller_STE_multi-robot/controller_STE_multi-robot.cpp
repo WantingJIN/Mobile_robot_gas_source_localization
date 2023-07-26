@@ -84,6 +84,7 @@ vector<CellMeasurements> cell_measurements_list;
 // gas concentration variance map
 double gas_concentration_variance_map[x_nbins*y_nbins] = {0};
 double gas_hit_variance_map[x_nbins*y_nbins] = {0};
+int cell_visited_list[x_nbins*y_nbins] = {0};
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -451,7 +452,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
         // update the likelihood based on the similarity of the hit event
 	    if ((history_hit != model_hit))
-		    sum_tmp += pdf_data * pow(2, 2);
+		    sum_tmp += pdf_data * pow(3, 2);
 		if (history_hit == 0 && model_hit == 0)
 			sum_tmp += pdf_data * pow(0.5, 2);
 		prev_his_thrs = his_thrs; 
@@ -787,18 +788,30 @@ void informative_path_planning_based_on_variance(){
 	int max_variance_index = 0;
 	if (simulation_parameters.gasFeature == CONCENTRATION){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
-			if (gas_concentration_variance_map[i] > max_variance){
-				max_variance = gas_concentration_variance_map[i];
-				max_variance_index = i;
+			if (simulation_parameters.visitedList == ON){
+				if (gas_concentration_variance_map[i] > max_variance && cell_visited_list[i] == 0){
+					max_variance = gas_concentration_variance_map[i];
+					max_variance_index = i;
+				} 
+			}else{
+				if (gas_concentration_variance_map[i] > max_variance){
+					max_variance = gas_concentration_variance_map[i];
+					max_variance_index = i;
+				}
 			}
 		}
-
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
-			if (gas_hit_variance_map[i] > max_variance){
-				printf("gas_hit_variance_map[i] %f \n", gas_hit_variance_map[i]);
-				max_variance = gas_hit_variance_map[i];
-				max_variance_index = i;
+			if (simulation_parameters.visitedList == ON){
+				if (gas_hit_variance_map[i] > max_variance && cell_visited_list[i] == 0){
+					max_variance = gas_hit_variance_map[i];
+					max_variance_index = i;
+				}
+			}else{
+				if (gas_hit_variance_map[i] > max_variance){
+					max_variance = gas_hit_variance_map[i];
+					max_variance_index = i;
+				}
 			}
 		}
 	}
@@ -1052,6 +1065,14 @@ void state_measuring(){
 				history.measurement.push_back(sample_from_map[i]);
 				history.gas_hit_event.push_back(0);
 				history.size++;
+				// mark the cell as visited
+				if (simulation_parameters.visitedList == ON){
+					int pos_coord[2];
+					pos_coord[0] =  ceil((sample_in_motion.position[i].x - source_x_min) / x_resol);
+					pos_coord[1] =  ceil((sample_in_motion.position[i].y - source_y_min) / y_resol);
+					int idx = posterior.indices_to_index(pos_coord);
+					cell_visited_list[idx] = 1;
+				}
 			}
 		} else {
 			// if else, save the instant measurement directly
@@ -1064,6 +1085,14 @@ void state_measuring(){
 				history.measurement.push_back(sample_in_motion.measurement[i]);
 				history.gas_hit_event.push_back(0);
 				history.size++;
+				// mark the cell as visited
+				if (simulation_parameters.visitedList == ON) {
+					int pos_coord[2];
+					pos_coord[0] =  ceil((sample_in_motion.position[i].x - source_x_min) / x_resol);
+					pos_coord[1] =  ceil((sample_in_motion.position[i].y - source_y_min) / y_resol);
+					int idx = posterior.indices_to_index(pos_coord);
+					cell_visited_list[idx] = 1;
+				}
 			}
 		}
 		sample_in_motion.position.clear();
@@ -1084,6 +1113,14 @@ void state_measuring(){
 		history.measurement.push_back(sampleBuffer.average_concentration);
 		history.gas_hit_event.push_back(0);
 		history.size++;
+        // mark the current cell as visited
+		if (simulation_parameters.visitedList == ON){
+			int pos_coord[2];
+			pos_coord[0] =  ceil((current_position.x - source_x_min) / x_resol);
+			pos_coord[1] =  ceil((current_position.y - source_y_min) / y_resol);
+			int idx = posterior.indices_to_index(pos_coord);
+			cell_visited_list[idx] = 1;
+		}
         if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
@@ -1277,9 +1314,6 @@ void state_updategoal(){
 		break;
 	}
     goal_outside_obstacles(&goal_position);
-    // printf("goal position here %f %f 3\n", goal_position.x, goal_position.y);
-    //heterogeneous_navigation();
-
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
   //   aStar as;
   //   if(as.search(current_position, goal_position, astar_map, 0)){
