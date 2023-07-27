@@ -805,9 +805,6 @@ void goal_outside_obstacles(Position * goal){
 			//printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
 				// printf(">>> best sor far\n");
-				//if so, then check if that position is not in another obstacle and it's inside the arena
-				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
-				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
@@ -834,7 +831,6 @@ void goal_outside_obstacles(Position * goal){
 			//check if the distance to candidate is smaller than others
 			//printf("XMIN :%f, XMAX:%f, YMIN:%f, YMAX:%f\n", XMIN, XMAX, YMIN, YMAX);
 			printf("candidates x: %f, y:%f\n", candidates[i].x, candidates[i].y);
-			printf("goal is: %f, %f\n", goal->x, goal->y);
 			printf("distance is %f\n", goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
 				printf(">>> best sor far\n");
@@ -927,6 +923,9 @@ void state_updategoal(){
 	default:
 		break;
 	}
+	goal_position.x = 7.143750;
+	goal_position.y = 0.1;
+	goal_position.heading = 0;
     goal_outside_obstacles(&goal_position);
 
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);

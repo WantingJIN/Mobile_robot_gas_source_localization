@@ -326,8 +326,8 @@ void state_measuring(){
 	// printf("measuring sample number %d\n", sampleBuffer.n_samples);
 	std::vector<double> sample_from_map;
 	int history_size_before_sampling = history.size;
-    if (CONTINOUS_SAMPLING){
-		if (KERNEL_INTERPOLATION){
+    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
+		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
 				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
@@ -340,7 +340,7 @@ void state_measuring(){
 			}
 		} else {
 			for(int i=0; i<sample_in_motion.size; i++){
-				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement_avg.push_back(sample_in_motion.measurement_avg[i]);
 				history.measurement_std.push_back(0.0);
@@ -352,85 +352,90 @@ void state_measuring(){
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 	}
-	while(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
-		//continue measuring odor concentration
-        sampleBuffer.instant_concentration = odor_read();
-		//measuring wind
-		//wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
-		//add samples to buffers
-		sampleBuffer.add_all_to_buffer();
-		next_iteration_time();
-		//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
-	}
-
+	if (simulation_parameters.samplingMode == STOP_AND_SENSE){
+		while(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
+			//continue measuring odor concentration
+			sampleBuffer.instant_concentration = odor_read();
+			//measuring wind
+			//wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			//add samples to buffers
+			sampleBuffer.add_all_to_buffer();
+			next_iteration_time();
+			//printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
+		}
 		//average all samples
 		sampleBuffer.average_all();
+	} else if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING || simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
+		sampleBuffer.instant_concentration = odor_read();
+		sampleBuffer.add_all_to_buffer();
+		sampleBuffer.average_all();
+	}
+	
+	//log and save
+	if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+	log_position();
+	log_measurements();
+	history.position.push_back({current_position.x, current_position.y, 0.0});
+	// FIXME: temporay fix of gas measurement
+	double calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
+	if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
+	history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value));
+	// if(history.measurement_avg[history.size] < 0) history.measurement_avg[history.size] = 0;
+	history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
+	history.size++;
+	history_print(history);
 
-		//log and save
-		if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
-		log_position();
-		log_measurements();
-		history.position.push_back({current_position.x, current_position.y, 0.0});
-		// FIXME: temporay fix of gas measurement
-		double calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
-		if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
-		history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value));
-		// if(history.measurement_avg[history.size] < 0) history.measurement_avg[history.size] = 0;
-		history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
-		history.size++;
-		history_print(history);
+	// send it to friends
+	// if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
+	// 	Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
+//   		send_msg(msg);
+//   	}
 
-		// send it to friends
-		// if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-		// 	Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
-  //   		send_msg(msg);
-  //   	}
+	double m_buffer[5] = {0};
+	int timeout = 10;
+	int success = -1;
 
-    	double m_buffer[5] = {0};
-		int timeout = 10;
-		int success = -1;
+	//send the message
+	int history_size_after_sampling = history.size;
 
-    	//send the message
-        int history_size_after_sampling = history.size;
+	printf("history size before : %d, after ; %d \n", history_size_before_sampling, history_size_after_sampling);
+	// first send the size of the message
+	int measurement_size = history_size_after_sampling -  history_size_before_sampling;
+	do{
+		success = send(sock, &measurement_size, sizeof(measurement_size), 0);
+		--timeout;
+	} while(success == -1 && timeout > 0);
+	if(success > 0){
+		printf("successfully sent measurement_size %d \n", measurement_size);
+		timeout = 10;
+	}
+	else
+		printf("failed to send measurement_size %d \n", measurement_size);
 
-        printf("history size before : %d, after ; %d \n", history_size_before_sampling, history_size_after_sampling);
-		// first send the size of the message
-		int measurement_size = history_size_after_sampling -  history_size_before_sampling;
-        do{
-			success = send(sock, &measurement_size, sizeof(measurement_size), 0);
+
+	for (int i = history_size_before_sampling; i < history_size_after_sampling; i++) {
+		m_buffer[0] = i;
+		m_buffer[1] = history.position[i].x;
+		m_buffer[2] = history.position[i].y;
+		m_buffer[3] = history.measurement_avg[i];
+		m_buffer[4] = history.measurement_std[i];
+		//variable = (condition) ? expressionTrue : expressionFalse;
+		do{
+			success = send(sock, m_buffer, sizeof(m_buffer), 0);
 			--timeout;
 		} while(success == -1 && timeout > 0);
 		if(success > 0){
-			printf("successfully sent measurement_size %d \n", measurement_size);
+			printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
 			timeout = 10;
+
 		}
 		else
-			printf("failed to send measurement_size %d \n", measurement_size);
+			printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+	
 
-
-        for (int i = history_size_before_sampling; i < history_size_after_sampling; i++) {
-			m_buffer[0] = i;
-			m_buffer[1] = history.position[i].x;
-			m_buffer[2] = history.position[i].y;
-			m_buffer[3] = history.measurement_avg[i];
-			m_buffer[4] = history.measurement_std[i];
-			//variable = (condition) ? expressionTrue : expressionFalse;
-			do{
-				success = send(sock, m_buffer, sizeof(m_buffer), 0);
-				--timeout;
-			} while(success == -1 && timeout > 0);
-			if(success > 0){
-				printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
-				timeout = 10;
-
-			}
-			else
-				printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
-		
-
-		// send the measurement to the server and wait for new orders
-		FSM.state = STATE_LISTEN;
-		FSM.hook  = state_listen;
+	// send the measurement to the server and wait for new orders
+	FSM.state = STATE_LISTEN;
+	FSM.hook  = state_listen;
 	}
 }
 
@@ -473,14 +478,14 @@ void state_listen(){
 void state_moving(){
 	//printf("moving toward the goal\n");
 	//verify if arrived to the goal if applicable
-	if (CONTINOUS_SAMPLING){
+	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
 		sample_counter++;
 		//sample and run Kernel
 		double sensor_reading = odor_read();
 		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
 		if (instant_concentration < 0) instant_concentration = 0;
 		double reverse_sensor_reading = 0.0;
-		if (REVERSE_SENSOR_MODEL){
+		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL){
 			// FIXME: temporary attemp for reverse sensor model
 			double Ts = 0.1; // sampling frequency
 			double tau_r = 0.5; // time constant for the rise
@@ -498,7 +503,7 @@ void state_moving(){
 			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (KERNEL_INTERPOLATION){
+		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > 10){

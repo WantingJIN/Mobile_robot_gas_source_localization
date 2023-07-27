@@ -27,10 +27,6 @@
 
 // Sampling mode
 
-#define CONTINOUS_SAMPLING 1
-#define KERNEL_INTERPOLATION 0
-#define REVERSE_SENSOR_MODEL 0
-#define STOP_AND_SENSE 0
 
 //Constant variables
 #define BOUND(x, a, b) (((x)<(a))?(a):((x)>(b))?(b):(x))
@@ -104,6 +100,23 @@ struct parameters_set{
 	//double b_z;
 };
 
+typedef enum samplingMode{
+	STOP_AND_SENSE = 0,
+	SENSE_WITHOUT_STOP = 1,
+	CONTINOUS_SAMPLING = 2,
+}eSamplingMode;
+
+typedef enum processingMode{
+	NO_PROCESSING = 0,
+	KERNEL_INTERPOLATION = 1,
+	REVERSE_SENSOR_MODEL = 2,
+}eProcessingMode;
+
+typedef enum sensorCalibration{
+	ON = 0,
+	OFF = 1,
+}eSensorCalibration;
+
 // simulation paramters
 struct simulation_parameters{
 	float likelihood_error;
@@ -113,7 +126,9 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
-	double source_position[2];
+	eSamplingMode samplingMode;
+	eProcessingMode processingMode; 
+	eSensorCalibration sensorCalibration;
 };
 extern struct simulation_parameters simulation_parameters;
 

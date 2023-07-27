@@ -108,7 +108,10 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0};
+    // 1. likelihood_error; 2. gloabl_local_search_ratio; 3. MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
+	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9. processingMode; 10. sensorCalibration;
+    //                                                       1    2    3   4  5  6  7        8                9           10
+    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -155,11 +158,12 @@ void init(){
        if(ok) printf("scenario : %d\n", simulation_parameters.map_nbr);
        fclose(sim_param_file);
     }
-
+     
+    float real_source_position[2]={0};
     if(access("/home/root/wanting/source_location.txt", F_OK) != -1 ){
        sim_param_file = fopen("/home/root/wanting/source_position.txt", "r");
-       ok = fscanf(sim_param_file, "%f %f", &simulation_parameters.source_position[0], &simulation_parameters.source_position[1]);
-       if(ok) printf("source position : %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1]);
+       ok = fscanf(sim_param_file, "%f %f", &real_source_position[0], &real_source_position[1]);
+       if(ok) printf("source position : %f %f\n", real_source_position[0], real_source_position[1]);
        fclose(sim_param_file);
     }
 
@@ -177,13 +181,11 @@ void init(){
     fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-    fprintf(sim_param_file, "source_position %f %f %f\n", simulation_parameters.source_position[0], simulation_parameters.source_position[1], 0.1);
+    fprintf(sim_param_file, "source_position %f %f %f\n", real_source_position[0], real_source_position[1], 0.1);
     fprintf(sim_param_file, "robot's ID %d\n", ID);
-    fprintf(sim_param_file, "stop_and_sense %d\n", STOP_AND_SENSE);
-    fprintf(sim_param_file, "odor_filter_length %d\n", ODOR_FILTER_LENGTH);
-    fprintf(sim_param_file, "continous_sampling %d\n", CONTINOUS_SAMPLING);
-    fprintf(sim_param_file, "kernel_mapping %d\n", KERNEL_INTERPOLATION);
-    fprintf(sim_param_file, "reverse_sensor_model %d\n", REVERSE_SENSOR_MODEL);
+    fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
+    fprintf(sim_param_file, "processing_mode %d\n", simulation_parameters.processingMode);
+    fprintf(sim_param_file, "sensor_calibration %d\n", simulation_parameters.sensorCalibration);
     fclose(sim_param_file);
 }
 
@@ -666,8 +668,16 @@ double calibrate_sensor_reading (double raw_reading){
     // first degree calibration -0310
     // double a = 2.0;
     // double b = 99;
-    double a = 2.9;
-    double b = 297.6;
+    double a;
+    double b;
+
+    if (simulation_parameters.sensorCalibration == ON){
+        a = 2.9;
+        b = 297.6;
+    } else {
+        a = 1;
+        b = 0;
+    }
     double calibrated_reading = (raw_reading - b) * a;
     
     
