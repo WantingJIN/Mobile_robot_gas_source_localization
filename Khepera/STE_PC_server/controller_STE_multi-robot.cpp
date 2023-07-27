@@ -488,8 +488,8 @@ void random_navigation(){
 
 bool position_outside_arena(Position p){
 	bool outside = 0;
-	if(p.x < XMIN || p.x > XMAX) outside = 1;
-	if(p.y < YMIN || p.y > YMAX) outside = 1;
+	if(p.x < float(XMIN) || p.x > float(XMAX)) outside = 1;
+	if(p.y < float(YMIN) || p.y > float(YMAX)) outside = 1;
 	//if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
 }
@@ -822,10 +822,10 @@ void goal_outside_obstacles(Position * goal){
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
 		Position nearest_position(*goal);
-		Position candidates[4] = {	Position(XMIN, goal->y, 0), 
-									Position(XMAX, goal->y, 0),
-									Position(goal->x, YMIN, 0),
-									Position(goal->x, YMAX, 0)};
+		Position candidates[4] = {	Position(float(XMIN), goal->y, 0), 
+									Position(float(XMAX), goal->y, 0),
+									Position(goal->x, float(YMIN), 0),
+									Position(goal->x, float(YMAX), 0)};
 
 		for(int i=0; i<4; i++){
 			//check if the distance to candidate is smaller than others
@@ -923,9 +923,6 @@ void state_updategoal(){
 	default:
 		break;
 	}
-	goal_position.x = 7.143750;
-	goal_position.y = 0.1;
-	goal_position.heading = 0;
     goal_outside_obstacles(&goal_position);
 
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);

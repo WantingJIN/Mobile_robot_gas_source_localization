@@ -16,11 +16,11 @@
 #define SENSOR_NUMBER  		8
 #define MAX_NB_ROBOTS          	3
 //wind tunnel boundaries
-#define XMIN (static_cast<double>3.0)
-#define YMIN (static_cast<double>0.16)
+#define XMIN 3.0
+#define YMIN 0.16
 //#define ZMIN 0.1
-#define XMAX (static_cast<double>12.5)
-#define YMAX (static_cast<double>3.8)
+#define XMAX 12.5
+#define YMAX 3.8
 
 //#define ZMAX 1.9
 // min and max for each parameter
