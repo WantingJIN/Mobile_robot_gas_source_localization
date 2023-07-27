@@ -5,6 +5,8 @@
 #include "PlumeModel.h"
 #include "controller_STE_multi-robot.h"
 #include <stdexcept>
+#include "CellMeasurements.h"
+#include "GasDispersionMap.h"
 
 /********************************************************/
 //						PlumeModel 						//
