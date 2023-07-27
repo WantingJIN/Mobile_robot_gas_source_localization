@@ -71,11 +71,11 @@
 //#define a_z_nbins 	10 //(a_z_max - a_z_min) / 0.0025
 //#define b_z_nbins 	10 //(b_z_max - b_z_min) / 0.025
 //resolution of the estimated terms
-#define Q_resol    (Q_max-Q_min)/Q_nbins
-#define x_resol    (source_x_max-source_x_min)/x_nbins
-#define y_resol    (source_y_max-source_y_min)/y_nbins
-#define a_y_resol  (a_y_max-a_y_min)/a_y_nbins
-#define b_y_resol  (b_y_max-b_y_min)/b_y_nbins
+#define Q_resol    (static_cast<double>(Q_max-Q_min)/Q_nbins)
+#define x_resol    (static_cast<double>(source_x_max-source_x_min)/x_nbins)
+#define y_resol    (static_cast<double>(source_y_max-source_y_min)/y_nbins)
+#define a_y_resol  (static_cast<double>(a_y_max-a_y_min)/a_y_nbins)
+#define b_y_resol  (static_cast<double>(b_y_max-b_y_min)/b_y_nbins)
 #define MAX_DISTANCE 10.77 //from (2.75,0) to (12.75,4)
 
 #define VERBOSE 		1
@@ -105,6 +105,16 @@ typedef enum planningStrategy{
 	INFORMATIVE = 1,
 }ePlanningStrategy;
 
+typedef enum gasFeature{
+	CONCENTRATION = 0,
+	GASHIT = 1,
+}eGasFeature;
+
+typedef enum visitedList{
+	ON = 0,
+	OFF = 1,
+}eVisitedList;
+
 // simulation paramters
 struct simulation_parameters{
 	float likelihood_error;
@@ -115,6 +125,8 @@ struct simulation_parameters{
 	int scenario;
 	int map_nbr;
 	ePlanningStrategy planningStrategy;
+	eGasFeature gasFeature;
+	eVisitedList visitedList;
 };
 extern struct simulation_parameters simulation_parameters;
 
