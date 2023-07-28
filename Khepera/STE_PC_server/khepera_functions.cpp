@@ -70,7 +70,7 @@ void init(){
 	// 1. likelihood_error; 2.gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; //1 for MCMC, 0 for exhaustive evaluation
 	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List
 	//                                                      1.   2.   3.   4. 5. 6. 7. 8.
-    simulation_parameters = (struct simulation_parameters) {375, 0.5, 100, 1, 1, 0, 0, INFORMATIVE, CONCENTRATION, ON};
+    simulation_parameters = (struct simulation_parameters) {375, 0.5, 100, 1, 1, 0, 0, GREEDY, CONCENTRATION, OFF};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -134,7 +134,9 @@ void init(){
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
-	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
+	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
+	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
+	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
 	fclose(sim_param_file);
 }
 
