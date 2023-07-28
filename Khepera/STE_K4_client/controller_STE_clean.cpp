@@ -295,7 +295,7 @@ void log_history(){
     //FILE * measurement_history_logfile;
     measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
-		fprintf(measurement_history_logfile,"%d, %f %f\n", i, history.measurement_avg[i], history.measurement_std[i]);
+		fprintf(measurement_history_logfile,"%d, %f, %f\n", i, history.measurement_avg[i], history.measurement_std[i]);
 	}
     fclose(measurement_history_logfile);
    
