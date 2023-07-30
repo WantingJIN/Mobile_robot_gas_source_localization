@@ -589,7 +589,7 @@ void DeepCFDPlumeModel2D::concentration_variance_for_allpossiblesource(double pa
     for (auto &cell : cell_data_list){
 		int idx = round((cell.px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
 		int idy = round((cell.py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-		float con = output[0][0][idx][idy].item<float>();
+		float con = output[0][0][idy][idx].item<float>();
 		cell.add_measurement(con);
 	}
 
@@ -601,9 +601,9 @@ void DeepCFDPlumeModel2D::concentration_variance_for_allpossiblesource(double pa
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list
 // calculate the gas concentration map for each possible source location
-	for (int i = 0; i < x_nbins; i++)
+	for (int j = 0; j < y_nbins; j++)
 	{
-		for (int j = 0; j < y_nbins; j++)
+		for (int i = 0; i < x_nbins; i++)
 		{
 			GasDispersionMap gas_map(i,j);
 			calculate_gas_concentration_map(gas_map);
@@ -614,9 +614,9 @@ void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // TODO - possible improvement: only store the variance of the gas concentration map
 void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
 	// initialize cell meausurements list
-	for (int i = 0; i < x_nbins; i++)
+	for (int j = 0; j < y_nbins; j++)
 	{
-		for (int j = 0; j < y_nbins; j++)
+		for (int i = 0; i < x_nbins; i++)
 		{
 			CellMeasurements cell_measurements(i,j);
 			cell_lists.push_back(cell_measurements);
@@ -634,7 +634,7 @@ void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
 void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){
 	for (int i = 0; i < cell_lists.size(); i++){
 		cell_lists[i].calculate_weighted_variance(pdf);
-		gas_con_variance_map[i] = cell_lists[i].meas_mean;
+		gas_con_variance_map[i] = cell_lists[i].meas_std;
 	}
 }
 
