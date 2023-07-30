@@ -1,7 +1,7 @@
+%% read experiment files
 clear all; close all; clc;
-
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Results/1689260644628/101';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/0730_test_new_informative_use_concentration_mean/2/1690723736137/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -26,31 +26,34 @@ entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
 real_source_position = params.source_position;
 
-
+%% plot gas concentration map
 x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
-% f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-% for i=1:size(gas_maps,1)
-%     source_position = gas_maps(i,1:2);
-%     imagesc(y,x,reshape(gas_maps(i,3:end),20,20))
-%     hold on
-%     plot(source_position(2),source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
-%     hold on
-%     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
-%     axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
-%     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
-%     xlabel('Y(m)'); ylabel('X(m)');
-%     load MyColormap2; colormap(mymap); colorbar;caxis([0 Inf]);
-%     hold off;
-%     xlim([0 4])
-%     ylim([2 13])
-%     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
-%     ax = gca;
-%     ax.TitleFontSizeMultiplier = 3;
-%     pause;
-%     drawnow
-% %     saveas(f, [anim_folder,'/',num2str(i),'.png']);
-% end
+f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
+for i=1:size(gas_maps,1)
+    source_position = gas_maps(i,1:2); 
+    % be careful: the reshape functio will first fill the column and then
+    % row: Use the revert matrix!!
+    imagesc(y,x,reshape(gas_maps(i,3:end),20,20)')
+    hold on
+    plot(source_position(2),source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    hold on
+    patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
+    axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
+    title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
+    xlabel('Y(m)'); ylabel('X(m)');
+    load MyColormap2; colormap(mymap); colorbar;caxis([0 Inf]);
+    hold off;
+    xlim([0 4])
+    ylim([2 13])
+    ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
+    ax = gca;
+    ax.TitleFontSizeMultiplier = 3;
+    pause;
+    drawnow
+%     saveas(f, [anim_folder,'/',num2str(i),'.png']);
+end
+%% plot pdf
 % close all
 % f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
 % for i=1:size(pdf,1)
@@ -72,13 +75,16 @@ y=linspace(0,4,20);
 % %     saveas(f, [anim_folder,'/',num2str(i),'.png']);
 % end
 
+
+%% calculate average value of gas concentration
 f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
 gas_concentration_sum = zeros(1,400);
 for i = 1:size(gas_maps,1)
     gas_concentration_sum = gas_concentration_sum + gas_maps(i,3:end);
 end
 gas_concentration_avg = gas_concentration_sum/size(gas_maps,1);
-
+imagesc(y,x,reshape(gas_concentration_avg,20,20))
+axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
 %% calculate the gas variance for uniform source position distribution
 gas_variance_sum = zeros(1,400);
 

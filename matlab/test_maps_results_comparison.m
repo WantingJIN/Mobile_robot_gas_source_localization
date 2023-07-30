@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/results_stop_sense_MOX_retest';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/0728_test_new_informative_use_concentration_mean';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -113,7 +113,7 @@ end
 
 
 %% plot for thesis
-f = figure();
+f = figure('Position',[-1561         656         715         615]);
 custom_color = [44,136,217]./255;
 subplot(1,3,1)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
@@ -159,7 +159,16 @@ for i = 1: size (error_x,1)
     end
 end
 success_rate = success_case/size(error_x,1)
-annotation(f,'textbox',[0.25 0.01 0.504365076491284 0.0473684201637904],'String',{'Success rate:', num2str(success_rate)},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',14);
+
+annotation(f,'textbox',...
+    [0.25 0.01 0.504365076491284 0.0473684201637904],...
+    'String',{'Success rate:',num2str(success_rate)},...
+    'LineStyle','none',...
+    'HorizontalAlignment','center',...
+    'FontWeight','bold',...
+    'FontSize',12,...
+    'FitBoxToText','off');
+
 saveas(f,[general_folder '/test_maps_results_comparison.png']);
 %% save the statistical result for t-test
 save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
