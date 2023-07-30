@@ -58,6 +58,10 @@ void CellMeasurements::calculate_variance(){
 void CellMeasurements::calculate_weighted_variance(double *pdf){
 	int i;
 	float sum = 0.0;
+	// calculate the weighted mean
+	for(i = 0; i < meas_num; i++){
+		meas_mean += measurements[i] * pdf[i];
+	}
 	// TODO - check if the pdf is stored as the same order as the measurements (first y, then x)
 	for(i = 0; i < meas_num; i++){
 		sum += pow(measurements[i] - meas_mean, 2) * pdf[i];

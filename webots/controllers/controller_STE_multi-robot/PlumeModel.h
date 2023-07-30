@@ -85,6 +85,7 @@ public:
 	//virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
+	virtual void log_gas_concentration_map(char* filename, char writing_mode) = 0;
 	void random_params(double * random_params);
 
 	void get_expected_value(double* container);
@@ -126,7 +127,7 @@ public:
 	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
-	//void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map);
+	void log_gas_concentration_map(char* filename, char writing_mode);
 };
 
 
@@ -163,6 +164,7 @@ public:
 
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
+	void log_gas_concentration_map(char* filename, char writing_mode);
 };
 
 
@@ -218,6 +220,7 @@ public:
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
 	//void random_params(double * random_params);
+	void log_gas_concentration_map(char* filename, char writing_mode);
 };
 
 #endif

@@ -198,6 +198,7 @@ void GaussianPlumeModel2D::print_max_a_post_val(){
 
 void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
 void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
+void GaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
 /********************************************************/
@@ -362,6 +363,7 @@ void NNGaussianPlumeModel2D::print_max_a_post_val(){
 void NNGaussianPlumeModel2D::concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
+void NNGaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -598,6 +600,7 @@ void DeepCFDPlumeModel2D::concentration_variance_for_allpossiblesource(double pa
 
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list
+// calculate the gas concentration map for each possible source location
 	for (int i = 0; i < x_nbins; i++)
 	{
 		for (int j = 0; j < y_nbins; j++)
@@ -605,17 +608,15 @@ void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 			GasDispersionMap gas_map(i,j);
 			calculate_gas_concentration_map(gas_map);
 			gas_con_map_list.push_back(gas_map);
-			//gas_map.log_map("/home/wjin/Workspace/continuous_STE/Results/current/101/gas_concentration_variance_map.csv", 'a');
 		}
 	}
 }
 // TODO - possible improvement: only store the variance of the gas concentration map
 void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
 	// initialize cell meausurements list
-	// NOTE - first start with y axis and and then x axis, keep the same order as pdf
-	for (int j = 0; j < y_nbins; j++)
+	for (int i = 0; i < x_nbins; i++)
 	{
-		for (int i = 0; i < x_nbins; i++)
+		for (int j = 0; j < y_nbins; j++)
 		{
 			CellMeasurements cell_measurements(i,j);
 			cell_lists.push_back(cell_measurements);
@@ -627,14 +628,13 @@ void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
 			cell.add_measurement(con);
 			cell.add_gas_hit(con);
 		}
-		cell.calculate_mean();
 	}
 }
 
 void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){
 	for (int i = 0; i < cell_lists.size(); i++){
 		cell_lists[i].calculate_weighted_variance(pdf);
-		gas_con_variance_map[i] = cell_lists[i].meas_std;
+		gas_con_variance_map[i] = cell_lists[i].meas_mean;
 	}
 }
 
@@ -659,14 +659,14 @@ void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_
 
 	//time(&start);
     at::Tensor output = DeepCFD(inputs).toTensor();
-
+    // calculate the gas concentration for each cell
 	for (int i = 0; i < x_nbins; i++){
 		for (int j = 0; j < y_nbins; j++){
 			double px = i * x_resol + source_x_min;
 			double py = j * y_resol + source_y_min; 
 			int idx = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
 		    int idy = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-			float con = output[0][0][idx][idy].item<float>();
+			float con = output[0][0][idy][idx].item<float>();
 			gas_map.gasConcentrationMap[i][j] = con;
 		}
 	}
@@ -684,4 +684,10 @@ void DeepCFDPlumeModel2D::print_expected_val(){
 void DeepCFDPlumeModel2D::print_max_a_post_val(){
 	printf("MaxApost value: @(%f %f)\n", 
 		max_a_post_value[0], max_a_post_value[1]);
+}
+
+void DeepCFDPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){
+	for (auto gas_map : gas_con_map_list){
+		gas_map.log_map(filename, writing_mode);
+	}
 }
