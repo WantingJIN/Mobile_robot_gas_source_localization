@@ -9,6 +9,8 @@
 
 #include <torch/script.h> // One-stop header.
 #include <torch/torch.h>
+
+#include "Dbscan.h"
 //#include <numpy/ndarrayobject.h>
 #include <fstream>
 #include <string>
@@ -81,7 +83,6 @@ public:
 
 	virtual int get_source_position_params_nbr() = 0;
 	virtual void get_source_position_params(parameter * source_position_param_list) = 0;
-	virtual void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list) = 0;
 	//virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
@@ -124,7 +125,6 @@ public:
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
 
-	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void log_gas_concentration_map(char* filename, char writing_mode);
@@ -158,9 +158,6 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
-
-	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
-	//void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map);
 
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
@@ -197,8 +194,7 @@ public:
 	torch::Tensor c_torch;
 	vector<GasDispersionMap> gas_con_map_list;
 	vector<CellMeasurements> cell_lists;
-    //returns concentration for a set of parameters and a position
-	void concentration_variance_for_allpossiblesource(double param_list[], vector<CellMeasurements> &cell_data_list);
+
 	// resturns gas concentration map for a set of parameters
 	void initialize_gas_concentration_map_list();
 	void initialize_cell_measurement_list();

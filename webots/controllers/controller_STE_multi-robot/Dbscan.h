@@ -19,12 +19,11 @@ public:
 
 public:
     DBSCAN(float eps, unsigned int minPts, double rat);
-    void intialize_points(vector<CellMeasurements> cells);
 
     ~DBSCAN(){}
     vector<CellMeasurements> findNeighbors(const CellMeasurements& cell, const vector<CellMeasurements>& cells);
     void expandCluster(CellMeasurements& cell, vector<CellMeasurements>& neighbors, int clusterId, vector<CellMeasurements>& cells);
-    void run();
+    void run(vector<CellMeasurements> cells);
     void printResults();
 
 private:

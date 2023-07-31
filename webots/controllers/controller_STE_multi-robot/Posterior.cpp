@@ -454,19 +454,6 @@ void Posterior::exhaustive_evaluation(struct history &history){
 	//printf("\n");
 }
 
-void Posterior::calculate_cell_measure_variance_for_all_possible_source(vector<CellMeasurements> &cell_measurements_list){
-	int i = 0;
-	double sample[nbr_dimension];
-	for (i = 0; i < nbr_element; i++){
-		index_to_param_values(i, sample);
-		model->concentration_variance_for_allpossiblesource(sample, cell_measurements_list);
-	}
-	for (auto &cell : cell_measurements_list){
-		cell.calculate_mean();
-		cell.calculate_variance();
-	}
-}
-
 //relative entropy calculation between one posterior pdf and another P
 double Posterior::Kullback_Leibler_divergence(Posterior P){
 	double DKL = 0;
