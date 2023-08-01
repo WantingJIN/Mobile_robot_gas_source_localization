@@ -38,6 +38,8 @@ private:
     double ratio;
     float epsilon;
     inline double calculateDistance(CellPoint cell1, CellPoint cell2);
+    pair<CellPoint, CellPoint> calculateBoundingBox(const std::vector<CellPoint>& points, const int clusterId);
+    vector<pair<CellPoint, CellPoint>> calculateBoundingBoxes(int cluster_num);
 };
 
 #endif

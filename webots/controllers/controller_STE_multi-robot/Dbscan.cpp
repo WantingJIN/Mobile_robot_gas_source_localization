@@ -1,7 +1,7 @@
 #include "Dbscan.h"
 #include <stack>
 
-
+using namespace std;
 DBSCAN::DBSCAN(float eps, unsigned int minPts, double rat){
 	epsilon = eps;
 	minPoints = minPts;
@@ -84,7 +84,6 @@ void DBSCAN::expandCluster(CellPoint& cell, vector<int>& neighbors, int clusterI
 }
 
 void DBSCAN::run(vector<CellMeasurements> cells){
-	printf("Enter DBSCAN run!!! \n");
 	double max_std = 0;
 	double min_std = 100000;
 	for (vector<CellMeasurements>::iterator iter = cells.begin(); iter != cells.end(); iter++){
@@ -97,7 +96,6 @@ void DBSCAN::run(vector<CellMeasurements> cells){
 	}
 	for (vector<CellMeasurements>::iterator iter = cells.begin(); iter != cells.end(); iter++){
 		if (iter->meas_std > 0.5 * (max_std - min_std) + min_std){
-			printf("Add cell (%d, %d) to cell_list \n", iter->idx_x, iter->idx_y);
 			CellPoint cell;
 			cell.x = iter->px;
 			cell.y = iter->py;
@@ -106,7 +104,7 @@ void DBSCAN::run(vector<CellMeasurements> cells){
 		}
 	}
 	pointSize = cell_list.size();
-	int clusterId = 1;
+	int clusterId = 0;
 	for (vector<CellPoint>::iterator iter = cell_list.begin(); iter != cell_list.end(); iter++){
 		if (iter->cluster_id == UNCLASSIFIED){
 			vector<int> neighbors = findNeighbors(*iter);
@@ -119,7 +117,13 @@ void DBSCAN::run(vector<CellMeasurements> cells){
 			}
 		}
 	}
-	printResults(--clusterId);
+	vector<pair<CellPoint, CellPoint>> cluster_bounding_boxes;
+	cluster_bounding_boxes = calculateBoundingBoxes(clusterId);
+	// print cluster bounding boxes
+	printResults(clusterId);
+	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++){
+		printf("Cluster %d: (%f, %f) - (%f, %f) \n", iter->first.cluster_id, iter->first.x, iter->first.y, iter->second.x, iter->second.y);
+	}
 }
 
 inline double DBSCAN::calculateDistance(CellPoint cellCore, CellPoint cellTarget){
@@ -131,7 +135,39 @@ void DBSCAN::printResults(int cluster_num){
 	printf("Clustered cells: \n");
 	for (vector<CellPoint>::iterator iter = cell_list.begin(); iter != cell_list.end(); iter++){
 		if (iter->cluster_id != NOISE){
-			printf("Cell (%f, %f) @ cluster %d \n", iter->x, iter->y ,iter->cluster_id);
+			printf("Cell (%f, %f) @ cluster %d \n", iter->x, iter->y ,iter->cluster_id+1);
 		}
 	}
+}
+
+pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPoint>& points, const int clusterId) {
+    float minX = numeric_limits<float>::max();
+    float minY = numeric_limits<float>::max();
+    float maxX = numeric_limits<float>::min();
+    float maxY = numeric_limits<float>::min();
+
+    for (auto& point : points){
+        minX = min(minX, point.x);
+        minY = min(minY, point.y);
+        maxX = max(maxX, point.x);
+        maxY = max(maxY, point.y);
+    }
+
+    CellPoint topLeft = {minX, minY, clusterId};
+    CellPoint bottomRight = {maxX, maxY, clusterId};
+    return std::make_pair(topLeft, bottomRight);
+}
+
+vector<pair<CellPoint, CellPoint>> DBSCAN::calculateBoundingBoxes(int cluster_num){
+	vector<pair<CellPoint, CellPoint>> boundingBoxes;
+	for (int i = 0; i < cluster_num; i++){
+		vector<CellPoint> points;
+		for (vector<CellPoint>::iterator iter = cell_list.begin(); iter != cell_list.end(); iter++){
+			if (iter->cluster_id == i){
+				points.push_back(*iter);
+			}
+		}
+		boundingBoxes.push_back(calculateBoundingBox(points, i));
+	}
+	return boundingBoxes;
 }
