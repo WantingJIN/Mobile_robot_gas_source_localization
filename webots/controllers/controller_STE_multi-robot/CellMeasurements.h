@@ -26,9 +26,6 @@ class CellMeasurements{
         float hit_std;
         float hit_mean;
 
-        // clustering result
-        int cluster_id;
-
         //constructor : everything set to 0
         CellMeasurements();
         CellMeasurements(int idx_x, int idx_y);

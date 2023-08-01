@@ -13,25 +13,31 @@
 
 using namespace std;
 
+typedef struct CellPoint_
+{
+    float x, y;  // X, Y, position
+    int cluster_id;  // clustered ID
+}CellPoint;
+
 class DBSCAN {
 public:
-    vector<CellMeasurements> cell_list;
+    vector<CellPoint> cell_list;
 
 public:
     DBSCAN(float eps, unsigned int minPts, double rat);
 
     ~DBSCAN(){}
-    vector<CellMeasurements> findNeighbors(const CellMeasurements& cell, const vector<CellMeasurements>& cells);
-    void expandCluster(CellMeasurements& cell, vector<CellMeasurements>& neighbors, int clusterId, vector<CellMeasurements>& cells);
+    vector<int> findNeighbors(const CellPoint cell);
+    void expandCluster(CellPoint& cell, vector<int>& neighbors, int clusterId);
     void run(vector<CellMeasurements> cells);
-    void printResults();
+    void printResults(int clusterNum);
 
 private:
     unsigned int pointSize;
     unsigned int minPoints;
     double ratio;
     float epsilon;
-    inline double calculateDistance(CellMeasurements cell1, CellMeasurements cell2);
+    inline double calculateDistance(CellPoint cell1, CellPoint cell2);
 };
 
 #endif

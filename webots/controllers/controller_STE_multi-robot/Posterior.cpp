@@ -291,11 +291,11 @@ void Posterior::process(){
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
 	}
 	entropy = -1 * entropy;
-    printf("pdf is: ");
-	for (i = 0; i < nbr_element; i++){
-		printf("%f ", pdf[i]);
-	}
-	printf("\n");
+    // printf("pdf is: ");
+	// for (i = 0; i < nbr_element; i++){
+	// 	printf("%f ", pdf[i]);
+	// }
+	// printf("\n");
 	//log
 	//const char* str = "/home/wjin/Workspace/continuous_STE/Results/pdf.csv";
 	//log_pdf(str, 'a');
