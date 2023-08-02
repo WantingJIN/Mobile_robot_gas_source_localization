@@ -3,8 +3,9 @@
 #include "Constant.h"
 
 using namespace std;
-DBSCAN::DBSCAN(float eps, unsigned int minPts, double rat){
-	epsilon = eps;
+DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat){
+	x_epsilon = x_eps;
+	y_epsilon = y_eps;
 	minPoints = minPts;
 	ratio = rat;
 }
@@ -15,7 +16,7 @@ vector<int> DBSCAN::findNeighbors(const CellPoint cell){
     vector<int> clusterIndex;
     for( iter = cell_list.begin(); iter != cell_list.end(); ++iter)
     {
-        if ( calculateDistance(cell, *iter) <= epsilon )
+        if ( isWithinDistance(cell, *iter) == 1 )
         {
             clusterIndex.push_back(index);
         }
@@ -126,8 +127,8 @@ void DBSCAN::run(vector<CellMeasurements> cells){
 	logBoundingBoxes();
 }
 
-inline double DBSCAN::calculateDistance(CellPoint cellCore, CellPoint cellTarget){
-	return sqrt(pow(cellCore.x - cellTarget.x, 2) + pow(cellCore.y - cellTarget.y, 2));
+inline bool DBSCAN::isWithinDistance(CellPoint cellCore, CellPoint cellTarget){
+	return abs(cellCore.x - cellTarget.x) <= x_epsilon && abs(cellCore.y - cellTarget.y) <= y_epsilon;
 }
 
 void DBSCAN::printResults(){

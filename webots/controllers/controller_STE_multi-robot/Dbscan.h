@@ -21,7 +21,7 @@ public:
     vector<pair<CellPoint, CellPoint>> cluster_bounding_boxes; 
 
 public:
-    DBSCAN(float eps, unsigned int minPts, double rat);
+    DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat);
 
     ~DBSCAN(){}
     vector<int> findNeighbors(const CellPoint cell);
@@ -33,9 +33,10 @@ private:
     unsigned int pointSize;
     unsigned int minPoints;
     double ratio;
-    float epsilon;
+    float x_epsilon;
+    float y_epsilon;
 
-    inline double calculateDistance(CellPoint cell1, CellPoint cell2);
+    inline bool isWithinDistance(CellPoint cell1, CellPoint cell2);
     pair<CellPoint, CellPoint> calculateBoundingBox(const std::vector<CellPoint>& points, const int clusterId);
     void calculateBoundingBoxes();
     void logBoundingBoxes();
