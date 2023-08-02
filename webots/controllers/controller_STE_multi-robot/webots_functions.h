@@ -57,7 +57,7 @@ extern FILE* tmp_file;
 extern FILE* config_logfile;
 extern FILE* trajectory_logfile;
 extern FILE* gas_concentration_map_logfile;
-extern FILE* gas_concentration_variance_map_logfile;
+extern FILE* gas_information_map_logfile;
 extern FILE* gas_hit_variance_map_logfile;
 extern char goalposition_logfile_name[512];
 extern char measurements_logfile_name[512];
@@ -73,7 +73,7 @@ extern char entropy_logfile_name[512];
 extern char config_logfile_name[512];
 extern char trajectory_logfile_name[512];
 extern char gas_concentration_map_logfile_name[512];
-extern char gas_concentration_variance_map_logfile_name[512];
+extern char gas_information_map_logfile_name[512];
 extern char gas_hit_variance_map_logfile_name[512];
 
 // finite state machine

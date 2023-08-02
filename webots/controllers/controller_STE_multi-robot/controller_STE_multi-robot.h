@@ -68,6 +68,11 @@ typedef enum visitedList{
 	visitedList_OFF = 1,
 }eVisitedList;
 
+typedef enum infoFeature{
+	VARIANCE = 0,
+	MEAN = 1,
+}eInfoFeature;
+
 
 //parameters to estimate
 struct parameters_set{
@@ -94,6 +99,7 @@ struct simulation_parameters{
 	ePlanningStrategy planningStrategy;
 	eGasFeature gasFeature;
 	eVisitedList visitedList;
+	eInfoFeature infoFeature;
 };
 extern struct simulation_parameters simulation_parameters;
 

@@ -122,7 +122,7 @@ void init(){
     sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
-	sprintf(gas_concentration_variance_map_logfile_name, "%s/gas_concentration_variance_map.csv", folder_name);
+	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
     sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
@@ -140,8 +140,8 @@ void init(){
     fclose(trajectory_logfile);
 	gas_concentration_map_logfile = fopen(gas_concentration_map_logfile_name, "w");
 	fclose(gas_concentration_map_logfile);
-	gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "w");
-	fclose(gas_concentration_variance_map_logfile);
+	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "w");
+	fclose(gas_information_map_logfile);
 	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
 	fclose(gas_hit_variance_map_logfile);
 
@@ -149,9 +149,9 @@ void init(){
     //default values for the simulation parameters
 	//1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; 
 	//5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
-	//11. planningStrategy; 12.gasFeature; 13.visitedList;
-	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                        9.     10.      11.         12.         13.               14. 
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON};
+	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature
+	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                        9.     10.      11.         12.         13.               14.       15.
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON, MEAN};
     
 	// cell_measurements each_cell;
 	// for (int i = 0; i <plume_model.x_bins; i++){
@@ -258,6 +258,7 @@ void init(){
 	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
 	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
 	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
+	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){

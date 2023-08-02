@@ -195,6 +195,7 @@ void GaussianPlumeModel2D::print_max_a_post_val(){
 }
 
 void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
+void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 void GaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
 vector<pair<CellPoint, CellPoint>> GaussianPlumeModel2D::clustering_cell_with_variance(){return {};}
@@ -360,6 +361,7 @@ void NNGaussianPlumeModel2D::print_max_a_post_val(){
 }
 
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
+void NNGaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
 vector<pair<CellPoint, CellPoint>> NNGaussianPlumeModel2D::clustering_cell_with_variance(){ return {}; }
@@ -600,6 +602,13 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_co
 	}
 }
 
+void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){
+	for (int i = 0; i < cell_lists.size(); i++){
+		cell_lists[i].calculate_weighted_variance(pdf);
+		gas_con_variance_map[i] = cell_lists[i].meas_mean;
+	}
+}
+
 void DeepCFDPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){
 	for (int i = 0; i < cell_lists.size(); i++){
 		cell_lists[i].calculate_hit_weighted_variance(pdf);
@@ -610,8 +619,8 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_h
 
 vector<pair<CellPoint, CellPoint>> DeepCFDPlumeModel2D::clustering_cell_with_variance(){
 	// dbscan clustering
-	// param: eps, minPts, ratio
-	DBSCAN dbscan(0.5, 4, 0.6);
+	// param: x_eps, y_eps, minPts, ratio
+	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, 0.6);
 	dbscan.run(cell_lists);
 	return dbscan.cluster_bounding_boxes;
 }

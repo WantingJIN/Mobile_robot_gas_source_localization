@@ -85,6 +85,7 @@ public:
 	virtual void get_source_position_params(parameter * source_position_param_list) = 0;
 	//virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
+	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
 	virtual void log_gas_concentration_map(char* filename, char writing_mode) = 0;
     virtual vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance() = 0;
@@ -128,6 +129,7 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void log_gas_concentration_map(char* filename, char writing_mode);
 	vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance();
@@ -163,6 +165,7 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void log_gas_concentration_map(char* filename, char writing_mode);
 	vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance();
@@ -204,6 +207,7 @@ public:
 	void initialize_cell_measurement_list();
 	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
     void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 

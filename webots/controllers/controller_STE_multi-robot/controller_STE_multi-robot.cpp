@@ -41,7 +41,7 @@ FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* gas_concentration_map_logfile;
-FILE* gas_concentration_variance_map_logfile;
+FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
@@ -57,7 +57,7 @@ char entropy_logfile_name[512];
 char config_logfile_name[512];
 char trajectory_logfile_name[512];
 char gas_concentration_map_logfile_name[512];
-char gas_concentration_variance_map_logfile_name[512];
+char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
 
 // finite state machine
@@ -82,7 +82,7 @@ DeepCFDPlumeModel2D plume_model;
 // vector of the cell_measurements
 vector<CellMeasurements> cell_measurements_list; 
 // gas concentration variance map
-double gas_concentration_variance_map[x_nbins*y_nbins] = {0};
+double gas_information_map[x_nbins*y_nbins] = {0};
 double gas_hit_variance_map[x_nbins*y_nbins] = {0};
 int cell_visited_list[x_nbins*y_nbins] = {0};
 
@@ -292,15 +292,15 @@ void log_entropy(){
 	fclose(entropy_logfile);
 }
 
-void log_gas_concentration_variance_map(){
-	gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "a");
+void log_gas_information_map(){
+	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "a");
 
 	for(int i = 0; i < x_nbins * y_nbins; i++)
-		fprintf(gas_concentration_variance_map_logfile, "%.9f, ", gas_concentration_variance_map[i]);
+		fprintf(gas_information_map_logfile, "%.9f, ", gas_information_map[i]);
 
-	fprintf(gas_concentration_variance_map_logfile, "\n");
+	fprintf(gas_information_map_logfile, "\n");
 
-	fclose(gas_concentration_variance_map_logfile);
+	fclose(gas_information_map_logfile);
 }
 
 void log_gas_hit_variance_map(){
@@ -783,8 +783,12 @@ void lawnmower_planning(){
 
 void calculate_information_gain_with_variance(){
 	if (simulation_parameters.gasFeature == CONCENTRATION){
-		plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
-		log_gas_concentration_variance_map();
+		if (simulation_parameters.infoFeature == VARIANCE){
+			plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
+		} else if (simulation_parameters.infoFeature == MEAN){
+			plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
+		}
+		log_gas_information_map();
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
 		log_gas_hit_variance_map();
@@ -796,38 +800,38 @@ void informative_max_variance_point_planning(){
 	printf("informative path planning based on variance \n");
 	double best_point[2]={0};
 	// find the maximal variance in gas variance map
-	double max_variance = 0;
-	int max_variance_index = 0;
+	double max_info = 0;
+	int max_info_index = 0;
 	if (simulation_parameters.gasFeature == CONCENTRATION){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
-				if (gas_concentration_variance_map[i] > max_variance && cell_visited_list[i] == 0){
-					max_variance = gas_concentration_variance_map[i];
-					max_variance_index = i;
+				if (gas_information_map[i] > max_info && cell_visited_list[i] == 0){
+					max_info = gas_information_map[i];
+					max_info_index = i;
 				} 
 			}else{
-				if (gas_concentration_variance_map[i] > max_variance){
-					max_variance = gas_concentration_variance_map[i];
-					max_variance_index = i;
+				if (gas_information_map[i] > max_info){
+					max_info = gas_information_map[i];
+					max_info_index = i;
 				}
 			}
 		}
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
-				if (gas_hit_variance_map[i] > max_variance && cell_visited_list[i] == 0){
-					max_variance = gas_hit_variance_map[i];
-					max_variance_index = i;
+				if (gas_hit_variance_map[i] > max_info && cell_visited_list[i] == 0){
+					max_info = gas_hit_variance_map[i];
+					max_info_index = i;
 				}
 			}else{
-				if (gas_hit_variance_map[i] > max_variance){
-					max_variance = gas_hit_variance_map[i];
-					max_variance_index = i;
+				if (gas_hit_variance_map[i] > max_info){
+					max_info = gas_hit_variance_map[i];
+					max_info_index = i;
 				}
 			}
 		}
 	}
-	posterior.index_to_param_values(max_variance_index, best_point);
+	posterior.index_to_param_values(max_info_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
@@ -1070,19 +1074,24 @@ void goal_outside_obstacles(Position * goal){
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
 		Position nearest_position(*goal);
-		Position candidates[4] = {	Position(XMIN, goal->y, 0), 
-									Position(XMAX, goal->y, 0),
-									Position(goal->x, YMIN, 0),
-									Position(goal->x, YMAX, 0)};
+		Position candidates[8] = {	Position(float(XMIN), goal->y, 0), 
+									Position(float(XMAX), goal->y, 0),
+									Position(goal->x, float(YMIN), 0),
+									Position(goal->x, float(YMAX), 0),
+									Position(float(XMIN), float(YMIN), 0),
+									Position(float(XMIN), float(YMAX), 0),
+									Position(float(XMAX), float(YMIN), 0),
+									Position(float(XMAX), float(YMAX), 0)};
 		// for each candidate position
-		for(int i=0; i<4; i++){
+		for(int i=0; i<8; i++){
 			//check if the distance to candidate is smaller than others
 			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
+				//printf("candidates position is: %f %f\n", candidates[i].x, candidates[i].y);
 				// printf(">>> best sor far\n");
 				//if so, then check if that position is not in another obstacle and it's inside the arena
-				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
-				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
+				//printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
+				//printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
