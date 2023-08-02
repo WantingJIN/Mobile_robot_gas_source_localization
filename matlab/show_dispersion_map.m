@@ -1,7 +1,7 @@
 %% read experiment files
 clear all; close all; clc;
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Results/0730_test_new_informative_use_concentration_mean/2/1690723736137/101';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/0802_test_informative_clustering/1/1690971208394/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -25,10 +25,9 @@ measurements = dlmread([experiment_file_path, '/measurements.csv']); %measuremen
 entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
 real_source_position = params.source_position;
-
-%% plot gas concentration map
 x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
+%% plot gas concentration map
 f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
 for i=1:size(gas_maps,1)
     source_position = gas_maps(i,1:2); 
@@ -83,45 +82,53 @@ for i = 1:size(gas_maps,1)
     gas_concentration_sum = gas_concentration_sum + gas_maps(i,3:end);
 end
 gas_concentration_avg = gas_concentration_sum/size(gas_maps,1);
-imagesc(y,x,reshape(gas_concentration_avg,20,20))
+imagesc(y,x,reshape(gas_concentration_avg,20,20)')
 axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
 %% calculate the gas variance for uniform source position distribution
+f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
 gas_variance_sum = zeros(1,400);
 
 for i = 1:size(gas_maps,1)
     gas_variance_sum = gas_variance_sum + (gas_maps(i,3:end)-gas_concentration_avg).^2;
 end
 gas_concentration_std = sqrt(gas_variance_sum)/size(gas_maps,1);
-%imagesc(y,x,reshape(gas_concentration_avg,20,20))
-% imagesc(y,x,reshape(gas_concentration_std,20,20))
-% axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
+
+imagesc(y,x,reshape(gas_concentration_std,20,20)')
+axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
 
 %% calculate the weighted gas average value
-% for iter = 1:size(pdf,1)
-%     gas_weighted_sum = zeros(1,400);
-%     pdf_square = reshape(pdf(iter,:),20,20);
-%     for i = 1:size(gas_maps,1)
-%         idx_x = mod(i,20)+1;
-%         idx_y = ceil(i/20);
-%         gas_weighted_sum = gas_weighted_sum + gas_maps(i,3:end)*pdf_square(idx_y,idx_x);
-%     end
-%     imagesc(y,x,reshape(gas_weighted_sum,20,20))
-%     axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
-%     xlim([0 4])
-%     ylim([2 13])
-%     ax = gca;
-%     pause;
-%     drawnow
-% end
+f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
+for iter = 1:size(pdf,1)
+    subplot(1,2,1)
+    imagesc(y,x,reshape(pdf(iter,:),20,20));
+    axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
+    xlim([0 4])
+    ylim([2 13])
+    subplot(1,2,2)
+    gas_weighted_sum = zeros(1,400);
+    title("pdf")
+    for i = 1:size(gas_maps,1)
+        gas_weighted_sum = gas_weighted_sum + gas_maps(i,3:end)*pdf(iter,i);
+    end
+    imagesc(y,x,reshape(gas_weighted_sum,20,20)')
+    axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
+    xlim([0 4])
+    ylim([2 13])
+    ax = gca;
+    title('weighted expected concentration')
+    pause;
+    drawnow
+end
 
 %% calculate the weighted gas variance by taking into account possility distribution 
 for iter = 1:size(pdf,1)
+    gas_weighted_sum = zeros(1,400);
     gas_weighted_variance_sum = zeros(1,400);
-    pdf_square = reshape(pdf(iter,:),20,20);
     for i = 1:size(gas_maps,1)
-        idx_x = mod(i,20)+1;
-        idx_y = ceil(i/20);
-        gas_weighted_variance_sum = gas_weighted_variance_sum + (gas_maps(i,3:end)-gas_concentration_avg).^2*pdf_square(idx_y,idx_x);
+        gas_weighted_sum = gas_weighted_sum + gas_maps(i,3:end)*pdf(iter,i);
+    end
+    for i = 1:size(gas_maps,1)
+        gas_weighted_variance_sum = gas_weighted_variance_sum + (gas_maps(i,3:end)-gas_weighted_sum).^2*pdf(iter,i);
     end
     gas_weighted_concentration_std = sqrt(gas_weighted_variance_sum);
     % normalize the variance map
@@ -151,7 +158,7 @@ for iter = 1:size(pdf,1)
 %     gscatter(gas_variance_with_idx(:,1),gas_variance_with_idx(:,2),idx,hsv(numGroups));
 %     grid
     
-    imagesc(y,x,reshape(gas_weighted_concentration_std,20,20));
+    imagesc(y,x,reshape(gas_weighted_concentration_std,20,20)');
     hold on
     plot(positions(iter,3),positions(iter,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
     hold on
