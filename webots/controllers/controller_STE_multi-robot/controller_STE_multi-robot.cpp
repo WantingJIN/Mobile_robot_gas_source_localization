@@ -780,15 +780,25 @@ void lawnmower_planning(){
 		printf("FINISHED \n");
 	}
 }
-void informative_path_planning_based_on_variance(){
+
+void calculate_information_gain_with_variance(){
+	if (simulation_parameters.gasFeature == CONCENTRATION){
+		plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
+		log_gas_concentration_variance_map();
+	} else if (simulation_parameters.gasFeature == GASHIT){
+		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
+		log_gas_hit_variance_map();
+	}
+}
+
+
+void informative_max_variance_point_planning(){
 	printf("informative path planning based on variance \n");
 	double best_point[2]={0};
 	// find the maximal variance in gas variance map
 	double max_variance = 0;
 	int max_variance_index = 0;
 	if (simulation_parameters.gasFeature == CONCENTRATION){
-		plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
-		log_gas_concentration_variance_map();
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
 				if (gas_concentration_variance_map[i] > max_variance && cell_visited_list[i] == 0){
@@ -803,8 +813,6 @@ void informative_path_planning_based_on_variance(){
 			}
 		}
 	} else if (simulation_parameters.gasFeature == GASHIT){
-		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
-		log_gas_hit_variance_map();
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
 				if (gas_hit_variance_map[i] > max_variance && cell_visited_list[i] == 0){
@@ -838,7 +846,7 @@ void informative_clustering_planning(){
 	clusters_bounding_box = plume_model.clustering_cell_with_variance();
 	if (clusters_bounding_box.size() == 0){
 		printf("no cluster found \n");
-		informative_path_planning_based_on_variance();
+		informative_max_variance_point_planning();
 		return;
 	} else{
 		// find the cluster with the shortest distance to robot
@@ -1351,7 +1359,8 @@ void state_updategoal(){
 	    balance_expected_maximal_pdf();
 		break;
     case INFORMATIVE:
-	    informative_path_planning_based_on_variance();
+		calculate_information_gain_with_variance();
+	    informative_max_variance_point_planning();
 		break;
 	case RANDOM:
 		random_planning();
@@ -1360,6 +1369,7 @@ void state_updategoal(){
 		lawnmower_planning();
 		break;	
     case INFORMATIVE_CLUSTERING:
+        calculate_information_gain_with_variance();
 		informative_clustering_planning();
 		break;
 	default:
