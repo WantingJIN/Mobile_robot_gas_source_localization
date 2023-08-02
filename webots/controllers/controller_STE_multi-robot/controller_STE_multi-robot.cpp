@@ -787,8 +787,10 @@ void informative_path_planning_based_on_variance(){
 	double max_variance = 0;
 	int max_variance_index = 0;
 	if (simulation_parameters.gasFeature == CONCENTRATION){
+		plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
+		log_gas_concentration_variance_map();
 		for (int i = 0; i< x_nbins*y_nbins; i++){
-			if (simulation_parameters.visitedList == ON){
+			if (simulation_parameters.visitedList == visitedList_ON){
 				if (gas_concentration_variance_map[i] > max_variance && cell_visited_list[i] == 0){
 					max_variance = gas_concentration_variance_map[i];
 					max_variance_index = i;
@@ -801,8 +803,10 @@ void informative_path_planning_based_on_variance(){
 			}
 		}
 	} else if (simulation_parameters.gasFeature == GASHIT){
+		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
+		log_gas_hit_variance_map();
 		for (int i = 0; i< x_nbins*y_nbins; i++){
-			if (simulation_parameters.visitedList == ON){
+			if (simulation_parameters.visitedList == visitedList_ON){
 				if (gas_hit_variance_map[i] > max_variance && cell_visited_list[i] == 0){
 					max_variance = gas_hit_variance_map[i];
 					max_variance_index = i;
@@ -826,6 +830,55 @@ void informative_path_planning_based_on_variance(){
 		greedy_planning();
 	}
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+
+}
+
+void informative_clustering_planning(){
+	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
+	clusters_bounding_box = plume_model.clustering_cell_with_variance();
+	if (clusters_bounding_box.size() == 0){
+		printf("no cluster found \n");
+		informative_path_planning_based_on_variance();
+		return;
+	} else{
+		// find the cluster with the shortest distance to robot
+		double min_dist = 100;
+		int min_dist_index = 0;
+		for (int i = 0; i < clusters_bounding_box.size(); i++){
+            // calculate the center of the cluster
+			Position cell_center;
+			cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
+			cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
+			double dist = dist_to_goal(cell_center);
+			if (dist < min_dist){
+				min_dist = dist;
+				min_dist_index = i;
+			}
+		}
+        Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
+									Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
+									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
+									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
+		// find the vertex of the cluster with the shortest and largest distance to robot
+		double min_dist_to_robot = 100;
+		double max_dist_to_robot = 0;
+		int min_dist_to_robot_index = 0;
+		int max_dist_to_robot_index = 0;
+		for (int i = 0; i < 4; i++){
+			double dist = dist_to_goal(cluster_vertex[i]);
+			if (dist < min_dist_to_robot){
+				min_dist_to_robot = dist;
+				min_dist_to_robot_index = i;
+			}
+			if (dist > max_dist_to_robot){
+				max_dist_to_robot = dist;
+				max_dist_to_robot_index = i;
+			}
+		}							
+        goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
+		goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+        goal_position.heading = 0;
+	}
 
 }
 
@@ -1066,7 +1119,7 @@ void state_measuring(){
 				history.gas_hit_event.push_back(0);
 				history.size++;
 				// mark the cell as visited
-				if (simulation_parameters.visitedList == ON){
+				if (simulation_parameters.visitedList == visitedList_ON){
 					int pos_coord[2];
 					pos_coord[0] =  ceil((sample_in_motion.position[i].x - source_x_min) / x_resol);
 					pos_coord[1] =  ceil((sample_in_motion.position[i].y - source_y_min) / y_resol);
@@ -1086,7 +1139,7 @@ void state_measuring(){
 				history.gas_hit_event.push_back(0);
 				history.size++;
 				// mark the cell as visited
-				if (simulation_parameters.visitedList == ON) {
+				if (simulation_parameters.visitedList == visitedList_ON) {
 					int pos_coord[2];
 					pos_coord[0] =  ceil((sample_in_motion.position[i].x - source_x_min) / x_resol);
 					pos_coord[1] =  ceil((sample_in_motion.position[i].y - source_y_min) / y_resol);
@@ -1114,7 +1167,7 @@ void state_measuring(){
 		history.gas_hit_event.push_back(0);
 		history.size++;
         // mark the current cell as visited
-		if (simulation_parameters.visitedList == ON){
+		if (simulation_parameters.visitedList == visitedList_ON){
 			int pos_coord[2];
 			pos_coord[0] =  ceil((current_position.x - source_x_min) / x_resol);
 			pos_coord[1] =  ceil((current_position.y - source_y_min) / y_resol);
@@ -1222,10 +1275,6 @@ void state_estimating(){
 	printf("sum posterior : %f \n", posterior.sum);
 	//printf("Before process. \n");
 	posterior.process();
-	plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
-	log_gas_concentration_variance_map();
-	plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
-	log_gas_hit_variance_map();
 	// calculate the variance of reading for each cell
 	//posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
 	//printf("After Process. Start logging.\n");
@@ -1310,6 +1359,9 @@ void state_updategoal(){
 	case LAWNMOWER:
 		lawnmower_planning();
 		break;	
+    case INFORMATIVE_CLUSTERING:
+		informative_clustering_planning();
+		break;
 	default:
 		break;
 	}

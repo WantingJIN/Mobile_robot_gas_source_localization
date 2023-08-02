@@ -1,5 +1,6 @@
 #include "Dbscan.h"
 #include <stack>
+#include "Constant.h"
 
 using namespace std;
 DBSCAN::DBSCAN(float eps, unsigned int minPts, double rat){
@@ -117,20 +118,19 @@ void DBSCAN::run(vector<CellMeasurements> cells){
 			}
 		}
 	}
-	vector<pair<CellPoint, CellPoint>> cluster_bounding_boxes;
-	cluster_bounding_boxes = calculateBoundingBoxes(clusterId);
-	// print cluster bounding boxes
-	printResults(clusterId);
-	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++){
-		printf("Cluster %d: (%f, %f) - (%f, %f) \n", iter->first.cluster_id, iter->first.x, iter->first.y, iter->second.x, iter->second.y);
-	}
+	cluster_num = clusterId;
+	// print clustering results
+	printResults();
+	// calcalate cluster bounding boxes and log it
+	calculateBoundingBoxes();
+	logBoundingBoxes();
 }
 
 inline double DBSCAN::calculateDistance(CellPoint cellCore, CellPoint cellTarget){
 	return sqrt(pow(cellCore.x - cellTarget.x, 2) + pow(cellCore.y - cellTarget.y, 2));
 }
 
-void DBSCAN::printResults(int cluster_num){
+void DBSCAN::printResults(){
 	printf("Number of clusters found: %d \n", cluster_num);
 	printf("Clustered cells: \n");
 	for (vector<CellPoint>::iterator iter = cell_list.begin(); iter != cell_list.end(); iter++){
@@ -147,10 +147,10 @@ pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPo
     float maxY = numeric_limits<float>::min();
 
     for (auto& point : points){
-        minX = min(minX, point.x);
-        minY = min(minY, point.y);
-        maxX = max(maxX, point.x);
-        maxY = max(maxY, point.y);
+        minX = min(minX, point.x - float(x_resol/2));
+        minY = min(minY, point.y - float(y_resol/2));
+        maxX = max(maxX, point.x + float(x_resol/2));
+        maxY = max(maxY, point.y + float(y_resol/2));
     }
 
     CellPoint topLeft = {minX, minY, clusterId};
@@ -158,8 +158,7 @@ pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPo
     return std::make_pair(topLeft, bottomRight);
 }
 
-vector<pair<CellPoint, CellPoint>> DBSCAN::calculateBoundingBoxes(int cluster_num){
-	vector<pair<CellPoint, CellPoint>> boundingBoxes;
+void DBSCAN::calculateBoundingBoxes(){
 	for (int i = 0; i < cluster_num; i++){
 		vector<CellPoint> points;
 		for (vector<CellPoint>::iterator iter = cell_list.begin(); iter != cell_list.end(); iter++){
@@ -167,7 +166,20 @@ vector<pair<CellPoint, CellPoint>> DBSCAN::calculateBoundingBoxes(int cluster_nu
 				points.push_back(*iter);
 			}
 		}
-		boundingBoxes.push_back(calculateBoundingBox(points, i));
+		cluster_bounding_boxes.push_back(calculateBoundingBox(points, i));
 	}
-	return boundingBoxes;
+}
+
+void DBSCAN::logBoundingBoxes(){
+	char clustering_bounding_boxes_logfile_name[512];
+	sprintf(clustering_bounding_boxes_logfile_name, "/home/wjin/Workspace/continuous_STE/Results/current/101/clustering_bounding_boxes.csv");	
+    FILE * clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
+	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
+	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++){
+	    fprintf(clustering_bounding_boxes_logfile, "%f, %f, %f, %f, ", iter->first.x, iter->first.y, iter->second.x, iter->second.y);
+		printf("Cluster %d: (%f, %f) - (%f, %f) \n", iter->first.cluster_id, iter->first.x, iter->first.y, iter->second.x, iter->second.y);
+	}
+	fprintf(clustering_bounding_boxes_logfile, "\n");
+	fclose(clustering_bounding_boxes_logfile); 
+
 }

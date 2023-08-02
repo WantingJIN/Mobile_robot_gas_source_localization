@@ -5,6 +5,12 @@
 #include <condition_variable>
 using std::vector;
 
+
+typedef struct CellPoint_
+{
+    float x, y;  // X, Y, position
+    int cluster_id;  // clustered ID
+}CellPoint;
 class CellMeasurements{ 
     public: 
         // idx of the cell   
