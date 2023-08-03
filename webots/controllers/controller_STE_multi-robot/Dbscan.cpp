@@ -85,24 +85,27 @@ void DBSCAN::expandCluster(CellPoint& cell, vector<int>& neighbors, int clusterI
     // }
 }
 
-void DBSCAN::run(vector<CellMeasurements> cells){
-	double max_std = 0;
-	double min_std = 100000;
-	for (vector<CellMeasurements>::iterator iter = cells.begin(); iter != cells.end(); iter++){
-		if (iter->meas_std > max_std){
-			max_std = iter->meas_std;
+void DBSCAN::run(double information[]){
+	double max_info = 0;
+	double min_info = 100000;
+	for (int i = 0; i < x_nbins * y_nbins; i++){
+		if (information[i] > max_info){
+			max_info = information[i];
 		}
-		if (iter->meas_std < min_std){
-			min_std = iter->meas_std;
+		if (information[i] < min_info){
+			min_info = information[i];
 		}
 	}
-	for (vector<CellMeasurements>::iterator iter = cells.begin(); iter != cells.end(); iter++){
-		if (iter->meas_std > 0.5 * (max_std - min_std) + min_std){
-			CellPoint cell;
-			cell.x = iter->px;
-			cell.y = iter->py;
-			cell.cluster_id = UNCLASSIFIED;
-			cell_list.push_back(cell);
+	// first fill y then fill x
+	for (int j = 0; j < y_nbins; j++){
+		for (int i = 0; i < x_nbins; i++){
+			if (information[j * y_nbins + i] > ratio * (max_info - min_info) + min_info){
+				CellPoint cell;
+				cell.x = i * x_resol + source_x_min + x_resol / 2;
+				cell.y = j * y_resol + source_y_min + y_resol / 2;
+				cell.cluster_id = UNCLASSIFIED;
+				cell_list.push_back(cell);
+			}
 		}
 	}
 	pointSize = cell_list.size();

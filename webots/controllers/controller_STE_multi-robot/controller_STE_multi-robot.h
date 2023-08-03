@@ -21,6 +21,7 @@
 #include "Position.h"
 #include "gasMap2D.h"
 #include "Constant.h"
+#include "Dbscan.h"
 
 extern int nbr_obs;
 extern float margin;

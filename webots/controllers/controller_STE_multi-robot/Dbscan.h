@@ -26,7 +26,7 @@ public:
     ~DBSCAN(){}
     vector<int> findNeighbors(const CellPoint cell);
     void expandCluster(CellPoint& cell, vector<int>& neighbors, int clusterId);
-    void run(vector<CellMeasurements> cells);
+    void run(double cells[]);
     void printResults();
 
 private:

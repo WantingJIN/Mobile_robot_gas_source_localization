@@ -198,7 +198,6 @@ void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_c
 void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 void GaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
-vector<pair<CellPoint, CellPoint>> GaussianPlumeModel2D::clustering_cell_with_variance(){return {};}
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
 /********************************************************/
@@ -364,7 +363,6 @@ void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
-vector<pair<CellPoint, CellPoint>> NNGaussianPlumeModel2D::clustering_cell_with_variance(){ return {}; }
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -615,14 +613,6 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_h
 		gas_hit_variance_map[i] = cell_lists[i].hit_std;
 	}
 
-}
-
-vector<pair<CellPoint, CellPoint>> DeepCFDPlumeModel2D::clustering_cell_with_variance(){
-	// dbscan clustering
-	// param: x_eps, y_eps, minPts, ratio
-	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, 0.6);
-	dbscan.run(cell_lists);
-	return dbscan.cluster_bounding_boxes;
 }
 
 void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){

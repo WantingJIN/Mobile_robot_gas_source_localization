@@ -845,9 +845,17 @@ void informative_max_variance_point_planning(){
 
 }
 
+vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double gas_information_map[]){
+	// dbscan clustering
+	// param: x_eps, y_eps, minPts, ratio
+	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/6.0));
+	dbscan.run(gas_information_map);
+	return dbscan.cluster_bounding_boxes;
+}
+
 void informative_clustering_planning(){
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	clusters_bounding_box = plume_model.clustering_cell_with_variance();
+	clusters_bounding_box = clustering_information_blocks(gas_information_map);
 	if (clusters_bounding_box.size() == 0){
 		printf("no cluster found \n");
 		informative_max_variance_point_planning();

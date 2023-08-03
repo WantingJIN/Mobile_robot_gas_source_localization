@@ -10,7 +10,6 @@
 #include <torch/script.h> // One-stop header.
 #include <torch/torch.h>
 
-#include "Dbscan.h"
 //#include <numpy/ndarrayobject.h>
 #include <fstream>
 #include <string>
@@ -88,7 +87,6 @@ public:
 	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
 	virtual void log_gas_concentration_map(char* filename, char writing_mode) = 0;
-    virtual vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance() = 0;
 	
 	void random_params(double * random_params);
 
@@ -132,7 +130,6 @@ public:
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void log_gas_concentration_map(char* filename, char writing_mode);
-	vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance();
 };
 
 
@@ -168,7 +165,6 @@ public:
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void log_gas_concentration_map(char* filename, char writing_mode);
-	vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance();
 };
 
 
@@ -225,7 +221,6 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 	//void random_params(double * random_params);
 	void log_gas_concentration_map(char* filename, char writing_mode);
-	vector<pair<CellPoint, CellPoint>> clustering_cell_with_variance();
 };
 
 #endif
