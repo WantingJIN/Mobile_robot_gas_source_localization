@@ -43,6 +43,7 @@ FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
+FILE* experiment_time_logfile;
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
 char posterior_logfile_name[256];
@@ -1018,8 +1019,6 @@ void state_estimating(){
 	
 	printf("sum posterior : %f \n", posterior.sum);
 	posterior.process();
-	plume_model.calculate_weighted_gas_con_variance_map(gas_concentration_variance_map, posterior.pdf);
-	log_gas_concentration_variance_map();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
