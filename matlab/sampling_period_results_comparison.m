@@ -31,7 +31,7 @@ for i=1:exp_number
     if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
-    new_path = [general_folder '/' num2str(params.sampling_frequency)];
+    new_path = [general_folder '/' num2str(params.sampling_period)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))
@@ -63,7 +63,7 @@ for i=1:number
   
     % ground truth and other params
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
-    samp_prd_list(i,1) = params.sampling_frequency*0.1;
+    samp_prd_list(i,1) = params.sampling_period*0.1;
     % stats
     expected_a_posteriori_file = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
     iteration_nbr_list(i) = size(expected_a_posteriori_file,1);

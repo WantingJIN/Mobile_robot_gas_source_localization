@@ -12,7 +12,7 @@ echo $m > $map_nbr_filename
 cp /home/wjin/Workspace/continuous_STE/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
 cp /home/wjin/Workspace/continuous_STE/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
 cp /home/wjin/Workspace/continuous_STE/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
-sampling_frq_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/sampling_frequency.txt"
+sampling_prd_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/sampling_period.txt"
 source_pos_filename="/home/wjin/Workspace/continuous_STE/webots/data/source_pos.txt"
 
 nbr_source_pos=8
@@ -32,10 +32,10 @@ else
 fi
 
 #{0..8}
-for f in 10 15 20 25 30 35 40;
+for p in 1 10 15 20 25 30 35 40;
 do
 	echo "frequency is $f"
-	echo $f > $sampling_frq_filename
+	echo $p > $sampling_prd_filename
 
 	# wind map and obstacle list
 

@@ -7,6 +7,10 @@ webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
 webots_folder="../webots"
 map_nbr_filename="/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt"
 source_pos_filename="/home/wjin/Workspace/continuous_STE/webots/data/source_pos.txt"
+sampling_prd_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/sampling_period.txt"
+# use environment 0: obstacle free enviroment
+p=10
+echo $p > $sampling_prd_filename
 
 nbr_source_pos=8
 source_pos_x=12.7
@@ -25,7 +29,7 @@ else
 fi
 
 #{0..8}
-for m in 0 #{1..8}
+for m in {1..8}
 do
 	echo $m > $map_nbr_filename
 
