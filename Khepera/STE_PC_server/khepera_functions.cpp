@@ -35,7 +35,9 @@ void init(){
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-    sprintf(gas_concentration_variance_map_logfile_name, "%s/gas_concentration_variance_map.csv", folder_name);
+    sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
+	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 
     // Running STE offline :log name of the experiment and scan
     sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2/2022-09-11_21-55");
@@ -55,8 +57,12 @@ void init(){
     fclose(expected_a_posteriori_logfile);
     max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "w");
     fclose(max_a_posteriori_logfile);
-    gas_concentration_variance_map_logfile = fopen(gas_concentration_variance_map_logfile_name, "w");
-	fclose(gas_concentration_variance_map_logfile);
+    gas_information_map_logfile = fopen(gas_information_map_logfile_name, "w");
+	fclose(gas_information_map_logfile);
+	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
+	fclose(gas_hit_variance_map_logfile);
+	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
+	fclose(experiment_time_logfile);
 
 	// experiment results folder
     experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
@@ -68,9 +74,9 @@ void init(){
     // get the configuration
     //default values for the simulation parameters
 	// 1. likelihood_error; 2.gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; //1 for MCMC, 0 for exhaustive evaluation
-	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List
-	//                                                      1.   2.   3.   4. 5. 6. 7. 8.
-    simulation_parameters = (struct simulation_parameters) {375, 0.5, 100, 1, 1, 0, 0, GREEDY, CONCENTRATION, OFF};
+	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List; 11. information feature
+	//                                                      1.   2.   3.   4. 5. 6. 7. 8.         9.          10.  11.
+    simulation_parameters = (struct simulation_parameters) {375, 0.5, 100, 1, 1, 0, 0, GREEDY, CONCENTRATION, OFF, MEAN};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -137,6 +143,7 @@ void init(){
 	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
 	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
 	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
+	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
 	fclose(sim_param_file);
 }
 

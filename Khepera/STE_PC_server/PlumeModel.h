@@ -78,6 +78,8 @@ public:
 	void set_max_a_post_value(double* container);
 
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
+	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
+	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
 
 };
 
@@ -110,6 +112,8 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 };
 
 
@@ -142,6 +146,8 @@ public:
 	void get_source_position_params(parameter * source_position_param_list);
 
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 };
 
 
@@ -191,8 +197,9 @@ public:
 	// resturns gas concentration map for a set of parameters
 	void initialize_gas_concentration_map_list();
 	void initialize_cell_measurement_list();
-	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
     void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 };
 

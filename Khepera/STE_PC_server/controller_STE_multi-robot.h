@@ -23,6 +23,7 @@
 #include "SampleBuffer.h"
 #include "Position.h"
 #include "Constant.h"
+#include "Dbscan.h"
 
 extern int nbr_obs;
 extern float margin;
@@ -40,6 +41,7 @@ struct parameters_set{
 typedef enum planningStrategy{
 	GREEDY = 0,
 	INFORMATIVE = 1,
+	INFORMATIVE_CLUSTERING = 5,
 }ePlanningStrategy;
 
 typedef enum gasFeature{
@@ -48,9 +50,14 @@ typedef enum gasFeature{
 }eGasFeature;
 
 typedef enum visitedList{
-	ON = 0,
-	OFF = 1,
+	visitedList_ON = 0,
+	visitedList_OFF = 1,
 }eVisitedList;
+
+typedef enum infoFeature{
+	VARIANCE = 0,
+	MEAN = 1,
+}einfoFeature;
 
 // simulation paramters
 struct simulation_parameters{
@@ -64,6 +71,7 @@ struct simulation_parameters{
 	ePlanningStrategy planningStrategy;
 	eGasFeature gasFeature;
 	eVisitedList visitedList;
+	einfoFeature infoFeature;
 };
 extern struct simulation_parameters simulation_parameters;
 

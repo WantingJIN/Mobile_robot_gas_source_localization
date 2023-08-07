@@ -176,6 +176,8 @@ void GaussianPlumeModel2D::print_max_a_post_val(){
 		max_a_post_value[2], max_a_post_value[0], max_a_post_value[1], max_a_post_value[3], max_a_post_value[4]);
 }
 void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
+void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
+void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
@@ -338,6 +340,8 @@ void NNGaussianPlumeModel2D::print_max_a_post_val(){
 		max_a_post_value[2], max_a_post_value[0], max_a_post_value[1]);
 }
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
+void NNGaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
+void NNGaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
@@ -532,9 +536,11 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list
-	for (int i = 0; i < x_nbins; i++)
+// calculate the gas concentration map for each possible source location
+// first scan y axis then x axis; the same order as the pdf
+	for (int j = 0; j < y_nbins; j++)
 	{
-		for (int j = 0; j < y_nbins; j++)
+		for (int i = 0; i < x_nbins; i++)
 		{
 			GasDispersionMap gas_map(i,j);
 			calculate_gas_concentration_map(gas_map);
@@ -570,6 +576,13 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_co
 	}
 }
 
+void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_mean_map, double *pdf){
+	for (int i = 0; i < cell_lists.size(); i++){
+		cell_lists[i].calculate_weighted_variance(pdf);
+		gas_con_mean_map[i] = cell_lists[i].meas_mean;
+	}
+}
+
 void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
 	float sx = gas_map.sx;
 	float sy = gas_map.sy;
@@ -584,20 +597,19 @@ void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_
 
 	//time(&start);
     at::Tensor output = DeepCFD(inputs).toTensor();
-
+    // calculate the gas concentration for each cell
 	for (int i = 0; i < x_nbins; i++){
 		for (int j = 0; j < y_nbins; j++){
 			double px = i * x_resol + source_x_min;
 			double py = j * y_resol + source_y_min; 
 			int idx = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
 		    int idy = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-			float con = output[0][0][idx][idy].item<float>();
+			float con = output[0][0][idy][idx].item<float>();
 			gas_map.gasConcentrationMap[i][j] = con;
 		}
 	}
 
 }
-
 
 double DeepCFDPlumeModel2D::approx_concentration(Position robot_position, double wind_intensity){
 	return concentration(robot_position, wind_intensity, expected_value);
