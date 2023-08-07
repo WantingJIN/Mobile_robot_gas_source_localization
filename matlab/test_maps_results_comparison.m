@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/0728_test_new_informative_use_concentration_mean';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/ICRA_results_test_maps_4000_dataset';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -79,6 +79,16 @@ for i=1:number
     
     max_a_post_list(i,1:2) = max_a_post(end,2:3);
     convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
+    % time taken for each run 
+    measurement = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/measurements.csv']);
+    exp_time_list(i) = measurement(end,4);
+    % traveling_distance
+    trajectory = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/trajectory.csv']);
+    traj_length_sum = 0;
+    for iter = 2:size(trajectory,1)
+        traj_length_sum = traj_length_sum + sqrt((trajectory(iter,2)-trajectory(iter-1,2))^2 + (trajectory(iter,3) - trajectory(iter-1,3))^2); 
+    end
+    traj_length_list(i) = traj_length_sum;
 end
 
 %% boxplots
@@ -113,9 +123,9 @@ end
 
 
 %% plot for thesis
-f = figure('Position',[-1561         656         715         615]);
+f = figure('Position',[-1561         656         1215         615]);
 custom_color = [44,136,217]./255;
-subplot(1,3,1)
+subplot(1,5,1)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
@@ -128,7 +138,7 @@ ylim([-1,10])
 xlabel('Map number');
 ylabel('Error (m)');
 title('Error on x');
-subplot(1,3,2);
+subplot(1,5,2);
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
@@ -141,7 +151,7 @@ ylim([-3,4])
 xlabel('Map number');
 title('Error on y');
 ylabel('Error (m)');
-subplot(1,3,3);
+subplot(1,5,3);
 boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
@@ -150,7 +160,34 @@ grid on;
 ylim([0,50])
 xlabel('Map number');
 title('nbr iterations');
+subplot(1,5,4)
+plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+hold on;
+boxplot(exp_time_list, map_nbr_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%ylim([-3,4])
+xlabel('Map number');
+title('Experiment time');
+ylabel('Time (s)');
+subplot(1,5,5)
+plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+hold on;
+boxplot(traj_length_list, map_nbr_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%ylim([-3,4])
+xlabel('Map number');
+title('Traveling distance');
+ylabel('Distance (m)');
+
 hold on
+
+
 %% calculate success rate
 success_case = 0;
 for i = 1: size (error_x,1)
