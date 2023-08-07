@@ -10,8 +10,8 @@ WorldInfo {
   physics "odor_physics"
 }
 Viewpoint {
-  orientation -0.012669597063749465 -0.03219885756887109 0.9994011781469451 3.135733706935144
-  position 6.730204558130799 0.6816593155108678 16.560655214388188
+  orientation -0.0015196439063931734 0.6232703559043535 0.7820049578699986 3.10506874718362
+  position 7.4242659694326285 19.41422506699584 4.942990994022454
 }
 Background {
   skyColor [
@@ -100,7 +100,7 @@ DEF SOURCE_ODOR_0 Solid {
         }
       }
       geometry DEF CYLINDER_SOURCE_ODOR Cylinder {
-        height 0.1
+        height 0.001
         radius 0.05
       }
     }

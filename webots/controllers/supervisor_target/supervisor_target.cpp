@@ -136,7 +136,7 @@ int main(void){
     if (access("../../data/source_pos.txt", F_OK) != -1) {
        FILE * sim_param_file = fopen("../../data/source_pos.txt", "r");
         int ok = fscanf(sim_param_file, "%lf %lf", &source_position[0], &source_position[1]);
-        source_position[2] = 0.1;
+        source_position[2] = 0.13;
         if(ok) printf("source of gas : %lf %lf %lf\n", source_position[0], source_position[1], source_position[2]);
         fclose(sim_param_file);  
     }
@@ -146,7 +146,7 @@ int main(void){
         do{
             source_position[0] = 12.7;
             source_position[1] = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
-            source_position[2] = 0.1;
+            source_position[2] = 0.13;
         }while(is_in_obstacle_list(source_position[0], source_position[1], obstacles, nbr_obs) != -1);
     }
     wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def("SOURCE_ODOR_0"),"translation"), source_position);

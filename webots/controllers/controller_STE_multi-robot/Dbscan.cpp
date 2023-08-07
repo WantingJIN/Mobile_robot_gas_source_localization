@@ -124,7 +124,7 @@ void DBSCAN::run(double information[]){
 	}
 	cluster_num = clusterId;
 	// print clustering results
-	printResults();
+	//printResults();
 	// calcalate cluster bounding boxes and log it
 	calculateBoundingBoxes();
 	logBoundingBoxes();

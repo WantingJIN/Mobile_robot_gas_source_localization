@@ -14,9 +14,18 @@ source_pos_y_min=0.5
 source_pos_y_max=3.5
 source_pos_y_step=$(awk "BEGIN { print ($source_pos_y_max - $source_pos_y_min) / $nbr_source_pos }")
 
+#delete last unfinished job
+result_folder_name="/home/wjin/Workspace/continuous_STE/Results/current/"  # the folder to store the result for experiment that not finish
+if [ -d "$result_folder_name" ]; then
+    echo "Folder exists. Delete"
+    rm -r "$result_folder_name"
+    echo "Folder deleted successfully."
+else
+    echo "Folder does not exist."
+fi
 
 #{0..8}
-for m in {1..8}
+for m in 0 #{1..8}
 do
 	echo $m > $map_nbr_filename
 
