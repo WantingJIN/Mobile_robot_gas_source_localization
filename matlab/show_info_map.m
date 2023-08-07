@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Results/0802_test_concentration_clustering/1';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/0803_test_concentration_clustering/1';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -93,7 +93,13 @@ for i=1:size(pdf,1)
             end
         end
     else
-        imagesc(y,x,reshape(gas_information_map(i,1:end-1),params.nbins(1), params.nbins(2))); hold on
+        
+        gas_information_map_this_iteration = gas_information_map(i,1:end-1);
+        max_gas = max(gas_information_map_this_iteration);
+        min_gas = min(gas_information_map_this_iteration);
+        threshold = ((max_gas-min_gas)*0.5 +min_gas);
+        gas_information_map_this_iteration(gas_information_map_this_iteration < threshold) = 0;
+        imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on
         if params.planning_strategy == 5
             cluster_num = cluster_bounding_boxes(i,1);
             if cluster_num > 0

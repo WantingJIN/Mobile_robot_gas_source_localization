@@ -1,7 +1,7 @@
 %% read experiment files
 clear all; close all; clc;
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Results/0802_test_informative_clustering/1/1690971208394/101';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/0802_test_informative_clustering/1/1690987805754/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -112,6 +112,7 @@ for iter = 1:size(pdf,1)
     end
     imagesc(y,x,reshape(gas_weighted_sum,20,20)')
     axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
+    load MyColormap2; colormap(mymap); 
     xlim([0 4])
     ylim([2 13])
     ax = gca;
@@ -167,6 +168,7 @@ for iter = 1:size(pdf,1)
     axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6]);
     xlim([0 4]);
     ylim([2 13]);
+    load MyColormap2; colormap(mymap); 
     ax = gca;
     pause;
     drawnow
