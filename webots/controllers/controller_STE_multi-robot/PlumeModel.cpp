@@ -563,6 +563,7 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list
 // calculate the gas concentration map for each possible source location
+// first scan y axis then x axis; the same order as the pdf
 	for (int j = 0; j < y_nbins; j++)
 	{
 		for (int i = 0; i < x_nbins; i++)
@@ -600,10 +601,10 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_co
 	}
 }
 
-void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){
+void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_mean_map, double *pdf){
 	for (int i = 0; i < cell_lists.size(); i++){
 		cell_lists[i].calculate_weighted_variance(pdf);
-		gas_con_variance_map[i] = cell_lists[i].meas_mean;
+		gas_con_mean_map[i] = cell_lists[i].meas_mean;
 	}
 }
 

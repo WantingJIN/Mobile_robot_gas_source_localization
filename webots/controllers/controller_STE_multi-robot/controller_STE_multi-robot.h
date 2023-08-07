@@ -74,7 +74,6 @@ typedef enum infoFeature{
 	MEAN = 1,
 }eInfoFeature;
 
-
 //parameters to estimate
 struct parameters_set{
 	double Q;

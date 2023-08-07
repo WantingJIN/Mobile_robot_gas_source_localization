@@ -83,7 +83,7 @@ DeepCFDPlumeModel2D plume_model;
 
 // vector of the cell_measurements
 vector<CellMeasurements> cell_measurements_list; 
-// gas concentration variance map
+// gas information map
 double gas_information_map[x_nbins*y_nbins] = {0};
 double gas_hit_variance_map[x_nbins*y_nbins] = {0};
 int cell_visited_list[x_nbins*y_nbins] = {0};
@@ -324,6 +324,7 @@ void log_gas_hit_variance_map(){
 
 	fclose(gas_hit_variance_map_logfile);
 }
+
 void log_history(){
 	// position
 	//FILE* position_history_logfile;
@@ -755,8 +756,7 @@ void heterogeneous_navigation(){
 
 void greedy_planning(){
 	double best_point[2]={0};
-	// FIXME - temperoy solution; the code is kind of confusing
-	// global_local_ratio = 1; only use the factor of the marginal posterior, not considersing the distance
+	// Adaptive greedy planning based on entropy
 	// if (posterior.entropy > 4){
 	// 	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
 	// } else {
