@@ -101,6 +101,7 @@ struct simulation_parameters{
 	eGasFeature gasFeature;
 	eVisitedList visitedList;
 	eInfoFeature infoFeature;
+	int sampling_frequency;
 };
 extern struct simulation_parameters simulation_parameters;
 

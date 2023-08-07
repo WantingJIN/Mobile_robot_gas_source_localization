@@ -764,18 +764,19 @@ void random_planning(){
 void lawnmower_planning(){
 	int static direction = 1;
 	double x_step = 1.0;
-	goal_position.y = (direction == 1)? YMAX - SAFETY_MARGIN: YMIN + + SAFETY_MARGIN ;
+	double y_step = 4;
+	goal_position.y = current_position.y + direction*y_step ;
 	goal_position.x = current_position.x;
 	goal_position.heading = 0;
 	if (current_position.y > YMAX - SAFETY_MARGIN - 0.05 && direction == 1){
 		goal_position.x = current_position.x + x_step;
 		direction = -1;
 	}
-	if (current_position.y < YMIN + SAFETY_MARGIN + 0.05 && direction == -1){
+	if (current_position.y < YMIN + SAFETY_MARGIN + 0.1 && direction == -1){
 		goal_position.x = current_position.x + x_step;
 		direction = 1;
 	}
-	if (goal_position.x > XMAX){
+	if (goal_position.x > XMAX - SAFETY_MARGIN - 0.05){
 		FSM.state = STATE_FINISHED;
 		printf("FINISHED \n");
 	}
@@ -1082,14 +1083,14 @@ void goal_outside_obstacles(Position * goal){
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
 		Position nearest_position(*goal);
-		Position candidates[8] = {	Position(float(XMIN), goal->y, 0), 
-									Position(float(XMAX), goal->y, 0),
-									Position(goal->x, float(YMIN), 0),
-									Position(goal->x, float(YMAX), 0),
-									Position(float(XMIN), float(YMIN), 0),
-									Position(float(XMIN), float(YMAX), 0),
-									Position(float(XMAX), float(YMIN), 0),
-									Position(float(XMAX), float(YMAX), 0)};
+		Position candidates[8] = {	Position(float(XMIN + SAFETY_MARGIN), goal->y, 0), 
+									Position(float(XMAX - SAFETY_MARGIN), goal->y, 0),
+									Position(goal->x, float(YMIN + SAFETY_MARGIN), 0),
+									Position(goal->x, float(YMAX - SAFETY_MARGIN), 0),
+									Position(float(XMIN + SAFETY_MARGIN), float(YMIN + SAFETY_MARGIN), 0),
+									Position(float(XMIN + SAFETY_MARGIN), float(YMAX - SAFETY_MARGIN), 0),
+									Position(float(XMAX - SAFETY_MARGIN), float(YMIN + SAFETY_MARGIN), 0),
+									Position(float(XMAX - SAFETY_MARGIN), float(YMAX - SAFETY_MARGIN), 0)};
 		// for each candidate position
 		for(int i=0; i<8; i++){
 			//check if the distance to candidate is smaller than others
@@ -1202,6 +1203,7 @@ void state_measuring(){
         if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
+		history_print(history);
 		// go to estimation
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
@@ -1392,41 +1394,44 @@ void state_updategoal(){
 	default:
 		break;
 	}
-    goal_outside_obstacles(&goal_position);
-    printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-  //   aStar as;
-  //   if(as.search(current_position, goal_position, astar_map, 0)){
-		// as.path( path );
-		// i = path.begin();
-		// std::ofstream myfile;
-		// myfile.open("aStar_paths.txt", ios::app);
-		// for( std::list<Position>::iterator i = path.begin(); i != path.end(); i++ )
-	 //    	myfile<< " " << i->x << ", " << i->y << ";";
-  //   	myfile<< std::endl;
-  //   	myfile.close();
-  //   }else{
-  //   	printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> aStar could not find a way!\n");
-  //   	as.search(current_position, goal_position, astar_map, 1);
-  //   }
+	if (FSM.state != STATE_FINISHED){
+		goal_outside_obstacles(&goal_position);
+		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+	//   aStar as;
+	//   if(as.search(current_position, goal_position, astar_map, 0)){
+			// as.path( path );
+			// i = path.begin();
+			// std::ofstream myfile;
+			// myfile.open("aStar_paths.txt", ios::app);
+			// for( std::list<Position>::iterator i = path.begin(); i != path.end(); i++ )
+		//    	myfile<< " " << i->x << ", " << i->y << ";";
+	//   	myfile<< std::endl;
+	//   	myfile.close();
+	//   }else{
+	//   	printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> aStar could not find a way!\n");
+	//   	as.search(current_position, goal_position, astar_map, 1);
+	//   }
 
-    //find the path using visibility graph
-    VisiLibity::Point start(current_position.x, current_position.y);
-    VisiLibity::Point finish(goal_position.x, goal_position.y);
-    VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-    // copy the path in another variable
-    for(unsigned k=0; k<Polyline_path.size(); k++){
-    	Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-        path.push_back(p);
-        log_trajectory(p);
-    }
-    i = path.begin();
-    printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-    //send the goal to the supervisor
-    Message msg(ID, 0, goal_position, -1, goal_position, 0);
-    send_msg(msg);
-	//move to the goal position
-	FSM.state = STATE_MOVING;
-	FSM.hook = state_moving;
+		//find the path using visibility graph
+		VisiLibity::Point start(current_position.x, current_position.y);
+		VisiLibity::Point finish(goal_position.x, goal_position.y);
+		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+		// copy the path in another variable
+		for(unsigned k=0; k<Polyline_path.size(); k++){
+			Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
+			path.push_back(p);
+			log_trajectory(p);
+		}
+		i = path.begin();
+		printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+		//send the goal to the supervisor
+		Message msg(ID, 0, goal_position, -1, goal_position, 0);
+		send_msg(msg);
+		//move to the goal position
+		FSM.state = STATE_MOVING;
+		FSM.hook = state_moving;
+	}
+    
 }
 
 void state_moving(){
@@ -1458,7 +1463,7 @@ void state_moving(){
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
-		if (sample_counter > 10){
+		if (sample_counter > simulation_parameters.sampling_frequency){
 			if (!position_outside_arena(current_position)){
 				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 				sample_in_motion.measurement.push_back(instant_concentration);
