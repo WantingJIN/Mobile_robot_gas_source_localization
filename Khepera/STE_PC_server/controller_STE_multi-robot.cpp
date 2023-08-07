@@ -137,10 +137,8 @@ int sock = 0;
 // log time
 static double start_timestamp;
 static double end_timestamp;
-double time_before_moving;
-double time_after_moving;
-double time_before_measuring;
-double time_after_measuring;
+double time_before_moving_and_measuring;
+double time_after_moving_and_measuring;
 double navigation_sampling_time_sum = 0;
 
 // =========================== FUNCTIONS ================================ //
@@ -1036,8 +1034,8 @@ void state_estimating(){
 	if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1){
 		//the end
 		FSM.state = STATE_FINISHED;
+		end_timestamp = get_exp_time();
 	}else{
-	
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
 			
@@ -1079,6 +1077,7 @@ void state_updategoal(){
 
 	//send the message
 	send_goal_to_robot(goal_position.x, goal_position.y);
+	time_before_moving_and_measuring = get_exp_time();
 
 	//move to listen
 	FSM.state = STATE_LISTEN;
@@ -1125,6 +1124,8 @@ void state_listen(){
 		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
+		time_after_moving_and_measuring = get_exp_time();
+	    navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
 	}
 	else{
 		printf("nothing yet .. \n");
@@ -1219,6 +1220,7 @@ int main(int argc, char **argv){
 
 	// main loop
 	while (FSM.state != STATE_FINISHED){
+		start_timestamp = get_exp_time();
 		//update_position();
 		//if we are not stopped to sample, let's log the trajectory
 		/*if(speed[0]!=0 && speed[1]!=0){
