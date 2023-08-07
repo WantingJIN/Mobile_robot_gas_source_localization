@@ -43,6 +43,7 @@ FILE* trajectory_logfile;
 FILE* gas_concentration_map_logfile;
 FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
+FILE* experiment_time_logfile;
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
 char posterior_logfile_name[512];
@@ -59,6 +60,7 @@ char trajectory_logfile_name[512];
 char gas_concentration_map_logfile_name[512];
 char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
+char experiment_time_logfile_name[512];
 
 // finite state machine
 struct FSM FSM;
@@ -123,6 +125,15 @@ std::string environment_file("../../data/test_map.environment");
 VisiLibity::Environment my_environment(environment_file);
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
+
+// log time
+static double start_timestamp;
+static double end_timestamp;
+double time_before_moving;
+double time_after_moving;
+double time_before_measuring;
+double time_after_measuring;
+double navigation_sampling_time_sum = 0;
 
 // =========================== FUNCTIONS ================================ //
 //random value sampled from a nromal distribution
@@ -339,6 +350,14 @@ void log_trajectory(Position p){
 	trajectory_logfile = fopen(trajectory_logfile_name, "a");
 	fprintf(trajectory_logfile,"%d, %f, %f, %f, %f\n", FSM.n_cycles, p.x, p.y, p.heading, time);
 	fclose(trajectory_logfile);
+}
+
+void log_experiment_time(){
+	double experiment_time = end_timestamp - start_timestamp;
+	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
+	fprintf(experiment_time_logfile, "total experiment time: %f\n", experiment_time);
+	fprintf(experiment_time_logfile, "navigation and sampling time: %f\n", navigation_sampling_time_sum);
+    fclose(experiment_time_logfile);
 }
 
 
@@ -1125,6 +1144,10 @@ void state_waiting(){
 	if(counter > 300){
 		FSM.state = STATE_MEASURING;
 		FSM.hook  = state_measuring;
+		// log start timestamp of the first measuring state (static variable) 
+		start_timestamp = wb_robot_get_time();
+		printf("start timestamp: %f\n", start_timestamp);
+		time_before_measuring = start_timestamp;
 	}
 }
 
@@ -1207,6 +1230,9 @@ void state_measuring(){
 		// go to estimation
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
+		time_after_measuring = wb_robot_get_time();
+		navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
+		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 	}
 	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING){
 		// Sample for several seconds and take the average value
@@ -1244,6 +1270,9 @@ void state_measuring(){
 			// go to estimation
 			FSM.state = STATE_ESTIMATING;
 			FSM.hook  = state_estimating;
+			time_after_measuring = wb_robot_get_time();
+			navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
+			printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 		}
 	}
 	if (simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
@@ -1277,6 +1306,9 @@ void state_measuring(){
 		// go to estimation
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
+		time_after_measuring = wb_robot_get_time();
+		navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
+		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 	}
 }
 
@@ -1332,6 +1364,9 @@ void state_estimating(){
 	if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1){
 		//the end
 		FSM.state = STATE_FINISHED;
+		// log the finish time stamp
+		end_timestamp = wb_robot_get_time();
+		printf("end time stamp: %f\n", end_timestamp);
 		printf("Current state is STATE_FINISHED");
 	}else{
 		//update goal
@@ -1430,6 +1465,7 @@ void state_updategoal(){
 		//move to the goal position
 		FSM.state = STATE_MOVING;
 		FSM.hook = state_moving;
+		time_before_moving = wb_robot_get_time();
 	}
     
 }
@@ -1463,7 +1499,7 @@ void state_moving(){
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
-		if (sample_counter > simulation_parameters.sampling_frequency){
+		if (sample_counter > simulation_parameters.sampling_period){
 			if (!position_outside_arena(current_position)){
 				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 				sample_in_motion.measurement.push_back(instant_concentration);
@@ -1502,6 +1538,10 @@ void state_moving(){
 		//back to measuring
 		FSM.state = STATE_MEASURING;
 		FSM.hook  = state_measuring;
+		time_after_moving = wb_robot_get_time();
+		navigation_sampling_time_sum += time_after_moving - time_before_moving;
+		time_before_measuring = wb_robot_get_time();
+		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 	}
 }
 
@@ -1583,6 +1623,7 @@ int main(int argc, char **argv){
 	}
 	// //final logs
 	log_history();
+	log_experiment_time();
 	cleaning_up();
     //free the allocated memory to obstacle array
     for(int i = 0; i < nbr_obs; i++)
