@@ -608,7 +608,7 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_me
 	}
 }
 
-void DeepCFDPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){
+void DeepCFDPlumeModel2D::calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf){
 	for (int i = 0; i < cell_lists.size(); i++){
 		cell_lists[i].calculate_hit_weighted_variance(pdf);
 		gas_hit_variance_map[i] = cell_lists[i].hit_std;

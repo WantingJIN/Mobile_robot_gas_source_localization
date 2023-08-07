@@ -1170,8 +1170,8 @@ void state_measuring(){
 				// mark the cell as visited
 				if (simulation_parameters.visitedList == visitedList_ON){
 					int pos_coord[2];
-					pos_coord[0] =  ceil((sample_in_motion.position[i].x - source_x_min) / x_resol);
-					pos_coord[1] =  ceil((sample_in_motion.position[i].y - source_y_min) / y_resol);
+					pos_coord[0] =  floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
+					pos_coord[1] =  floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
 					int idx = posterior.indices_to_index(pos_coord);
 					cell_visited_list[idx] = 1;
 				}
@@ -1190,8 +1190,8 @@ void state_measuring(){
 				// mark the cell as visited
 				if (simulation_parameters.visitedList == visitedList_ON) {
 					int pos_coord[2];
-					pos_coord[0] =  ceil((sample_in_motion.position[i].x - source_x_min) / x_resol);
-					pos_coord[1] =  ceil((sample_in_motion.position[i].y - source_y_min) / y_resol);
+					pos_coord[0] =  floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
+					pos_coord[1] =  floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
 					int idx = posterior.indices_to_index(pos_coord);
 					cell_visited_list[idx] = 1;
 				}
@@ -1218,8 +1218,8 @@ void state_measuring(){
         // mark the current cell as visited
 		if (simulation_parameters.visitedList == visitedList_ON){
 			int pos_coord[2];
-			pos_coord[0] =  ceil((current_position.x - source_x_min) / x_resol);
-			pos_coord[1] =  ceil((current_position.y - source_y_min) / y_resol);
+			pos_coord[0] =  floor((current_position.x - source_x_min) / x_resol);
+			pos_coord[1] =  floor((current_position.y - source_y_min) / y_resol);
 			int idx = posterior.indices_to_index(pos_coord);
 			cell_visited_list[idx] = 1;
 		}
