@@ -129,6 +129,7 @@ struct simulation_parameters{
 	eSamplingMode samplingMode;
 	eProcessingMode processingMode; 
 	eSensorCalibration sensorCalibration;
+	int sampling_period;
 };
 extern struct simulation_parameters simulation_parameters;
 

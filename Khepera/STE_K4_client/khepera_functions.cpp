@@ -109,9 +109,9 @@ void init(){
     // get the configuration
     //default values for the simulation parameters
     // 1. likelihood_error; 2. gloabl_local_search_ratio; 3. MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
-	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9. processingMode; 10. sensorCalibration;
-    //                                                       1    2    3   4  5  6  7        8                9           10
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON};
+	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9. processingMode; 10. sensorCalibration; 11. sampling_period; 
+    //                                                       1    2    3   4  5  6  7        8                9           10  11
+    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON, 10};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -186,6 +186,7 @@ void init(){
     fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
     fprintf(sim_param_file, "processing_mode %d\n", simulation_parameters.processingMode);
     fprintf(sim_param_file, "sensor_calibration %d\n", simulation_parameters.sensorCalibration);
+    fprintf(sim_param_file, "sampling_frequency %d\n", simulation_parameters.sampling_period);
     fclose(sim_param_file);
 }
 

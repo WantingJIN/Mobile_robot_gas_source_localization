@@ -506,7 +506,7 @@ void state_moving(){
 		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
-		if (sample_counter > 10){
+		if (sample_counter > simulation_parameters.sampling_period){
 			sample_counter = 0;
 			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 			sample_in_motion.measurement_avg.push_back(instant_concentration);
