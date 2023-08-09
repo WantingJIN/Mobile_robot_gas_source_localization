@@ -179,6 +179,7 @@ void DBSCAN::logBoundingBoxes(){
 	sprintf(clustering_bounding_boxes_logfile_name, "/home/wjin/Workspace/continuous_STE/Results/current/101/clustering_bounding_boxes.csv");	
     FILE * clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
 	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
+	fprintf(clustering_bounding_boxes_logfile, "%f, ", ratio);
 	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++){
 	    fprintf(clustering_bounding_boxes_logfile, "%f, %f, %f, %f, ", iter->first.x, iter->first.y, iter->second.x, iter->second.y);
 		printf("Cluster %d: (%f, %f) - (%f, %f) \n", iter->first.cluster_id, iter->first.x, iter->first.y, iter->second.x, iter->second.y);

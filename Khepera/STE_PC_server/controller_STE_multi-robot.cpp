@@ -1153,8 +1153,8 @@ void state_read(){
     
 	if (simulation_parameters.visitedList == visitedList_ON) {
 		int pos_coord[2];
-		pos_coord[0] =  ceil((f1 - source_x_min) / x_resol);
-		pos_coord[1] =  ceil((f2 - source_y_min) / y_resol);
+		pos_coord[0] =  floor((f1 - source_x_min) / x_resol);
+		pos_coord[1] =  floor((f2 - source_y_min) / y_resol);
 		int idx = posterior.indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 	}
