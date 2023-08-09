@@ -661,6 +661,11 @@ void calculate_information_gain_with_variance(){
 		} else if (simulation_parameters.infoFeature == MEAN){
 			plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
 		}
+		if (simulation_parameters.infoFeature == BELIEF){
+			for (int i = 0; i< x_nbins*y_nbins; i++){
+				gas_information_map[i] = posterior.pdf[i];
+			}
+		}
 		log_gas_information_map();
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
@@ -720,7 +725,7 @@ void informative_max_variance_point_planning(){
 vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double gas_information_map[]){
 	// dbscan clustering
 	// param: x_eps, y_eps, minPts, ratio
-	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/15.0));
+	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/simulation_parameters.cluster_entropy_ratio));
 	dbscan.run(gas_information_map);
 	return dbscan.cluster_bounding_boxes;
 }

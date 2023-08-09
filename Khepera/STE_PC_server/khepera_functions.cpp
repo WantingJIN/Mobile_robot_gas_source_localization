@@ -74,9 +74,9 @@ void init(){
     // get the configuration
     //default values for the simulation parameters
 	// 1. likelihood_error; 2.gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; //1 for MCMC, 0 for exhaustive evaluation
-	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List; 11. information feature
+	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List; 11. information feature 12. cluster_entropy_ratio
 	//                                                      1.   2.   3.   4. 5. 6. 7. 8.                      9.             10.             11.
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, GREEDY, CONCENTRATION, visitedList_OFF, MEAN};
+    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, GREEDY, CONCENTRATION, visitedList_OFF, MEAN, 6.0};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -144,6 +144,7 @@ void init(){
 	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
 	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
 	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
+	fprintf(sim_param_file, "cluster_entropy_ratio %d\n", simulation_parameters.cluster_entropy_ratio);
 	fclose(sim_param_file);
 }
 

@@ -1,7 +1,7 @@
 %% read experiment files
 clear all; close all; clc;
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Results/0802_test_informative_clustering/1/1690987805754/101';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/0809_map2/2/1691586291278/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -122,7 +122,14 @@ for iter = 1:size(pdf,1)
 end
 
 %% calculate the weighted gas variance by taking into account possility distribution 
+f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
 for iter = 1:size(pdf,1)
+    subplot(1,2,1)
+    imagesc(y,x,reshape(pdf(iter,:),20,20));
+    axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6])
+    xlim([0 4])
+    ylim([2 13])
+    subplot(1,2,2)
     gas_weighted_sum = zeros(1,400);
     gas_weighted_variance_sum = zeros(1,400);
     for i = 1:size(gas_maps,1)
@@ -161,8 +168,8 @@ for iter = 1:size(pdf,1)
     
     imagesc(y,x,reshape(gas_weighted_concentration_std,20,20)');
     hold on
-    plot(positions(iter,3),positions(iter,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
-    hold on
+%     plot(positions(iter,3),positions(iter,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+%     hold on
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on
     axis equal;view(180,90);axis([-0.1,4.1,2.4,12.6]);

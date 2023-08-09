@@ -210,39 +210,12 @@ void init(){
 		if(ok) printf("sampling_period : %d\n", simulation_parameters.sampling_period);
 		fclose(sim_param_file);
 	}
-	// read sampling mode
-	// 0: continous sampling; 1: stop and sense sampling ; 2:SENSE_WITHOUT_STOP
-    // if(access("../../data/simulation_parameters/sampling_mode.txt", F_OK) != -1 ){
-	// 	int samplingModeType = 0;
-	// 	sim_param_file = fopen("../../data/simulation_parameters/sampling_mode.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &samplingModeType);
-	// 	simulation_parameters.samplingMode = static_cast<eSamplingMode>(samplingModeType);
-	// 	if(ok) printf("sampling mode : %d\n", simulation_parameters.samplingMode);
-	// 	fclose(sim_param_file);
-	// }
-	// // read data post-processing mode
-	// // NO_PROCESSING = 0,
-	// //KERNEL_MAPPING = 1,
-	// //REVERSE_SENSOR_MODEL = 2,
-	// if(access("../../data/simulation_parameters/data_processing_mode.txt", F_OK) != -1 ){
-	// 	int processingModeType = 0;
-	// 	sim_param_file = fopen("../../data/simulation_parameters/data_processing_mode.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &processingModeType);
-	// 	simulation_parameters.processingMode = static_cast<eProcessingMode>(processingModeType);
-	// 	if(ok) printf("data processing mode : %d\n", simulation_parameters.processingMode);
-	// 	fclose(sim_param_file);
-	// }
-	// // read sensor type
-	// //PID = 0,
-	// //MOX = 1,
-	// if(access("../../data/simulation_parameters/gas_sensor_type.txt", F_OK) != -1 ){
-	// 	int gasSensortype = 0;
-	// 	sim_param_file = fopen("../../data/simulation_parameters/gas_sensor_type.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &gasSensortype);
-	// 	simulation_parameters.gasSensor = static_cast<eGasSensor>(gasSensortype);
-	// 	if(ok) printf("gas sensor : %d\n", simulation_parameters.gasSensor);
-	// 	fclose(sim_param_file);
-	// }
+	if(access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
+		ok = fscanf(sim_param_file, "%f", &simulation_parameters.cluster_entropy_ratio);
+		if(ok) printf("cluster_entropy_ratio : %f\n", simulation_parameters.cluster_entropy_ratio);
+		fclose(sim_param_file);
+	}
 	if(access("../../data/map_nbr.txt", F_OK) != -1 ){
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);

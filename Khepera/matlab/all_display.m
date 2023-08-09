@@ -1,12 +1,20 @@
 close all; clc; clear all;
-
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Khepera/Results/1');
+work_station = "Desktop";
+% work_station = "Laptop"
+if work_station == "Desktop"
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
+else
+    root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
+end
+
+folder_list = dir([root_path, '/Results_0808']);
+
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
 %%
-for i=1:exp_number
+for i=1 :exp_number-1
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     folder_name_k4 = [folder_list(i).folder, '/', folder_list(i).name, '/k4'];
     folder_name_pc = [folder_list(i).folder, '/', folder_list(i).name, '/pc'];
@@ -16,47 +24,51 @@ for i=1:exp_number
     f1all = figure('Position',[-686   629   570   418]);
     f2all = figure('Name','measurements','Position',[-1561 656 794 415]); 
     
-        % data :
-        positions = dlmread([folder_name_k4, '/goal_position.csv']); %position_history
-        positions(:,4) = 0;
-        trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
-        trajectory(:,4) = 0;
-        trajectory = [positions(1,:); trajectory(1:end-1,:)];
-        measurements = dlmread([folder_name_k4, '/measurements.csv']); %measurement_history
-        entropy = dlmread([folder_name_pc, '/entropy.csv']);
-        expected_a_posteriori = dlmread([folder_name_pc, '/expected_a_posteriori.csv']);
-        max_a_posteriori = dlmread([folder_name_pc, '/max_a_posteriori.csv']);
-        if(isnan(expected_a_posteriori(end,2))), expected_a_posteriori(end,2) = max_a_posteriori(end,2); end
-        if(isnan(expected_a_posteriori(end,3))), expected_a_posteriori(end,3) = max_a_posteriori(end,3); end
-        % ground truth and other params
-        params = my_text2struct([folder_name_pc, '/param_log.csv']);
-        
-        source_postion_file_name = [folder_name_pc '/source_position.txt'];
-        source_file = fopen(source_postion_file_name, 'r');
-        source_real_position = fscanf(source_file,'%f %f');
-        source_real_position(3) = 0.1;
-        %source_real_position = params.source_position;
-        %source_real_position = [12.7, 3 , 0.1];
-        Q_min = params.min_maxs(1); Q_max = params.min_maxs(2);
-        source_position_min = [params.min_maxs(3),params.min_maxs(5)];
-        source_position_max = [params.min_maxs(4),params.min_maxs(6)];
-        a_y_min = params.min_maxs(7); a_y_max = params.min_maxs(8);
-        b_y_min = params.min_maxs(9); b_y_max = params.min_maxs(10);
-        Q_nbins = params.nbins(1);
-        x_nbins = params.nbins(2);
-        y_nbins = params.nbins(3);
-        a_y_nbins = params.nbins(4);
-        b_y_nbins = params.nbins(5);
-        % obstacles
-        obstacles_x=[];
-        obstacles_y=[];
-        obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
-        obst_fileID = fopen(obst_file);
-        C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
-        for k=1:length(C{1,1})
-            obstacles_x(:,k) = [C{1,1}(k) , C{1,3}(k), C{1,3}(k) , C{1,1}(k)];
-            obstacles_y(:,k) = [C{1,2}(k) , C{1,2}(k), C{1,4}(k) , C{1,4}(k)];
-        end
+    % data :
+    positions = dlmread([folder_name_k4, '/goal_position.csv']); %position_history
+    positions(:,4) = 0;
+    %positions_history = dlmread([folder_name_k4, '/position_history.csv']); 
+    trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
+    trajectory(:,4) = 0;
+    trajectory = [positions(1,:); trajectory(1:end-1,:)];
+    measurements = dlmread([folder_name_k4, '/measurements.csv']); %measurement_history
+    position_history = dlmread([folder_name_pc, '/position_history.csv']); %position_history
+    measurement_history = dlmread([folder_name_pc, '/measurement_history.csv']); %measurement_history
+    entropy = dlmread([folder_name_pc, '/entropy.csv']);
+    expected_a_posteriori = dlmread([folder_name_pc, '/expected_a_posteriori.csv']);
+    max_a_posteriori = dlmread([folder_name_pc, '/max_a_posteriori.csv']);
+    if(isnan(expected_a_posteriori(end,2))), expected_a_posteriori(end,2) = max_a_posteriori(end,2); end
+    if(isnan(expected_a_posteriori(end,3))), expected_a_posteriori(end,3) = max_a_posteriori(end,3); end
+    % ground truth and other params
+    params = my_text2struct([folder_name_pc, '/param_log.csv']);
+    
+    source_postion_file_name = [folder_name_pc '/source_position.txt'];
+    source_file = fopen(source_postion_file_name, 'r');
+    source_real_position = fscanf(source_file,'%f %f');
+    source_real_position(3) = 0.1;
+    %source_real_position = params.source_position;
+    %source_real_position = [12.7, 3 , 0.1];
+    Q_min = params.min_maxs(1); Q_max = params.min_maxs(2);
+    source_position_min = [params.min_maxs(3),params.min_maxs(5)];
+    source_position_max = [params.min_maxs(4),params.min_maxs(6)];
+    a_y_min = params.min_maxs(7); a_y_max = params.min_maxs(8);
+    b_y_min = params.min_maxs(9); b_y_max = params.min_maxs(10);
+    Q_nbins = params.nbins(1);
+    x_nbins = params.nbins(2);
+    y_nbins = params.nbins(3);
+    a_y_nbins = params.nbins(4);
+    b_y_nbins = params.nbins(5);
+    % obstacles
+    obstacles_x=[];
+    obstacles_y=[];
+    % working from desktop
+    obst_file = [root_path '/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
+    obst_fileID = fopen(obst_file);
+    C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
+    for k=1:length(C{1,1})
+        obstacles_x(:,k) = [C{1,1}(k) , C{1,3}(k), C{1,3}(k) , C{1,1}(k)];
+        obstacles_y(:,k) = [C{1,2}(k) , C{1,2}(k), C{1,4}(k) , C{1,4}(k)];
+    end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Mesurement points %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,8 +124,8 @@ for i=1:exp_number
         figure(f2all);
         axes0 = axes('Parent',f2all,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
         hold on;
-        scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName','Measurements','MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);
-        %scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth','showlegend', 'False', 0.05);
+        %scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName','Measurements','MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on
+        scatter3(position_history(:,2),position_history(:,3),position_history(:,4),15,measurement_history(:,2),'DisplayName','Measurements','MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
         plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',10,'LineWidth',2,'DisplayName','Source real position'); %real source position
         plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',10,'LineWidth',2,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
@@ -280,7 +292,7 @@ for i=1:exp_number
     % save
     saveas(f1all,[folder_name '/measurements_entropy.png']);
     saveas(f2all,[folder_name '/trajectory.png']);
-     saveas(f2all,[folder_name '/trajectory.svg']);
+    saveas(f2all,[folder_name '/trajectory.svg']);
     
     close(f1all); close(f2all);
 end

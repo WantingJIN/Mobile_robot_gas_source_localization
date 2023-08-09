@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 %general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Results/0803_test_concentration_clustering/1';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/0809_pdf_clustering_ratio_10/2';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -83,37 +83,37 @@ for i=1:size(pdf,1)
             cluster_num = cluster_bounding_boxes(i-1,1);
             if cluster_num > 0
                 for cluster_idx = 1 : cluster_num
-                    x1 = cluster_bounding_boxes(i-1, 2 + (cluster_idx-1)*4);
-                    y1 = cluster_bounding_boxes(i-1, 3 + (cluster_idx-1)*4);
-                    x2 = cluster_bounding_boxes(i-1, 4 + (cluster_idx-1)*4);
-                    y2 = cluster_bounding_boxes(i-1, 5 + (cluster_idx-1)*4);
+                    x1 = cluster_bounding_boxes(i-1, 3 + (cluster_idx-1)*4);
+                    y1 = cluster_bounding_boxes(i-1, 4 + (cluster_idx-1)*4);
+                    x2 = cluster_bounding_boxes(i-1, 5 + (cluster_idx-1)*4);
+                    y2 = cluster_bounding_boxes(i-1, 6 + (cluster_idx-1)*4);
                     rectangle('Position',[y1 x1 (y2-y1) (x2-x1)], 'EdgeColor',"#A2142F",'LineWidth',2)
                     hold on
                 end
             end
         end
     else
-        
+    if params.planning_strategy == 5
+        cluster_num = cluster_bounding_boxes(i,1);
+        ratio = cluster_bounding_boxes(i,2);
         gas_information_map_this_iteration = gas_information_map(i,1:end-1);
         max_gas = max(gas_information_map_this_iteration);
         min_gas = min(gas_information_map_this_iteration);
-        threshold = ((max_gas-min_gas)*0.5 +min_gas);
+        threshold = ((max_gas-min_gas)*ratio +min_gas);
         gas_information_map_this_iteration(gas_information_map_this_iteration < threshold) = 0;
         imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on
-        if params.planning_strategy == 5
-            cluster_num = cluster_bounding_boxes(i,1);
-            if cluster_num > 0
-                for cluster_idx = 1 : cluster_num
-                    x1 = cluster_bounding_boxes(i, 2 + (cluster_idx-1)*4);
-                    y1 = cluster_bounding_boxes(i, 3 + (cluster_idx-1)*4);
-                    x2 = cluster_bounding_boxes(i, 4 + (cluster_idx-1)*4);
-                    y2 = cluster_bounding_boxes(i, 5 + (cluster_idx-1)*4);
-                    rectangle('Position',[y1 x1 (y2-y1) (x2-x1)],'EdgeColor', "#A2142F",'LineWidth',2)
-                    hold on
-                end
+        if cluster_num > 0
+            for cluster_idx = 1 : cluster_num
+                x1 = cluster_bounding_boxes(i, 3 + (cluster_idx-1)*4);
+                y1 = cluster_bounding_boxes(i, 4 + (cluster_idx-1)*4);
+                x2 = cluster_bounding_boxes(i, 5 + (cluster_idx-1)*4);
+                y2 = cluster_bounding_boxes(i, 6 + (cluster_idx-1)*4);
+                rectangle('Position',[y1 x1 (y2-y1) (x2-x1)],'EdgeColor', "#A2142F",'LineWidth',2)
+                hold on
             end
         end
     end
+end
     plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
     hold on
     %rectplot = @(x1,y1,x2,y2) rectangle('Position',[x1 y1 x2 y2]);
@@ -147,7 +147,7 @@ for i=1:size(pdf,1)
     ax.TitleFontSizeMultiplier = 2;
     pause;
     drawnow
-%     saveas(f, [anim_folder,'/',num2str(i),'.png']);
+    %     saveas(f, [anim_folder,'/',num2str(i),'.png']);
 end
 close all
 %% show dispersion map

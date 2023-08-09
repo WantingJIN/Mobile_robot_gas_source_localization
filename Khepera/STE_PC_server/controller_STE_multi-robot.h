@@ -57,6 +57,7 @@ typedef enum visitedList{
 typedef enum infoFeature{
 	VARIANCE = 0,
 	MEAN = 1,
+	BELIEF = 2,
 }einfoFeature;
 
 // simulation paramters
@@ -72,6 +73,7 @@ struct simulation_parameters{
 	eGasFeature gasFeature;
 	eVisitedList visitedList;
 	einfoFeature infoFeature;
+	float cluster_entropy_ratio;
 };
 extern struct simulation_parameters simulation_parameters;
 
