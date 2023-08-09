@@ -519,40 +519,7 @@ bool position_outside_arena(Position p){
 	//if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
 }
-/*
-double posterior_predictive(double concentration, double position[][3]){ 
-	int i=0, j=0, l=0,m=0,n=0;
-	struct parameters_set source_param;
-	struct history fake_history = {1, {{0}}, {0}};
-	double predictive = 0;
-
-	for (i=0; i<x_nbins; i++){
-		for (j=0; j<y_nbins; j++){
-			//for (k=0; k<z_nbins; k++){
-				for (l=0; l<Q_nbins; l++){
-					for(m=0; m<a_y_nbins; m++){
-						for(n=0; n<b_y_nbins; n++){
-							source_param = (struct parameters_set) {(float)((Q_max-Q_min)*(2*l+1))/(float)(2*Q_nbins) + Q_min, {
-								(float)((source_x_max-source_x_min)*(2*i+1))/(float)(2*x_nbins) + source_x_min, 
-								(float)((source_y_max-source_y_min)*(2*j+1))/(float)(2*y_nbins) + source_y_min}, 
-								//(float)((source_z_max-source_z_min)*(2*k+1))/(float)(2*z_nbins) + source_z_min}, 
-								//(float)((a_y_max-a_y_min)*(2*m+1))/(float)(2*a_y_nbins) + a_y_min,
-								//(float)((b_y_max-b_y_min)*(2*n+1))/(float)(2*b_y_nbins) + b_y_min,
-								(float)((a_y_max-a_y_min)*(2*m+1))/(float)(2*a_y_nbins) + a_y_min,
-								(float)((b_y_max-b_y_min)*(2*n+1))/(float)(2*b_y_nbins) + b_y_min};
-								memcpy(fake_history.position, position, sizeof *position); fake_history.measurement[0] = concentration;
-							predictive += likelihood(fake_history, source_param) * posterior.pdf[i][j][l][m][n];
-
-						}
-					}
-				}
-			//}
-		}
-	}
-	return predictive;
-}
-*/
-void information_gain_navigation_approx(Position current_position){
+void information_gain_navigation_approx(){
 	float p0 = 0.5; //50 cm
 	double DKL=0, max_DKL=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
@@ -591,53 +558,28 @@ void information_gain_navigation_approx(Position current_position){
 			// printf("position : %f %f\n", tmp_position.x, tmp_position.y);
 			//printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 			if(position_outside_arena(tmp_position)) continue;
-			// //calculate the expected concentration on position
-			// // FIXME: possible bug here, we are caluculating the futhyre posterior with accumulated sampling fake history
-			// fake_history.measurement.push_back(plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
-			// std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
-			// fake_history.position.push_back(tmp_position);
-			// (fake_history.size)++;
-			// // printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
-			// // memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
-			// // future_posterior.sum = 0;
-			// // TODO: Improve the way regenrate fake plume; at least use the same plume model for different positions
-			// // TODO: Test the performance of the fake plume model
-			// DeepCFDPlumeModel2D plume_model_fake;
-			// Posterior future_posterior(&plume_model_fake, 0);
-			// //future_posterior.copy_posterior(zero);
-			// future_posterior.MCMC_evaluation(fake_history);
-			// //calculate the expected information gain
-			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// // printf("DKL: %f _______________________\n", DKL);
-			// if(DKL > max_DKL ){
-			// 	max_DKL = DKL;
-			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
-			// 	goal_position.y = tmp_position.y;
-			// 	goal_position.heading = 0;
-			// }
-            // fake_history.measurement.pop_back();
-			// fake_history.position.pop_back();
-			// fake_history.size--;
-			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			if(fake_concentration > max_meas){
-				max_meas = fake_concentration;
-				goal_position.x = tmp_position.x; 
+			//calculate the expected concentration on position
+			fake_history.measurement.push_back(plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
+			std::cout<<"fake_history.measurement = "<<fake_history.measurement[fake_history.size]<<std::endl;
+			fake_history.position.push_back(tmp_position);
+			(fake_history.size)++;
+			DeepCFDPlumeModel2D plume_model_fake;
+			Posterior future_posterior(&plume_model_fake, 0);
+			//future_posterior.copy_posterior(zero);
+			future_posterior.MCMC_evaluation(fake_history);
+			//calculate the expected information gain
+			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// printf("DKL: %f _______________________\n", DKL);
+			if(DKL > max_DKL ){
+				max_DKL = DKL;
+				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
-			}		
+			}
+            fake_history.measurement.pop_back();
+			fake_history.position.pop_back();
+			fake_history.size--;
 	}
-	// for(int i =- 1; i <= 1; i++){
-	// 	for (int j = -1; j <= 1; j++){
-	// 		tmp_position.x = current_position.x + i*p0;
-	//  		tmp_position.y = current_position.y + j*p0;
-	// 		if(!position_outside_arena(tmp_position)){
-	// 			goal_position.x = tmp_position.x ; // + (randu()-0.5)/5.0
-	// 			goal_position.y = tmp_position.y ;
-	// 			goal_position.heading = 0;
-	// 			break;
-	// 		}
-	// 	}
-	// }
 }
 /*
 void information_gain_navigation_predictive(){
@@ -808,6 +750,11 @@ void calculate_information_gain_with_variance(){
 		} else if (simulation_parameters.infoFeature == MEAN){
 			plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
 		}
+		if (simulation_parameters.infoFeature == BELIEF){
+			for (int i = 0; i< x_nbins*y_nbins; i++){
+				gas_information_map[i] = posterior.pdf[i];
+			}
+		}
 		log_gas_information_map();
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
@@ -868,7 +815,7 @@ void informative_max_variance_point_planning(){
 vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double gas_information_map[]){
 	// dbscan clustering
 	// param: x_eps, y_eps, minPts, ratio
-	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/6.0));
+	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/simulation_parameters.cluster_entropy_ratio));
 	dbscan.run(gas_information_map);
 	return dbscan.cluster_bounding_boxes;
 }
@@ -1377,33 +1324,6 @@ void state_estimating(){
 
 void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
-
-	//find the best point to move to 
-
-	// switch(simulation_parameters.scenario){
-	// 	case NO_COM_NO_COOR :
-	// 		information_gain_navigation_approx(current_position);
-	// 		// printf("goal position here 1 %f %f\n", goal_position.x, goal_position.y);
-    // 		//information_gain_navigation_predictive();
-    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    // 		DKL_MAP_distance(1.0);
-    // 		// printf("goal position here 2 %f %f\n", goal_position.x, goal_position.y);
-    // 		break;
-    // 	case COM_NO_COOR :
-    // 		information_gain_navigation_approx(current_position);
-    // 		//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-    // 		DKL_MAP_distance(0.75);
-    // 		break;
-	//     case COM_COOR :
-	//     	information_gain_navigation_approx(current_position);
-	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-	//     	//balance_exploration_exploitation(simulation_parameters.gloabl_local_search_ratio);
-	//     	DKL_MAP_distance(0.75);
-	//     	//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    // 		joint_planning();
-    // 		//printf("[%d] goal position %f %f \n", ID, goal_position[0], goal_position[1]);
-    // 		break;
-    // }
     switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
@@ -1426,6 +1346,10 @@ void state_updategoal(){
         calculate_information_gain_with_variance();
 		informative_clustering_planning();
 		break;
+	case INFORMATIVE_KLD:
+		information_gain_navigation_approx();
+		DKL_MAP_distance(0.75);
+	    break;
 	default:
 		break;
 	}

@@ -57,6 +57,7 @@ typedef enum planningStrategy{
 	RANDOM = 3,
 	LAWNMOWER = 4,
 	INFORMATIVE_CLUSTERING = 5,
+	INFORMATIVE_KLD = 6,
 }ePlanningStrategy;
 
 typedef enum gasFeature{
@@ -72,6 +73,7 @@ typedef enum visitedList{
 typedef enum infoFeature{
 	VARIANCE = 0,
 	MEAN = 1,
+	BELIEF = 2,
 }eInfoFeature;
 
 //parameters to estimate
@@ -101,6 +103,7 @@ struct simulation_parameters{
 	eVisitedList visitedList;
 	eInfoFeature infoFeature;
 	int sampling_period;
+	float cluster_entropy_ratio;
 };
 extern struct simulation_parameters simulation_parameters;
 
