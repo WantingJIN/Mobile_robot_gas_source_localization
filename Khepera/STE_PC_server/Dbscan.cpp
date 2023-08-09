@@ -62,27 +62,6 @@ void DBSCAN::expandCluster(CellPoint& cell, vector<int>& neighbors, int clusterI
             }
         }
 	printf("Exit expandCluster \n");
-	// std::stack<CellMeasurements> stack;
-    // stack.push(cell);
-    // cell.cluster_id = clusterId;
-
-    // while (!stack.empty()) {
-    //     CellMeasurements currentPoint = stack.top();
-    //     stack.pop();
-
-    //     // Find neighbors of the current point
-    //     std::vector<CellMeasurements> currentNeighbors = findNeighbors(currentPoint, cell_list);
-
-    //     // Check if the current point is a core point
-    //     if (currentNeighbors.size() >= minPoints) {
-    //         for (auto & neighbor : currentNeighbors) {
-    //             if (neighbor.cluster_id == -1) {
-    //                 neighbor.cluster_id = clusterId;
-    //                 stack.push(neighbor);
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 void DBSCAN::run(double information[]){
@@ -176,7 +155,7 @@ void DBSCAN::calculateBoundingBoxes(){
 
 void DBSCAN::logBoundingBoxes(){
 	char clustering_bounding_boxes_logfile_name[512];
-	sprintf(clustering_bounding_boxes_logfile_name, "/home/wjin/Workspace/continuous_STE/Results/current/101/clustering_bounding_boxes.csv");	
+	sprintf(clustering_bounding_boxes_logfile_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/log_STE_multi/clustering_bounding_boxes.csv");	
     FILE * clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
 	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
 	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++){

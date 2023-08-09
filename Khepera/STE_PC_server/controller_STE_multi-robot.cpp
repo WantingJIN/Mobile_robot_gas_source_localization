@@ -437,8 +437,7 @@ void log_experiment_time(){
 
 //ASSUMPTION : Using the history of measurements, but only one robot is operating
 double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose){ 
-	//float sigmaE = simulation_parameters.likelihood_error;
-	float sigmaE = 775;
+	float sigmaE = simulation_parameters.likelihood_error;
 	//float sigmaD = 250; //125;
 	double sum_tmp = 0;
 
@@ -721,7 +720,7 @@ void informative_max_variance_point_planning(){
 vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double gas_information_map[]){
 	// dbscan clustering
 	// param: x_eps, y_eps, minPts, ratio
-	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/6.0));
+	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0-posterior.entropy/15.0));
 	dbscan.run(gas_information_map);
 	return dbscan.cluster_bounding_boxes;
 }
@@ -742,6 +741,7 @@ void informative_clustering_planning(){
 			Position cell_center;
 			cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
 			cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
+			//printf("Cell center is (%f, %f)  \n", cell_center.x, cell_center.y);
 			double dist = dist_to_goal(cell_center);
 			if (dist < min_dist){
 				min_dist = dist;
@@ -758,6 +758,7 @@ void informative_clustering_planning(){
 		int min_dist_to_robot_index = 0;
 		int max_dist_to_robot_index = 0;
 		for (int i = 0; i < 4; i++){
+			//printf("vertex is (%f, %f)  \n", cluster_vertex[i].x, cluster_vertex[i].y);
 			double dist = dist_to_goal(cluster_vertex[i]);
 			if (dist < min_dist_to_robot){
 				min_dist_to_robot = dist;
@@ -1252,6 +1253,7 @@ int main(int argc, char **argv){
 	}
 	// final logs
 	log_history();
+	log_experiment_time();
 	cleaning_up();
 	//free the allocated memory to obstacle array
     for(int i = 0; i < nbr_obs; i++)

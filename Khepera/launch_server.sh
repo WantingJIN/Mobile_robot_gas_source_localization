@@ -13,6 +13,16 @@ echo $source_x $source_y > "/home/wanting/Workspace/kheperaodor/plume_model_lear
 # environment map
 # add the source position to the environment map to avoid collision with source location
 cp /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Env_map/test_map"$map".environment /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test_map.environment
+
+#delete last unfinished job
+result_folder_name="/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/log_STE_multi/"  # the folder to store the result for experiment that not finish
+if [ -d "$result_folder_name" ]; then
+    echo "Folder exists. Delete"
+    rm -r "$result_folder_name"
+    echo "Folder deleted successfully."
+else
+    echo "Folder does not exist."
+fi
 # MarginY=0.2
 # MarginX=0.05
 # MINX=`echo $source_x - $MarginX | bc`
