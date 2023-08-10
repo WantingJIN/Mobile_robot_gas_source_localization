@@ -60,8 +60,14 @@ typedef enum infoFeature{
 	BELIEF = 2,
 }einfoFeature;
 
+typedef enum workingMode{
+	OFFLINE = 0,
+	EXPERIMENT = 1,
+}eworkingMode;
+
 // simulation paramters
 struct simulation_parameters{
+	eworkingMode workingMode;
 	float likelihood_error;
 	float gloabl_local_search_ratio;
 	int MCMC_iteration_num;

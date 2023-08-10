@@ -68,6 +68,8 @@ FILE* experiment_measurements_logfile;
 char experiment_measurements_logfile_name[300];
 FILE* experiment_position_logfile;
 char experiment_position_logfile_name[300];
+FILE* experiment_goalposition_logfile;
+char experiment_goalposition_logfile_name[300];
 
 char scan_folder_name[256];
 FILE* scan_measurements_logfile;
@@ -1032,10 +1034,9 @@ void state_estimating(){
 		//the end
 		FSM.state = STATE_FINISHED;
 		end_timestamp = get_exp_time();
-	}else{
+	} else {
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
-			
 	}
 }
 
@@ -1061,24 +1062,34 @@ void state_updategoal(){
     goal_outside_obstacles(&goal_position);
 
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+	switch(simulation_parameters.workingMode){
+		case EXPERIMENT:
+			//send the goal to the supervisor
+			Message msg(ID, 0, goal_position, -1, goal_position, 0);
+			send_msg(msg);
 
+			// send message to client
+			double g_buffer[2] = {0};
+			int timeout = 10;
+			int success = -1;
 
-    //send the goal to the supervisor
-    Message msg(ID, 0, goal_position, -1, goal_position, 0);
-    send_msg(msg);
+			//send the message
+			send_goal_to_robot(goal_position.x, goal_position.y);
+			time_before_moving_and_measuring = get_exp_time();
 
-    // send message to client
-    double g_buffer[2] = {0};
-	int timeout = 10;
-	int success = -1;
+			//move to listen
+			FSM.state = STATE_LISTEN;
+			FSM.hook = state_listen;
+			break;
+		case OFFLINE:
+			FSM.state = STATE_READ;
+			FSM.hook  = state_read;
+			break;
+		default:
+			break;
+	}
 
-	//send the message
-	send_goal_to_robot(goal_position.x, goal_position.y);
-	time_before_moving_and_measuring = get_exp_time();
-
-	//move to listen
-	FSM.state = STATE_LISTEN;
-	FSM.hook = state_listen;
+    
 	 
 } 
 
@@ -1138,45 +1149,46 @@ void state_read(){
 	unsigned long t;
 	char line[256];
 
-	// NOTE Read from an experiment
-	if (history.size < 7){
-		fscanf(experiment_measurements_logfile, "%d, %f %f", &d, &f1, &f2);
-    history.size = d;
-	history.measurement_avg[history.size] = f1;
-	if (history.measurement_avg[history.size] < 0) history.measurement_avg[history.size]=0;
-	history.measurement_std[history.size] = f2;
-	//history.measurement_std[history.size] = 0;
+    // Read the goal position
+	if (!feof(experiment_measurements_logfile) && !feof(experiment_position_logfile) && !feof(experiment_goal_logfile)){
+		fscanf(experiment_goal_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3, &t);
+		goal_position.x = f1;
+		goal_position.y = f2;
+		goal_position.heading = 0;
 
-	fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
-	history.position[history.size].x = f1;
-	history.position[history.size].y = f2;
-    
-	if (simulation_parameters.visitedList == visitedList_ON) {
-		int pos_coord[2];
-		pos_coord[0] =  floor((f1 - source_x_min) / x_resol);
-		pos_coord[1] =  floor((f2 - source_y_min) / y_resol);
-		int idx = posterior.indices_to_index(pos_coord);
-		cell_visited_list[idx] = 1;
-	}
+		while (dist_to_goal(goal_position) > 0.05){
+			fscanf(experiment_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2);
+			history.size ++;
+			history.measurement_avg.push_back(f1);
+			history.measurement_std.push_back(f2);
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
+			history.position.push_back({f1, f2, f3});
+			current_position.x = f1;
+			current_position.y = f2;
+			current_position.heading = f3;
+		}
 
+		// NOTE Read from a scan
+		// printf("I am here \n");
+		// fscanf(scan_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f4);
+		// history.size ++;
+		// history.measurement_avg[history.size] = f2;
+		// if (history.measurement_avg[history.size] < 0.0)
+		// 	history.measurement_avg[history.size] = 0.0;
+		// history.measurement_std[history.size] = 0.0;
 
-	// NOTE Read from a scan
-	// printf("I am here \n");
-	// fscanf(scan_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f4);
-	// history.size ++;
-	// history.measurement_avg[history.size] = f2;
-	// if (history.measurement_avg[history.size] < 0.0)
-	// 	history.measurement_avg[history.size] = 0.0;
-	// history.measurement_std[history.size] = 0.0;
+		// fscanf(scan_position_logfile, "%d, %f, %f, %f, %f", &d, &f1, &f2, &f3, &f4);
+		// history.position[history.size].x = f1;
+		// history.position[history.size].y = f2;
 
-	// fscanf(scan_position_logfile, "%d, %f, %f, %f, %f", &d, &f1, &f2, &f3, &f4);
-	// history.position[history.size].x = f1;
-	// history.position[history.size].y = f2;
+		// // Move to estimating
+		history_print(history);
+		FSM.state = STATE_ESTIMATING;
+		FSM.hook = state_estimating;
 
-    // // Move to estimating
-     history_print(history);
-     FSM.state = STATE_ESTIMATING;
-     FSM.hook = state_estimating;
+	} else{
+		printf("End of experiment measurements file\n");
+		FSM.state = STATE_FINISHED;
 
 	}
 	
@@ -1192,9 +1204,10 @@ int main(int argc, char **argv){
 	//CPyInstance hInstance;
 
 	init();
-	
-	init_TCP_socket();
-	printf("finish init TCP. \n");
+	if (simulation_parameters.workingMode == EXPERIMENT){
+		init_TCP_socket();
+		printf("finish init TCP. \n");
+	}
 
 	read_obstacle_list();
 

@@ -77,6 +77,8 @@ extern char experiment_time_logfile_name[512];
 extern char logfile_folder_name[256];
 extern FILE* experiment_measurements_logfile;
 extern char experiment_measurements_logfile_name[300];
+extern FILE* experiment_goalposition_logfile;
+extern char experiment_goalposition_logfile_name[300];
 extern FILE* experiment_position_logfile;
 extern char experiment_position_logfile_name[300];
 // read scan file

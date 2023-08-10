@@ -13,11 +13,21 @@ void init(){
 	
 	// seed the RNG
 	srand(time(NULL));
-
-	//set the state to wait for stationary plume
-	FSM.state = STATE_LISTEN;
-	FSM.hook  = state_listen;
-	
+    
+	switch (simulation_parameters.workingMode){
+		case EXPERIMENT:
+			//set the state to wait for stationary plume
+			FSM.state = STATE_LISTEN;
+			FSM.hook  = state_listen;
+			break;
+		case OFFLINE:
+			//read position and measurement from log files
+			FSM.state = STATE_READ;
+			FSM.hook  = state_read;
+			break;
+		default:
+			break;
+	}
 	
 	FSM.n_cycles = 0;
 
@@ -43,6 +53,7 @@ void init(){
     sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/2/2022-09-11_21-55");
 	sprintf(experiment_measurements_logfile_name, "%s/k4/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/k4/position_history.csv", logfile_folder_name);
+	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
 
     sprintf(scan_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/log_K4_scan_map5_11_2");
 	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
@@ -73,11 +84,12 @@ void init(){
 
     // get the configuration
     //default values for the simulation parameters
+	// 0. workingMode(OFFLINE or EXPERIMENT)
 	// 1. likelihood_error; 2.gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; //1 for MCMC, 0 for exhaustive evaluation
 	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List; 11. information feature 12. cluster_entropy_ratio
 	// 13. measurement_error
-	//                                                      1.   2.   3.   4. 5. 6. 7. 8.                      9.             10.             11.      12.   13.
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_OFF, BELIEF, 10.0, 0};
+	//                                                      0.       1.   2.   3.   4. 5. 6. 7. 8.                      9.             10.             11.      12.   13.
+    simulation_parameters = (struct simulation_parameters) {OFFLINE, 775, 0.5, 100, 1, 1, 0, 0, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_OFF, BELIEF, 10.0, 0};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -124,7 +136,13 @@ void init(){
        ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
        if(ok) printf("map number : %d\n", simulation_parameters.map_nbr);
        fclose(sim_param_file);
-   }
+    }
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/working_mode.txt", F_OK) != -1 ){
+       sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/working_mode.txt", "r");
+       ok = fscanf(sim_param_file, "%d", &simulation_parameters.workingMode);
+       if(ok) printf("working mode : %d\n", simulation_parameters.workingMode);
+       fclose(sim_param_file);
+    }
 
 	printf("Number of robots : %d - scenario : %d \n", simulation_parameters.number_of_robots, simulation_parameters.scenario);
 
