@@ -1031,7 +1031,7 @@ void goal_outside_obstacles(Position * goal){
 				//if so, then check if that position is not in another obstacle and it's inside the arena
 				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
 				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
-				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
+				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
