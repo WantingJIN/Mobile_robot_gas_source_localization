@@ -438,7 +438,7 @@ void log_experiment_time(){
 //ASSUMPTION : Using the history of measurements, but only one robot is operating
 double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose){ 
 	float sigmaE = simulation_parameters.likelihood_error;
-	//float sigmaD = 250; //125;
+	float sigmaD = simulation_parameters.measurement_error; //125;
 	double sum_tmp = 0;
 
 	double true_source_location[2] = {11.0,1.0};
@@ -463,7 +463,6 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 		// if (sigmaD > 125){
 		// 	sigmaD = 125;
 		// }
-		float sigmaD = 0;
 		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 		if (verbose){
 			//printf("Parameters is : %f, %f\n", parameters[0], parameters[1]);
@@ -758,22 +757,15 @@ void informative_clustering_planning(){
 									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
 									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
 		// find the vertex of the cluster with the shortest and largest distance to robot
-		double min_dist_to_robot = 100;
 		double max_dist_to_robot = 0;
-		int min_dist_to_robot_index = 0;
 		int max_dist_to_robot_index = 0;
 		for (int i = 0; i < 4; i++){
-			//printf("vertex is (%f, %f)  \n", cluster_vertex[i].x, cluster_vertex[i].y);
 			double dist = dist_to_goal(cluster_vertex[i]);
-			if (dist < min_dist_to_robot){
-				min_dist_to_robot = dist;
-				min_dist_to_robot_index = i;
-			}
 			if (dist > max_dist_to_robot){
 				max_dist_to_robot = dist;
 				max_dist_to_robot_index = i;
 			}
-		}							
+		}
         goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
 		goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
         goal_position.heading = 0;
@@ -941,7 +933,7 @@ void goal_outside_obstacles(Position * goal){
 			//printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
 				// printf(">>> best sor far\n");
-				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
+				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
@@ -1110,10 +1102,13 @@ void state_listen(){
 			if(success_recv_meas > 0){
 				printf("received Gas value %f: (%f, %f) %f +- %f\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]); 
 				// save in history
-				history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
-				history.measurement_avg.push_back(buffer[3]);
-				history.measurement_std.push_back(buffer[4]);
-				history.size++;
+				if (!position_outside_arena({float(buffer[1]), float(buffer[2]), 0})){
+					history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
+					history.measurement_avg.push_back(buffer[3]);
+					history.measurement_std.push_back(buffer[4]);
+					history.size++;
+				}
+				
 				// check if all was received so far
 				if(history.size != buffer[0] + 1){
 					printf("Something wrong in history...\n");
