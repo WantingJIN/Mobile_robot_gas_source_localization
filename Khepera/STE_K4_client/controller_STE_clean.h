@@ -130,6 +130,7 @@ struct simulation_parameters{
 	eProcessingMode processingMode; 
 	eSensorCalibration sensorCalibration;
 	int sampling_period;
+	int wheel_speed;
 };
 extern struct simulation_parameters simulation_parameters;
 

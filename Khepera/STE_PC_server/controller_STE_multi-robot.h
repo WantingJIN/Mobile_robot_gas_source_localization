@@ -74,6 +74,7 @@ struct simulation_parameters{
 	eVisitedList visitedList;
 	einfoFeature infoFeature;
 	float cluster_entropy_ratio;
+	float measurement_error;
 };
 extern struct simulation_parameters simulation_parameters;
 
