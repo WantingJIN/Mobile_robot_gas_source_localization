@@ -1064,6 +1064,7 @@ void state_updategoal(){
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	switch(simulation_parameters.workingMode){
 		case EXPERIMENT:
+		{
 			//send the goal to the supervisor
 			Message msg(ID, 0, goal_position, -1, goal_position, 0);
 			send_msg(msg);
@@ -1081,6 +1082,9 @@ void state_updategoal(){
 			FSM.state = STATE_LISTEN;
 			FSM.hook = state_listen;
 			break;
+
+		}
+			
 		case OFFLINE:
 			FSM.state = STATE_READ;
 			FSM.hook  = state_read;
@@ -1144,20 +1148,22 @@ void state_listen(){
 }
 
 void state_read(){
+	printf("Enter state read\n");
     int d;
 	float f1, f2, f3, f4; 
-	unsigned long t;
+    double t;
 	char line[256];
 
     // Read the goal position
-	if (!feof(experiment_measurements_logfile) && !feof(experiment_position_logfile) && !feof(experiment_goal_logfile)){
-		fscanf(experiment_goal_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3, &t);
+	if (!feof(experiment_goalposition_logfile)){
+		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
 		goal_position.x = f1;
 		goal_position.y = f2;
 		goal_position.heading = 0;
+		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
 		while (dist_to_goal(goal_position) > 0.05){
-			fscanf(experiment_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2);
+			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f1, &f2);
 			history.size ++;
 			history.measurement_avg.push_back(f1);
 			history.measurement_std.push_back(f2);
@@ -1182,7 +1188,7 @@ void state_read(){
 		// history.position[history.size].y = f2;
 
 		// // Move to estimating
-		history_print(history);
+		//history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook = state_estimating;
 
@@ -1234,30 +1240,6 @@ int main(int argc, char **argv){
 	// main loop
 	while (FSM.state != STATE_FINISHED){
 		start_timestamp = get_exp_time();
-		//update_position();
-		//if we are not stopped to sample, let's log the trajectory
-		/*if(speed[0]!=0 && speed[1]!=0){
-			log_trajectory();
-		}*/
-		//send info (current position and goal position) to friends for joint planning
-		/*if(simulation_parameters.scenario == COM_COOR){
-			// if a robot is already sampling (i.e. STATE_MEASURING), its goal should not be swapped with anyone. Therefore we send 0 as goal and current position
-			if(FSM.state == STATE_MEASURING){
-				Position tmp;
-				Message msg(ID, 1, tmp, sampleBuffer.average_concentration, tmp, 1);
-				send_msg(msg);
-			}else{
-				Message msg(ID, 1, current_position, sampleBuffer.average_concentration, goal_position, 1);
-				//printf("[%d] I am sendig my position %f %f %f and my goal %f %f %f\n", msg.sender_ID, msg.position[0],msg.position[1], msg.position[2], msg.goal[0],msg.goal[1],msg.goal[2]);
-    			send_msg(msg);
-    		}
-    	}
-		//receive info from colleagues for joint planning and history
-		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-			//printf("Robot %d has %d unread messages! \n", ID, wb_receiver_get_queue_length(receiver));
-			receive_from_friends();
-			//printf("[%d] my history size is %d\n", ID, history.size);
-		}*/
 	   	//change state
     	FSM.hook();
     	//next
