@@ -39,7 +39,7 @@ def DeepCFD_output_eval(sx, sy, lpx, lpy):
 	else:
 		# make the input tensors using sx sy
 		# mat_x = sio.loadmat('/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/training_set_map1/dataset_mat/input_stationary_channels.mat')
-		adr = "/home/wjin/Workspace/continuous_STE/Results/test_maps/map{}/test_map{}_flowdef_sdf_emptysourcepos.mat".format(m,m)
+		adr = "/home/wjin/Workspace/continuous_STE/Results/test_maps/map{}/test_map{}_flowdef_sdf_sourcepos.mat".format(m,m)
 		mat_x = sio.loadmat(adr)
 		array_x = mat_x.get('py_x')
 		double_x = torch.from_numpy(array_x)

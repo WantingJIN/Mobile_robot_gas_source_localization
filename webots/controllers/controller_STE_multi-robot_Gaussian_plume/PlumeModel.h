@@ -6,7 +6,24 @@
 #include <vector>
 #include "Position.h"
 #include <Python.h>
-#include "pyhelper.hpp"
+
+#include <torch/script.h> // One-stop header.
+#include <torch/torch.h>
+
+//#include <numpy/ndarrayobject.h>
+#include <fstream>
+#include <string>
+
+#include <iostream>
+#include <memory>
+//#include <opencv2/opencv.hpp>
+#include <matio.h>
+#include <cmath>
+#include "CellMeasurements.h"
+#include "GasDispersionMap.h"	
+//#include <Eigen/Dense>
+
+//#include "pyhelper.hpp"
 using namespace std;
 
 #define PI 	3.14159265358979
@@ -53,8 +70,8 @@ public:
 
 	//function that returns concentration using parameters
 	virtual double concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
-	virtual void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg,vector<vector<float>> &c_std) = 0;
-	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg) = 0;
+	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
+	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
@@ -65,6 +82,12 @@ public:
 
 	virtual int get_source_position_params_nbr() = 0;
 	virtual void get_source_position_params(parameter * source_position_param_list) = 0;
+	//virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
+	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
+	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
+	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
+	virtual void log_gas_concentration_map(char* filename, char writing_mode) = 0;
+	
 	void random_params(double * random_params);
 
 	void get_expected_value(double* container);
@@ -91,8 +114,8 @@ public:
 
     //returns concentration for a set of parameters and a position
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg, vector<vector<float>> &c_std);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
+	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 
@@ -102,6 +125,11 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
+
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
+	void log_gas_concentration_map(char* filename, char writing_mode);
 };
 
 
@@ -132,6 +160,11 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
+
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
+	void log_gas_concentration_map(char* filename, char writing_mode);
 };
 
 
@@ -150,11 +183,33 @@ public:
 
     //destructor
     ~DeepCFDPlumeModel2D();
+    
+	//model
+	torch::Device device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;;
+	torch::jit::script::Module DeepCFD;
 
-    //returns concentration for a set of parameters and a position
+	//load pytorch model
+    void initialize_model_features();
+
+	//feature
+	torch::Tensor x;
+	torch::Tensor r_torch;
+	torch::Tensor c_torch;
+	vector<GasDispersionMap> gas_con_map_list;
+	vector<CellMeasurements> cell_lists;
+
+	// resturns gas concentration map for a set of parameters
+	void initialize_gas_concentration_map_list();
+	void initialize_cell_measurement_list();
+	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
+    void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
+	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], vector<vector<float>> &c_avg, vector<vector<float>> &c_std);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<vector<float>> &c_avg);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
+	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 
@@ -165,6 +220,7 @@ public:
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
 	//void random_params(double * random_params);
+	void log_gas_concentration_map(char* filename, char writing_mode);
 };
 
 #endif

@@ -1,8 +1,5 @@
-#ifndef CONTROLLER_STE_CLEAN_H
-#define CONTROLLER_STE_CLEAN_H
-
-
-
+#ifndef CONTROLLER_STE_MULTI_ROBOT_H
+#define CONTROLLER_STE_MULTI_ROBOT_H
 
 //C libraries
 #include <assert.h>
@@ -11,7 +8,7 @@
 #include <stdlib.h> //srand
 #include <sys/stat.h> // mkdir
 #include <sys/time.h>
-#include <time.h> //time
+#include <time.h> //time 
 #include <string.h>
 #include <unistd.h>
 #include <iostream>
@@ -22,75 +19,62 @@
 #include "PlumeModel.h"
 #include "SampleBuffer.h"
 #include "Position.h"
-
-
-//Constant variables
-#define BOUND(x, a, b) (((x)<(a))?(a):((x)>(b))?(b):(x))
-#define PI 					3.14159265358979
-#define TIME_STEP 			64 //adjusts the speed (ms)
-#define SAFETY_MARGIN 		.2 // how far in meters are you ready to approach the walls
-#define WHEEL_RADIUS	        0.021  	//K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
-#define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
-#define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	50 
-#define N_CONCENTRATION_LEVEL 4
-#define MAX_SPEED 			47.61 //K3: 35748.4
-#define SENSOR_NUMBER  		8
-#define MAX_NB_ROBOTS          	3
-//wind tunnel boundaries
-#define XMIN 3.0
-#define YMIN 0.16
-//#define ZMIN 0.1
-#define XMAX 12.5
-#define YMAX 3.8
-//#define ZMAX 1.9
-// min and max for each parameter
-#define Q_min  1.0
-#define Q_max  101.0
-#define source_x_min  2.75
-#define source_y_min  0.0
-//#define source_z_min  0
-#define source_x_max  12.75
-#define source_y_max  4.0
-//#define source_z_max  2
-#define a_y_min  0.01
-#define a_y_max  0.05
-#define b_y_min  0.01
-#define b_y_max  0.05
-//#define a_z_min  0.01
-//#define a_z_max  0.05
-//#define b_z_min  0.1
-//#define b_z_max  0.5
-// number of bins for posterior PDF
-#define Q_nbins 	20 //(Q_max - Q_min) /20
-#define x_nbins 	20 //(source_x_max - source_x_min)/0.1 //0.1 m is the granuality
-#define y_nbins 	20 //(source_y_max - source_y_min)/0.1 //0.1 m is the granuality
-//#define z_nbins 	10 //(source_z_max - source_z_min)/0.1 //0.1 m is the granuality
-#define a_y_nbins 	10 //(a_y_max - a_y_min) / 0.0025
-#define b_y_nbins 	10 //(b_y_max - b_y_min) / 0.025
-//#define a_z_nbins 	10 //(a_z_max - a_z_min) / 0.0025
-//#define b_z_nbins 	10 //(b_z_max - b_z_min) / 0.025
-//resolution of the estimated terms
-#define Q_resol    (Q_max-Q_min)/Q_nbins
-#define x_resol    (source_x_max-source_x_min)/x_nbins
-#define y_resol    (source_y_max-source_y_min)/y_nbins
-#define a_y_resol  (a_y_max-a_y_min)/a_y_nbins
-#define b_y_resol  (b_y_max-b_y_min)/b_y_nbins
-#define MAX_DISTANCE 10.77 //from (2.75,0) to (12.75,4)
-
-#define VERBOSE 		1
-
-#define NO_COM_NO_COOR	0
-#define COM_NO_COOR		1
-#define COM_COOR 		2
-#define SCENARIO 		NO_COM_NO_COOR
-
-#define TIMEOUT         1000*1000 // miliseconds
+#include "gasMap2D.h"
+#include "Constant.h"
+#include "Dbscan.h"
 
 extern int nbr_obs;
 extern float margin;
 extern float ** obstacles;
 // extern float obstacles[][4];
+
+// Mode of sampling 
+typedef enum samplingMode {
+	CONTINOUS_SAMPLING = 0,
+	STOP_AND_GO_SAMPLING = 1,
+	SENSE_WITHOUT_STOP = 2,
+}eSamplingMode;
+
+// Mode of Processing; 
+// in order to composente the slow reaction/recovery time of sensing
+typedef enum processingMode {
+	NO_PROCESSING = 0,
+	KERNEL_MAPPING = 1,
+	REVERSE_SENSOR_MODEL = 2,
+	MAPPING_AND_REVERSE_SENSOR_MODEL = 3,
+}eProcessingMode;
+
+typedef enum gasSensor{
+	PID = 0,
+	MOX = 1,
+	NOISY_MOX = 2,
+}eGasSensor;
+
+typedef enum planningStrategy{
+	GREEDY = 0,
+	INFORMATIVE = 1,
+	BALANCE_MAXIMAL_EXPECTED = 2,
+	RANDOM = 3,
+	LAWNMOWER = 4,
+	INFORMATIVE_CLUSTERING = 5,
+	INFORMATIVE_KLD = 6,
+}ePlanningStrategy;
+
+typedef enum gasFeature{
+	CONCENTRATION = 0,
+	GASHIT = 1,
+}eGasFeature;
+
+typedef enum visitedList{
+	visitedList_ON = 0,
+	visitedList_OFF = 1,
+}eVisitedList;
+
+typedef enum infoFeature{
+	VARIANCE = 0,
+	MEAN = 1,
+	BELIEF = 2,
+}eInfoFeature;
 
 //parameters to estimate
 struct parameters_set{
@@ -111,6 +95,15 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
+	eSamplingMode samplingMode;
+	eProcessingMode processingMode;
+	eGasSensor gasSensor;
+	ePlanningStrategy planningStrategy;
+	eGasFeature gasFeature;
+	eVisitedList visitedList;
+	eInfoFeature infoFeature;
+	int sampling_period;
+	float cluster_entropy_ratio;
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -137,8 +130,11 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
-	Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	//Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	//double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	vector<Position> position;
+	vector<double> measurement;
+	vector<int> gas_hit_event;
 };
 
 // message structure
@@ -164,8 +160,12 @@ void state_moving();
 void state_waiting();
 void state_obstacle_avoidance();
 
+//planning strategy
+void informative_path_planning_based_on_variance();
+
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model);
+double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();
@@ -178,5 +178,8 @@ void goal_outside_obstacles(Position * goal);
 int obstacle_or_not();
 void do_odometry();
 
+// calculate the Gaussian distribution of the history and the CDF of the data
+double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
+void calculate_history_distribution(struct history history, double &mean, double &stddev);
 
 #endif

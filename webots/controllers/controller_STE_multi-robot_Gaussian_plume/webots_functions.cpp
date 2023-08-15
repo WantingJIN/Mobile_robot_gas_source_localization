@@ -1,5 +1,5 @@
 #include "webots_functions.h"
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 
 
 //webots libraries
@@ -14,6 +14,8 @@ WbDeviceTag infrared_sensors[12];
 WbDeviceTag left_motor, right_motor;
 
 long long start_time;
+
+double previous_sensor_value;
 
 void init(){
 	if(VERBOSE) printf("initialization\n");
@@ -87,7 +89,8 @@ void init(){
 	FSM.hook  = state_waiting;
 	FSM.n_cycles = 0;
 
-	
+	// previous reading initialization 
+	previous_sensor_value = 0.0;
 
 	//initialize the current position
 	get_gps_position(&current_position);
@@ -118,6 +121,10 @@ void init(){
     sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
     sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
+	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
+	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+    sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
+	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
@@ -132,11 +139,31 @@ void init(){
     fclose(entropy_logfile);
     trajectory_logfile = fopen(trajectory_logfile_name, "w");
     fclose(trajectory_logfile);
+	gas_concentration_map_logfile = fopen(gas_concentration_map_logfile_name, "w");
+	fclose(gas_concentration_map_logfile);
+	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "w");
+	fclose(gas_information_map_logfile);
+	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
+	fclose(gas_hit_variance_map_logfile);
+	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
+	fclose(experiment_time_logfile);
 
     // get the configuration
     //default values for the simulation parameters
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0};
-
+	//1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; 
+	//5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
+	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
+	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.      11.                   12.         13.           14.       15.  16.
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, GREEDY, CONCENTRATION, visitedList_ON, BELIEF, 10, 6};
+    
+	// cell_measurements each_cell;
+	// for (int i = 0; i <plume_model.x_bins; i++){
+	// 	for (int j = 0; j <plume_model.y_bins; j++){
+	// 		each_cell.idx = i;
+	// 		each_cell.idy = j;
+	// 		cell_measurements_list.push_back(each_cell);
+	// 	}
+	// }
 	//read simulation parameters
 	FILE* sim_param_file;
 	int ok = 0;
@@ -176,6 +203,19 @@ void init(){
 		if(ok) printf("scenario : %d\n", simulation_parameters.scenario);
 		fclose(sim_param_file);
 	}
+
+	if(access("../../data/simulation_parameters/sampling_period.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/sampling_period.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &simulation_parameters.sampling_period);
+		if(ok) printf("sampling_period : %d\n", simulation_parameters.sampling_period);
+		fclose(sim_param_file);
+	}
+	if(access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
+		ok = fscanf(sim_param_file, "%f", &simulation_parameters.cluster_entropy_ratio);
+		if(ok) printf("cluster_entropy_ratio : %f\n", simulation_parameters.cluster_entropy_ratio);
+		fclose(sim_param_file);
+	}
 	if(access("../../data/map_nbr.txt", F_OK) != -1 ){
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
@@ -194,6 +234,16 @@ void init(){
 	fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
+	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
+	fprintf(sim_param_file, "data_processing_mode %d\n", simulation_parameters.processingMode);
+	fprintf(sim_param_file, "gas_sensor_type %d\n", simulation_parameters.gasSensor);
+	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
+	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
+	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
+	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
+	fprintf(sim_param_file, "sampling_period %d\n", simulation_parameters.sampling_period);
+	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){
@@ -202,16 +252,64 @@ void init(){
 	}
 }
 
-double odor_read(){
-	double odor_sample=0;
+/* Return value
+ * sensor_reading: the reading of the sensor (by taking into account the sensor model)
+ * odor_concentration: the concentration of the odor at the robot's position (ground truth)
+ */
+
+void odor_read(double *sensor_reading, double &odor_concentration){
 	while (wb_receiver_get_queue_length(odor_tag) > 0) {
 		assert(wb_receiver_get_data_size(odor_tag) == sizeof(double));
-		odor_sample = *(const double *)wb_receiver_get_data(odor_tag);
+		odor_concentration = *(const double *)wb_receiver_get_data(odor_tag);
 		wb_receiver_next_packet(odor_tag);
 	}
-	//printf("odor measurement : %f \n",odor_measurement);
-	return odor_sample;
+	if (sensor_reading !=nullptr){
+		//printf("odor measurement : %f \n",odor_measurement);
+		// For PID sensor, the sensor reading is equal to the odor concentration
+		if (simulation_parameters.gasSensor == PID){
+			*sensor_reading = odor_concentration;
+		}
+        // For the MOX sensor, the sensor properties are modeled as a first-order system
+		if (simulation_parameters.gasSensor == MOX){
+			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double tau_r = 1.3; // time constant for the rise
+			double tau_d = 2.0; // time constant for the decay
+			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
+			// where wc is the cut-off frequency and Ts is the sampling period
+			double alpha;
+			if (odor_concentration > previous_sensor_value)   //rising phase
+				alpha = Ts / (tau_r + Ts);
+			else                                       //decaying phase
+				alpha = Ts / (tau_d + Ts);
+			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
+			previous_sensor_value = *sensor_reading;
+		}
+		if (simulation_parameters.gasSensor == NOISY_MOX){
+			double Ts = TIME_STEP / 1000.0; // sampling frequency
+			double tau_r = 1.3; // time constant for the rise
+			double tau_d = 2.0; // time constant for the decay
+			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
+			// where wc is the cut-off frequency and Ts is the sampling period
+			double alpha;
+			if (odor_concentration > previous_sensor_value)   //rising phase
+				alpha = Ts / (tau_r + Ts);
+			else                                       //decaying phase
+				alpha = Ts / (tau_d + Ts);
+			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
+			previous_sensor_value = *sensor_reading;
+
+			// add some random noise to the sensor reading
+			//define the sensor noise as a Gaussian distribution with mean 0 and variance 100
+			double mean = 0.0;
+			double variance = 10000;
+			double sensor_noise = generateGaussianNoise(mean, variance);
+			*sensor_reading += sensor_noise;
+			if (*sensor_reading < 0)
+				*sensor_reading = 0;
+		}
+	}
 }
+
 
 void wind_read(double* intensity, double* angle){
 	struct vect3D{
@@ -558,4 +656,11 @@ void next_iteration_time(){
 	//check for timeout
 	// if(current_timestamp()-start_time > TIMEOUT)
 	// 	FSM.state = STATE_FINISHED;
+}
+
+double generateGaussianNoise(double mean, double variance) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::normal_distribution<double> dist(mean, std::sqrt(variance));
+    return dist(gen);
 }
