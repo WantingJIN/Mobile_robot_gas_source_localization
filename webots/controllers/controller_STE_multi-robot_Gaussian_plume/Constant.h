@@ -24,8 +24,8 @@
 
 //#define ZMAX 1.9
 // min and max for each parameter
-#define Q_min  1.0
-#define Q_max  20.0
+#define Q_min  80.0
+#define Q_max  101.0
 #define source_x_min  3.0
 #define source_y_min  0.0
 //#define source_z_min  0
