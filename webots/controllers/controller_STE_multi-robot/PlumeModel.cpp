@@ -198,6 +198,7 @@ void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_c
 void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 void GaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
+void GaussianPlumeModel2D::initialize_information_matrix(){}
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
 /********************************************************/
@@ -363,6 +364,7 @@ void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::log_gas_concentration_map(char* filename, char writing_mode){}
+void NNGaussianPlumeModel2D::initialize_information_matrix(){}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -396,12 +398,6 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(){
 
 	//initialize the trained neural network
 	initialize_model_features();
-
-	//initialize the dispersion map list
-	initialize_gas_concentration_map_list();
-
-	//initialize the cell measurements list
-	initialize_cell_measurement_list();
 }
 
 DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D & another_model){
@@ -427,6 +423,14 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D(){
 	delete[] expected_value;
 	delete[] max_a_post_value;
 	delete[] covar_sig_ii;
+}
+
+void DeepCFDPlumeModel2D::initialize_information_matrix(){
+    //initialize the dispersion map list
+	initialize_gas_concentration_map_list();
+
+	//initialize the cell measurements list
+	initialize_cell_measurement_list();
 }
 
 int DeepCFDPlumeModel2D::get_source_position_params_nbr(){
