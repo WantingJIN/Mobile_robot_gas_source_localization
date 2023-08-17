@@ -87,6 +87,7 @@ public:
 	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
 	virtual void log_gas_concentration_map(char* filename, char writing_mode) = 0;
+	virtual void initialize_information_matrix() = 0;
 	
 	void random_params(double * random_params);
 
@@ -125,7 +126,8 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
-
+    
+	void initialize_information_matrix();
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
@@ -160,7 +162,8 @@ public:
 
 	int get_source_position_params_nbr(); 
 	void get_source_position_params(parameter * source_position_param_list);
-
+    
+	void initialize_information_matrix();
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
@@ -199,6 +202,7 @@ public:
 	vector<CellMeasurements> cell_lists;
 
 	// resturns gas concentration map for a set of parameters
+	void initialize_information_matrix();
 	void initialize_gas_concentration_map_list();
 	void initialize_cell_measurement_list();
 	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);

@@ -981,7 +981,7 @@ void DKL_MAP_distance(float gloabl_local_search_ratio){
 	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-	float ratio = 0;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float ratio = 0.3;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
 	//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
 	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
@@ -1348,7 +1348,7 @@ void state_updategoal(){
 		break;
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
-		DKL_MAP_distance(0.75);
+		DKL_MAP_distance(1.0);
 	    break;
 	default:
 		break;
@@ -1510,8 +1510,11 @@ int main(int argc, char **argv){
 	char label2[255];
     sprintf(label2,"Reading: %d\n",0);
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
-	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
-    
+	if (simulation_parameters.planningStrategy == INFORMATIVE || simulation_parameters.planningStrategy == INFORMATIVE_CLUSTERING){
+		// initialize the clustering algorithm
+		plume_model.initialize_information_matrix();
+		plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
+	}
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED){

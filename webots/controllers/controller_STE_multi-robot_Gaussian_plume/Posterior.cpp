@@ -3,7 +3,7 @@
 #include <iterator>
 #include <fstream>
 #include <vector>
-#include "nvwa/debug_new.h"
+//#include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include <random>
 
@@ -26,12 +26,12 @@ struct normal_random_variable{
     {
         static std::mt19937 gen{ std::random_device{}() };
         static std::normal_distribution<> dist;
-
-        //return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
+        
 		Eigen::VectorXd vec(mean.size());
         vec.setRandom();
         vec = (vec.array() * dist(gen)).matrix();
         return mean + transform * vec;
+        //return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
     }
 };
 
@@ -150,6 +150,7 @@ Posterior::~Posterior(){
 //copy the pdf of a posterior in this one
 void Posterior::pdf_reset(){
 	int i=0;
+	// FIXME - Check here if sum needs to be calulated differently
 	sum = 0; 
     max = 0;
     entropy = 0;
@@ -290,7 +291,11 @@ void Posterior::process(){
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
 	}
 	entropy = -1 * entropy;
-	//printf("\n");
+    // printf("pdf is: ");
+	// for (i = 0; i < nbr_element; i++){
+	// 	printf("%f ", pdf[i]);
+	// }
+	// printf("\n");
 	//log
 	//const char* str = "/home/wjin/Workspace/continuous_STE/Results/pdf.csv";
 	//log_pdf(str, 'a');
@@ -354,8 +359,8 @@ void Posterior::MCMC_evaluation(struct history history){
 	//error detection
 	double sample_likelihood = likelihood(history, sample, model);
 	if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f %f %f %f\n", 
-			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1], sample[2], sample[3], sample[4]);
+		if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f\n", 
+			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
 		dirac_flag = 1;
 		return;
 	}
@@ -422,16 +427,26 @@ void Posterior::MCMC_evaluation(struct history history){
 }
 
 //exhaustive evaluation of all the values of the posterior pdf
-void Posterior::exhaustive_evaluation(struct history history){
+void Posterior::exhaustive_evaluation(struct history &history){
+	printf("exhaustive evaluation\n");
 	int i=0;
 	double sample[nbr_dimension];
-
+    double mean, stddev;
+	if (simulation_parameters.gasFeature == GASHIT){
+		calculate_history_distribution(history, mean, stddev);
+	}
 	//for each element of the pdf
 	for(i = 0; i < nbr_element; i++){
 		//convert index 'i' to set of parameter values 'sample'
 		index_to_param_values(i, sample);
 		//calculate the posterior of 'sample'
-		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
+		// check the gas feature
+		if (simulation_parameters.gasFeature == CONCENTRATION){
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
+		}
+		if (simulation_parameters.gasFeature == GASHIT){
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model, mean, stddev);
+		}
 		//printf("%f, ", pdf[i]);
 		//add the new value to the sum
 		sum += pdf[i];
@@ -498,7 +513,6 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 
 			//combined value
 			double tmp_value = (ratio * marginal) + ((1-ratio) * (inv_dist[i][j]/sum_inv_distance));//marginal - ratio*(distance/MAX_DISTANCE);
-			
 			//if the cell(i,j) is the best so far, its center is copied in best_point
 			if(tmp_value > value){
 				value = tmp_value;
@@ -507,6 +521,8 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 			}
 		}
 	}
+
+	printf("best mariginal: %f, %f\n", best_point[0], best_point[1]);
 }
 
 //log the posterior pdf

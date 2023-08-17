@@ -4,6 +4,7 @@
 #include "controller_STE_multi-robot_Gaussian_plume.h"
 #include "PlumeModel.h"
 #include "Position.h"
+#include "CellMeasurements.h"
 
 class Posterior{ 
     public: 
@@ -48,7 +49,7 @@ class Posterior{
     //efficient sampling through MCMC
     void MCMC_evaluation(struct history history);
     //exhaustive evaluation of all the values of the posterior pdf
-    void exhaustive_evaluation(struct history history);
+    void exhaustive_evaluation(struct history &history);
 
     //relative entropy calculation between one posterior pdf and another P
     double Kullback_Leibler_divergence(Posterior P);
@@ -59,6 +60,7 @@ class Posterior{
     //log the posterior pdf
     void log_pdf(const char * file_name, char writing_mode);
     void log_marginal_pdf(const char * file_name, char writing_mode);
+
 }; 
 
 #endif
