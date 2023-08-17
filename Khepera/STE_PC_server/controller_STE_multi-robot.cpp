@@ -526,72 +526,66 @@ bool position_outside_arena(Position p){
 	return outside;
 }
 
-void information_gain_navigation_approx(Position current_position){
-	float p0 = 1.0; //50 cm
+void information_gain_navigation_approx(){
+	float p0 = 0.5; //50 cm
 	double DKL=0, max_DKL=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
-	// struct history fake_history;
-	// fake_history.position = history.position;
-	// fake_history.measurement_avg = history.measurement_avg;
-	// fake_history.measurement_std = history.measurement_std;
-	// fake_history.size = history.size;
+	struct history fake_history;
+	fake_history.position = history.position;
+	fake_history.measurement_avg = history.measurement_avg;
+	fake_history.size = history.size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
-	// for(int i = 0; i < simulation_parameters.number_of_robots; i++){
-	// 	if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
-	// 	fake_history.position[fake_history.size].copy_position(friends[i].goal);
-	// 	fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
-	// 	fake_history.measurement_std[fake_history.size] = 300; //FIXME: to fix later
-	// 	(fake_history.size)++;
-	// }
-
-	for(int i =- 1; i <= 1; i++){
-		for (int j = -1; j <= 1; j++){
+	for(int i = 0; i < simulation_parameters.number_of_robots; i++){
+		if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
+		fake_history.position[fake_history.size].copy_position(friends[i].goal);
+		fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
+		(fake_history.size)++;
+	}
+	// 4 candidate positions
+    // Position candidates[4] = {	Position(current_position.x + p0, current_position.y, 0), 
+	// 							Position(current_position.x - p0, current_position.y, 0),
+	// 							Position(current_position.x, current_position.y + p0, 0),
+	// 							Position(current_position.x, current_position.y - p0, 0)};
+	// 8 candidate positions
+	Position candidates[8] = {	Position(current_position.x + p0, current_position.y, 0),
+								Position(current_position.x - p0, current_position.y, 0),
+								Position(current_position.x, current_position.y + p0, 0),
+								Position(current_position.x, current_position.y - p0, 0),
+								Position(current_position.x + p0, current_position.y + p0, 0),
+								Position(current_position.x - p0, current_position.y + p0, 0),
+								Position(current_position.x + p0, current_position.y - p0, 0),
+								Position(current_position.x - p0, current_position.y - p0, 0)};							
+	for(auto &candidate_pos : candidates){
 			// for each possible action
-			if (i == 0 && j ==0){
-				continue;
-			}
-			tmp_position.x = current_position.x + i*p0;
-			tmp_position.y = current_position.y + j*p0;
+			tmp_position.x = candidate_pos.x;
+			tmp_position.y = candidate_pos.y;
 			tmp_position.heading = 0;
-			
 			// printf("position : %f %f\n", tmp_position.x, tmp_position.y);
 			//printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
-
-             //informative goal selection
-            // fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			// fake_history.measurement_std[fake_history.size] = 300;
-			// fake_history.position[fake_history.size].copy_position(tmp_position);
-			// (fake_history.size)++;
-			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
-			// memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
-			// future_posterior.sum = 0;
-			// DeepCFDPlumeModel2D plume_model_fake;
-			// Posterior future_posterior(&plume_model_fake, 0);
-			// //future_posterior.copy_posterior(zero);
-			// future_posterior.MCMC_evaluation(fake_history);
-			// //calculate the expected information gain
-			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// // printf("DKL: %f _______________________\n", DKL);
-			// if(DKL > max_DKL ){
-			// 	max_DKL = DKL;
-			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
-			// 	goal_position.y = tmp_position.y;
-			// 	goal_position.heading = 0;
-			// }
-
-			//Greedy goal selection
-			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			if(fake_concentration > max_meas){
-				max_meas = fake_concentration;
-				goal_position.x = tmp_position.x; 
+			fake_history.measurement_avg.push_back(plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
+			//std::cout<<"fake_history.measurement = "<<fake_history.measurement_avg[fake_history.size]<<std::endl;
+			fake_history.position.push_back(tmp_position);
+			(fake_history.size)++;
+			DeepCFDPlumeModel2D plume_model_fake;
+			Posterior future_posterior(&plume_model_fake, 0);
+			//future_posterior.copy_posterior(zero);
+			future_posterior.MCMC_evaluation(fake_history);
+			//calculate the expected information gain
+			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// printf("DKL: %f _______________________\n", DKL);
+			if(DKL > max_DKL ){
+				max_DKL = DKL;
+				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
 			}
-		}
+            fake_history.measurement_avg.pop_back();
+			fake_history.position.pop_back();
+			fake_history.size--;
 	}
 }
 
@@ -871,36 +865,24 @@ void joint_planning(){
 
 void DKL_MAP_distance(float global_local_search_ratio){
 	double best_point[2]={0};
-	// if the goal position is visited before, reselect the goal position with different global_local_search_ratio
-	do{
-		posterior.XYmarginal_distance_combined(current_position, global_local_search_ratio, best_point);
-		printf("Greedy goal is %f %f \n", goal_position.x, goal_position.y);
-		printf("Move to source goal is %f %f\n", best_point[0], best_point[1]);
+	posterior.XYmarginal_distance_combined(current_position, global_local_search_ratio, best_point);
+	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
+	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-		float ratio = 0.5;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
-		float vec1[2] = {0}, vec2[2] = {0};
-		//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
-		//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
-		vec1[0] = goal_position.x - current_position.x; //exploration
-		vec1[1] = goal_position.y - current_position.y;
-		//vec1[2] = goal_position[2] - current_position[2]; 
-		vec2[0] = best_point[0] - current_position.x; //exploitation (source) //estimated_source_parameters //max_a_post_source_parameters
-		vec2[1] = best_point[1] - current_position.y;
-		// if(posterior.entropy > 3){
-		// 	ratio = 0.25;
-		// }else{
-		// 	ratio = 0.5;
-		// }
-		//vec2[2] = estimated_source_parameters.source_position[2] - current_position[2];
-		
-		goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
-		goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
-		goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
-		global_local_search_ratio = global_local_search_ratio/2;
-	} 
-	while (posterior.check_if_cell_visited(goal_position));
+	float ratio = 0.3;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float vec1[2] = {0}, vec2[2] = {0};
+	//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
+	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
+	vec1[0] = goal_position.x - current_position.x; //exploration
+	vec1[1] = goal_position.y - current_position.y;
+ 	//vec1[2] = goal_position[2] - current_position[2]; 
+	vec2[0] = best_point[0] - current_position.x; //exploitation (source) //estimated_source_parameters //max_a_post_source_parameters
+	vec2[1] = best_point[1] - current_position.y;
+	//vec2[2] = estimated_source_parameters.source_position[2] - current_position[2];
+	goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
+	goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
+	goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
 
-	posterior.mark_cell_as_visited(goal_position);
 }
 
 void goal_outside_obstacles(Position * goal){
@@ -1048,9 +1030,9 @@ void state_updategoal(){
 	case GREEDY:
 		greedy_planning();
 		break;
-    case INFORMATIVE:
-		calculate_information_gain_with_variance();
-	    informative_max_variance_point_planning();
+    case INFORMATIVE_KLD:
+		information_gain_navigation_approx();
+		DKL_MAP_distance(1.0);
 		break;
 	case INFORMATIVE_CLUSTERING:
         calculate_information_gain_with_variance();
@@ -1150,7 +1132,7 @@ void state_listen(){
 void state_read(){
 	printf("Enter state read\n");
     int d;
-	float f1, f2, f3, f4; 
+	float f1, f2, f3, f4, f5, f6, f7, f8; 
     double t;
 	char line[256];
 
@@ -1163,15 +1145,15 @@ void state_read(){
 		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
 		while (dist_to_goal(goal_position) > 0.05){
-			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f1, &f2);
+			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f4, &f5);
 			history.size ++;
-			history.measurement_avg.push_back(f1);
-			history.measurement_std.push_back(f2);
-			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
-			history.position.push_back({f1, f2, f3});
-			current_position.x = f1;
-			current_position.y = f2;
-			current_position.heading = f3;
+			history.measurement_avg.push_back(f4);
+			history.measurement_std.push_back(f5);
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
+			history.position.push_back({f6, f7, f8});
+			current_position.x = f6;
+			current_position.y = f7;
+			current_position.heading = f8;
 		}
 
 		// NOTE Read from a scan
@@ -1236,6 +1218,10 @@ int main(int argc, char **argv){
     	exit(1);
   	}
   	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
+	if (simulation_parameters.planningStrategy == INFORMATIVE_CLUSTERING){
+		// initialize the clustering algorithm
+		plume_model.initialize_information_matrix();
+	}
 
 	// main loop
 	while (FSM.state != STATE_FINISHED){

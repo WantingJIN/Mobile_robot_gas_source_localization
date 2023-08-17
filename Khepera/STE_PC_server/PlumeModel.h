@@ -80,6 +80,7 @@ public:
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
+	virtual void initialize_information_matrix() = 0;
 
 };
 
@@ -114,6 +115,7 @@ public:
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
+	void initialize_information_matrix();
 };
 
 
@@ -148,6 +150,7 @@ public:
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
+	void initialize_information_matrix();
 };
 
 
@@ -201,6 +204,7 @@ public:
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+	void initialize_information_matrix();
 };
 
 #endif
