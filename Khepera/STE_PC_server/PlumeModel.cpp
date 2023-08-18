@@ -178,6 +178,7 @@ void GaussianPlumeModel2D::print_max_a_post_val(){
 void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
 void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
+void GaussianPlumeModel2D::initialize_information_matrix(){}
 
 /********************************************************/
 //					NNGaussianPlumeModel2D 				//
@@ -342,6 +343,7 @@ void NNGaussianPlumeModel2D::print_max_a_post_val(){
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf){}
 void NNGaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf){}
+void NNGaussianPlumeModel2D::initialize_information_matrix(){}
 
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
@@ -376,12 +378,6 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(){
 	covar_sig_ii[1] = 0.1;	//y
     //initialize the trained neural network
 	initialize_model_features();
-
-	//initialize the dispersion map list
-	initialize_gas_concentration_map_list();
-
-	//initialize the cell measurements list
-	initialize_cell_measurement_list();
 }
 
 DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D & another_model){
@@ -408,6 +404,15 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D(){
 	delete[] covar_sig_ii;
 }
 
+void DeepCFDPlumeModel2D::initialize_information_matrix(){
+    //initialize the dispersion map list
+	initialize_gas_concentration_map_list();
+
+	//initialize the cell measurements list
+	initialize_cell_measurement_list();
+}
+
+
 int DeepCFDPlumeModel2D::get_source_position_params_nbr(){
 	return 2;
 }
@@ -431,7 +436,7 @@ void DeepCFDPlumeModel2D::initialize_model_features(){
     DeepCFD = torch::jit::load("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/STE_PC_server/DeepCFD_libtorch_model.pt", device);
 	std::string mat_address = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
     //convert string to char*
-    std::cout << mat_address << std::endl;
+    //std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];
     strcpy(mat_adr, mat_address.c_str());
     mat_t *mat;

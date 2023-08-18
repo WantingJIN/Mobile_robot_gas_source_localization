@@ -141,8 +141,9 @@ int sock = 0;
 static double start_timestamp;
 static double end_timestamp;
 double time_before_moving_and_measuring;
-double time_after_moving_and_measuring;
+double time_after_moving_and_measuring ;
 double navigation_sampling_time_sum = 0;
+double sent_first_goal = false;
 
 // =========================== FUNCTIONS ================================ //
 int init_TCP_socket(){
@@ -526,72 +527,66 @@ bool position_outside_arena(Position p){
 	return outside;
 }
 
-void information_gain_navigation_approx(Position current_position){
-	float p0 = 1.0; //50 cm
+void information_gain_navigation_approx(){
+	float p0 = 0.5; //50 cm
 	double DKL=0, max_DKL=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
-	// struct history fake_history;
-	// fake_history.position = history.position;
-	// fake_history.measurement_avg = history.measurement_avg;
-	// fake_history.measurement_std = history.measurement_std;
-	// fake_history.size = history.size;
+	struct history fake_history;
+	fake_history.position = history.position;
+	fake_history.measurement_avg = history.measurement_avg;
+	fake_history.size = history.size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
-	// for(int i = 0; i < simulation_parameters.number_of_robots; i++){
-	// 	if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
-	// 	fake_history.position[fake_history.size].copy_position(friends[i].goal);
-	// 	fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
-	// 	fake_history.measurement_std[fake_history.size] = 300; //FIXME: to fix later
-	// 	(fake_history.size)++;
-	// }
-
-	for(int i =- 1; i <= 1; i++){
-		for (int j = -1; j <= 1; j++){
+	for(int i = 0; i < simulation_parameters.number_of_robots; i++){
+		if(friends[i].ID == 0 || friends[i].ID  == ID) continue;
+		fake_history.position[fake_history.size].copy_position(friends[i].goal);
+		fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
+		(fake_history.size)++;
+	}
+	// 4 candidate positions
+    // Position candidates[4] = {	Position(current_position.x + p0, current_position.y, 0), 
+	// 							Position(current_position.x - p0, current_position.y, 0),
+	// 							Position(current_position.x, current_position.y + p0, 0),
+	// 							Position(current_position.x, current_position.y - p0, 0)};
+	// 8 candidate positions
+	Position candidates[8] = {	Position(current_position.x + p0, current_position.y, 0),
+								Position(current_position.x - p0, current_position.y, 0),
+								Position(current_position.x, current_position.y + p0, 0),
+								Position(current_position.x, current_position.y - p0, 0),
+								Position(current_position.x + p0, current_position.y + p0, 0),
+								Position(current_position.x - p0, current_position.y + p0, 0),
+								Position(current_position.x + p0, current_position.y - p0, 0),
+								Position(current_position.x - p0, current_position.y - p0, 0)};							
+	for(auto &candidate_pos : candidates){
 			// for each possible action
-			if (i == 0 && j ==0){
-				continue;
-			}
-			tmp_position.x = current_position.x + i*p0;
-			tmp_position.y = current_position.y + j*p0;
+			tmp_position.x = candidate_pos.x;
+			tmp_position.y = candidate_pos.y;
 			tmp_position.heading = 0;
-			
 			// printf("position : %f %f\n", tmp_position.x, tmp_position.y);
 			//printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 			if(position_outside_arena(tmp_position)) continue;
 			//calculate the expected concentration on position
-
-             //informative goal selection
-            // fake_history.measurement_avg[fake_history.size] = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			// fake_history.measurement_std[fake_history.size] = 300;
-			// fake_history.position[fake_history.size].copy_position(tmp_position);
-			// (fake_history.size)++;
-			// printf("fake_history.measurement[%d] = %f \n", fake_history.size-1, fake_history.measurement[fake_history.size-1]);
-			// memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf); //memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
-			// future_posterior.sum = 0;
-			// DeepCFDPlumeModel2D plume_model_fake;
-			// Posterior future_posterior(&plume_model_fake, 0);
-			// //future_posterior.copy_posterior(zero);
-			// future_posterior.MCMC_evaluation(fake_history);
-			// //calculate the expected information gain
-			// DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// // printf("DKL: %f _______________________\n", DKL);
-			// if(DKL > max_DKL ){
-			// 	max_DKL = DKL;
-			// 	goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
-			// 	goal_position.y = tmp_position.y;
-			// 	goal_position.heading = 0;
-			// }
-
-			//Greedy goal selection
-			double fake_concentration = plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity);
-			if(fake_concentration > max_meas){
-				max_meas = fake_concentration;
-				goal_position.x = tmp_position.x; 
+			fake_history.measurement_avg.push_back(plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
+			//std::cout<<"fake_history.measurement = "<<fake_history.measurement_avg[fake_history.size]<<std::endl;
+			fake_history.position.push_back(tmp_position);
+			(fake_history.size)++;
+			DeepCFDPlumeModel2D plume_model_fake;
+			Posterior future_posterior(&plume_model_fake, 0);
+			//future_posterior.copy_posterior(zero);
+			future_posterior.MCMC_evaluation(fake_history);
+			//calculate the expected information gain
+			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+			// printf("DKL: %f _______________________\n", DKL);
+			if(DKL > max_DKL ){
+				max_DKL = DKL;
+				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
 			}
-		}
+            fake_history.measurement_avg.pop_back();
+			fake_history.position.pop_back();
+			fake_history.size--;
 	}
 }
 
@@ -739,37 +734,72 @@ void informative_clustering_planning(){
 		informative_max_variance_point_planning();
 		return;
 	} else{
-		// find the cluster with the shortest distance to robot
-		double min_dist = 100;
-		int min_dist_index = 0;
-		for (int i = 0; i < clusters_bounding_box.size(); i++){
-            // calculate the center of the cluster
-			Position cell_center;
-			cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
-			cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
-			//printf("Cell center is (%f, %f)  \n", cell_center.x, cell_center.y);
-			double dist = dist_to_goal(cell_center);
-			if (dist < min_dist){
-				min_dist = dist;
-				min_dist_index = i;
+		// // find the cluster with the shortest distance to robot
+		// double min_dist = 100;
+		// int min_dist_index = 0;
+		// for (int i = 0; i < clusters_bounding_box.size(); i++){
+        //     // calculate the center of the cluster
+		// 	Position cell_center;
+		// 	cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
+		// 	cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
+		// 	//printf("Cell center is (%f, %f)  \n", cell_center.x, cell_center.y);
+		// 	double dist = dist_to_goal(cell_center);
+		// 	if (dist < min_dist){
+		// 		min_dist = dist;
+		// 		min_dist_index = i;
+		// 	}
+		// }
+        // Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
+		// 							Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
+		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
+		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
+		// // find the vertex of the cluster with the shortest and largest distance to robot
+		// double max_dist_to_robot = 0;
+		// int max_dist_to_robot_index = 0;
+		// for (int i = 0; i < 4; i++){
+		// 	double dist = dist_to_goal(cluster_vertex[i]);
+		// 	if (dist > max_dist_to_robot){
+		// 		max_dist_to_robot = dist;
+		// 		max_dist_to_robot_index = i;
+		// 	}
+		// }
+        // goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
+		// goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+        // goal_position.heading = 0;
+        
+		// find the farest vertex of each cluster to robot
+		double max_dist_to_robot;
+		int max_dist_to_robot_index;
+		vector<Position> candidate_goal;
+        for (int i = 0; i < clusters_bounding_box.size(); i++) {
+			max_dist_to_robot = 0;
+			max_dist_to_robot_index = 0;
+			// calculate the distance of each vertex to robot
+			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0), 
+		 							Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
+		 							Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
+		 							Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
+		    for (int i = 0; i < 4; i++){
+				double dist = dist_to_goal(cluster_vertex[i]);
+				if (dist > max_dist_to_robot){
+					max_dist_to_robot = dist;
+					max_dist_to_robot_index = i;
+				}
+			}
+			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
+		}
+        // find the cloest point among candidate goals
+		double min_dist_to_robot = 1000;
+		int min_dist_to_robot_index = 0;
+        for (int j = 0; j < candidate_goal.size(); j++) {
+			double dist = dist_to_goal(candidate_goal[j]);
+				if (dist < min_dist_to_robot) {
+					min_dist_to_robot = dist;
+					min_dist_to_robot_index = j;
 			}
 		}
-        Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
-									Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
-									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
-									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
-		// find the vertex of the cluster with the shortest and largest distance to robot
-		double max_dist_to_robot = 0;
-		int max_dist_to_robot_index = 0;
-		for (int i = 0; i < 4; i++){
-			double dist = dist_to_goal(cluster_vertex[i]);
-			if (dist > max_dist_to_robot){
-				max_dist_to_robot = dist;
-				max_dist_to_robot_index = i;
-			}
-		}
-        goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
-		goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+		goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+		goal_position.y = candidate_goal[min_dist_to_robot_index].y;
         goal_position.heading = 0;
 	}
 
@@ -871,36 +901,24 @@ void joint_planning(){
 
 void DKL_MAP_distance(float global_local_search_ratio){
 	double best_point[2]={0};
-	// if the goal position is visited before, reselect the goal position with different global_local_search_ratio
-	do{
-		posterior.XYmarginal_distance_combined(current_position, global_local_search_ratio, best_point);
-		printf("Greedy goal is %f %f \n", goal_position.x, goal_position.y);
-		printf("Move to source goal is %f %f\n", best_point[0], best_point[1]);
+	posterior.XYmarginal_distance_combined(current_position, global_local_search_ratio, best_point);
+	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
+	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-		float ratio = 0.5;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
-		float vec1[2] = {0}, vec2[2] = {0};
-		//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
-		//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
-		vec1[0] = goal_position.x - current_position.x; //exploration
-		vec1[1] = goal_position.y - current_position.y;
-		//vec1[2] = goal_position[2] - current_position[2]; 
-		vec2[0] = best_point[0] - current_position.x; //exploitation (source) //estimated_source_parameters //max_a_post_source_parameters
-		vec2[1] = best_point[1] - current_position.y;
-		// if(posterior.entropy > 3){
-		// 	ratio = 0.25;
-		// }else{
-		// 	ratio = 0.5;
-		// }
-		//vec2[2] = estimated_source_parameters.source_position[2] - current_position[2];
-		
-		goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
-		goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
-		goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
-		global_local_search_ratio = global_local_search_ratio/2;
-	} 
-	while (posterior.check_if_cell_visited(goal_position));
+	float ratio = 0.3;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float vec1[2] = {0}, vec2[2] = {0};
+	//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
+	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
+	vec1[0] = goal_position.x - current_position.x; //exploration
+	vec1[1] = goal_position.y - current_position.y;
+ 	//vec1[2] = goal_position[2] - current_position[2]; 
+	vec2[0] = best_point[0] - current_position.x; //exploitation (source) //estimated_source_parameters //max_a_post_source_parameters
+	vec2[1] = best_point[1] - current_position.y;
+	//vec2[2] = estimated_source_parameters.source_position[2] - current_position[2];
+	goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
+	goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
+	goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
 
-	posterior.mark_cell_as_visited(goal_position);
 }
 
 void goal_outside_obstacles(Position * goal){
@@ -1048,9 +1066,9 @@ void state_updategoal(){
 	case GREEDY:
 		greedy_planning();
 		break;
-    case INFORMATIVE:
-		calculate_information_gain_with_variance();
-	    informative_max_variance_point_planning();
+    case INFORMATIVE_KLD:
+		information_gain_navigation_approx();
+		DKL_MAP_distance(1.0);
 		break;
 	case INFORMATIVE_CLUSTERING:
         calculate_information_gain_with_variance();
@@ -1064,6 +1082,7 @@ void state_updategoal(){
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	switch(simulation_parameters.workingMode){
 		case EXPERIMENT:
+		{
 			//send the goal to the supervisor
 			Message msg(ID, 0, goal_position, -1, goal_position, 0);
 			send_msg(msg);
@@ -1076,11 +1095,15 @@ void state_updategoal(){
 			//send the message
 			send_goal_to_robot(goal_position.x, goal_position.y);
 			time_before_moving_and_measuring = get_exp_time();
+			sent_first_goal = true;
 
 			//move to listen
 			FSM.state = STATE_LISTEN;
 			FSM.hook = state_listen;
 			break;
+
+		}
+			
 		case OFFLINE:
 			FSM.state = STATE_READ;
 			FSM.hook  = state_read;
@@ -1136,7 +1159,9 @@ void state_listen(){
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
 		time_after_moving_and_measuring = get_exp_time();
-	    navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
+        if (sent_first_goal) {
+			navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
+		}
 	}
 	else{
 		printf("nothing yet .. \n");
@@ -1144,28 +1169,30 @@ void state_listen(){
 }
 
 void state_read(){
+	printf("Enter state read\n");
     int d;
-	float f1, f2, f3, f4; 
-	unsigned long t;
+	float f1, f2, f3, f4, f5, f6, f7, f8; 
+    double t;
 	char line[256];
 
     // Read the goal position
-	if (!feof(experiment_measurements_logfile) && !feof(experiment_position_logfile) && !feof(experiment_goal_logfile)){
-		fscanf(experiment_goal_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3, &t);
+	if (!feof(experiment_goalposition_logfile)){
+		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
 		goal_position.x = f1;
 		goal_position.y = f2;
 		goal_position.heading = 0;
+		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
 		while (dist_to_goal(goal_position) > 0.05){
-			fscanf(experiment_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2);
+			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f4, &f5);
 			history.size ++;
-			history.measurement_avg.push_back(f1);
-			history.measurement_std.push_back(f2);
-			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f3);
-			history.position.push_back({f1, f2, f3});
-			current_position.x = f1;
-			current_position.y = f2;
-			current_position.heading = f3;
+			history.measurement_avg.push_back(0.5*f4);
+			history.measurement_std.push_back(f5);
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
+			history.position.push_back({f6, f7, f8});
+			current_position.x = f6;
+			current_position.y = f7;
+			current_position.heading = f8;
 		}
 
 		// NOTE Read from a scan
@@ -1182,7 +1209,7 @@ void state_read(){
 		// history.position[history.size].y = f2;
 
 		// // Move to estimating
-		history_print(history);
+		//history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook = state_estimating;
 
@@ -1230,34 +1257,14 @@ int main(int argc, char **argv){
     	exit(1);
   	}
   	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
+	if (simulation_parameters.planningStrategy == INFORMATIVE_CLUSTERING){
+		// initialize the clustering algorithm
+		plume_model.initialize_information_matrix();
+	}
 
 	// main loop
 	while (FSM.state != STATE_FINISHED){
 		start_timestamp = get_exp_time();
-		//update_position();
-		//if we are not stopped to sample, let's log the trajectory
-		/*if(speed[0]!=0 && speed[1]!=0){
-			log_trajectory();
-		}*/
-		//send info (current position and goal position) to friends for joint planning
-		/*if(simulation_parameters.scenario == COM_COOR){
-			// if a robot is already sampling (i.e. STATE_MEASURING), its goal should not be swapped with anyone. Therefore we send 0 as goal and current position
-			if(FSM.state == STATE_MEASURING){
-				Position tmp;
-				Message msg(ID, 1, tmp, sampleBuffer.average_concentration, tmp, 1);
-				send_msg(msg);
-			}else{
-				Message msg(ID, 1, current_position, sampleBuffer.average_concentration, goal_position, 1);
-				//printf("[%d] I am sendig my position %f %f %f and my goal %f %f %f\n", msg.sender_ID, msg.position[0],msg.position[1], msg.position[2], msg.goal[0],msg.goal[1],msg.goal[2]);
-    			send_msg(msg);
-    		}
-    	}
-		//receive info from colleagues for joint planning and history
-		if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-			//printf("Robot %d has %d unread messages! \n", ID, wb_receiver_get_queue_length(receiver));
-			receive_from_friends();
-			//printf("[%d] my history size is %d\n", ID, history.size);
-		}*/
 	   	//change state
     	FSM.hook();
     	//next

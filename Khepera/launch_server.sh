@@ -6,9 +6,11 @@
 
 # set the map number
 map=2
+workingMode=1
 read -r source_x source_y <<<"12.7 1"
 
 echo $map > "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt"
+echo $workingMode > "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/working_mode.txt"
 echo $source_x $source_y > "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt"
 # environment map
 # add the source position to the environment map to avoid collision with source location

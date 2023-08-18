@@ -40,7 +40,7 @@ struct parameters_set{
 };
 typedef enum planningStrategy{
 	GREEDY = 0,
-	INFORMATIVE = 1,
+	INFORMATIVE_KLD = 1,
 	INFORMATIVE_CLUSTERING = 5,
 }ePlanningStrategy;
 
