@@ -141,8 +141,9 @@ int sock = 0;
 static double start_timestamp;
 static double end_timestamp;
 double time_before_moving_and_measuring;
-double time_after_moving_and_measuring;
+double time_after_moving_and_measuring ;
 double navigation_sampling_time_sum = 0;
+double sent_first_goal = false;
 
 // =========================== FUNCTIONS ================================ //
 int init_TCP_socket(){
@@ -733,37 +734,72 @@ void informative_clustering_planning(){
 		informative_max_variance_point_planning();
 		return;
 	} else{
-		// find the cluster with the shortest distance to robot
-		double min_dist = 100;
-		int min_dist_index = 0;
-		for (int i = 0; i < clusters_bounding_box.size(); i++){
-            // calculate the center of the cluster
-			Position cell_center;
-			cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
-			cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
-			//printf("Cell center is (%f, %f)  \n", cell_center.x, cell_center.y);
-			double dist = dist_to_goal(cell_center);
-			if (dist < min_dist){
-				min_dist = dist;
-				min_dist_index = i;
+		// // find the cluster with the shortest distance to robot
+		// double min_dist = 100;
+		// int min_dist_index = 0;
+		// for (int i = 0; i < clusters_bounding_box.size(); i++){
+        //     // calculate the center of the cluster
+		// 	Position cell_center;
+		// 	cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
+		// 	cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
+		// 	//printf("Cell center is (%f, %f)  \n", cell_center.x, cell_center.y);
+		// 	double dist = dist_to_goal(cell_center);
+		// 	if (dist < min_dist){
+		// 		min_dist = dist;
+		// 		min_dist_index = i;
+		// 	}
+		// }
+        // Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
+		// 							Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
+		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
+		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
+		// // find the vertex of the cluster with the shortest and largest distance to robot
+		// double max_dist_to_robot = 0;
+		// int max_dist_to_robot_index = 0;
+		// for (int i = 0; i < 4; i++){
+		// 	double dist = dist_to_goal(cluster_vertex[i]);
+		// 	if (dist > max_dist_to_robot){
+		// 		max_dist_to_robot = dist;
+		// 		max_dist_to_robot_index = i;
+		// 	}
+		// }
+        // goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
+		// goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+        // goal_position.heading = 0;
+        
+		// find the farest vertex of each cluster to robot
+		double max_dist_to_robot;
+		int max_dist_to_robot_index;
+		vector<Position> candidate_goal;
+        for (int i = 0; i < clusters_bounding_box.size(); i++) {
+			max_dist_to_robot = 0;
+			max_dist_to_robot_index = 0;
+			// calculate the distance of each vertex to robot
+			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0), 
+		 							Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
+		 							Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
+		 							Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
+		    for (int i = 0; i < 4; i++){
+				double dist = dist_to_goal(cluster_vertex[i]);
+				if (dist > max_dist_to_robot){
+					max_dist_to_robot = dist;
+					max_dist_to_robot_index = i;
+				}
+			}
+			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
+		}
+        // find the cloest point among candidate goals
+		double min_dist_to_robot = 1000;
+		int min_dist_to_robot_index = 0;
+        for (int j = 0; j < candidate_goal.size(); j++) {
+			double dist = dist_to_goal(candidate_goal[j]);
+				if (dist < min_dist_to_robot) {
+					min_dist_to_robot = dist;
+					min_dist_to_robot_index = j;
 			}
 		}
-        Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
-									Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
-									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
-									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
-		// find the vertex of the cluster with the shortest and largest distance to robot
-		double max_dist_to_robot = 0;
-		int max_dist_to_robot_index = 0;
-		for (int i = 0; i < 4; i++){
-			double dist = dist_to_goal(cluster_vertex[i]);
-			if (dist > max_dist_to_robot){
-				max_dist_to_robot = dist;
-				max_dist_to_robot_index = i;
-			}
-		}
-        goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
-		goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+		goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+		goal_position.y = candidate_goal[min_dist_to_robot_index].y;
         goal_position.heading = 0;
 	}
 
@@ -1059,6 +1095,7 @@ void state_updategoal(){
 			//send the message
 			send_goal_to_robot(goal_position.x, goal_position.y);
 			time_before_moving_and_measuring = get_exp_time();
+			sent_first_goal = true;
 
 			//move to listen
 			FSM.state = STATE_LISTEN;
@@ -1122,7 +1159,9 @@ void state_listen(){
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
 		time_after_moving_and_measuring = get_exp_time();
-	    navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
+        if (sent_first_goal) {
+			navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
+		}
 	}
 	else{
 		printf("nothing yet .. \n");
@@ -1147,7 +1186,7 @@ void state_read(){
 		while (dist_to_goal(goal_position) > 0.05){
 			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f4, &f5);
 			history.size ++;
-			history.measurement_avg.push_back(f4);
+			history.measurement_avg.push_back(0.5*f4);
 			history.measurement_std.push_back(f5);
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
 			history.position.push_back({f6, f7, f8});

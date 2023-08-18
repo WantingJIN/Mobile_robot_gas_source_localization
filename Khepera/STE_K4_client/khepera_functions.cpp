@@ -112,7 +112,7 @@ void init(){
 	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9. processingMode; 10. sensorCalibration; 11. sampling_period;
     // 12. wheel_speed 
     //                                                       1    2    3   4  5  6  7        8                9           10  11
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON, 8, 200};
+    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON, 8, 400};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -300,15 +300,15 @@ void establish_baseline(){
     	//stop once reached
     	khepera4_drive_set_speed(0,0);
     	//measure
-    	filtered_concentration = 0;
-        for (int j=0; j < ODOR_FILTER_LENGTH; j++){ //100 times
-            current_odor = odor_read();
-            if (current_odor > 0.1)
-                filtered_concentration += current_odor;
-            else
-            	j--;
-        }
-        filtered_concentration /= ODOR_FILTER_LENGTH;
+    	filtered_concentration = odor_read();
+        // for (int j=0; j < 1; j++){ //100 times
+        //     current_odor = odor_read();
+        //     if (current_odor > 0.1)
+        //         filtered_concentration += current_odor;
+        //     else
+        //     	j--;
+        // }
+        //filtered_concentration /= ODOR_FILTER_LENGTH;
         printf("[%d] position : %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, filtered_concentration);
     	//take min and max
     	if (filtered_concentration > max) 
@@ -675,8 +675,10 @@ double calibrate_sensor_reading (double raw_reading){
     double b;
 
     if (simulation_parameters.sensorCalibration == ON){
-        a = 2.9;
-        b = 297.6;
+        // a = 2.9;
+        // b = 297.6;
+        a = 2.0;
+        b = 0;
     } else {
         a = 1;
         b = 0;
