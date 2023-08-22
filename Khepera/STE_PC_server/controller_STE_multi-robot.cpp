@@ -496,7 +496,7 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
 	
 	// verify if all the parameters are between the right intervals
 	for(i = 0; i < nbr_dimension; i++)
-		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] >= model->param_list[i].lower_limit);
+		output = output && (parameters[i] < float(model->param_list[i].upper_limit) && parameters[i] >= float(model->param_list[i].lower_limit));
 	
 	// verify the x and y elements of the parameters are not inside obstacles
 	Position tmp_p(parameters[0], parameters[1], 0);
