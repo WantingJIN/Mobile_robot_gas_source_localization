@@ -44,6 +44,7 @@ FILE* gas_concentration_map_logfile;
 FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
 FILE* experiment_time_logfile;
+FILE* sim_param_file;
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
 char posterior_logfile_name[512];
@@ -489,12 +490,15 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
 	
 	// verify if all the parameters are between the right intervals
 	for(i = 0; i < nbr_dimension; i++)
-		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] >= model->param_list[i].lower_limit);
+		output = output && (parameters[i] < float(model->param_list[i].upper_limit) && parameters[i] >= float(model->param_list[i].lower_limit));
+	// if ( output == 0){
+	// 	printf("parameters: %f %f %f %f %f\n", parameters[0], parameters[1], parameters[2], parameters[3], parameters[4]);
+	// } 	
 	
 	// verify the x and y elements of the parameters are not inside obstacles
 	Position tmp_p(parameters[0], parameters[1], 0);
 	if(tmp_p.is_in_obstacle_list(obstacles, nbr_obs) != -1){
-		// printf("point %f %f is in obstacle\n", parameters[0], parameters[1]);
+		printf("point %f %f is in obstacle\n", parameters[0], parameters[1]);
 		output = 0;
 	}
 
@@ -706,7 +710,7 @@ void greedy_planning(){
 	// }
 	printf("greedy planning \n");
 	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
-	//printf("best point: %f %f \n", best_point[0], best_point[1]);
+	printf("best point: %f %f \n", best_point[0], best_point[1]);
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
@@ -744,6 +748,7 @@ void lawnmower_planning(){
 }
 
 void calculate_information_gain_with_variance(){
+	printf("Enter here! \n");
 	if (simulation_parameters.gasFeature == CONCENTRATION){
 		if (simulation_parameters.infoFeature == VARIANCE){
 			plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
@@ -752,7 +757,7 @@ void calculate_information_gain_with_variance(){
 		}
 		if (simulation_parameters.infoFeature == BELIEF){
 			for (int i = 0; i< x_nbins*y_nbins; i++){
-				gas_information_map[i] = posterior.pdf[i];
+				gas_information_map[i] = posterior.source_marginal_pdf[i];
 			}
 		}
 		log_gas_information_map();
@@ -798,7 +803,13 @@ void informative_max_variance_point_planning(){
 			}
 		}
 	}
-	posterior.index_to_param_values(max_info_index, best_point);
+    // convert the index to the position
+    double idx_y = max_info_index/y_nbins;
+	double idx_x = max_info_index - idx_y*y_nbins;
+	best_point[0] = idx_x*x_resol + source_x_min;
+	best_point[1] = idx_y*y_resol + source_y_min;
+
+	//posterior.index_to_param_values(max_info_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
@@ -981,7 +992,7 @@ void DKL_MAP_distance(float gloabl_local_search_ratio){
 	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-	float ratio = 0;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float ratio = 0.3;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
 	//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
 	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
@@ -1348,7 +1359,7 @@ void state_updategoal(){
 		break;
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
-		DKL_MAP_distance(0.75);
+		DKL_MAP_distance(1.0);
 	    break;
 	default:
 		break;
@@ -1511,8 +1522,10 @@ int main(int argc, char **argv){
     sprintf(label2,"Reading: %d\n",0);
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
 	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
-    
-
+    // log current plume model parameters
+	sim_param_file = fopen(config_logfile_name, "a");
+	fprintf(sim_param_file, "source_term %f %f %f %f %f %f\n", plume_model.param_list[2].lower_limit, plume_model.param_list[2].upper_limit, plume_model.param_list[3].lower_limit, plume_model.param_list[3].upper_limit, plume_model.param_list[4].lower_limit, plume_model.param_list[4].upper_limit);
+	fclose(sim_param_file);
 	// //main loop
 	while (FSM.state != STATE_FINISHED){
 		update_position();

@@ -84,18 +84,32 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	
 	//allocate memory for the parameters
 	param_list = new parameter[nbr_param];
-	
+
+	//read from file
+	FILE * sim_param_file;
+	int ok = 0;
+	float m_Q_min, m_Q_max, m_a_y_min, m_a_y_max, m_b_y_min, m_b_y_max;
+	if(access("../../data/source_terms.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/source_terms.txt", "r");
+		ok = fscanf(sim_param_file, "%f, %f, %f, %f, %f, %f", &m_Q_min, &m_Q_max, &m_a_y_min, &m_a_y_max, &m_b_y_min, &m_b_y_max);
+		//if(ok) printf("m_Q_min, m_Q_max, m_a_y_min, m_a_y_max, m_b_y_min, m_b_y_max: %f, %f, %f, %f, %f, %f\n", m_Q_min, m_Q_max, m_a_y_min, m_a_y_max, m_b_y_min, m_b_y_max);
+		fclose(sim_param_file);
+	}
+	float m_Q_resol = (m_Q_max - m_Q_min)/Q_nbins;
+	float m_a_y_resol = (m_a_y_max - m_a_y_min)/a_y_nbins;
+	float m_b_y_resol = (m_b_y_max - m_b_y_min)/b_y_nbins;
+
 	//hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	//source_x
-	param_list[0] = parameter {"source_x", 		source_x_min,  source_x_max, 	x_resol, 	x_nbins, 	0, 0};
+	param_list[0] = parameter {"source_x", 		float(source_x_min),  float(source_x_max), 	float(x_resol), 	x_nbins, 	0, 0};
 	//source_y
-	param_list[1] = parameter {"source_y", 		source_y_min,  	source_y_max, 		y_resol, 	y_nbins, 	0, 0};
+	param_list[1] = parameter {"source_y", 		float(source_y_min),  	float(source_y_max),  float(y_resol), 	y_nbins, 	0, 0};
 	//Q
-	param_list[2] = parameter {"Q", 			Q_min, 		Q_max, 	  Q_resol, 	Q_nbins, 	0, 0};
+	param_list[2] = parameter {"Q", 			m_Q_min, 		m_Q_max, 	  m_Q_resol, 	Q_nbins, 	0, 0};
 	//sigma_a
-	param_list[3] = parameter {"sigma_y_a", 	a_y_min,  	a_y_max, 	a_y_resol, 	a_y_nbins, 	0, 0};
+	param_list[3] = parameter {"sigma_y_a", 	m_a_y_min,  	m_a_y_max, 	m_a_y_resol, 	a_y_nbins, 	0, 0};
 	//sigma_b
-	param_list[4] = parameter {"sigma_y_b",  	b_y_min,   	b_y_max,  	b_y_resol, 	a_y_nbins, 	0, 0};
+	param_list[4] = parameter {"sigma_y_b",  	m_b_y_min,   	m_b_y_max,  	m_b_y_resol, 	a_y_nbins, 	0, 0};
 
 	//initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
