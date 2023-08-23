@@ -704,7 +704,12 @@ void informative_max_variance_point_planning(){
 			}
 		}
 	}
-	posterior.index_to_param_values(max_info_index, best_point);
+    double idx_y = max_info_index/y_nbins;
+	double idx_x = max_info_index - idx_y*y_nbins;
+	best_point[0] = idx_x*x_resol + source_x_min;
+	best_point[1] = idx_y*y_resol + source_y_min;	
+	
+    //posterior.index_to_param_values(max_info_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
