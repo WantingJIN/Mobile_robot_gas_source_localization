@@ -1,6 +1,7 @@
 # webots
 webots/plugins/physics/odor_physics/results/SENSOR_*
 Results*/**
+*Results*/**
 !Results/test_maps/map*/*.environment
 webots/wb_output.txt
 webots_*/
@@ -25,6 +26,7 @@ openfoam/AutoGDM
 # khepera
 
 Khepera/Results*/**
+Khepera/*Results*/**
 Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
