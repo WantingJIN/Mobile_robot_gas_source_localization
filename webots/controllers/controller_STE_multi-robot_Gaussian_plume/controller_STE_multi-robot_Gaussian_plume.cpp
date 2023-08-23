@@ -1523,8 +1523,8 @@ int main(int argc, char **argv){
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
 	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
     // log current plume model parameters
-	sim_param_file = fopen(config_logfile_name, "a");
-	fprintf(sim_param_file, "source_term %f %f %f %f %f %f\n", plume_model.param_list[2].lower_limit, plume_model.param_list[2].upper_limit, plume_model.param_list[3].lower_limit, plume_model.param_list[3].upper_limit, plume_model.param_list[4].lower_limit, plume_model.param_list[4].upper_limit);
+	// sim_param_file = fopen(config_logfile_name, "a");
+	// fprintf(sim_param_file, "source_term %f %f %f %f %f %f\n", plume_model.param_list[2].lower_limit, plume_model.param_list[2].upper_limit, plume_model.param_list[3].lower_limit, plume_model.param_list[3].upper_limit, plume_model.param_list[4].lower_limit, plume_model.param_list[4].upper_limit);
 	fclose(sim_param_file);
 	// //main loop
 	while (FSM.state != STATE_FINISHED){
