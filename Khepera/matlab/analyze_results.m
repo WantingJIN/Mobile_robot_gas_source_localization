@@ -4,11 +4,11 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/clustering_continunous_MOX';
-% choose the folders
+general_folder = '/home/wjin/Workspace/continuous_STE/Khepera/Results_0818/stop_sense_kld';
 folder_list = dir([general_folder '/**']);
-folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
+folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103', 'pc', 'k4'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
+folder_list = folder_list(~ismember({folder_list.folder}, [general_folder '/bad']));
 folder_list = folder_list([folder_list.isdir]);
 numExperiments = length(folder_list);
 
@@ -16,12 +16,10 @@ for i = 1:numExperiments
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     folder_name_k4 = [folder_name, '/k4'];
     folder_name_pc = [folder_name, '/pc'];
-   
-    % remove folders with unfinished jobs
-    file_list = dir([folder_name '/**']);
-    if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
+
     % ground truth and other params
     params = my_text2struct([folder_name_pc, '/param_log.csv']);
+%     params_k4 = my_text2struct([folder_name_k4, '/param_log.csv']);
     map_nbr = params.map_nbr;
     % stats
     expected_a_posteriori_file = dlmread([folder_name_pc, '/expected_a_posteriori.csv']);
@@ -31,26 +29,32 @@ for i = 1:numExperiments
     max_a_post_file = dlmread([folder_name_pc, '/max_a_posteriori.csv']);
     if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
     if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
-    error(1) = params.source_position(1) - expected_a_posteriori(1);
-    error(2) = params.source_position(2) - expected_a_posteriori(2);
+    source_postion_file_name = [folder_name_pc '/source_position.txt'];
+    source_file = fopen(source_postion_file_name, 'r');
+    source_real_position = fscanf(source_file,'%f %f');
+    error(1) = source_real_position(1) - expected_a_posteriori(1);
+    error(2) = source_real_position(2) - expected_a_posteriori(2);
     entropy_file = dlmread([folder_name_pc, '/entropy.csv']);
     entropy(1) = entropy_file(end,1);
     
     max_a_post(1:2) = max_a_post_file(end,2:3);
-    convergence_list(1) = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
-    % time taken for each run 
-    measurements = dlmread([folder_name_pc, '/measurements.csv']);
-    exp_time = measurements(end,4);
-    % traveling_distance
-    trajectory = dlmread([folder_name_pc, '/trajectory.csv']);
+    convergence = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
+    % experimental time
+    goal_positions = dlmread([folder_name_k4, '/goal_position.csv']);
+    exp_time = (goal_positions(end, 5) - goal_positions(1,5))/1000;
+    
+    % trajectory_length
+    trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
     traj_length_sum = 0;
     for iter = 2:size(trajectory,1)
         traj_length_sum = traj_length_sum + sqrt((trajectory(iter,2)-trajectory(iter-1,2))^2 + (trajectory(iter,3) - trajectory(iter-1,3))^2); 
     end
-    traj_length= traj_length_sum;
+    traj_length = traj_length_sum;
+
     
     % strategy
-    sampling_mode_idx = params.sampling_mode;
+    %sampling_mode_idx = params_k4.sampling_mode;
+    sampling_mode_idx = 1;
     sampling_mode = "";
     switch sampling_mode_idx
         case 0
@@ -68,23 +72,13 @@ for i = 1:numExperiments
             planning_mode = "greedy";
         case 5
             planning_mode = "belief clustering";
-        case 6
+        case 1
             planning_mode = "informative kld";
     end
-
-    sensor_mode_idx = params.gas_sensor_type;
-    sensor_mode = "";
-    switch sensor_mode_idx
-        case 0 
-            sensor_mode = "PID";
-        case 1
-            sensor_mode = "MOX";
-    end
             
-
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode);
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode'};
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode'};
     
     % Append the temporary table to the main dataTable
     dataTable = [dataTable; tempTable];
