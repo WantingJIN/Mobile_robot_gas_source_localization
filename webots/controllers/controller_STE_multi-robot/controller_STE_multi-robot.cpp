@@ -829,41 +829,74 @@ void informative_clustering_planning(){
 		return;
 	} else{
 		// find the cluster with the shortest distance to robot
-		double min_dist = 100;
-		int min_dist_index = 0;
-		for (int i = 0; i < clusters_bounding_box.size(); i++){
-            // calculate the center of the cluster
-			Position cell_center;
-			cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
-			cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
-			double dist = dist_to_goal(cell_center);
-			if (dist < min_dist){
-				min_dist = dist;
-				min_dist_index = i;
+		// double min_dist = 100;
+		// int min_dist_index = 0;
+		// for (int i = 0; i < clusters_bounding_box.size(); i++){
+        //     // calculate the center of the cluster
+		// 	Position cell_center;
+		// 	cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
+		// 	cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
+		// 	double dist = dist_to_goal(cell_center);
+		// 	if (dist < min_dist){
+		// 		min_dist = dist;
+		// 		min_dist_index = i;
+		// 	}
+		// }
+        // Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
+		// 							Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
+		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
+		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
+		// // find the vertex of the cluster with the shortest and largest distance to robot
+		// double min_dist_to_robot = 100;
+		// double max_dist_to_robot = 0;
+		// int min_dist_to_robot_index = 0;
+		// int max_dist_to_robot_index = 0;
+		// for (int i = 0; i < 4; i++){
+		// 	double dist = dist_to_goal(cluster_vertex[i]);
+		// 	if (dist < min_dist_to_robot){
+		// 		min_dist_to_robot = dist;
+		// 		min_dist_to_robot_index = i;
+		// 	}
+		// 	if (dist > max_dist_to_robot){
+		// 		max_dist_to_robot = dist;
+		// 		max_dist_to_robot_index = i;
+		// 	}
+		// }							
+        // goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
+		// goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+        // goal_position.heading = 0;
+		double max_dist_to_robot;
+		int max_dist_to_robot_index;
+		vector<Position> candidate_goal;
+        for (int i = 0; i < clusters_bounding_box.size(); i++) {
+			max_dist_to_robot = 0;
+			max_dist_to_robot_index = 0;
+			// calculate the distance of each vertex to robot
+			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0), 
+		 							Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
+		 							Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
+		 							Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
+		    for (int i = 0; i < 4; i++){
+				double dist = dist_to_goal(cluster_vertex[i]);
+				if (dist > max_dist_to_robot){
+					max_dist_to_robot = dist;
+					max_dist_to_robot_index = i;
+				}
+			}
+			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
+		}
+        // find the cloest point among candidate goals
+		double min_dist_to_robot = 1000;
+		int min_dist_to_robot_index = 0;
+        for (int j = 0; j < candidate_goal.size(); j++) {
+			double dist = dist_to_goal(candidate_goal[j]);
+				if (dist < min_dist_to_robot) {
+					min_dist_to_robot = dist;
+					min_dist_to_robot_index = j;
 			}
 		}
-        Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
-									Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
-									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
-									Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
-		// find the vertex of the cluster with the shortest and largest distance to robot
-		double min_dist_to_robot = 100;
-		double max_dist_to_robot = 0;
-		int min_dist_to_robot_index = 0;
-		int max_dist_to_robot_index = 0;
-		for (int i = 0; i < 4; i++){
-			double dist = dist_to_goal(cluster_vertex[i]);
-			if (dist < min_dist_to_robot){
-				min_dist_to_robot = dist;
-				min_dist_to_robot_index = i;
-			}
-			if (dist > max_dist_to_robot){
-				max_dist_to_robot = dist;
-				max_dist_to_robot_index = i;
-			}
-		}							
-        goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
-		goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
+		goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+		goal_position.y = candidate_goal[min_dist_to_robot_index].y;
         goal_position.heading = 0;
 	}
 
@@ -1510,7 +1543,7 @@ int main(int argc, char **argv){
 	char label2[255];
     sprintf(label2,"Reading: %d\n",0);
     wb_supervisor_set_label(1,label2,0.1,0.85,0.1,0xFF0000,0,"Impact");
-	if (simulation_parameters.planningStrategy == INFORMATIVE || simulation_parameters.planningStrategy == INFORMATIVE_CLUSTERING){
+	if (simulation_parameters.infoFeature == MEAN || simulation_parameters.infoFeature == VARIANCE){
 		// initialize the clustering algorithm
 		plume_model.initialize_information_matrix();
 		plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');

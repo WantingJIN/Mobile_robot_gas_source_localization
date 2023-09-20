@@ -154,7 +154,7 @@ void init(){
 	//5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
 	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
 	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.      11.                   12.         13.           14.       15.  16.
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, INFORMATIVE_KLD, CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
     
 	// cell_measurements each_cell;
 	// for (int i = 0; i <plume_model.x_bins; i++){
@@ -272,8 +272,12 @@ void odor_read(double *sensor_reading, double &odor_concentration){
         // For the MOX sensor, the sensor properties are modeled as a first-order system
 		if (simulation_parameters.gasSensor == MOX){
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			double tau_r = 1.3; // time constant for the rise
-			double tau_d = 2.0; // time constant for the decay
+			// double tau_r = 1.3; // time constant for the rise
+			// double tau_d = 2.0; // time constant for the decay
+			// double tau_r = 2.06; // time constant for the rise
+			// double tau_d = 4.53; // time constant for the decay
+			double tau_r = 0.72; // time constant for the rise
+			double tau_d = 0.92; // time constant for the decay
 			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
 			// where wc is the cut-off frequency and Ts is the sampling period
 			double alpha;
@@ -286,8 +290,8 @@ void odor_read(double *sensor_reading, double &odor_concentration){
 		}
 		if (simulation_parameters.gasSensor == NOISY_MOX){
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			double tau_r = 1.3; // time constant for the rise
-			double tau_d = 2.0; // time constant for the decay
+			double tau_r = 0.72; // time constant for the rise
+			double tau_d = 0.92; // time constant for the decay
 			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
 			// where wc is the cut-off frequency and Ts is the sampling period
 			double alpha;
