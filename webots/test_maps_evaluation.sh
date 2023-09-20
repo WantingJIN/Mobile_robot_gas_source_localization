@@ -8,11 +8,15 @@ webots_folder="../webots"
 map_nbr_filename="/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt"
 source_pos_filename="/home/wjin/Workspace/continuous_STE/webots/data/source_pos.txt"
 sampling_prd_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/sampling_period.txt"
+MCMC_exhaustive_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/MCMC_or_exhaustive_eval.txt"
 # use environment 0: obstacle free enviroment
 p=10
 echo $p > $sampling_prd_filename
+#use exhaustive search
+s=0
+echo $s > $MCMC_exhaustive_filename
 
-nbr_source_pos=8
+nbr_source_pos=10
 source_pos_x=12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
@@ -29,7 +33,7 @@ else
 fi
 
 #{0..8}
-for m in {1..8}
+for m in 2
 do
 	echo $m > $map_nbr_filename
 
@@ -39,7 +43,7 @@ do
 	cp /home/wjin/Workspace/continuous_STE/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 	#for k in {1..3}
-    for k in {1..8}
+    for k in 1 2 3
 	do
 		source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
 		echo $source_pos_x $source_pos_y > $source_pos_filename
