@@ -9,8 +9,9 @@
 
 ##### Requirement: 
 
-- gcc/g++ version: 9.0
-- libtorch: libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117
+- gcc/g++ version: 9.4.0 (check your gcc version with gcc -v)
+- cuda version:  12.0 (check your cuda version with nvcc --version) download from https://developer.nvidia.com/cuda-downloads
+- libtorch: libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117 download from https://pytorch.org/get-started/locally/ by selecting stable; Linux; LibTorch; C++; CUDA 11.7
 
 ##### Modify the CMakeLists:
 1. Modify the path of the webot: `set(WEBOTS_HOME "your-path-of-webots")`
