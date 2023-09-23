@@ -111,7 +111,7 @@ float ** obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
-std::string environment_file("/home/wjin/Workspace/continuous_STE/Khepera/Data/test_map.environment");
+std::string environment_file("/home/durancea/plume_model_learning/Khepera/Data/test_map.environment");
 VisiLibity::Environment my_environment(environment_file);
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
@@ -265,7 +265,7 @@ void history_print(struct history history){
 
 void read_obstacle_list(){
 	// open file
-	std::ifstream infile("/home/wjin/Workspace/continuous_STE/Khepera/Data/obstacle_list.txt");
+	std::ifstream infile("/home/durancea/plume_model_learning/Khepera/Data/obstacle_list.txt");
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	// allocate memory for obstacle list array

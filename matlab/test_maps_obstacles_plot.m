@@ -2,7 +2,7 @@ clear all; close all; clc;
 
 % to plot all test maps in one figure
 
-folder_path = '/home/wjin/Workspace/continuous_STE/openfoam/test_maps';
+folder_path = '/home/durancea/plume_model_learning/openfoam/test_maps';
 figure(1)
 [ha, pos] = tight_subplot(2,3,[.03 .03],[.03 .03],[.05 .02])
 cmap = [ repmat([255,255,255]./255,0,1)               % < 0
@@ -18,7 +18,7 @@ cmap = [ repmat([255,255,255]./255,0,1)               % < 0
 ];
 map_nbr = [0 1 2 3 5 10];
 for i=1:size(map_nbr,2)
-    folder_name = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind1/'];
+    folder_name = ['/home/durancea/plume_model_learning/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind1/'];
     obstacles = load([folder_name num2str(map_nbr(i)) '_obstacle.mat']);
     p = 1:size(map_nbr,2);
     %subplot(1,3,p(i));
@@ -39,7 +39,7 @@ end
 saveas(gcf,[folder_path '/' 'physical_test_map_total' '.png']);
 % %%
 % for i=1:size(map_nbr,2)
-%     folder_name = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind1/'];
+%     folder_name = ['/home/durancea/plume_model_learning/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind1/'];
 %     obstacles = load([folder_name num2str(map_nbr(i)) '_obstacle.mat']);
 %     figure(2)
 %     set(gcf,'position',[600,600,1000,250]);
@@ -48,7 +48,7 @@ saveas(gcf,[folder_path '/' 'physical_test_map_total' '.png']);
 %     set(gca, 'YDir','normal')
 %     colormap('bone')
 %     title(['Test map ' num2str(map_nbr(i))]);
-%     save_path = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(i)];
+%     save_path = ['/home/durancea/plume_model_learning/openfoam/test_maps/map' num2str(i)];
 %     saveas(gcf,[save_path '/' num2str(map_nbr(i)) '.png']);
 %     
 % end

@@ -1,5 +1,5 @@
 % While calibrate sensor reading using the experiments data
-% experiment_folder = '/home/wjin/Workspace/continuous_STE/Results/Experimental_Results/Results-0305/2023-03-05_11-14/';
+% experiment_folder = '/home/durancea/plume_model_learning/Results/Experimental_Results/Results-0305/2023-03-05_11-14/';
 % experiment_measurement = dlmread([experiment_folder 'k4/measurements.csv']);
 % baseline_measurement = dlmread([experiment_folder 'k4/baseline_measurements.csv']);
 % webots_ground_truth = dlmread([experiment_folder 'Ground_truth_wb/measurements.csv']);

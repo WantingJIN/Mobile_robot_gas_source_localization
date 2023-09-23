@@ -4,7 +4,7 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID';
+general_folder = '/home/durancea/plume_model_learning/Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID';
 % choose the folders
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));

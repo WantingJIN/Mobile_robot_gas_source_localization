@@ -1334,7 +1334,7 @@ void state_estimating(){
 	log_entropy();
 	//printf("Finish logging.\n");
 	posterior.log_pdf(posterior_pdf_3D_name, 'a');
-	//posterior.log_pdf("/home/wjin/Workspace/continuous_STE/Results/current/101/posterior.csv",'a');
+	//posterior.log_pdf("/home/durancea/plume_model_learning/Results/current/101/posterior.csv",'a');
 
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);

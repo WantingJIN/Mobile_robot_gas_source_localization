@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/0804_test_continous_sampling_lawnmower';
+general_folder = '/home/durancea/plume_model_learning/Results/0804_test_continous_sampling_lawnmower';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);

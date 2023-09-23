@@ -1,6 +1,6 @@
 clear all; close all; clc;
 
-root_folder='/home/wjin/Workspace/continuous_STE/Results/Experimental_Results/Results_0727/2023-07-27_16-01';
+root_folder='/home/durancea/plume_model_learning/Results/Experimental_Results/Results_0727/2023-07-27_16-01';
 
 pc_folder=[root_folder '/pc'];
 k4_folder=[root_folder '/k4'];
@@ -8,7 +8,7 @@ pdf = dlmread([pc_folder,'/posterior_pdf_3D.csv']);
 positions = dlmread([k4_folder, '/goal_position.csv']);
 params = my_text2struct([pc_folder, '/param_log.csv']);
 %anim_folder='/home//Workspace/continuous_STE/Khepera/DataKhepera/Results/ani'
-obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
+obst_file = ['/home/durancea/plume_model_learning/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
 obst_fileID = fopen(obst_file);
 C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
 for k=1:length(C{1,1})
