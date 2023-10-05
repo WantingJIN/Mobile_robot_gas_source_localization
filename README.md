@@ -1,11 +1,20 @@
 # Plume model learning for STE
 
 ## Overview of the project
-## Openfoam 
+
+This project builds upon the traditional STE for GSL framework, adapting it for complex environments. We've created a data-driven plume model to serve as a substitute for the original plume dispersion model in the STE framework. This project involves multiple steps and uses various platforms and programming languages.
+
+Please refer to this ReadME file for details on the required software versions and instructions on how to build the project.
+
+## Openfoam
+
+openfoam v9: https://openfoam.org/download/9-ubuntu/ 
 
 ## Webots 
 
-### - How to compile the controller?
+webots 2021b
+
+### - How to compile the Webots controller?
 
 ##### Requirement: 
 

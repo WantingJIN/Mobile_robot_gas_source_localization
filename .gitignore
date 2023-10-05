@@ -1,9 +1,14 @@
 # webots
 webots/plugins/physics/odor_physics/results/SENSOR_*
-Results/**
-!Results/test_maps/
 webots/wb_output.txt
 webots_*/
+
+# Results
+Results/**
+!Results/test_maps/
+!Results/test_maps/map*
+!Results/test_maps/map*/**.mat
+!Results/test_maps/map*/**.environment
 result_backup
 *.wbproj
 
@@ -15,8 +20,10 @@ webots/controllers/controller_STE_video
 # openfoam
 openfoam/training_random/training_random_win*/*
 !openfoam/training_random/training_random_win*/0
-openfoam/test_maps/map*/map*_wind*
 !openfoam/test_maps/map*/map*_wind0
+!openfoam/test_maps/map*/map*_wind*/
+openfoam/test_maps/map*/map*_wind*/**
+!openfoam/test_maps/map*/map*_wind*/*.txt
 openfoam/simulation_comparision/*
 openfoam/simscale
 openfoam/AutoGDM
