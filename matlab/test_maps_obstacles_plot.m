@@ -18,7 +18,7 @@ cmap = [ repmat([255,255,255]./255,0,1)               % < 0
 ];
 map_nbr = [0 1 2 3 5 10];
 for i=1:size(map_nbr,2)
-    folder_name = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind1/'];
+    folder_name = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind0.75/'];
     obstacles = load([folder_name num2str(map_nbr(i)) '_obstacle.mat']);
     p = 1:size(map_nbr,2);
     %subplot(1,3,p(i));
@@ -39,7 +39,7 @@ end
 saveas(gcf,[folder_path '/' 'physical_test_map_total' '.png']);
 % %%
 % for i=1:size(map_nbr,2)
-%     folder_name = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind1/'];
+%     folder_name = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind0.75/'];
 %     obstacles = load([folder_name num2str(map_nbr(i)) '_obstacle.mat']);
 %     figure(2)
 %     set(gcf,'position',[600,600,1000,250]);

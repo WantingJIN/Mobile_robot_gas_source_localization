@@ -56,7 +56,7 @@ for i=1:exp_number
         % obstacles
         obstacles_x=[];
         obstacles_y=[];
-        obst_file = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(params.map_nbr) '/map' num2str(params.map_nbr) '_wind1/' num2str(params.map_nbr) '_obstacles.txt'];
+        obst_file = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(params.map_nbr) '/map' num2str(params.map_nbr) '_wind0.75/' num2str(params.map_nbr) '_obstacles.txt'];
         obst_fileID = fopen(obst_file);
         C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
         for k=1:length(C{1,1})

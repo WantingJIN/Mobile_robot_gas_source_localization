@@ -1,5 +1,4 @@
 function [CC, U] = openfoam_steadyState_CC_U(case_path)
-%case_path = '/data/FaezehRahbar/Projects/Data-driven_plume_model/openfoam/map1/map1_wind1';
 folder_list = dir(case_path);
 folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','constant','system','VTK'}));

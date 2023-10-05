@@ -19,7 +19,7 @@ folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 %% for all maps i
 for maps = 0:length(folder_list)-1
     close all;
-    folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind1/'];
+    folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind0.75/'];
     
     % data
     [CC, U] = openfoam_steadyState_CC_U(folder);

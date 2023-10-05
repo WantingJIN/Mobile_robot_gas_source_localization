@@ -30,10 +30,10 @@ for i=0:length(plume_data_list)-1
     mapN = ['map' num2str(i)];
     
     % flow def
-    flow_def = load([flow_data_folder mapN '/' mapN '_wind1/flow_def.mat']);
+    flow_def = load([flow_data_folder mapN '/' mapN '_wind0.75/flow_def.mat']);
 
     % SDF
-    SDF = load([flow_data_folder mapN '/' mapN '_wind1/SDF.mat']);
+    SDF = load([flow_data_folder mapN '/' mapN '_wind0.75/SDF.mat']);
     
     %% dataset #1 (empty source position)
     

@@ -9,8 +9,8 @@ map_nbr_filename="/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt"
 # use environment 0: obstacle free enviroment
 m=0
 echo $m > $map_nbr_filename
-cp /home/wjin/Workspace/continuous_STE/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
-cp /home/wjin/Workspace/continuous_STE/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
+cp /home/wjin/Workspace/continuous_STE/openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
+cp /home/wjin/Workspace/continuous_STE/openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
 cp /home/wjin/Workspace/continuous_STE/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 sampling_prd_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/sampling_period.txt"
 source_pos_filename="/home/wjin/Workspace/continuous_STE/webots/data/source_pos.txt"

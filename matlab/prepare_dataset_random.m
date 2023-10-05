@@ -1,7 +1,7 @@
 close all; clear all; clc;
 
 % data files
-flow_data_folder = '../openfoam/training_random/training_random_wind1.0_angle0/';
+flow_data_folder = '../openfoam/training_random/training_random_wind0.75_angle0/';
 flow_data_list = dir(flow_data_folder);
 flow_data_list = flow_data_list([flow_data_list.isdir]);
 flow_data_list = flow_data_list(~ismember({flow_data_list.name},{'.','..','0'}));

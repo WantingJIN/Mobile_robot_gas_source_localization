@@ -16,8 +16,8 @@ do
 		results_folder=../../Results/test_maps/map${d}
 		mkdir -p $results_folder
 		# copy the txt file for odor plugin
-		cp map${d}/map${d}_wind1/${d}.txt $wb_folder/data/plugin_parameters/wind_map.txt
-		cp map${d}/map${d}_wind1/${d}_obstacles.txt $wb_folder/data/obstacle_list.txt
+		cp map${d}/map${d}_wind0.75/${d}.txt $wb_folder/data/plugin_parameters/wind_map.txt
+		cp map${d}/map${d}_wind0.75/${d}_obstacles.txt $wb_folder/data/obstacle_list.txt
 
 		# then, 20 random release rate [36, 53]
 		for i in 1

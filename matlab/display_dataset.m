@@ -7,8 +7,8 @@ data = load([path file]);
 
 %% obstacles
 map_nbr = maps_nbr_from_path(path);
-%openfoam_folder = ['../openfoam/test_maps/map' map_nbr '/map' map_nbr '_wind1/'];
-openfoam_folder = ['../openfoam/training_random/training_random_wind1.0_angle0/' map_nbr '/'];
+%openfoam_folder = ['../openfoam/test_maps/map' map_nbr '/map' map_nbr '_wind0.75/'];
+openfoam_folder = ['../openfoam/training_random/training_random_wind0.75_angle0/' map_nbr '/'];
 obstacle = load([openfoam_folder maps_nbr_from_path(path) '_obstacle.mat']);
 obstacle.obstacle_map = (obstacle.obstacle_map == 0);
 obstacle.obstacle_map = obstacle.obstacle_map(:);

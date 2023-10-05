@@ -8,7 +8,7 @@
 close all; clear all; clc;
 
 % general folder
-general_folder = '../openfoam/training_random/training_random_wind1.0_angle0/';
+general_folder = '../openfoam/training_random/training_random_wind0.75_angle0/';
 addpath("functions");
 % universal grid
 step = 0.1; % this should match the grid size in openfoam
