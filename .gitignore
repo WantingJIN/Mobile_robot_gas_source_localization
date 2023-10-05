@@ -60,3 +60,6 @@ Khepera/Results/**
 # some figures
 **feature**.png
 **truth**.png
+
+# matlab
+*.asv
