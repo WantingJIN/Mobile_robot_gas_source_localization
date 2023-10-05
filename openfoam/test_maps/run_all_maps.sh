@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #for all the maps
-for n in {0..8}
+for n in {0..10}
 do
 	cd map$n
 	echo $PWD
 	#run for different wind speeds
-	for w in 1
+	for w in 0.75
 	do
 		d=map${n}_wind$w
 		echo $d
@@ -20,12 +20,14 @@ do
 				cp -r map${n}_wind0 $d
 				#go in the subfolder
 				cd $d
-				./Allremove.sh
-				#change the wind speed in the file U in folder 0
-				text1="value           uniform (0 0 0);\n    }\n    outlet"
-				text2="value           uniform (-$w 0 0);\n    }\n    outlet"
-				sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U
+				#change the wind speed in the file U.orig in folder 0
+				text1="internalField   uniform (-0.75 0 0);"
+				text2="internalField   uniform (-$w 0 0);"
+				sed -i -e :n -e "$!N;/\n.*\n/!{$!bn};  s/$text1/$text2/;P;D" 0/U.orig
 				./Allrun_parallel.sh
+                #clean logs
+				rm log.*
+				rm -r 5/
 				cd ..
 			else
 				echo $d already exists! Nothing to be done here.
