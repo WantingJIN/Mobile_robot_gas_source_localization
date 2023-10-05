@@ -4,7 +4,7 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/ICRA2024/0816_informative_KLD_continunous_MOX';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID';
 % choose the folders
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
@@ -84,10 +84,10 @@ for i = 1:numExperiments
             sensor_mode = "MOX";
     end
             
-
+    estimate_error=sqrt(error(1)^2+error(2)^2);
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode);
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode'};
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error'};
     
     % Append the temporary table to the main dataTable
     dataTable = [dataTable; tempTable];
@@ -100,7 +100,7 @@ writetable(dataTable, [general_folder '/experiment_data.csv']); % Save as CSV
 disp('Experiment data saved.');
 
 %% plot the result for this folder 
-f = figure('Position',[-1561         656         1215         615]);
+f = figure('Position',[-1561         656         2015         1215]);
 custom_color = [44,136,217]./255;
 subplot(1,5,1)
 plot([0 length(unique(dataTable.Map))], [0 0], 'g');

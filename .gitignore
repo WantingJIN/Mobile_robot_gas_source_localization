@@ -1,8 +1,7 @@
 # webots
 webots/plugins/physics/odor_physics/results/SENSOR_*
-Results*/**
-*Results*/**
-!Results/test_maps/map*/*.environment
+Results/**
+!Results/test_maps/
 webots/wb_output.txt
 webots_*/
 result_backup

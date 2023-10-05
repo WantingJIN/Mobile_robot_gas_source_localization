@@ -6,6 +6,11 @@ echo "Start time : $now"
 webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
 webots_folder="../webots"
 map_nbr_filename="/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt"
+source_pos_filename="/home/wjin/Workspace/continuous_STE/webots/data/source_pos.txt"
+MCMC_exhaustive_filename="/home/wjin/Workspace/continuous_STE/webots/data/simulation_parameters/MCMC_or_exhaustive_eval.txt"
+#use MCMC search
+s=1
+echo $s > $MCMC_exhaustive_filename
 
 #delete last unfinished job
 result_folder_name="/home/wjin/Workspace/continuous_STE/Results/current/"  # the folder to store the result for experiment that not finish
@@ -16,6 +21,13 @@ if [ -d "$result_folder_name" ]; then
 else
     echo "Folder does not exist."
 fi
+
+nbr_source_pos=10
+source_pos_x=12.7
+source_pos_y_min=0.5
+source_pos_y_max=3.5
+source_pos_y_step=$(awk "BEGIN { print ($source_pos_y_max - $source_pos_y_min) / $nbr_source_pos }")
+
 #{0..8}
 for m in 0
 do
@@ -27,8 +39,10 @@ do
 	cp /home/wjin/Workspace/continuous_STE/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 	#for k in {1..3}
-    for k in {1..8}
+    for k in 1 2
 	do
+	    source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
+		echo $source_pos_x $source_pos_y > $source_pos_filename
 		$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps_with_Gaussian_plume.wbt' # >wb_output.txt
 		now=$(date +"%T")
 		echo "map $m  k $k  end time $now"
