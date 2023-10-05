@@ -1078,6 +1078,9 @@ void state_updategoal(){
 		break;
 	}
     goal_outside_obstacles(&goal_position);
+	if (simulation_parameters.workingMode == VIDEO){
+		state_read_goal();
+	}
 
     printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	switch(simulation_parameters.workingMode){
@@ -1103,10 +1106,32 @@ void state_updategoal(){
 			break;
 
 		}
+		case VIDEO:
+		{
+			//send the goal to the supervisor
+			Message msg(ID, 0, goal_position, -1, goal_position, 0);
+			send_msg(msg);
+
+			// send message to client
+			double g_buffer[2] = {0};
+			int timeout = 10;
+			int success = -1;
+
+			//send the message
+			send_goal_to_robot(goal_position.x, goal_position.y);
+			time_before_moving_and_measuring = get_exp_time();
+			sent_first_goal = true;
+
+			//move to listen
+			FSM.state = STATE_LISTEN;
+			FSM.hook = state_listen;
+			break;
+		}
+
 			
 		case OFFLINE:
-			FSM.state = STATE_READ;
-			FSM.hook  = state_read;
+			FSM.state = STATE_READ_ALL;
+			FSM.hook  = state_read_goal_measurement;
 			break;
 		default:
 			break;
@@ -1168,8 +1193,8 @@ void state_listen(){
 	}
 }
 
-void state_read(){
-	printf("Enter state read\n");
+void state_read_goal_measurement(){
+	printf("Enter state read goal and measurment\n");
     int d;
 	float f1, f2, f3, f4, f5, f6, f7, f8; 
     double t;
@@ -1222,6 +1247,28 @@ void state_read(){
 
 }
 
+void state_read_goal(){
+	printf("Enter state read goal and measurment\n");
+    int d;
+	float f1, f2, f3; 
+    double t;
+	char line[256];
+
+    // Read the goal position
+	if (!feof(experiment_goalposition_logfile)){
+		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
+		goal_position.x = f1;
+		goal_position.y = f2;
+		goal_position.heading = 0;
+		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+	} else{
+		printf("End of experiment measurements file\n");
+		FSM.state = STATE_FINISHED;
+
+	}
+
+}
+
 
 // =========================== MAIN ============================== //
 
@@ -1231,7 +1278,7 @@ int main(int argc, char **argv){
 	//CPyInstance hInstance;
 
 	init();
-	if (simulation_parameters.workingMode == EXPERIMENT){
+	if (simulation_parameters.workingMode == EXPERIMENT || simulation_parameters.workingMode == VIDEO){
 		init_TCP_socket();
 		printf("finish init TCP. \n");
 	}

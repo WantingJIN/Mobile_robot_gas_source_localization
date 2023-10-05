@@ -35,7 +35,7 @@ void init(){
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 
     // Running STE offline :log name of the experiment and scan
-    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results_0823/2023-08-23_12-36");
+    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results_0823/2023-08-23_12-51");
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
@@ -75,10 +75,9 @@ void init(){
 	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List; 11. information feature 12. cluster_entropy_ratio
 	// 13. measurement_error
 	//                                                      0.       1.   2.   3.   4. 5. 6. 7. 8.                      9.             10.             11.      12.   13.
-    simulation_parameters = (struct simulation_parameters) {OFFLINE, 775, 0.5, 100, 1, 1, 0, 0, INFORMATIVE_KLD, CONCENTRATION, visitedList_OFF, BELIEF, 10.0, 125};
+    simulation_parameters = (struct simulation_parameters) {OFFLINE, 575, 0.5, 100, 1, 1, 0, 0, INFORMATIVE_KLD, CONCENTRATION, visitedList_OFF, BELIEF, 10.0, 125};
 
 	//read simulation parameters
-	FILE* sim_param_file;
 	int ok = 0;
 	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/likelihood_error.txt", F_OK) != -1 ){
 		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/likelihood_error.txt", "r");

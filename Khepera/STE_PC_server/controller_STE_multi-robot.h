@@ -63,6 +63,7 @@ typedef enum infoFeature{
 typedef enum workingMode{
 	OFFLINE = 0,
 	EXPERIMENT = 1,
+	VIDEO = 2,
 }eworkingMode;
 
 // simulation paramters
@@ -95,7 +96,8 @@ typedef enum state {
   STATE_FINISHED    	=	5,
   STATE_OBSTACLE_AVOIDANCE = 6,
   STATE_LISTEN			=	7,
-  STATE_READ            =   8,
+  STATE_READ_ALL            =   8,
+  STATE_READ_GOAL           =   9,
 }eState;
 
 //finite state machine
@@ -137,7 +139,8 @@ void state_moving();
 void state_waiting();
 void state_obstacle_avoidance();
 void state_listen();
-void state_read();
+void state_read_goal();
+void state_read_goal_measurement();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose);

@@ -44,6 +44,7 @@ FILE* trajectory_logfile;
 FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
 FILE* experiment_time_logfile;
+FILE* sim_param_file;
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
 char posterior_logfile_name[256];
@@ -1264,6 +1265,9 @@ int main(int argc, char **argv){
 		// initialize the clustering algorithm
 		plume_model.initialize_information_matrix();
 	}
+	sim_param_file = fopen(config_logfile_name, "a");
+	fprintf(sim_param_file, "source_term %f %f %f %f %f %f\n", plume_model.param_list[2].lower_limit, plume_model.param_list[2].upper_limit, plume_model.param_list[3].lower_limit, plume_model.param_list[3].upper_limit, plume_model.param_list[4].lower_limit, plume_model.param_list[4].upper_limit);
+    fclose(sim_param_file);
 
 	// main loop
 	while (FSM.state != STATE_FINISHED){

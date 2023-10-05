@@ -58,6 +58,7 @@ extern FILE* config_logfile;
 extern FILE* gas_information_map_logfile;
 extern FILE* gas_hit_variance_map_logfile;
 extern FILE* experiment_time_logfile;
+extern FILE* sim_param_file;
 extern char goalposition_logfile_name[256];
 extern char measurements_logfile_name[256];
 extern char posterior_logfile_name[256];

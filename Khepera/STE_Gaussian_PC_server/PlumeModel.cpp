@@ -81,6 +81,19 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	
 	//allocate memory for the parameters
 	param_list = new parameter[nbr_param];
+	FILE * sim_param_file;
+	int ok = 0;
+	float m_Q_min, m_Q_max, m_a_y_min, m_a_y_max, m_b_y_min, m_b_y_max, m_covar_sig3, m_covar_sig4;
+	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_term.txt", F_OK) != -1 ){
+		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_term.txt", "r");
+		ok = fscanf(sim_param_file, "%f, %f, %f, %f, %f, %f, %f, %f", &m_Q_min, &m_Q_max, &m_a_y_min, &m_a_y_max, &m_b_y_min, &m_b_y_max, &m_covar_sig3, &m_covar_sig4);
+		//if(ok) printf("m_Q_min, m_Q_max, m_a_y_min, m_a_y_max, m_b_y_min, m_b_y_max: %f, %f, %f, %f, %f, %f\n", m_Q_min, m_Q_max, m_a_y_min, m_a_y_max, m_b_y_min, m_b_y_max);
+		fclose(sim_param_file);
+	}
+	float m_Q_resol = (m_Q_max - m_Q_min)/Q_nbins;
+	float m_a_y_resol = (m_a_y_max - m_a_y_min)/a_y_nbins;
+	float m_b_y_resol = (m_b_y_max - m_b_y_min)/b_y_nbins;
+
 	
 	//hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	//source_x
@@ -88,11 +101,11 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	//source_y
 	param_list[1] = parameter {"source_y", 		source_y_min,  	source_y_max, 		y_resol, 	y_nbins, 	0, 0};
 	//Q
-	param_list[2] = parameter {"Q", 			Q_min, 		Q_max, 	  Q_resol, 	Q_nbins, 	0, 0};
+	param_list[2] = parameter {"Q", 			m_Q_min, 		m_Q_max, 	  m_Q_resol, 	Q_nbins, 	0, 0};
 	//sigma_a
-	param_list[3] = parameter {"sigma_y_a", 	a_y_min,  	a_y_max, 	a_y_resol, 	a_y_nbins, 	0, 0};
+	param_list[3] = parameter {"sigma_y_a", 	m_a_y_min,  	m_a_y_max, 	m_a_y_resol, 	a_y_nbins, 	0, 0};
 	//sigma_b
-	param_list[4] = parameter {"sigma_y_b",  	b_y_min,   	b_y_max,  	b_y_resol, 	a_y_nbins, 	0, 0};
+	param_list[4] = parameter {"sigma_y_b",  	float(b_y_min),   	float(b_y_max),  	float(b_y_resol), 	a_y_nbins, 	0, 0};
 
 	//initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
@@ -107,8 +120,8 @@ GaussianPlumeModel2D::GaussianPlumeModel2D(){
 	covar_sig_ii[0] = 4;	//x
 	covar_sig_ii[1] = 0.1;	//y
 	covar_sig_ii[2] = 4;	//Q
-	covar_sig_ii[3] = 0.00001;	//sigma_y_a
-	covar_sig_ii[4] = 0.0005;	//sigma_y_n
+	covar_sig_ii[3] = m_covar_sig3; //0.001;	//sigma_y_a
+	covar_sig_ii[4] = m_covar_sig4; //0.01;	//sigma_y_n
 }
 
 //destructor
