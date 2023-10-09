@@ -1,4 +1,5 @@
 #include "khepera_functions.h"
+#include "Constant.h"
 
 // struct sKhepera4 khepera4;
 // struct sOdorboard odorboard;
@@ -34,13 +35,14 @@ void init(){
 	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 
-    // Running STE offline :log name of the experiment and scan
-    sprintf(logfile_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results_0818/continuous_clustering_ratio10/10/2023-08-18_16-54");
+    // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
+	// log name of the experiment and scan
+    sprintf(logfile_folder_name, "%s/Khepera/Results_0818/continuous_clustering_ratio10/10/2023-08-18_16-54", workspacePath);
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
 
-    sprintf(scan_folder_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/log_K4_scan_map5_11_2");
+    sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
 	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
 	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
 
@@ -80,51 +82,59 @@ void init(){
 	//read simulation parameters
 	FILE* sim_param_file;
 	int ok = 0;
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/likelihood_error.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/likelihood_error.txt", "r");
+	string sim_param_file_path;
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/likelihood_error.txt";
+	if(access(sim_param_file_path.c_str() , F_OK) != -1 ){
+		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
 		ok = fscanf(sim_param_file, "%f", &simulation_parameters.likelihood_error);
 		if(ok) printf("likelihood_error : %f\n", simulation_parameters.likelihood_error);
 		fclose(sim_param_file);
 	}
-    //printf("likelihood_error %f\n", simulation_parameters.likelihood_error);
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/gloabl_local_search_ratio.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params", "r");
+    sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/gloabl_local_search_ratio.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
 		ok = fscanf(sim_param_file, "%f", &simulation_parameters.gloabl_local_search_ratio);
 		if(ok) printf("gloabl_local_search_ratio : %f\n", simulation_parameters.gloabl_local_search_ratio);
 		fclose(sim_param_file);
 	}
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_iteration_num.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_iteration_num.txt", "r");
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/MCMC_iteration_num.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_iteration_num);
 		if(ok) printf("MCMC_iteration_num : %d\n", simulation_parameters.MCMC_iteration_num);
 		fclose(sim_param_file);
 	}
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_or_exhaustive_eval.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/MCMC_or_exhaustive_eval.txt", "r");
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/MCMC_or_exhaustive_eval.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_or_exhaustive_eval);
 		if(ok) printf("MCMC_or_exhaustive_eval : %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
 		fclose(sim_param_file);
 	}
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/number_of_robots.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/number_of_robots.txt", "r");
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/number_of_robots.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.number_of_robots);
 		if(ok) printf("number_of_robots : %d\n", simulation_parameters.number_of_robots);
 		fclose(sim_param_file);
 	}
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/scenario.txt", F_OK) != -1 ){
-		sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/scenario.txt", "r");
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/scenario.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
 		ok = fscanf(sim_param_file, "%d", &simulation_parameters.scenario);
 		if(ok) printf("scenario : %d\n", simulation_parameters.scenario);
 		fclose(sim_param_file);
 	}
-    if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt", F_OK) != -1 ){
-       sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt", "r");
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/map_nbr.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+	   sim_param_file = fopen(sim_param_file_path.c_str(), "r");
        ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
        if(ok) printf("map number : %d\n", simulation_parameters.map_nbr);
        fclose(sim_param_file);
     }
-	if(access("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/working_mode.txt", F_OK) != -1 ){
-       sim_param_file = fopen("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/working_mode.txt", "r");
+	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/working_mode.txt";
+	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
+	   sim_param_file = fopen(sim_param_file_path.c_str(), "r");
        int workingMode = 0;
 	   ok = fscanf(sim_param_file, "%d", &workingMode);
 	   simulation_parameters.workingMode = static_cast<eworkingMode>(workingMode);

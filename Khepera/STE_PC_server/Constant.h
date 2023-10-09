@@ -65,7 +65,7 @@
 
 #define TIMEOUT         1000*1000 // miliseconds
 
-
+extern const char* workspacePath; 
 #endif
 
 

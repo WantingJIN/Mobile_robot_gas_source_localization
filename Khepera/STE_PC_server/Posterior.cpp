@@ -294,12 +294,7 @@ void Posterior::process(){
 	//printf("\n");
 
 	//log
-	//const char* str = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results/pdf.csv";
-	//log_pdf(str, 'a');
 	log_pdf(posterior_pdf_3D_name, 'a');
-	/*const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
-	log_marginal_pdf(str2, 'a');
-	*/
 	//print on screen
 	if(VERBOSE) model->print_expected_val();
 	if(VERBOSE) model->print_max_a_post_val();

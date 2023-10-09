@@ -2,11 +2,9 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
-#include "PlumeModel.h"
-#include "controller_STE_multi-robot.h"
 #include <stdexcept>
-#include "CellMeasurements.h"
-#include "GasDispersionMap.h"
+#include "PlumeModel.h"
+#include "Constant.h"
 
 /********************************************************/
 //						PlumeModel 						//
@@ -425,16 +423,15 @@ void DeepCFDPlumeModel2D::get_source_position_params(parameter * source_position
 void DeepCFDPlumeModel2D::initialize_model_features(){
 	// Load the number of maps
     int m;
-	// FIXME: change the path here
-    std::ifstream f("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt");
+	string map_file_path = string(workspacePath) + "/Khepera/Data/params/map_nbr.txt";
+    ifstream f(map_file_path.c_str());
     f >> m;
     f.close();
 
     // Load the model
-	//std::cout << "Loading model..." << std::endl;
-	// FIXME: change the path here
-    DeepCFD = torch::jit::load("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/STE_PC_server/DeepCFD_libtorch_model.pt", device);
-	std::string mat_address = "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/DeepCFD_input/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
+	string model_file_path = string(workspacePath) + "/Khepera/STE_PC_server/DeepCFD_libtorch_model.pt";
+    DeepCFD = torch::jit::load(model_file_path.c_str(), device);
+	string mat_address = string(workspacePath) + "/Khepera/Data/DeepCFD_input/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
     //convert string to char*
     //std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];

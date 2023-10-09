@@ -77,6 +77,8 @@ char scan_measurements_logfile_name[300];
 FILE* scan_position_logfile;
 char scan_position_logfile_name[300];
 
+// define the global parameter, the path to the workspace
+const char* workspacePath = getenv("STE_DDPM_ROOT");
 // finite state machine
 struct FSM FSM;
 
@@ -130,7 +132,7 @@ float ** obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
-std::string environment_file("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test_map.environment");
+std::string environment_file = std::string(workspacePath) + "/Khepera/Data/test_map.environment";
 VisiLibity::Environment my_environment(environment_file);
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
@@ -290,7 +292,8 @@ void history_print(struct history history){
 
 void read_obstacle_list(){
 	// open file
-	std::ifstream infile("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt");
+	string obs_file_path = string(workspacePath) + "/Khepera/Data/obstacle_list.txt";
+	std::ifstream infile(obs_file_path.c_str());
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	// allocate memory for obstacle list array
@@ -444,17 +447,6 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 	float sigmaD = simulation_parameters.measurement_error; //125;
 	double sum_tmp = 0;
 
-	double true_source_location[2] = {11.0,1.0};
-
-	// if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
-	
-	// for each sample, getting the model concentration and calculate the likelihood
-	// double model_concentration = 0;
-	// for (int i = 0; i < history.size; i++){
-	// 	model_concentration = model->concentration(history.position[i], sampleBuffer.average_wind_intensity, parameters);
-	// 	sum_tmp += pow(history.measurement_avg[i] - model_concentration, 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-	// }
-
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
 	vector<float> model_c_avg(history.size); 
@@ -467,10 +459,6 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 		// 	sigmaD = 125;
 		// }
 		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-		if (verbose){
-			//printf("Parameters is : %f, %f\n", parameters[0], parameters[1]);
-			//printf("For %d, estimation: %f, measurement: %f \n", i, true_model_c_avg[i][0], history.measurement_avg[i]);
-		}
 	}
 	
 	return (exp(-0.5 * sum_tmp));

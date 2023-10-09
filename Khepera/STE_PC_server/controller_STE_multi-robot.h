@@ -19,6 +19,7 @@
 #include <string>
 #include <Eigen/Dense>
 #include <cmath>
+#include <cstdlib> // for getenv
 #include "PlumeModel.h"
 #include "SampleBuffer.h"
 #include "Position.h"
