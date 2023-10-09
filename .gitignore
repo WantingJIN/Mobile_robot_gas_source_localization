@@ -30,12 +30,13 @@ openfoam/AutoGDM
 *.zip
 
 # khepera
-
 Khepera/Results*/**
 Khepera/*Results*/**
 Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
+Khepera/STE_PC_server/log.txt
+Khepera/STE_K4_client/makeenv
 Khepera/STE_offline/log_STE_multi/**
 Khepera/STE_offline/log_STE_**/**
 Khepera/Results/**
@@ -55,7 +56,10 @@ Khepera/Results/**
 **/output/
 **/output*/
 **/ReadmeFile/
+**output.txt
+
 #**/c++*/
+
 
 # some figures
 **feature**.png
