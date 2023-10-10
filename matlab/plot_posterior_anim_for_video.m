@@ -1,12 +1,12 @@
 clear all; close all; clc;
 
-%general_folder='/home/wjin/Workspace/continuous_STE/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/wjin/Workspace/continuous_STE/Khepera/results_continuous_sample_PID_fixed_8_source_pos/log_STE_ICRA_video';
+%general_folder='../Results/results_test_1_sense_reverse_model/1/';
+general_folder='../Khepera/results_continuous_sample_PID_fixed_8_source_pos/log_STE_ICRA_video';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
 
-%general_folder='/home/wjin/Workspace/continuous_STE/Results/Experimental_Results/Results_0223/2023-02-23_15-23/pc';
+%general_folder='../Results/Experimental_Results/Results_0223/2023-02-23_15-23/pc';
 
 pdf = dlmread([experiment_file_path,'/pdf.csv']);
 %pdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
@@ -14,7 +14,7 @@ positions = dlmread([experiment_file_path, '/position_history.csv']);
 anim_folder=[general_folder '/ani']
 params = my_text2struct([experiment_file_path,'/param_log.csv']);
 map_nbr = params.map_nbr;
-obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/' num2str(map_nbr) '_obstacles.txt'];
+obst_file = ['../Khepera/Data/Obstacle_lists/' num2str(map_nbr) '_obstacles.txt'];
 obst_fileID = fopen(obst_file);
 C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
 for k=1:length(C{1,1})

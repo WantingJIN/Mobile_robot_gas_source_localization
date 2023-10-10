@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 % Check the test map environments
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/test_maps';
+general_folder = '../Results/test_maps';
 map_number = 3;
 file_name = [general_folder, '/map', num2str(map_number),'/test_map', num2str(map_number), '.environment'];
 
@@ -18,7 +18,7 @@ axis equal
 hold on
 obstacles_x=[];
 obstacles_y=[];
-obst_file = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(map_number) '/map' num2str(map_number) '_wind0.75/' num2str(map_number) '_obstacles.txt'];
+obst_file = ['../openfoam/test_maps/map' num2str(map_number) '/map' num2str(map_number) '_wind0.75/' num2str(map_number) '_obstacles.txt'];
 obst_fileID = fopen(obst_file);
 C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
 for k=1:length(C{1,1})

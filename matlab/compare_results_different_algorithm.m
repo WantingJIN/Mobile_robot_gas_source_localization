@@ -2,13 +2,13 @@
 clear all; clc; close all;
 dataTable = table();
 
-plot_folder='/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/Plot';
+plot_folder='../Results/ICRA2024/Final_campaign/Plot';
 
 %% load the data
 % the general folder
-general_folder_list = ["/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/MOX/KLD_continunous_MOX",...
-    "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/MOX/KLD_visit_sense_MOX", ...
-    "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/MOX/KLD_stop_sense_MOX"];
+general_folder_list = ["../Results/ICRA2024/Final_campaign/MOX/KLD_continunous_MOX",...
+    "../Results/ICRA2024/Final_campaign/MOX/KLD_visit_sense_MOX", ...
+    "../Results/ICRA2024/Final_campaign/MOX/KLD_stop_sense_MOX"];
 % general_folder_list = ["/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/MOX/KLD_continunous_MOX",...
 %     "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/MOX/clustering_MOX_continuous_new_cluster_selection"];
 %  general_folder_list = ["/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID",...
@@ -99,8 +99,7 @@ dataTable.sampling_mode = categorical(dataTable.sampling_mode, samplingModeOrder
 planningModeOrder = ["informative kld", "belief clustering"];
 dataTable.planning_mode = categorical(dataTable.planning_mode, planningModeOrder);
 groupcat = dataTable.sampling_mode;
-% mapOrder = [0, 1, 2, 3, 5,10];
-mapOrder = 1;
+mapOrder = [0, 1, 2, 3, 5,10];
 dataTable.Map = categorical(dataTable.Map,mapOrder);
 %subplot(1,3,1)
 axes(ha(1));

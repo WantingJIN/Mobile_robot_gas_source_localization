@@ -1,4 +1,4 @@
-fname = '/home/wjin/Workspace/continuous_STE/python/MyDeepCFD-master/Run/results.json'; 
+fname = '../python/MyDeepCFD-master/Run/results.json'; 
 fid = fopen(fname); 
 raw = fread(fid,inf); 
 str = char(raw'); 

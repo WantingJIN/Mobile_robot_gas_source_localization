@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/results_continuous_MOX_greedy_gas_hit_dynamic_0.1_2_0.2_cdf/2');
+folder_list = dir('../Results/0913_KLD_continous_sense_new_MOX/2');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -56,7 +56,7 @@ for i=1:exp_number
         % obstacles
         obstacles_x=[];
         obstacles_y=[];
-        obst_file = ['/home/wjin/Workspace/continuous_STE/openfoam/test_maps/map' num2str(params.map_nbr) '/map' num2str(params.map_nbr) '_wind0.75/' num2str(params.map_nbr) '_obstacles.txt'];
+        obst_file = ['../openfoam/test_maps/map' num2str(params.map_nbr) '/map' num2str(params.map_nbr) '_wind0.75/' num2str(params.map_nbr) '_obstacles.txt'];
         obst_fileID = fopen(obst_file);
         C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
         for k=1:length(C{1,1})

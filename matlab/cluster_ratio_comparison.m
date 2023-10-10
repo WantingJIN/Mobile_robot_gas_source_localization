@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/0809_pdf_test_cluster_entropy_ratio_all_maps';
+general_folder = '../Results/0809_pdf_test_cluster_entropy_ratio_all_maps';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);

@@ -1,11 +1,11 @@
 %% Create an empty table to store experimental data
 clear all; clc; close all;
 dataTable = table();
-plot_folder='/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/Paper_plot';
+plot_folder='../Results/ICRA2024/Final_campaign/Paper_plot';
 %% compare MOX sensor sample-in-motion: KLD planning VS belief clustering
 % % the general folder
-% general_folder_list = ["/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/New_MOX/KLD_continunous_new_MOX",...
-%     "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/New_MOX/clustering_continuous_sense_new_MOX"];
+% general_folder_list = ["../Results/ICRA2024/Final_campaign/New_MOX/KLD_continunous_new_MOX",...
+%     "../Results/ICRA2024/Final_campaign/New_MOX/clustering_continuous_sense_new_MOX"];
 % num_comp = size(general_folder_list,2);
 % 
 % % load all the data and combine the results
@@ -97,9 +97,9 @@ plot_folder='/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign
 
 %% compare MOX sensor with KLD planning: Stop-sense-go, visit-sense-go, sense-in-motion
 % % the general folder
-% general_folder_list = ["/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/New_MOX/KLD_continunous_new_MOX",...
-%     "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/New_MOX/KLD_visit_sense_new_MOX", ...
-%     "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/New_MOX/KLD_stop_sense_new_MOX"];
+% general_folder_list = ["../Results/ICRA2024/Final_campaign/New_MOX/KLD_continunous_new_MOX",...
+%     "../Results/ICRA2024/Final_campaign/New_MOX/KLD_visit_sense_new_MOX", ...
+%     "../Results/ICRA2024/Final_campaign/New_MOX/KLD_stop_sense_new_MOX"];
 % num_comp = size(general_folder_list,2);
 % 
 % % load all the data and combine the results
@@ -188,8 +188,8 @@ plot_folder='/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign
 %% Compare PID sensor with KLD planning: stop-sense-go vs visit-sense-go
 
 % %the general folder
-general_folder_list = ["/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID",...
-     "/home/wjin/Workspace/continuous_STE/Results/ICRA2024/Final_campaign/PID/KLD_stop_sense_PID"];
+general_folder_list = ["../Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID",...
+     "../Results/ICRA2024/Final_campaign/PID/KLD_stop_sense_PID"];
 num_comp = size(general_folder_list,2);
 
 % load all the data and combine the results

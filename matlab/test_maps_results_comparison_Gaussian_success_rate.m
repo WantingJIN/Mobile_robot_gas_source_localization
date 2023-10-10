@@ -2,9 +2,9 @@ clear all; clc; close all;
 
 %% GET FIRST DATASET
 % the general folder
-general_folder = ["/home/wjin/Workspace/continuous_STE/Results/results_test_maps_4000_dataset"
-                   "/home/wjin/Workspace/continuous_STE/Results/results_test_maps_Gaussian_5D"]  ;
-save_folder_path = '/home/wjin/Workspace/continuous_STE/Results';
+general_folder = ["../Results/results_test_maps_4000_dataset"
+                   "../Results/results_test_maps_Gaussian_5D"]  ;
+save_folder_path = '../Results';
 n_exp=10;
                
 for gf=1:size(general_folder,1)

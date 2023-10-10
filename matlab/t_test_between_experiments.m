@@ -1,5 +1,5 @@
 %% run t-test between different experiment to determine if there is a statistical difference
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
+general_folder = '../Results/';
 experiment_1 = 'results_stop_sense_PID';
 experiment_2 = 'results_continuous_sample_MOX';
 experiment_1_folder = [general_folder experiment_1];
