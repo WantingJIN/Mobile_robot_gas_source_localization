@@ -65,7 +65,8 @@
 
 #define TIMEOUT         1000*1000 // miliseconds
 
-
+// define the global parameter - the root path of the project
+extern const char* workspacePath; 
 #endif
 
 

@@ -78,6 +78,9 @@ char scan_measurements_logfile_name[300];
 FILE* scan_position_logfile;
 char scan_position_logfile_name[300];
 
+// define the global parameter, the path to the workspace
+const char* workspacePath = getenv("STE_DDPM_ROOT");
+
 // finite state machine
 struct FSM FSM;
 
@@ -128,10 +131,10 @@ float ** obstacles = NULL;
 // 							{9-margin, 12+margin, 1-margin, static_cast<float>(1.5+margin)}, 
 // 							{static_cast<float>(11.5-margin), 12+margin, 0-margin, static_cast<float>(1.5+margin)}};
 // map astar_map(obstacles, 4);
-std::list<Position> path;
-std::list<Position>::iterator i;
+list<Position> path;
+list<Position>::iterator i;
 
-std::string environment_file("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test_map.environment");
+string environment_file = string(workspacePath) + "/Khepera/Data/test_map.environment";
 VisiLibity::Environment my_environment(environment_file);
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
@@ -291,7 +294,8 @@ void history_print(struct history history){
 
 void read_obstacle_list(){
 	// open file
-	std::ifstream infile("/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt");
+	string obs_file_path = string(workspacePath) + "/Khepera/Data/obstacle_list.txt";
+	ifstream infile(obs_file_path.c_str());
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	// allocate memory for obstacle list array

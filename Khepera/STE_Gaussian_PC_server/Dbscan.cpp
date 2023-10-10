@@ -155,7 +155,7 @@ void DBSCAN::calculateBoundingBoxes(){
 
 void DBSCAN::logBoundingBoxes(){
 	char clustering_bounding_boxes_logfile_name[512];
-	sprintf(clustering_bounding_boxes_logfile_name, "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/log_STE_multi/clustering_bounding_boxes.csv");	
+	sprintf(clustering_bounding_boxes_logfile_name, "%s/Khepera/log_STE_multi/clustering_bounding_boxes.csv", workspacePath);	
     FILE * clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
 	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
 	fprintf(clustering_bounding_boxes_logfile, "%f, ", ratio);

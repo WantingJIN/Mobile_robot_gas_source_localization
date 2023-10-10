@@ -12,6 +12,7 @@ using namespace std;
 
 #include <matio.h>
 #include <cmath>
+#include <unistd.h> // Include unistd.h for F_OK
 
 #include "CellMeasurements.h"
 #include "GasDispersionMap.h"
