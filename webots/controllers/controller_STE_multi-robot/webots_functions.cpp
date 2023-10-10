@@ -626,18 +626,6 @@ void cleaning_up(){
 	FILE * ack_file;
 	char * pPath;
 
-	// end of program notif for cluster
-	pPath = getenv ("WB_WORKING_DIR");
-    if (pPath!=NULL){
-    	sprintf(file_name, "%s/ack.txt",  pPath);
-    	ack_file = fopen(file_name, "w");
-    	fclose(ack_file);
-    }else{ //for local PC
-    	if(access("/home/rahbar/bell.wav", F_OK) != -1 )
-			//systemRet = system("aplay -q /home/rahbar/bell.wav");
-		if(systemRet == -1)
-			printf("end of program notification didn't work.\n");
-    }
     //disable the sensors
     wb_receiver_disable(odor_tag);
     wb_receiver_disable(wind_tag);

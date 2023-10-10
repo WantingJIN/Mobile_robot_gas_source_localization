@@ -62,6 +62,9 @@ char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 
+// define the global parameter - the root path of the project
+const char* workspacePath = getenv("STE_DDPM_ROOT");
+
 // finite state machine
 struct FSM FSM;
 
@@ -1060,10 +1063,6 @@ void goal_outside_obstacles(Position * goal){
 			//check if the distance to candidate is smaller than others
 			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
-				// printf(">>> best sor far\n");
-				//if so, then check if that position is not in another obstacle and it's inside the arena
-				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
-				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
@@ -1093,13 +1092,7 @@ void goal_outside_obstacles(Position * goal){
 		// for each candidate position
 		for(int i=0; i<8; i++){
 			//check if the distance to candidate is smaller than others
-			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 			if(goal->distance_from(candidates[i]) < min_dist){
-				//printf("candidates position is: %f %f\n", candidates[i].x, candidates[i].y);
-				// printf(">>> best sor far\n");
-				//if so, then check if that position is not in another obstacle and it's inside the arena
-				//printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
-				//printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
 					//if so, then this is the nearest position
 					nearest_position.copy_position(candidates[i]);
@@ -1312,17 +1305,12 @@ void state_estimating(){
 	}
 	
 	printf("sum posterior : %f \n", posterior.sum);
-	//printf("Before process. \n");
 	posterior.process();
-	// calculate the variance of reading for each cell
-	//posterior.calculate_cell_measure_variance_for_all_possible_source(cell_measurements_list);
-	//printf("After Process. Start logging.\n");
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
-	//printf("Finish logging.\n");
 	posterior.log_pdf(posterior_pdf_3D_name, 'a');
-	//posterior.log_pdf("/home/wjin/Workspace/continuous_STE/Results/current/101/posterior.csv",'a');
+
 
 	FSM.n_cycles++;
 	if(VERBOSE) printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
@@ -1504,7 +1492,6 @@ void state_moving(){
 
 void state_obstacle_avoidance(){
 	//printf("avoiding obstacle\n");
-	//obstacle_avoidance_k3();
 	obstacle_avoidance_k4();
 }
 
@@ -1513,11 +1500,8 @@ void state_obstacle_avoidance(){
 
 
 int main(int argc, char **argv){
-	// python instance (should be called ONLY ONCE and only in main)
-	//CPyInstance hInstance;
 	init();
 	read_obstacle_list();
-    //load_model_c();
 	//visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
   	if(  my_environment.is_valid( epsilon )  )
