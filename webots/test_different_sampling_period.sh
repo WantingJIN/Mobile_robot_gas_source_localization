@@ -1,21 +1,23 @@
 #!/bin/bash
 
+# To run from webots folder
+
 now=$(date +"%T")
 echo "Start time : $now"
 
 webots="/usr/local/bin/webots"
 webots_folder="../webots"
 map_nbr_filename="/home/durancea/plume_model_learning/webots/data/map_nbr.txt"
-# use environment 0: obstacle free enviroment
-m=1
+# use map 0: obstacle free enviroment
+m=10
 echo $m > $map_nbr_filename
-cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind0/"$m".txt data/plugin_parameters/wind_map.txt
-cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind0/"$m"_obstacles.txt data/obstacle_list.txt
+cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
+cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
 cp /home/durancea/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 sampling_prd_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/sampling_period.txt"
 source_pos_filename="/home/durancea/plume_model_learning/webots/data/source_pos.txt"
 
-nbr_source_pos=8
+nbr_source_pos=6
 source_pos_x=12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
@@ -31,25 +33,28 @@ else
     echo "Folder does not exist."
 fi
 
-#{0..8}
-for p in 1 10 15 20 25 30 35 40;
+# save previous period value
+tmp=$(cat "$sampling_prd_filename") 
+
+for p in 1 10 30 60 90 120 150 #10 15 20 25 30 35 40; 
 do
-	echo "frequency is $f"
+	echo "frequency is 1/$p"
 	echo $p > $sampling_prd_filename
 
 	# wind map and obstacle list
-
-	#for k in {1..3}
-    for k in {1..8}
+	for ((k=1; k<=$nbr_source_pos; k++))
 	do
 		source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
 		echo $source_pos_x $source_pos_y > $source_pos_filename
 		$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' # >wb_output.txt
 		now=$(date +"%T")
-		echo "map $m  k $k  end time $now"
+		echo "map $m  p $p k $k  end time $now"
 	done
+
 done
 
+# write original period value back
+echo $tmp > $sampling_prd_filename
 
 now=$(date +"%T")
 echo "End time : $now"

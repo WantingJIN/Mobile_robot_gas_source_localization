@@ -1,17 +1,13 @@
 clear all; close all; clc;
 
-%general_folder='/home/durancea/plume_model_learning/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/durancea/plume_model_learning/Khepera/results_continuous_sample_PID_fixed_8_source_pos/log_STE_ICRA_video';
-% experiment_path = uigetdir(general_folder);
-% experiment_file_path = [experiment_path,'/101'];
+general_folder='/home/durancea/plume_model_learning/Results/SR_MOX/10/1696237480617/101';
 experiment_file_path = general_folder;
 
-%general_folder='/home/durancea/plume_model_learning/Results/Experimental_Results/Results_0223/2023-02-23_15-23/pc';
 
-pdf = dlmread([experiment_file_path,'/pdf.csv']);
-%pdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
+threeDpdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
+pdf = threeDpdf(1:2,:);
 positions = dlmread([experiment_file_path, '/position_history.csv']);
-anim_folder=[general_folder '/ani']
+anim_folder=[general_folder '/ani'];
 params = my_text2struct([experiment_file_path,'/param_log.csv']);
 map_nbr = params.map_nbr;
 obst_file = ['/home/durancea/plume_model_learning/Khepera/Data/Obstacle_lists/' num2str(map_nbr) '_obstacles.txt'];
@@ -29,7 +25,7 @@ x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
 
 % plot the initial pdf for video
-f =figure('Position',[601.0000  111.4000  67 0.6000  1450.6000]);
+f =figure('Position',[601.0000  111.4000  670.6000  1450.6000]);
 imagesc(y,x,reshape(pdf(1,:),20,20))
 hold on
 plot(positions(1,3),positions(1,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
@@ -53,9 +49,10 @@ pause;
 drawnow
 saveas(f, [anim_folder,'/',num2str(0),'.png']);
 
-
+test1 = size(pdf,1)
 
 for i=2:size(pdf,1)
+    test=i
     f =figure('Position',[601.0000  111.4000  670.6000  1450.6000]);
     imagesc(y,x,reshape(pdf(i,:),20,20))
     hold on

@@ -210,18 +210,21 @@ void go_to_goal(Position goal){
     movement[1] = (goal.y - current_position.y);
     //printf("movement : %f %f \n", movement[0], movement[1]);
 
+	//float distance = sqrt(movement[0]^2+movement[1]^2);
+
     //vector to the goal in robot coordinates
     float x =  movement[0]*cosf(current_position.heading) + movement[1]*sinf(current_position.heading); // x in robot coordinates
-   
     float z = -movement[0]*sinf(current_position.heading) + movement[1]*cosf(current_position.heading); // z in robot coordinates
- 
     float bearing = atan2(z, x) - PI/2;    //[-PI, PI]
     //printf("bearing : %f \n", bearing/PI*180);
 
     //angular and linear velocity
     float w = 1 * sinf(bearing);
-    float u = 0.2 * cosf(bearing);
-    // printf("linear v : %f; angular w : %f \n", u, w);
+
+	int dir = (cosf(bearing)>0)-(cosf(bearing)<0);
+    float u = simulation_parameters.vel_factor * dir * (abs(bearing)<=0.2) + (abs(bearing)>0.2) * 0.2 * cosf(bearing); //simulation_parameters.vel_factor * 0.2 * cosf(bearing);
+    
+	//printf("linear v : %f; angular w : %f \n", u, w);
     // wheels speed
 	speed[0] = (u - AXLE_LENGTH*w/2.0) / WHEEL_RADIUS;   //10 is a speed-up factor
 	speed[1] = (u + AXLE_LENGTH*w/2.0) / WHEEL_RADIUS;
@@ -536,11 +539,6 @@ void information_gain_navigation_approx(){
 		fake_history.measurement[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
 		(fake_history.size)++;
 	}
-	// 4 candidate positions
-    // Position candidates[4] = {	Position(current_position.x + p0, current_position.y, 0), 
-	// 							Position(current_position.x - p0, current_position.y, 0),
-	// 							Position(current_position.x, current_position.y + p0, 0),
-	// 							Position(current_position.x, current_position.y - p0, 0)};
 	// 8 candidate positions
 	Position candidates[8] = {	Position(current_position.x + p0, current_position.y, 0),
 								Position(current_position.x - p0, current_position.y, 0),
@@ -653,21 +651,17 @@ double target_evaluation(double position[][3]){
 }
 */
 void balance_exploration_exploitation(float gloabl_local_search_ratio){
-	float ratio = gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float ratio = gloabl_local_search_ratio;
 	float vec1[2] = {0}, vec2[2] = {0};
 	printf("current_position : %f %f , goal position : %f %f , estimated source : %f %f \n", current_position.x,current_position.y,
 		goal_position.x,goal_position.y, plume_model.max_a_post_value[0],plume_model.max_a_post_value[1]);
 	vec1[0] = goal_position.x - current_position.x; //exploration
 	vec1[1] = goal_position.y - current_position.y;
- 	//vec1[2] = goal_position[2] - current_position[2]; 
-	//vec2[0] = posterior.max_a_posteriori.source_position[0] - current_position[0]; //exploitation (source) //estimated_source_parameters //max_a_post_source_parameters
-	//vec2[1] = posterior.max_a_posteriori.source_position[1] - current_position[1];
 	vec2[0] = plume_model.max_a_post_value[0] - current_position.x; //TODO: to improve
 	vec2[1] = plume_model.max_a_post_value[1] - current_position.y;
-	//vec2[2] = estimated_source_parameters.source_position[2] - current_position[2];
 	goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
 	goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
-	goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
+	goal_position.heading = 0;
 	//printf("new goal position : %f %f %f\n", goal_position[0],goal_position[1],goal_position[2]);
 }
 /*
@@ -1187,6 +1181,14 @@ void state_measuring(){
 		double odor_concentration = 0.0;
         odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+
+		printf("wind intensity reading: %f\n", sampleBuffer.instant_wind_intensity);
+		printf("wind orientation: %f\n", sampleBuffer.instant_wind_angle);
+		printf("Speed 0: %f\n", speed[0]);
+		printf("Speed 1: %f\n", speed[1]);
+		printf("Robot lin vel: %f\n", ((speed[0]+speed[1])*WHEEL_RADIUS/2));
+		printf("Robot orientation: %f\n", current_position.heading);
+
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
 		// FIXME - add the case for reverse sensor model
@@ -1483,12 +1485,10 @@ void state_moving(){
 		// 	FSM.hook  = state_obstacle_avoidance;
 		// 	return;
 		// }
-		//wb_differential_wheels_set_speed(speed[0],speed[1]);
 		set_wheels_speed(speed[0],speed[1]);
 		//log the position
 		//log_position();
 	}else{
-		//wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0,0);
 		sampleBuffer.reset_all();
 		path.clear();

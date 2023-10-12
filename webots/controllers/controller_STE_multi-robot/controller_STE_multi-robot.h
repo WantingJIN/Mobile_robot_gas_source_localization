@@ -104,6 +104,8 @@ struct simulation_parameters{
 	eInfoFeature infoFeature;
 	int sampling_period;
 	float cluster_entropy_ratio;
+	float vel_factor;
+	float wind_factor;
 };
 extern struct simulation_parameters simulation_parameters;
 

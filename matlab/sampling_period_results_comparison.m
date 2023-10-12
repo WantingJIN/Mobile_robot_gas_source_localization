@@ -2,11 +2,12 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/0804_test_continous_sampling_lawnmower';
+general_folder = '/home/durancea/plume_model_learning/Results/SR_map10_MOX_wider_range_6k';
 folder_list = dir(general_folder);
-folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
+folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
+
 
 for i=1:exp_number
     % the name of the folder
