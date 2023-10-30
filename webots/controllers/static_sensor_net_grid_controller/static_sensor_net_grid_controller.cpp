@@ -291,9 +291,10 @@ void wind_read(int i, double* intensity, double* angle){
     //*uz = v.z;
 
     //if sensor is placed in obstacle, we send only 0
-    if(in_obstacle(sensor_position[i]))
+    if(in_obstacle(sensor_position[i])){
         *intensity = 0;
         *angle = 0;
+    }
 }
 
 void place_sensor(int sensor_ID, double* position){
