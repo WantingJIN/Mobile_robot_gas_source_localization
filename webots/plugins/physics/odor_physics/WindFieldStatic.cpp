@@ -81,8 +81,8 @@ Point3 THISCLASS::GetWindSpeed(const Point3 &preal) {
 
 	//Fa
 	int index;
-	int nbins[3] = {100,64,21};						//HARD CODED /!\ //
-	float resolution[3] = {0.1586,0.0632,0.1};		//HARD CODED /!\ //
+	int nbins[3] = {100,64,19};						//HARD CODED /!\ //
+	float resolution[3] = {0.1586,0.0632,0.095};		//HARD CODED /!\ //
 	
 	//convert position to indices.
 	int indices[3];
