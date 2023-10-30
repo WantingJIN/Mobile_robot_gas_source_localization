@@ -12,7 +12,6 @@ Results/**
 result_backup
 *.wbproj
 
-webots/plugins/**
 WIRE_Lab/**
 webots/controllers/controller_STE_video
 
