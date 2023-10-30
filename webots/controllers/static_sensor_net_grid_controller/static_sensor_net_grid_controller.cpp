@@ -284,7 +284,7 @@ void wind_read(int i, double* intensity, double* angle){
     }
     //convert the 3D vector from the sensor to intensity and heading
     *intensity = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    *angle = atan2(v.y, v.x)/PI*180; //degree
+    *angle = atan2(v.y, v.x); //radian; while calculating the average, we use radian and covert to degree
     //keep the 3D vector
     //*ux = v.x; 
     //*uy = v.y;

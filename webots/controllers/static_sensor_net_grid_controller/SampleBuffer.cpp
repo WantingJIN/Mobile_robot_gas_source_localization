@@ -145,6 +145,6 @@ void SampleBuffer::average_wind(){
 		tmp_sin += sin(wind_angle_buffer[i]);
 		tmp_cos += cos(wind_angle_buffer[i]);
 	}
-	average_wind_angle = atan2(tmp_sin/n_samples, tmp_cos/n_samples);
+	average_wind_angle = atan2(tmp_sin/n_samples, tmp_cos/n_samples)*180/M_PI;
 	//averaging technique from https://rosettacode.org/wiki/Averages/Mean_angle
 }
