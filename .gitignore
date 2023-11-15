@@ -16,8 +16,8 @@ webots/controllers/controller_STE_video
 # openfoam
 openfoam/training_random/training_random_win*/*
 !openfoam/training_random/training_random_win*/0
-openfoam/test_maps/map*/map*_wind*
-!openfoam/test_maps/map*/map*_wind0
+openfoam/test_maps/*
+openfoam/test_maps2/*
 openfoam/simulation_comparision/*
 openfoam/simscale
 openfoam/AutoGDM

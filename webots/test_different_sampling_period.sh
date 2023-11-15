@@ -9,7 +9,7 @@ webots="/usr/local/bin/webots"
 webots_folder="../webots"
 map_nbr_filename="/home/durancea/plume_model_learning/webots/data/map_nbr.txt"
 # use map 0: obstacle free enviroment
-m=10
+m=0
 echo $m > $map_nbr_filename
 cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
 cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
@@ -36,7 +36,7 @@ fi
 # save previous period value
 tmp=$(cat "$sampling_prd_filename") 
 
-for p in 1 10 30 60 90 120 150 #10 15 20 25 30 35 40; 
+for p in 1 10 30 60 90  #10 15 20 25 30 35 40; 
 do
 	echo "frequency is 1/$p"
 	echo $p > $sampling_prd_filename

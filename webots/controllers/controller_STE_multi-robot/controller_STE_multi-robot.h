@@ -106,6 +106,7 @@ struct simulation_parameters{
 	float cluster_entropy_ratio;
 	float vel_factor;
 	float wind_factor;
+	float sampling_dist_thresh;
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -167,6 +168,10 @@ void informative_path_planning_based_on_variance();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model);
+//TEST
+double likelihood2(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
+double calculate_measurement_logit(double data, double centrality, double scale);
+
 double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
@@ -183,5 +188,9 @@ void do_odometry();
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
 void calculate_history_distribution(struct history history, double &mean, double &stddev);
+
+//NEW TEST
+void get_concentration_list(vector<Position> robot_position, int nbr, int source_idx, PlumeModel *model);
+void precompute_concentration_maps(PlumeModel *model);
 
 #endif

@@ -152,10 +152,10 @@ void init(){
     //default values for the simulation parameters
 	//1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; 
 	//5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
-	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
-	//17. velocity multiplier 18. wind speed multiplier
+	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio //NO_PROCESSING
+	//17. velocity multiplier 18. wind speed multiplier 19. sampling distance threshold (default 0)
 	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.  11.     12.             13.           14.       15.  16. 17.
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, LAWNMOWER, CONCENTRATION, visitedList_ON, BELIEF, 10, 10, 1.0, 0.75};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, LAWNMOWER, GASHIT, visitedList_ON, BELIEF, 10, 10, 1.0, 0.75, 0};
     
 	// cell_measurements each_cell;
 	// for (int i = 0; i <plume_model.x_bins; i++){
@@ -228,13 +228,19 @@ void init(){
 		if(ok) printf("sampling_period : %d\n", simulation_parameters.sampling_period);
 		fclose(sim_param_file);
 		// Test adaptive sampling period
-		simulation_parameters.sampling_period = int(100-167*simulation_parameters.vel_factor);
-		printf("sampling period modified: %d\n", simulation_parameters.sampling_period);
+		//simulation_parameters.sampling_period = int(100-167*simulation_parameters.vel_factor);
+		//printf("sampling period modified: %d\n", simulation_parameters.sampling_period);
 	}
 	if(access("../../data/simulation_parameters/wind_factor.txt", F_OK) != -1 ){
 		sim_param_file = fopen("../../data/simulation_parameters/wind_factor.txt", "r");
 		ok = fscanf(sim_param_file, "%f", &simulation_parameters.wind_factor);
 		if(ok) printf("wind param : %f\n", simulation_parameters.wind_factor);
+		fclose(sim_param_file);
+	}
+	if(access("../../data/simulation_parameters/sampling_dist_thresh.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/sampling_dist_thresh.txt", "r");
+		ok = fscanf(sim_param_file, "%f", &simulation_parameters.sampling_dist_thresh);
+		if(ok) printf("wind param : %f\n", simulation_parameters.sampling_dist_thresh);
 		fclose(sim_param_file);
 	}
 	//write the simulation parameters
@@ -261,6 +267,7 @@ void init(){
 	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
 	fprintf(sim_param_file, "vel_factor %f\n", simulation_parameters.vel_factor);
 	fprintf(sim_param_file, "wind_factor %f\n", simulation_parameters.wind_factor);
+	fprintf(sim_param_file, "sampling_dist_thresh %f\n", simulation_parameters.sampling_dist_thresh);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){
@@ -324,7 +331,13 @@ void odor_read(double *sensor_reading, double &odor_concentration){
 			double mean = 0.0;
 			double variance = 10000;
 			double sensor_noise = generateGaussianNoise(mean, variance);
-			*sensor_reading += sensor_noise;
+			// gaussian noise
+			//*sensor_reading += sensor_noise;
+			// constant error
+			//*sensor_reading += 200.0;
+			//scaling error
+			*sensor_reading *= 2.0;
+
 			if (*sensor_reading < 0)
 				*sensor_reading = 0;
 		}

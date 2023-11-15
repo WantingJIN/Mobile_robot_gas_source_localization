@@ -73,6 +73,11 @@ public:
 	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
+	//TEST
+	virtual double concentration(double cell_position[], double param_list[])=0;
+	//virtual void get_pos_list_idx(vector<Position> robot_position, int nbr, int idx[], int idy[])=0;
+	virtual double concentration(int idx, int idy, double param_list[])=0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg, vector<float> &c_std)=0;
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
 	
@@ -201,6 +206,10 @@ public:
 	vector<GasDispersionMap> gas_con_map_list;
 	vector<CellMeasurements> cell_lists;
 
+	//TEST precomputed_maps
+	vector<GasDispersionMap> precomp_com_gas_map_list;
+	vector<CellMeasurements> precomp_cell_lists;
+
 	// resturns gas concentration map for a set of parameters
 	void initialize_information_matrix();
 	void initialize_gas_concentration_map_list();
@@ -211,9 +220,16 @@ public:
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 
+
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
+
+	//TEST
+	double concentration(double cell_position[], double param_list[]);
+	//void get_pos_list_idx(vector<Position> robot_position, int nbr, int idx[], int idy[]);
+	double concentration(int idx, int idy, double param_list[]);
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg, vector<float> &c_std);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 

@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 %general_folder='/home/durancea/plume_model_learning/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/durancea/plume_model_learning/Results/results_continuous_MOX_no_processing_greedy/1/1687274906178/101';
+general_folder='/home/durancea/plume_model_learning/Results/old_tests/cst_vel_MOX_m1_k6/0.4/1696501263759/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;

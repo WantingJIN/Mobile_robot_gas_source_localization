@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 %general_folder='/home/durancea/plume_model_learning/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/durancea/plume_model_learning/Results/0809_pdf_clustering_ratio_10/2';
+general_folder='/home/durancea/plume_model_learning/Results/robot_vel_influence/cst_vel/sampling_dist_thresh_0.1/0.4';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;

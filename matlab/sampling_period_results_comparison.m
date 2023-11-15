@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/SR_map10_MOX_wider_range_6k';
+general_folder = '/home/durancea/plume_model_learning/Results/test_mapping/1698934643516';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
 folder_list = folder_list([folder_list.isdir]);

@@ -1,7 +1,7 @@
 %% read experiment files
 clear all; close all; clc;
 %general_folder='/home/durancea/plume_model_learning/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/durancea/plume_model_learning/Results/0809_map2/2/1691586291278/101';
+general_folder='/home/durancea/plume_model_learning/Results/robot_vel_influence/cst_vel/sampling_dist_thresh_0.1/0.4/1699219270186/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
