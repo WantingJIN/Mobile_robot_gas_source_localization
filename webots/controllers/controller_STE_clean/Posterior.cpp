@@ -1,5 +1,5 @@
 #include "Posterior.h"
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 struct normal_random_variable{
     normal_random_variable(Eigen::MatrixXd const& covar)

@@ -21,7 +21,7 @@
 #include <cmath>
 #include "CellMeasurements.h"
 #include "GasDispersionMap.h"	
-//#include <Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 
 //#include "pyhelper.hpp"
 using namespace std;
@@ -207,7 +207,7 @@ public:
 	vector<CellMeasurements> cell_lists;
 
 	//TEST precomputed_maps
-	vector<GasDispersionMap> precomp_com_gas_map_list;
+	vector<GasDispersionMap> precomp_con_map_map_list;
 	vector<CellMeasurements> precomp_cell_lists;
 
 	// resturns gas concentration map for a set of parameters

@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_gas_hit_sca_err';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_gas_hit_for_plot/bin_rel';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -183,8 +183,8 @@ else
     set(lines, 'Color', 'r');
     set(findobj(gca,'type','line'),'linew',1.2)
     grid on;
-    ylim([0,max(exp_time_list)+1])
-    xlabel('Sensor Type');
+    ylim([0,max(iteration_nbr_list)+1])
+    xlabel('Experiment');
     ylabel('nbr iterations');
     title('Total nbr iterations'); 
 end

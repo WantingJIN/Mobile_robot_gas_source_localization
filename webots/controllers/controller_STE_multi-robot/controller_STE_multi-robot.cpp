@@ -407,9 +407,46 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 	
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg, model_c_std);
 
+	// test relative error
+	/*
+	double mean, stddev;
+	calculate_history_distribution(history, mean, stddev);
+	double	model_mean;
+	double	model_stddev = 0.01;
+	if (model_c_avg.size() !=0){
+		double sum = 0;
+		sum = std::accumulate(model_c_avg.begin(), model_c_avg.end(), 0.0);
+		model_mean = sum / model_c_avg.size();
+		double sq_sum = std::inner_product(model_c_avg.begin(), model_c_avg.end(), model_c_avg.begin(), 0.0);
+		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
+			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
+	}
+	else model_mean = mean;
+	for (int i = 0; i < history.size; i++){
+		if (stddev == 0){
+			if (model_stddev == 0){
+				sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01), 2); ///(0.01*0.01+0.01*0.01);
+			}
+			else sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev), 2); ///(model_stddev*model_stddev+0.01*0.01);
+		}
+		else {	  
+			if (model_stddev == 0){  
+				sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01), 2); ///(stddev*stddev+0.01*0.01);
+			}
+			else
+				sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev), 2); ///(stddev*stddev+model_stddev*model_stddev);
+		}
+	}
+	sum_tmp /= (2*0.1*0.1); //(2*0.15*0.15);
+	*/
+
+
+	//absolute concentration values
+	
 	for (int i = 0; i < history.size; i++){
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 	}
+	
 
 	return (exp(-0.5 * sum_tmp)); // TEST history length div exp(-0.5 * sum_tmp / history.size)	
 }
@@ -421,7 +458,8 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	float sigmaD = 0; //125;
 	double sum_tmp = 0;
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
-	
+
+	// old
 	// for each sample, getting the model concentration and calculate the likelihood
 	// double model_concentration = 0;
 	// for (int i = 0; i < history.size; i++){
@@ -430,7 +468,6 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	// }
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
-	// printf("likelihood... history size %d\n", history.size);
 	vector<float> model_c_avg(history.size); 
 	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
@@ -475,7 +512,7 @@ double calculate_measurement_logit(double data, double centrality, double scalin
 	return logit;
 }
 double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev){
-	float sigmaE = 125; //simulation_parameters.likelihood_error; //0.1;
+	float sigmaE = 0.15; //s 125; //simulation_parameters.likelihood_error; //0.1;
 	float sigmaD = 0.01; //125; //0.01; //125;
 	double sum_tmp = 0; //0; 0 if sum 1 if mult
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
@@ -484,24 +521,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 
-	/*
-	// retrieve from map
-	int nbr = history.size;
-	float px[nbr];
-	float py[nbr];
-	int idx[nbr];
-	int idy[nbr];
 
-	// get indices in the map
-	for(int i=0; i<nbr; i++){
-		px[i] = history.position[i].x;
-		py[i] = history.position[i].y;
-		idx[i] =  floor((px[i]- source_x_min) / x_resol);
-		idy[i] =  floor((py[i] - source_y_min) / y_resol);
-	}
-	
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg, model_c_std);
-	*/
 
 	//gas hit event: fixed threshold
 	//  int gas_hit_threshold  = 1000;
@@ -537,7 +557,12 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	int model_hit;
 	double pdf_data = 0.0;
 
-	double logit = 0.0;
+	//TEST
+	double below_hist_th_proba = 0.0;
+	double below_model_th_proba = 0.0;
+	double rel_err_proba = 0.0;
+	double rel_hist_val = 0.0;
+	double rel_model_val = 0.0;
 
 	//TEST
 	double model_mean, model_stddev;
@@ -549,7 +574,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		double sq_sum = std::inner_product(model_c_avg.begin(), model_c_avg.end(), model_c_avg.begin(), 0.0);
 		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
 			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
-		//printf("mean: %f, stddev: %f\n", model_mean, model_stddev);
 	}
 	else model_mean = mean;
 
@@ -564,16 +588,14 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		}else{
 			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
 			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+			
 			if (stddev == 0){
 				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
-				//TEST
-				//pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i]-model_c_avg[i], 0.0, 0.01);
 				stddev = 0.01; //si;ply to avoid errorm probably need to re;ove
 			}
 			else
 				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-				//TEST
-				//pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i]-model_c_avg[i], 0.0, stddev);
+			
 		}
         // decide whether the gas hit event happens
 		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
@@ -581,116 +603,75 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
         // update the likelihood based on the similarity of the hit event
 		
-		//TEST multiplicative proba
+
+
+		
+		// TEST mult does not work well
 		/*
-		if (history_hit == 0 && model_hit == 0){ //non zero error
-			if (stddev == 0){
-				if (model_stddev == 0){
-					sum_tmp *= calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01);
-				}
-				else sum_tmp *= calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev);
-			}
-			else {	  
-				if (model_stddev == 0){  
-					sum_tmp *= calculate_measurement_gaussian_CDF(his_thrs, mean, stddev)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01);
-				}
-				else
-					sum_tmp *= calculate_measurement_gaussian_CDF(his_thrs, mean, stddev)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev);
-			}
+		if (history_hit == 0 && model_hit == 0){ 
+			sum_tmp *= below_hist_th_proba*below_model_th_proba;
 			printf("0 0 sum_tmp: %f\n", sum_tmp);
 		}
-		else if (history_hit == 0 && model_hit == 1){
-			if (stddev == 0){
-				sum_tmp *= exp(-0.5 * pow(history.measurement[i] - model_c_avg[i], 2) /(2*sigmaE*sigmaE))*calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01);
-			}
-			else {
-				sum_tmp *= exp(-0.5 * pow(history.measurement[i] - model_c_avg[i], 2) /(2*sigmaE*sigmaE))*calculate_measurement_gaussian_CDF(his_thrs, mean, stddev);
-			}
-			printf("0 1 sum_tmp: %f\n", sum_tmp);
-		}
-		else if (history_hit == 1 && model_hit == 0){
-			if (model_stddev == 0){
-				sum_tmp *= exp(-0.5 * pow(history.measurement[i] - model_c_avg[i], 2) /(2*sigmaE*sigmaE))*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01);
-			}
-			else
-				sum_tmp *= exp(-0.5 * pow(history.measurement[i] - model_c_avg[i], 2) /(2*sigmaE*sigmaE))*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev);
-			printf("1 0 sum_tmp: %f\n", sum_tmp);
+		else if (history_hit != model_hit){
+			sum_tmp *= exp(-0.5 * pow(rel_hist_val - rel_model_val, 2) /(2*sigmaE*sigmaE));
+			printf("mismatch sum_tmp: %f\n", sum_tmp);
 		}
 		else if (history_hit == 1 && model_hit == 1){
-			if (stddev == 0){
-				if (model_stddev == 0){
-					sum_tmp *= (1-calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01));
-				}
-				else
-					sum_tmp *= (1-calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev));
-			}
-			else {
-				if (model_stddev == 0){
-					sum_tmp *= (1-calculate_measurement_gaussian_CDF(his_thrs, mean, stddev)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01));
-				}
-				else
-					sum_tmp *= (1-calculate_measurement_gaussian_CDF(his_thrs, mean, stddev)*calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev));
-			}
-			printf("0 1 sum_tmp: %f\n", sum_tmp);
+			sum_tmp *= (1-below_hist_th_proba)*(1-below_model_th_proba);
+			printf("1 1 sum_tmp: %f\n", sum_tmp);
 		}
 		*/
 		
 		//OLD
-		/*
+		
 	    if ((history_hit != model_hit)) //non zero error
-		    //sum_tmp += pdf_data * pow(3, 2); //high value means lower likelihood
-			//TEST
-			sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) /(sigmaE*sigmaE + sigmaD*sigmaD);
+		    sum_tmp += pdf_data * pow(3, 2); //high value means lower likelihood
 		
 		if (history_hit == 0 && model_hit == 0)
-			//sum_tmp += pdf_data * pow(0.5, 2);
-			//TEST
-			sum_tmp += calculate_measurement_gaussian_CDF(his_thrs, mean, stddev); // cum proba of val <thresh
-		*/
+			sum_tmp += pdf_data * pow(0.5, 2);
+		
 
 		//TEST absolute concentration penalty
 		/*
-		if (history_hit == 1 && model_hit == 1)
+		if (history_hit != model_hit)
 			//sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (2*sigmaD*sigmaD); //(sigmaE*sigmaE + sigmaD*sigmaD);
 		*/
-
-
-
-
-
-
-		// TEST relative concentration penalty
-		if (history_hit != model_hit == 1)
-		if (stddev == 0){
-				if (model_stddev == 0){
-					sum_tmp += pow(calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01)-calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01), 2); ///(0.01*0.01+0.01*0.01);
-				}
-				else sum_tmp += pow(calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01)-calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev), 2); ///(model_stddev*model_stddev+0.01*0.01);
-			}
-			else {	  
-				if (model_stddev == 0){  
-					sum_tmp += pow(calculate_measurement_gaussian_CDF(his_thrs, mean, stddev)-calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01), 2); ///(stddev*stddev+0.01*0.01);
-				}
-				else
-					sum_tmp += pow(calculate_measurement_gaussian_CDF(his_thrs, mean, stddev)-calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev), 2); ///(stddev*stddev+model_stddev*model_stddev);
-			}
-
-			
-
 		
+		// TEST relative concentration penalty
+		/*
+		if (history_hit != model_hit){
+			//TEST /
+			if (stddev == 0){
+				//below_hist_th_proba = calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01);
+				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
+			}
+			else{
+				//below_hist_th_proba = calculate_measurement_gaussian_CDF(his_thrs, mean, stddev);
+				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
+			}
+			if (model_stddev == 0){
+				//below_model_th_proba = calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01);
+				rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01);
+			}
+			else{
+				//below_model_th_proba = calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev);
+				rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev);
+			}
+			sum_tmp += pow(rel_model_val-rel_hist_val, 2);
+		}
+		*/
 		prev_his_thrs = his_thrs; 
 		prev_mod_thrs = mod_thrs;
+
 	}
 
-	//TEST
-	sum_tmp /= (2*0.05*0.05);
-	//TEST
-	//sum_tmp /= history.size;
-    
-	// why does it make sense to take the exponential of a sum of cdfs?
-	printf("sum: %f\n", sum_tmp);
+	//TEST for rel concentration penalty
+	//sum_tmp /= (2*0.15*0.15); //2*0.05*0.05 // best for bin rel 2*0.15*0.15
+
+
+	//printf("sum: %f\n", sum_tmp);
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
-	return (exp(-0.5 * sum_tmp)); //sum_tmp; //
+	return (exp(-0.5 * sum_tmp)); //sum_tmp; //(exp(-0.5 * sum_tmp))
 }
 
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model){

@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/ICRA_results_test_maps_4000_dataset';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_old_m0_d0.1_info_clust';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -81,7 +81,12 @@ for i=1:number
     convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
     % time taken for each run 
     measurement = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/measurements.csv']);
-    exp_time_list(i) = measurement(end,4);
+    % exp_time_list(i) = measurement(end,4);
+    
+    exp_time_file = readtable([folder_name, '/', num2str(ID(1)), '/experiment_time.csv']);
+    nav_time = exp_time_file(2,2);
+    comp_time = exp_time_file(3,2);
+    exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
     % traveling_distance
     trajectory = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/trajectory.csv']);
     traj_length_sum = 0;

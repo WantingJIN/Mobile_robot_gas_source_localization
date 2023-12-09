@@ -9,12 +9,16 @@ map_nbr_filename="/home/durancea/plume_model_learning/webots/data/map_nbr.txt"
 source_pos_filename="/home/durancea/plume_model_learning/webots/data/source_pos.txt"
 sampling_prd_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/sampling_period.txt"
 MCMC_exhaustive_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/MCMC_or_exhaustive_eval.txt"
+vel_factor_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/vel_factor.txt" 
+rr_filename="/home/durancea/plume_model_learning/webots/data/plugin_parameters/releaseAmount.txt"
 # use environment 0: obstacle free enviroment
-p=10
-echo $p > $sampling_prd_filename
+#p=10
+#echo $p > $sampling_prd_filename
 #use exhaustive search
 s=0
 echo $s > $MCMC_exhaustive_filename
+
+
 
 nbr_source_pos=10
 source_pos_x=12.7
@@ -32,27 +36,42 @@ else
     echo "Folder does not exist."
 fi
 
+v=1
+# save previous velocity value
+tmp=$(cat "$vel_factor_filename") 
+echo $v > $vel_factor_filename
+
+echo $vel_factor_filename
+
 #{0..8}
-for m in 2
-do
-	echo $m > $map_nbr_filename
+#for r in 80
+#	do
+	for m in 0 #1 3 5 10 #0 1 2 
+		do
+			#echo $r > $rr_filename
+			echo $m > $map_nbr_filename
+			# wind map and obstacle list
+			cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
+			cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
+			cp /home/durancea/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
-	# wind map and obstacle list
-	cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
-	cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
-	cp /home/durancea/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
+			#for k in {1..3}
+			for ((k=1; k<=$nbr_source_pos; k++))
+			do
+				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
+				echo $source_pos_x $source_pos_y > $source_pos_filename
+				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' '--no-rendering' # >wb_output.txt
+				now=$(date +"%T")
+				echo "map $m  k $k  end time $now"
+			done
+		done
+#done
 
-	#for k in {1..3}
-    for k in 1 2 3
-	do
-		source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
-		echo $source_pos_x $source_pos_y > $source_pos_filename
-		$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' # >wb_output.txt
-		now=$(date +"%T")
-		echo "map $m  k $k  end time $now"
-	done
-done
+# write original velocity value back
+echo $tmp > $vel_factor_filename
 
+#rr=53
+#echo "$rr" > $wb_folder/data/plugin_parameters/releaseAmount.txt
 
 now=$(date +"%T")
 echo "End time : $now"

@@ -9,7 +9,7 @@
 //#include <opencv2/opencv.hpp>
 #include <matio.h>
 #include <cmath>
-//#include <Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 
 // NOTE: Download the matio library from https://sourceforge.net/projects/matio/files/matio/1.5.17/matio-1.5.17.tar.gz/download
 // and compile it following the ReadME.txt file in the downloaded folder.

@@ -1,4 +1,4 @@
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <algorithm>
 #include <iterator>
 #include <fstream>

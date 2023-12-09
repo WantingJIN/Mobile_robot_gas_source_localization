@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/durancea/plume_model_learning/Results/multtest/1');
+folder_list = dir('/home/durancea/plume_model_learning/Results/bin_gas_hit_for_plot/bin_rel');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -150,21 +150,44 @@ for i=1:exp_number
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         f0 = figure('Name','Expected a posteriori evolution','Position', [-1599, 1, 800, 1086]);
         
+        
+        % Subplot 1: X-coordinate estimation
         subplot(3,2,1);
-        plot(expected_a_posteriori(:,2),'*-');
-        hold on; axis([-inf inf source_position_min(1) source_position_max(1)]);
-        plot(max_a_posteriori(:,2),'d-b')
-        plot([0 size(max_a_posteriori,1)],[source_real_position(1), source_real_position(1)],'g');
+        plot(expected_a_posteriori(:,2), '*-', 'DisplayName', 'Expected');  % Expected value for X-coordinate
+        hold on;
+        axis([-inf inf source_position_min(1) source_position_max(1)]);
+        plot(max_a_posteriori(:,2), 'd-b', 'DisplayName', 'Max a posteriori');  % Maximum a posteriori estimate for X-coordinate
+        plot([0 size(max_a_posteriori,1)], [source_real_position(1), source_real_position(1)], 'g', 'DisplayName', 'Ground Truth');  % Ground truth X-coordinate
         grid on;
         title('X');
-        
+        legend('show');  % Display the legend
+
+        % Subplot 3: Y-coordinate estimation
         subplot(3,2,3);
-        plot(expected_a_posteriori(:,3),'*-');
+        plot(expected_a_posteriori(:,3), '*-', 'DisplayName', 'Expected');  % Expected value for Y-coordinate
         hold on;
-        plot(max_a_posteriori(:,3),'d-b')
-        plot([0 size(max_a_posteriori,1)],[source_real_position(2), source_real_position(2)],'g');
-        grid on; axis([-inf inf source_position_min(2) source_position_max(2)]);
+        plot(max_a_posteriori(:,3), 'd-b', 'DisplayName', 'Max a posteriori');  % Maximum a posteriori estimate for Y-coordinate
+        plot([0 size(max_a_posteriori,1)], [source_real_position(2), source_real_position(2)], 'g', 'DisplayName', 'Ground Truth');  % Ground truth Y-coordinate
+        grid on;
+        axis([-inf inf source_position_min(2) source_position_max(2)]);
         title('Y');
+        legend('show');  % Display the legend
+        
+%         subplot(3,2,1);
+%         plot(expected_a_posteriori(:,2),'*-');
+%         hold on; axis([-inf inf source_position_min(1) source_position_max(1)]);
+%         plot(max_a_posteriori(:,2),'d-b')
+%         plot([0 size(max_a_posteriori,1)],[source_real_position(1), source_real_position(1)],'g');
+%         grid on;
+%         title('X');
+%         
+%         subplot(3,2,3);
+%         plot(expected_a_posteriori(:,3),'*-');
+%         hold on;
+%         plot(max_a_posteriori(:,3),'d-b')
+%         plot([0 size(max_a_posteriori,1)],[source_real_position(2), source_real_position(2)],'g');
+%         grid on; axis([-inf inf source_position_min(2) source_position_max(2)]);
+%         title('Y');
         
         subplot(3,2,2);
         plot(expected_a_posteriori(:,4),'*-');

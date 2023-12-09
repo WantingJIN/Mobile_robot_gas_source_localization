@@ -18,7 +18,7 @@
 //#include <opencv2/opencv.hpp>
 #include <matio.h>
 #include <cmath>
-//#include <Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 
 //#include "pyhelper.hpp"
 using namespace std;

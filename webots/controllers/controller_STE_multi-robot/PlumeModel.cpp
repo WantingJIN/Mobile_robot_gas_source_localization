@@ -642,11 +642,11 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
     //std::cout << output << std::endl;
 
 
-	//TEST
-	int idx_sx = round((sx - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
-	int idx_sy = round((sy - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-	printf("In 64 map, source idx: sx %d, sy %d\n", idx_sx, idx_sy);
-	printf("Which should correspond in 20 map to : sx %d, sy %d\n", int(floor(idx_sx/3.2)), int(floor(idx_sy/3.2)));
+	//TEST correct
+	//int idx_sx = round((sx - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
+	//int idx_sy = round((sy - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
+	//printf("In 64 map, source idx: sx %d, sy %d\n", idx_sx, idx_sy);
+	//printf("Which should correspond in 20 map to : sx %d, sy %d\n", int(floor(idx_sx/3.2)), int(floor(idx_sy/3.2)));
 
 
 
@@ -669,6 +669,64 @@ void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int n
 	}
 
 }
+
+/*
+// test 64x64
+void DeepCFDPlumeModel2D::initialize_precomp_gas_concentration_map_list(){
+// initialize gas dispersion list
+// calculate the gas concentration map for each possible source location
+// first scan y axis then x axis; the same order as the pdf
+	for (int j = 0; j < 64; j++)
+	{
+		for (int i = 0; i < 64; i++)
+		{
+			GasDispersionMap gas_map(i,j);
+			calculate_gas_concentration_map(gas_map);
+
+
+
+
+
+
+
+
+
+
+
+			precomp_gas_con_map_list.push_back(gas_map);
+		}
+	}
+	//TEST
+	printf("size of gas map list along y ie rows %ld \n", precomp_gas_con_map_list.size());
+	printf("Test retrieve a measurement %f \n", precomp_gas_con_map_list[0].gasConcentrationMap[1][1]);
+	//printf("size of gas map list along x ie cols %d \n", gas_con_map_list[0].size());
+}
+
+
+
+// TODO - possible improvement: only store the variance of the gas concentration map
+void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
+	// initialize cell meausurements list
+	for (int j = 0; j < y_nbins; j++)
+	{
+		for (int i = 0; i < x_nbins; i++)
+		{
+			CellMeasurements cell_measurements(i,j);
+			cell_lists.push_back(cell_measurements);
+		}
+	}
+	for (auto &cell : cell_lists){
+		for (auto &gas_map : gas_con_map_list){
+			float con = gas_map.get_concentration(cell.idx_x, cell.idx_y);
+			cell.add_measurement(con);
+			cell.add_gas_hit(con);
+		}
+	}
+}
+*/
+
+
+//old 20x20
 
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list

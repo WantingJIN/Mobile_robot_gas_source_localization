@@ -17,7 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 extern "C"{
 	#include "odor_filter.h"

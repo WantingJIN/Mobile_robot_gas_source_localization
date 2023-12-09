@@ -14,7 +14,8 @@ echo $m > $map_nbr_filename
 cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
 cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
 cp /home/durancea/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
-vel_factor_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/vel_factor.txt"
+vel_factor_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/vel_factor.txt" 
+# command not found
 source_pos_filename="/home/durancea/plume_model_learning/webots/data/source_pos.txt"
 
 nbr_source_pos=10
@@ -33,7 +34,7 @@ else
     echo "Folder does not exist."
 fi
 
-# save previous period value
+# save previous velocity value
 tmp=$(cat "$vel_factor_filename") 
 
 for p in 1 #0.05 0.1 0.2 0.3 0.4 0.5 0.6  #  0.01 2.5 3.0 3.5 too fast after 1 anyways
