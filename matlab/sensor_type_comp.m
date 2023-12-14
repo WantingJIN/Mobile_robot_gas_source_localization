@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_gas_hit_for_plot/bin_rel';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_range_threshold/rr_comp_bin_range_rel_con_err_info_clust_m0_d0.1_k10_max_iter_50';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'

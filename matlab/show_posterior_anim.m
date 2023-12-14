@@ -1,17 +1,13 @@
 clear all; close all; clc;
 
-%general_folder='/home/durancea/plume_model_learning/Results/results_test_1_sense_reverse_model/1/';
-general_folder='/home/durancea/plume_model_learning/Results/con_info_clust_d0.1_m_comp_k10/0/1701009535653/101';
+general_folder='/home/durancea/plume_model_learning/Results/bin_model_threshold_only/0/1702501893383/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
 
-%general_folder='/home/durancea/plume_model_learning/Results/Experimental_Results/Results_0223/2023-02-23_15-23/pc';
-
 pdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
-%pdf = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
-anim_folder=[general_folder '/ani'] 
+anim_folder=[general_folder '/ani'] ;
 if(~exist(anim_folder,'dir'))
     mkdir(anim_folder);
 end
@@ -72,38 +68,5 @@ for i = 1:size(pdf, 1)
         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
     end
 end
-% for i=1:size(pdf,1)
-%     f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-%     imagesc(y,x,reshape(pdf(i,:),20,20))
-%     hold on
-%     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
-%     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
-%     hold on
-% %     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
-%     axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
-%     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
-%     xlabel('Y(m)'); ylabel('X(m)');
-%     load MyColormap2; colormap(mymap); colorbar;caxis([0 Inf]);
-%     annotation(f,'textbox',[0.254287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Measurement:', num2str(measurements(i,2))},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',24);
-%     annotation(f,'textbox',[0.60287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Entropy:', num2str(entropy(i,1))},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',24);
-%     hold off;
-%     xlim([0 4])
-%     ylim([2 13])
-%     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
-%     ax = gca;
-%     ax.TitleFontSizeMultiplier = 3;
-%     pause;
-%     drawnow
-%     saveas(f, [anim_folder,'/',num2str(i),'.png']);
-%     
-%     % Close the figure to avoid memory issues
-%     close(f);
-%     
-%     % Check if the image file was successfully created
-%     if exist(img_filename, 'file')
-%         disp(['Image ', num2str(i), ' saved successfully.']);
-%     else
-%         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
-%     end
-% end
+
 close all

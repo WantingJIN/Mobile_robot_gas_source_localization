@@ -46,7 +46,7 @@ echo $vel_factor_filename
 #{0..8}
 #for r in 80
 #	do
-	for m in 0 #1 3 5 10 #0 1 2 
+	for m in 1 # 3 5 10 #0 1 3 5 10 #0 1 2 
 		do
 			#echo $r > $rr_filename
 			echo $m > $map_nbr_filename
@@ -55,7 +55,7 @@ echo $vel_factor_filename
 			cp /home/durancea/plume_model_learning/openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
 			cp /home/durancea/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
-			#for k in {1..3}
+			#for k in {1..3} 1
 			for ((k=1; k<=$nbr_source_pos; k++))
 			do
 				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
@@ -65,7 +65,7 @@ echo $vel_factor_filename
 				echo "map $m  k $k  end time $now"
 			done
 		done
-#done
+done
 
 # write original velocity value back
 echo $tmp > $vel_factor_filename

@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_old_m0_d0.1_info_clust';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_model_threshold_only';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -143,6 +143,7 @@ ylim([-1,10])
 xlabel('Map number');
 ylabel('Error (m)');
 title('Error on x');
+
 subplot(1,5,2);
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
@@ -156,15 +157,17 @@ ylim([-3,4])
 xlabel('Map number');
 title('Error on y');
 ylabel('Error (m)');
+
 subplot(1,5,3);
 boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
-ylim([0,50])
+ylim([0,60])
 xlabel('Map number');
 title('nbr iterations');
+
 subplot(1,5,4)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
@@ -177,6 +180,7 @@ grid on;
 xlabel('Map number');
 title('Experiment time');
 ylabel('Time (s)');
+
 subplot(1,5,5)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;

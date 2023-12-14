@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/durancea/plume_model_learning/Results/bin_gas_hit_for_plot/bin_rel');
+folder_list = dir('/home/durancea/plume_model_learning/Results/bin_model_threshold_only/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -160,7 +160,7 @@ for i=1:exp_number
         plot([0 size(max_a_posteriori,1)], [source_real_position(1), source_real_position(1)], 'g', 'DisplayName', 'Ground Truth');  % Ground truth X-coordinate
         grid on;
         title('X');
-        legend('show');  % Display the legend
+        %legend('show');  % Display the legend
 
         % Subplot 3: Y-coordinate estimation
         subplot(3,2,3);

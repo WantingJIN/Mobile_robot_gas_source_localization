@@ -521,29 +521,61 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	vector<float> model_c_std(history.size); 
 	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 
-
+	//TEST to do in a function if works
+	double model_mean, model_stddev;
+	model_stddev = 0.01;
+	if (model_c_avg.size() !=0){
+		double sum = 0;
+		sum = std::accumulate(model_c_avg.begin(), model_c_avg.end(), 0.0);
+		model_mean = sum / model_c_avg.size();
+		double sq_sum = std::inner_product(model_c_avg.begin(), model_c_avg.end(), model_c_avg.begin(), 0.0);
+		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
+			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
+	}
+	else model_mean = mean;
 
 	//gas hit event: fixed threshold
-	//  int gas_hit_threshold  = 1000;
-	// 	int history_hit;
-	// 	int model_hit;
+	int gas_hit_threshold  = 1000;
+	int history_hit;
+	int model_hit;
 
-	// for (int i = 0; i < history.size; i++){
-	// 	if (history.measurement[i] < gas_hit_threshold)
-	// 		history_hit = 0;
-	// 	else
-	// 		history_hit = 1;
-    //     history.gas_hit_event[i] = history_hit;
-	// 	if (model_c_avg[i] < gas_hit_threshold)
-	// 		model_hit = 0;
-	// 	else
-	// 		model_hit = 1; 
-	//     if (history_hit != model_hit)
-	// 	    sum_tmp += pow(2, 2);
-	// 	if (history_hit == 0 && model_hit == 0)
-	// 		sum_tmp += pow(0.5, 2);
-	// }
+	/*
+	for (int i = 0; i < history.size; i++){
+	 	if (history.measurement[i] < gas_hit_threshold)
+	 		history_hit = 0;
+	 	else
+	 		history_hit = 1;
+         history.gas_hit_event[i] = history_hit;
+	 	if (model_c_avg[i] < gas_hit_threshold)
+	 		model_hit = 0;
+	 	else
+	 		model_hit = 1; 
+	    if (history_hit != model_hit)
+	 	    sum_tmp += 1;
+	}
+	*/
 
+	//model fixed only penalty depending on relative hist value
+	double rel_hist_val = 0.0;
+
+	for (int i = 0; i < history.size; i++){
+		if (stddev == 0)
+			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
+		else
+			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
+	 	if (model_c_avg[i] < gas_hit_threshold){
+	 		history.gas_hit_event[i]  = 0; //for plotting
+			//printf("model miss \n");
+			sum_tmp += rel_hist_val; //larger penalty if value detected is large and model has a miss
+		}
+	 	else{
+			history.gas_hit_event[i] = 1;
+			printf("model hit \n");
+	 		sum_tmp += 1-rel_hist_val; //small penalty if model hit and high concentration measurement
+		}
+	}
+
+	/*
 	// gas hit event: dynamic threshold
 	double lamda = 0.5; //0.5;
 	// threshold for history measurments
@@ -561,7 +593,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	double below_hist_th_proba = 0.0;
 	double below_model_th_proba = 0.0;
 	double rel_err_proba = 0.0;
-	double rel_hist_val = 0.0;
 	double rel_model_val = 0.0;
 
 	//TEST
@@ -577,26 +608,52 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	}
 	else model_mean = mean;
 
-
+	//TEST update if range change
+	double max_con = 0;
+	double min_con = 0;
+	*/
+	/*
 	for (int i = 0; i < history.size; i++){
+
+		//Dynamic threshold
+		
 		if (i == 0){
 			prev_his_thrs = history.measurement[i];
 			his_thrs = history.measurement[i];
 			prev_mod_thrs = model_c_avg[i];
 			mod_thrs = model_c_avg[i];
 			pdf_data = 1.0;
+			//TEST update if range change
+			max_con = history.measurement[i];
+			min_con = history.measurement[i];
 		}else{
+			//TEST range change:only update the threshold if the range of values changes
+			if (history.measurement[i]>max_con ){
+				his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
+				mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+				max_con = history.measurement[i];
+			}else if (history.measurement[i]<min_con){
+				his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
+				mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+				min_con = history.measurement[i];
+			}
+			//old dynamic threshold
+			/*
 			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
 			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
-			
+			*/
+			//old
+			/*
 			if (stddev == 0){
 				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
 				stddev = 0.01; //si;ply to avoid errorm probably need to re;ove
 			}
 			else
 				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-			
+			*/
+		/*
 		}
+		
         // decide whether the gas hit event happens
 		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
 		history.gas_hit_event[i] = history_hit;
@@ -622,22 +679,19 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		}
 		*/
 		
-		//OLD
-		
-	    if ((history_hit != model_hit)) //non zero error
-		    sum_tmp += pdf_data * pow(3, 2); //high value means lower likelihood
-		
-		if (history_hit == 0 && model_hit == 0)
-			sum_tmp += pdf_data * pow(0.5, 2);
-		
 
-		//TEST absolute concentration penalty
+
+		//TEST absolute concentration penalty (same as likelihood for concentration)
 		/*
+		sigmaE = simulation_parameters.likelihood_error;
+		sigmaD = 0; //125;
 		if (history_hit != model_hit)
-			//sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (2*sigmaD*sigmaD); //(sigmaE*sigmaE + sigmaD*sigmaD);
+			sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD); //(2*sigmaD*sigmaD)//(sigmaE*sigmaE + sigmaD*sigmaD);
 		*/
 		
-		// TEST relative concentration penalty
+
+
+		// TEST relative concentration penalty. woks well in map 0
 		/*
 		if (history_hit != model_hit){
 			//TEST /
@@ -660,17 +714,27 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 			sum_tmp += pow(rel_model_val-rel_hist_val, 2);
 		}
 		*/
+
+		//TEST simple score does not zork
+		/*
+		if (history_hit != model_hit){
+			sum_tmp +=1;
+		}
+		*/
+		/*
 		prev_his_thrs = his_thrs; 
 		prev_mod_thrs = mod_thrs;
-
+		
 	}
+	*/
 
 	//TEST for rel concentration penalty
 	//sum_tmp /= (2*0.15*0.15); //2*0.05*0.05 // best for bin rel 2*0.15*0.15
 
 
-	//printf("sum: %f\n", sum_tmp);
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
+	double likelihood = (exp(-0.5 * sum_tmp));
+	//if(likelihood<0.25) likelihood = 0.0;
 	return (exp(-0.5 * sum_tmp)); //sum_tmp; //(exp(-0.5 * sum_tmp))
 }
 

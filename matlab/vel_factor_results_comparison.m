@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/robot_vel_influence/cst_vel/sampling_dist_thresh_0.1';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_rel_con_err_info_clust_m0_d0.1_k10';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
