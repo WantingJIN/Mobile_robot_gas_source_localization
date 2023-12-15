@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/durancea/plume_model_learning/Results/bin_model_threshold_only/1');
+folder_list = dir('/home/durancea/plume_model_learning/Results/bin_model_thresh_only/d0/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
