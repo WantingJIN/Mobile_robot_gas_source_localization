@@ -465,6 +465,11 @@ void Posterior::exhaustive_evaluation(struct history &history){
 		//add the new value to the sum
 		sum += pdf[i];
 	}
+
+	//test hit event updqte
+	for (int i = 0; i < history.size; i++){
+		printf("In evqal model hit stored %d \n", history.gas_hit_event[i]);
+	}
 	//printf("\n");
 }
 

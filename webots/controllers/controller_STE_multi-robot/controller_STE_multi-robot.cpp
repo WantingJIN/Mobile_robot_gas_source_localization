@@ -22,6 +22,10 @@
 
 using namespace std;
 
+//TEST sleep
+#include <unistd.h>
+#include <webots/robot.h>
+
 //Global Variables
 
 // log files
@@ -539,41 +543,48 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	int history_hit;
 	int model_hit;
 
+	// fixed thresh
 	/*
 	for (int i = 0; i < history.size; i++){
 	 	if (history.measurement[i] < gas_hit_threshold)
 	 		history_hit = 0;
 	 	else
 	 		history_hit = 1;
-         history.gas_hit_event[i] = history_hit;
+        history.gas_hit_event[i] = history_hit;
+		//printf("hist val %f \n", history.measurement[i]);
 	 	if (model_c_avg[i] < gas_hit_threshold)
 	 		model_hit = 0;
 	 	else
 	 		model_hit = 1; 
 	    if (history_hit != model_hit)
 	 	    sum_tmp += 1;
+		//printf("moldel val %f \n", model_c_avg[i]);
+		//history.gas_hit_event[i] = model_hit;
 	}
 	*/
 
 	//model fixed only penalty depending on relative hist value
 	double rel_hist_val = 0.0;
-
+	
 	for (int i = 0; i < history.size; i++){
 		if (stddev == 0)
 			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
 		else
 			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
 	 	if (model_c_avg[i] < gas_hit_threshold){
-	 		history.gas_hit_event[i]  = 0; //for plotting
+	 		model_hit  = 0; //for plotting
 			//printf("model miss \n");
 			sum_tmp += rel_hist_val; //larger penalty if value detected is large and model has a miss
 		}
 	 	else{
-			history.gas_hit_event[i] = 1;
-			printf("model hit \n");
+			model_hit = 1;
+			//printf("model hit \n");
 	 		sum_tmp += 1-rel_hist_val; //small penalty if model hit and high concentration measurement
 		}
+		history.gas_hit_event[i] = model_hit;
+		//printf("model hit stored %d \n", history.gas_hit_event[i]);
 	}
+	
 
 	/*
 	// gas hit event: dynamic threshold
@@ -733,7 +744,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 
 
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
-	double likelihood = (exp(-0.5 * sum_tmp));
+	//double likelihood = (exp(-0.5 * sum_tmp));
 	//if(likelihood<0.25) likelihood = 0.0;
 	return (exp(-0.5 * sum_tmp)); //sum_tmp; //(exp(-0.5 * sum_tmp))
 }
@@ -1525,7 +1536,6 @@ void state_measuring(){
 		log_measurements();
 		if (!position_outside_arena(current_position)){
 			history.position.push_back({current_position.x, current_position.y, 0});
-			//history.measurement[history.size] = sampleBuffer.average_concentration;
 			history.measurement.push_back(sampleBuffer.average_concentration);
 			history.gas_hit_event.push_back(0);
 			history.size++;
@@ -1613,9 +1623,6 @@ void state_estimating(){
 		// log the finish time stamp
 		end_timestamp = wb_robot_get_time();
 		printf("end time stamp: %f\n", end_timestamp);
-
-		//printf("estimating_time_sum at end : %lld\n", estimating_time_sum);
-
 		printf("Current state is STATE_FINISHED");
 	}else{
 		//update goal
@@ -1861,14 +1868,56 @@ int main(int argc, char **argv){
     	next_iteration_time();
     	n_time_step++;
 	}
-	// //final logs
+
+	// Test to store correct bin values for visualization
+	// makes everything crash
+	
+	printf("Sqving\n");
+
+	//FILE *outputFile = fopen("/home/durancea/plume_model_learning/webots/wb_output.txt", "w");
+	//fprintf(outputFile, "Your output here\n");
+
+
+	if (simulation_parameters.gasFeature == GASHIT){
+		double mean, stddev;
+		double sample[2];
+		sample[0]=plume_model.expected_value[0];
+		sample[1]=plume_model.expected_value[1];
+		/*
+		printf("exp x: %f\n", sample[0]);
+		printf("exp y: %f\n", sample[1]);
+		fprintf(outputFile, "exp x: %f\n", sample[0] );
+		fprintf(outputFile, "exp y: %f\n", sample[1] );
+		fprintf(outputFile, "plume_model.expected_value[0]: %f\n", plume_model.expected_value[0] );
+		fprintf(outputFile, "plume_model.expected_value[1]: %f\n", plume_model.expected_value[1] );
+		fprintf(outputFile, "plume_model.expected_value[2]: %f\n", plume_model.expected_value[2] );
+		fprintf(outputFile, "plume_model.expected_value[3]: %f\n", plume_model.expected_value[3] );
+		fprintf(outputFile, "Before update\n");
+		for (int i = 0; i < history.size; i++){
+			fprintf(outputFile,"%f, %d\n", history.measurement[i], history.gas_hit_event[i]);
+		}
+		*/
+		calculate_history_distribution(history, mean, stddev);
+		likelihood_gas_hit(history, sample, &plume_model, mean, stddev);
+		/*
+		fprintf(outputFile, "After\n");
+		for (int i = 0; i < history.size; i++){
+			fprintf(outputFile,"%f, %d\n", history.measurement[i], history.gas_hit_event[i]);
+		}
+		*/
+	}
+	
+	// final logs
 	log_history();
 	log_experiment_time();
 	cleaning_up();
+
+	//fclose(outputFile);
     //free the allocated memory to obstacle array
     for(int i = 0; i < nbr_obs; i++)
     	delete[] obstacles[i];
 	delete[] obstacles;
+
 	exit(0);
 }
 
