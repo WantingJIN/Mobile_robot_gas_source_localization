@@ -1,6 +1,6 @@
 clear all; close all; clc;
 
-general_folder='/home/durancea/plume_model_learning/Results/bin_model_threshold_only/0/1702501893383/101';
+general_folder='/home/durancea/plume_model_learning/Results/con_rel_info_clust_d0.1_m_comp_k_10/0/1701022735140/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;

@@ -742,6 +742,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	//TEST for rel concentration penalty
 	//sum_tmp /= (2*0.15*0.15); //2*0.05*0.05 // best for bin rel 2*0.15*0.15
 
+	//TEST for constant thresh on model data only
+	sum_tmp /= (0.9*0.9); 
 
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
 	//double likelihood = (exp(-0.5 * sum_tmp));

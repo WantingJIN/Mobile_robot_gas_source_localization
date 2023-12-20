@@ -440,37 +440,20 @@ void Posterior::exhaustive_evaluation(struct history &history){
 	//for each element of the pdf
 	for(i = 0; i < nbr_element; i++){
 		//convert index 'i' to set of parameter values 'sample'
-		index_to_param_values(i, sample);
+		index_to_param_values(i, sample); //returns source nb i sx qnd sy coordinates in the map
 
-		//test
-		//printf("in likelihood i %d \n", i);
-		//printf("in likelihood sx %f \n", sample[0]);
-		//printf("in likelihood sy %f \n", sample[1]);
-
-		// TEST concentration maps
-		//get_concentration_list(history.position, history.size, i, model);
-
-		//calculate the posterior of 'sample'
-		// check the gas feature
+		//calculate the posterior distribution of source term param 'sample'
+		//check the gas feature selected
 		if (simulation_parameters.gasFeature == CONCENTRATION){
-			//pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
-			//(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model)
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood2(history, sample, i, model);
+			//pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood2(history, sample, i, model); //with precomputed maps
 		}
 		if (simulation_parameters.gasFeature == GASHIT){
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model, mean, stddev);
 		}
-		//printf("index pdf %d \n", i);
-		//printf("value %f\n ", pdf[i]);
-		//add the new value to the sum
+		// add the new value to the sum
 		sum += pdf[i];
 	}
-
-	//test hit event updqte
-	for (int i = 0; i < history.size; i++){
-		printf("In evqal model hit stored %d \n", history.gas_hit_event[i]);
-	}
-	//printf("\n");
 }
 
 
