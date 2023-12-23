@@ -48,6 +48,11 @@ FILE* gas_concentration_map_logfile;
 FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
 FILE* experiment_time_logfile;
+FILE* visited_list_logfile;
+
+//TEST
+FILE* console_logfile;
+
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
 char posterior_logfile_name[512];
@@ -65,6 +70,10 @@ char gas_concentration_map_logfile_name[512];
 char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
+char visited_list_logfile_name[512];
+
+//TEST
+char console_logfile_name[512];
 
 // finite state machine
 struct FSM FSM;
@@ -148,6 +157,7 @@ double c_avg[x_nbins*y_nbins][x_nbins*y_nbins]; //left: source position, right: 
 //TEST last position for measurement update
 Position last_measurement_pos;
 
+
 // =========================== FUNCTIONS ================================ //
 //random value sampled from a nromal distribution
 double randn(double mu, double sigma){
@@ -211,6 +221,11 @@ double dist_to_goal(Position goal){
     double dx, dy;
     dx = goal.x - current_position.x;
     dy = goal.y - current_position.y;
+
+	//TEST
+	double tmp = sqrt(dx*dx + dy*dy);
+	fprintf(console_logfile,"Inside dist to goal function my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, goal.x, goal.y);
+	fprintf(console_logfile, "dist to goal %f \n", tmp);
     return sqrt(dx*dx + dy*dy);
 }
 
@@ -237,7 +252,7 @@ void go_to_goal(Position goal){
     //float u = simulation_parameters.vel_factor * dir * (abs(bearing)<=0.2) + (abs(bearing)>0.2) * 0.2 * cosf(bearing); //simulation_parameters.vel_factor * 0.2 * cosf(bearing);
     
 	// ORIGINAL CONTROLLER
-	float u = simulation_parameters.vel_factor * 0.2 * cosf(bearing);
+	float u = simulation_parameters.vel_factor * 0.2 * cosf(bearing); //default vel factor is 1
 
 
 	//printf("linear v : %f; angular w : %f \n", u, w);
@@ -365,6 +380,17 @@ void log_history(){
 	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
 }
 
+void log_visited_list(){
+	visited_list_logfile = fopen(visited_list_logfile_name, "a");
+
+	for(int i = 0; i < x_nbins * y_nbins; i++)
+		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
+
+	fprintf(visited_list_logfile, "\n");
+
+	fclose(visited_list_logfile);
+}
+
 void log_trajectory(Position p){
 	double time = wb_robot_get_time();
 	trajectory_logfile = fopen(trajectory_logfile_name, "a");
@@ -393,13 +419,10 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 
 	vector<float> model_c_avg(history.size); 
-	vector<float> model_c_std(history.size); 
 
 	int nbr = history.size;
-	float px[nbr];
-	float py[nbr];
-	int idx[nbr];
-	int idy[nbr];
+	float px[nbr], py[nbr];
+	int idx[nbr], idy[nbr];
 
 	// get indices in the map
 	for(int i=0; i<nbr; i++){
@@ -409,11 +432,11 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 		idy[i] =  floor((py[i] - source_y_min) / y_resol);
 	}
 	
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg, model_c_std);
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
-	// test relative error
 	/*
-	double mean, stddev;
+	// test relative error
+	double mean, stddev, rel_model_val, rel_hist_val;
 	calculate_history_distribution(history, mean, stddev);
 	double	model_mean;
 	double	model_stddev = 0.01;
@@ -428,20 +451,20 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 	else model_mean = mean;
 	for (int i = 0; i < history.size; i++){
 		if (stddev == 0){
-			if (model_stddev == 0){
-				sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01), 2); ///(0.01*0.01+0.01*0.01);
-			}
-			else sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev), 2); ///(model_stddev*model_stddev+0.01*0.01);
+			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
 		}
-		else {	  
-			if (model_stddev == 0){  
-				sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01), 2); ///(stddev*stddev+0.01*0.01);
-			}
-			else
-				sum_tmp += pow(calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev)-calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev), 2); ///(stddev*stddev+model_stddev*model_stddev);
+		else{
+			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
 		}
+		if (model_stddev == 0){
+			rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01);
+		}
+		else{
+			rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev);
+		}
+		sum_tmp += pow(rel_model_val-rel_hist_val, 2);
 	}
-	sum_tmp /= (2*0.1*0.1); //(2*0.15*0.15);
+	sum_tmp /= (2*0.15*0.15); //(2*0.15*0.15);
 	*/
 
 
@@ -481,7 +504,9 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 		//std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
 	}
 
-	return (exp(-0.5 * sum_tmp)); // TEST history length div exp(-0.5 * sum_tmp / history.size)	
+
+
+	return (exp(-0.5 * sum_tmp));
 }
 
 
@@ -500,72 +525,67 @@ void calculate_history_distribution(struct history history, double &mean, double
 	stddev = sqrt(sum2 / history.size);
 	//printf("mean: %f, variance: %f\n", mean, variance);
 }
+
+
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev){
 	double cdf = 0.5 * (1 + std::erf((data - mean) / (stddev * std::sqrt(2))));
 	//printf("data: %f, mean: %f, stddev: %f, cdf: %f\n", data, mean, stddev, cdf);
 	return cdf;
 }
 
-// TEST
-double calculate_measurement_logit(double data, double centrality, double scaling ){
-	double logit = exp(scaling*(data-centrality)) / (1+exp(scaling*(data-centrality)));
-	//printf("data: %f, mean: %f, stddev: %f, cdf: %f\n", data, mean, stddev, cdf);
-	printf("F: %f\n", logit);
-	printf("concentrqtio: %f\n",data);
 
-	return logit;
-}
-double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev){
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev){
 	float sigmaE = 0.15; //s 125; //simulation_parameters.likelihood_error; //0.1;
 	float sigmaD = 0.01; //125; //0.01; //125;
 	double sum_tmp = 0; //0; 0 if sum 1 if mult
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
 	vector<float> model_c_avg(history.size); 
-	vector<float> model_c_std(history.size); 
-	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 
-	//TEST to do in a function if works
-	double model_mean, model_stddev;
-	model_stddev = 0.01;
-	if (model_c_avg.size() !=0){
-		double sum = 0;
-		sum = std::accumulate(model_c_avg.begin(), model_c_avg.end(), 0.0);
-		model_mean = sum / model_c_avg.size();
-		double sq_sum = std::inner_product(model_c_avg.begin(), model_c_avg.end(), model_c_avg.begin(), 0.0);
-		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
-			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
+	int nbr = history.size;
+	float px[nbr], py[nbr];
+	int idx[nbr], idy[nbr];
+
+	// get indices in the map
+	for(int i=0; i<nbr; i++){
+		px[i] = history.position[i].x;
+		py[i] = history.position[i].y;
+		idx[i] =  floor((px[i]- source_x_min) / x_resol);
+		idy[i] =  floor((py[i] - source_y_min) / y_resol);
 	}
-	else model_mean = mean;
+	
+	//old
+	//model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 
-	//gas hit event: fixed threshold
-	int gas_hit_threshold  = 1000;
+	//with precomputed map
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+
+
 	int history_hit;
 	int model_hit;
 
-	// fixed thresh
+	//--------------------------- fixed thresh -----------------------------
 	/*
+	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
 	 	if (history.measurement[i] < gas_hit_threshold)
 	 		history_hit = 0;
 	 	else
 	 		history_hit = 1;
         history.gas_hit_event[i] = history_hit;
-		//printf("hist val %f \n", history.measurement[i]);
 	 	if (model_c_avg[i] < gas_hit_threshold)
 	 		model_hit = 0;
 	 	else
 	 		model_hit = 1; 
 	    if (history_hit != model_hit)
 	 	    sum_tmp += 1;
-		//printf("moldel val %f \n", model_c_avg[i]);
-		//history.gas_hit_event[i] = model_hit;
 	}
 	*/
 
-	//model fixed only penalty depending on relative hist value
+	//-----model fixed threshold, penalty on relative concentration history ------- 
+	/**/
 	double rel_hist_val = 0.0;
-	
+	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
 		if (stddev == 0)
 			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
@@ -573,18 +593,18 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
 	 	if (model_c_avg[i] < gas_hit_threshold){
 	 		model_hit  = 0; //for plotting
-			//printf("model miss \n");
 			sum_tmp += rel_hist_val; //larger penalty if value detected is large and model has a miss
 		}
 	 	else{
 			model_hit = 1;
-			//printf("model hit \n");
 	 		sum_tmp += 1-rel_hist_val; //small penalty if model hit and high concentration measurement
 		}
-		history.gas_hit_event[i] = model_hit;
-		//printf("model hit stored %d \n", history.gas_hit_event[i]);
+		history.gas_hit_event[i] = model_hit; //will have to be re-run at the end of the algo with the expected source location as input for plotting
 	}
 	
+	sum_tmp /= (0.9*0.9); 
+
+	//-----------------------------dynamic threshold-------------------------------
 
 	/*
 	// gas hit event: dynamic threshold
@@ -606,7 +626,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	double rel_err_proba = 0.0;
 	double rel_model_val = 0.0;
 
-	//TEST
+
+	//TODO put in a function
 	double model_mean, model_stddev;
 	model_stddev = 0.01;
 	if (model_c_avg.size() !=0){
@@ -673,22 +694,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		
 
 
-		
-		// TEST mult does not work well
-		/*
-		if (history_hit == 0 && model_hit == 0){ 
-			sum_tmp *= below_hist_th_proba*below_model_th_proba;
-			printf("0 0 sum_tmp: %f\n", sum_tmp);
-		}
-		else if (history_hit != model_hit){
-			sum_tmp *= exp(-0.5 * pow(rel_hist_val - rel_model_val, 2) /(2*sigmaE*sigmaE));
-			printf("mismatch sum_tmp: %f\n", sum_tmp);
-		}
-		else if (history_hit == 1 && model_hit == 1){
-			sum_tmp *= (1-below_hist_th_proba)*(1-below_model_th_proba);
-			printf("1 1 sum_tmp: %f\n", sum_tmp);
-		}
-		*/
+	
 		
 
 
@@ -702,29 +708,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 		
 
 
-		// TEST relative concentration penalty. woks well in map 0
-		/*
-		if (history_hit != model_hit){
-			//TEST /
-			if (stddev == 0){
-				//below_hist_th_proba = calculate_measurement_gaussian_CDF(his_thrs, mean, 0.01);
-				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
-			}
-			else{
-				//below_hist_th_proba = calculate_measurement_gaussian_CDF(his_thrs, mean, stddev);
-				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-			}
-			if (model_stddev == 0){
-				//below_model_th_proba = calculate_measurement_gaussian_CDF(mod_thrs, model_mean, 0.01);
-				rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01);
-			}
-			else{
-				//below_model_th_proba = calculate_measurement_gaussian_CDF(mod_thrs, model_mean, model_stddev);
-				rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev);
-			}
-			sum_tmp += pow(rel_model_val-rel_hist_val, 2);
-		}
-		*/
+
 
 		//TEST simple score does not zork
 		/*
@@ -743,7 +727,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, PlumeMode
 	//sum_tmp /= (2*0.15*0.15); //2*0.05*0.05 // best for bin rel 2*0.15*0.15
 
 	//TEST for constant thresh on model data only
-	sum_tmp /= (0.9*0.9); 
+	//sum_tmp /= (0.9*0.9); 
 
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
 	//double likelihood = (exp(-0.5 * sum_tmp));
@@ -975,7 +959,7 @@ void greedy_planning(){
 void random_planning(){
 	do {
 		goal_position.heading = 0;
-        goal_position.x = (((double)rand() / (double)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;;
+        goal_position.x = (((double)rand() / (double)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;
         goal_position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
     } while(goal_position.is_in_obstacle_list(obstacles, nbr_obs));
 
@@ -1003,7 +987,7 @@ void lawnmower_planning(){
 }
 
 void calculate_information_gain_with_variance(){
-	if (simulation_parameters.gasFeature == CONCENTRATION){
+	//if (simulation_parameters.gasFeature == CONCENTRATION){
 		if (simulation_parameters.infoFeature == VARIANCE){
 			plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
 		} else if (simulation_parameters.infoFeature == MEAN){
@@ -1015,33 +999,61 @@ void calculate_information_gain_with_variance(){
 			}
 		}
 		log_gas_information_map();
+	//TEST remove gas hit var feature
+	/*
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
 		log_gas_hit_variance_map();
 	}
+	*/
 }
 
 
 void informative_max_variance_point_planning(){
 	printf("informative path planning based on variance \n");
+	//TEST
+	fprintf(console_logfile, "informative path planning based on variance \n");
 	double best_point[2]={0};
 	// find the maximal variance in gas variance map
 	double max_info = 0;
 	int max_info_index = 0;
-	if (simulation_parameters.gasFeature == CONCENTRATION){
+	int sum = 0;
+	//if (simulation_parameters.gasFeature == CONCENTRATION){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
 				if (gas_information_map[i] > max_info && cell_visited_list[i] == 0){
 					max_info = gas_information_map[i];
 					max_info_index = i;
 				} 
+				// if all cells have the same likelihood take a random one
+				else if (gas_information_map[i] == max_info && cell_visited_list[i] == 0){
+					sum++;
+					if (sum == x_nbins*y_nbins -2){
+						fprintf(console_logfile, "Uniform distrib \n");
+						max_info_index = rand() % x_nbins*y_nbins; 
+						fprintf(console_logfile, "Rand index %d\n", max_info_index);
+					}
+				} 
 			}else{
 				if (gas_information_map[i] > max_info){
 					max_info = gas_information_map[i];
 					max_info_index = i;
 				}
+				// if all cells have the same likelihood take a random one
+				else if (gas_information_map[i] == max_info){
+					sum++;
+					if (sum == x_nbins*y_nbins -2){
+						fprintf(console_logfile, "Uniform distrib \n");
+						max_info_index = rand() % x_nbins*y_nbins; 
+						fprintf(console_logfile, "Rand index %d\n", max_info_index);
+					}
+				} 
 			}
 		}
+		fprintf(console_logfile, "chosen index %d\n", max_info_index);
+		fprintf(console_logfile, "sum %d\n", sum);
+	//gas hit var feature does not work well
+	/*
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
@@ -1057,16 +1069,24 @@ void informative_max_variance_point_planning(){
 			}
 		}
 	}
+	*/
 	posterior.index_to_param_values(max_info_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
+
+
     // The goal position is very close to current postion, swith to greedy planning
-	if(dist_to_goal(goal_position) < 0.05){
+	if(dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh))){
 		printf("The goal position is very close to current postion, switch to greedy planning \n");
+		//TEST
+		fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
 		greedy_planning();
 	}
+
+	fprintf(console_logfile, "planned goal position : %f %f \n", goal_position.x, goal_position.y);
+	fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 
 }
@@ -1084,9 +1104,12 @@ void informative_clustering_planning(){
 	clusters_bounding_box = clustering_information_blocks(gas_information_map);
 	if (clusters_bounding_box.size() == 0){
 		printf("no cluster found \n");
+		//fprintf(console_logfile, "informative path planning based on variance \n");
 		informative_max_variance_point_planning();
 		return;
 	} else{
+		//TEST
+		fprintf(console_logfile, "clusters found \n");
 		// find the cluster with the shortest distance to robot
 		// double min_dist = 100;
 		// int min_dist_index = 0;
@@ -1157,6 +1180,10 @@ void informative_clustering_planning(){
 		goal_position.x = candidate_goal[min_dist_to_robot_index].x;
 		goal_position.y = candidate_goal[min_dist_to_robot_index].y;
         goal_position.heading = 0;
+
+		//TEST
+		fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
+		fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 
 }
@@ -1290,21 +1317,17 @@ void DKL_MAP_distance(float gloabl_local_search_ratio){
 }
 
 void goal_outside_obstacles(Position * goal){
-	// is the goal position in an obstacle?
+
+	double min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
+	// is the goal position in an obstacle or out of arena or too close to current position?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
-	// if not, then back to business
-	if(idx == -1 && !position_outside_arena(*goal)){
+	if(idx == -1 && !position_outside_arena(*goal) &&  goal->distance_from(current_position)<min_dist_to_current){
 		printf(">>> the goal is not in any obstacles or outside of the region\n");
 		return;
 	}
 
-	//set concentration to 0 in the original goal position
-	// history.position[history.size].x = goal->x;
-	// history.position[history.size].y = goal->y;
-	// history.position[history.size].heading = 0;
-	// history.measurement[history.size] = 0;
-	// history.size++;
-    
+	
+    //goal inside obstacle
 	if (idx != -1){
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
@@ -1332,10 +1355,12 @@ void goal_outside_obstacles(Position * goal){
 			}
 		}
 		//change the goal position using the pointer
-	    printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+	    printf(">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		fprintf(console_logfile, ">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
 	}
 
+	//oustide arena
     if (position_outside_arena(*goal)){
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
@@ -1367,10 +1392,48 @@ void goal_outside_obstacles(Position * goal){
 				}
 			}
 		}
-		//change the goal position using the pointer
-		printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+
+		fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		goal->copy_position(nearest_position);
+
+	}
+	//TEST
+	double dist_candidate_goal = goal->distance_from(current_position);
+	fprintf(console_logfile, ">>> Candidate goal %f %f \n", goal->x, goal->y);
+	fprintf(console_logfile, ">>> Current position %f %f \n", current_position.x, current_position.y);
+	fprintf(console_logfile, ">>> Dist from current %f \n", dist_candidate_goal);
+	if (goal->distance_from(current_position)<min_dist_to_current){
+		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
+		fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
+		// otherwise, lets try 4 different candidates
+		float min_dist = 10000.0;
+		Position nearest_position(*goal);
+		Position candidates[8] = {	Position(goal->x+min_dist_to_current, goal->y+min_dist_to_current, 0),
+									Position(goal->x+min_dist_to_current, goal->y-min_dist_to_current, 0),
+									Position(goal->x-min_dist_to_current, goal->y-min_dist_to_current, 0),
+									Position(goal->x-min_dist_to_current, goal->y+min_dist_to_current, 0),
+									Position(goal->x+min_dist_to_current, goal->y, 0), 
+									Position(goal->x-min_dist_to_current, goal->y, 0),
+									Position(goal->x, goal->y+min_dist_to_current, 0),
+									Position(goal->x, goal->y-min_dist_to_current, 0)};
+		// for each candidate position
+		for(int i=0; i<8; i++){
+			if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i]) && current_position.distance_from(candidates[i])>min_dist_to_current){
+				//Take the first candidate that satisfies the condition
+				nearest_position.copy_position(candidates[i]);
+				break;
+				// printf(">>> chose it as new position !!! \n");
+			}
+		}
+		fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
 	}
+
+
+	//change the goal position using the pointer
+	//printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+	//fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+	
 	
 }
 
@@ -1693,6 +1756,7 @@ void state_updategoal(){
 			log_trajectory(p);
 		}
 		i = path.begin();
+		fprintf(console_logfile, "from current %f %f to path begin %f %f \n", current_position.x, current_position.y, i->x, i->y);
 		printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		//send the goal to the supervisor
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
@@ -1755,13 +1819,26 @@ void state_moving(){
 		}
 	}
 	//verify if arrived to the goal if applicable
+	fprintf(console_logfile, "check dist to end goal \n");
+	fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	if(dist_to_goal(goal_position) > 0.05){
+
+		if(i == path.end()){
+			fprintf(console_logfile, "path end goal reached \n");
+		}
+
+		//TEST go to before
+		//go_to_goal(*i);
+
 		//move
+		fprintf(console_logfile, "check i ");
 		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
+			fprintf(console_logfile,"my position (%f, %f) - my i goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
 			printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			fprintf(console_logfile,"my position (%f, %f) - my i++ goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}
-		go_to_goal(*i);
+		go_to_goal(*i); //why is it after
 		//obstacle avoidance if necessary
 		// if(obstacle_or_not() == 1){
 		// 	FSM.state = STATE_OBSTACLE_AVOIDANCE;
@@ -1769,9 +1846,18 @@ void state_moving(){
 		// 	return;
 		// }
 		set_wheels_speed(speed[0],speed[1]);
+		//TEST
+		fprintf(console_logfile, "speeds %f, %f \n", speed[0], speed[1]);
 		//log the position
 		//log_position();
 	}else{
+		//TEST
+		fprintf(console_logfile, "goal reached \n");
+
+		if(i == path.end()){
+			fprintf(console_logfile, "path end goal reached \n");
+		}
+
 		set_wheels_speed(0,0);
 		sampleBuffer.reset_all();
 		path.clear();
@@ -1832,11 +1918,32 @@ int main(int argc, char **argv){
 		plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 	}
 
+
+
 	//TEST precompute gas maps
 	printf("before TEST precomp: entering precomputation \n");
 	plume_model.initialize_information_matrix();
 	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 	//precompute_concentration_maps(); 
+
+
+
+	//TEST filepath
+
+	printf("Test filepath\n");
+	printf("%s", console_logfile_name);
+	console_logfile = fopen(console_logfile_name, "a");
+    if (console_logfile != nullptr) {
+        // Write to the file at multiple locations
+        fprintf(console_logfile, "Text at location 1\n");
+
+        // ... additional code ...
+
+        //fclose(console_logfile);
+        printf("Text written to file successfully.\n");
+    } else {
+        fprintf(stderr, "Unable to open the file.\n");
+    }
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED){
@@ -1871,50 +1978,48 @@ int main(int argc, char **argv){
     	n_time_step++;
 	}
 
-	// Test to store correct bin values for visualization
-	// makes everything crash
-	
-	printf("Sqving\n");
 
-	//FILE *outputFile = fopen("/home/durancea/plume_model_learning/webots/wb_output.txt", "w");
-	//fprintf(outputFile, "Your output here\n");
+
 
 
 	if (simulation_parameters.gasFeature == GASHIT){
 		double mean, stddev;
 		double sample[2];
+		int indices[2];
 		sample[0]=plume_model.expected_value[0];
 		sample[1]=plume_model.expected_value[1];
-		/*
-		printf("exp x: %f\n", sample[0]);
-		printf("exp y: %f\n", sample[1]);
-		fprintf(outputFile, "exp x: %f\n", sample[0] );
-		fprintf(outputFile, "exp y: %f\n", sample[1] );
-		fprintf(outputFile, "plume_model.expected_value[0]: %f\n", plume_model.expected_value[0] );
-		fprintf(outputFile, "plume_model.expected_value[1]: %f\n", plume_model.expected_value[1] );
-		fprintf(outputFile, "plume_model.expected_value[2]: %f\n", plume_model.expected_value[2] );
-		fprintf(outputFile, "plume_model.expected_value[3]: %f\n", plume_model.expected_value[3] );
-		fprintf(outputFile, "Before update\n");
-		for (int i = 0; i < history.size; i++){
-			fprintf(outputFile,"%f, %d\n", history.measurement[i], history.gas_hit_event[i]);
-		}
-		*/
+
+		indices[0] =  floor((sample[0]- source_x_min) / x_resol);
+		indices[1] =  floor((sample[1] - source_y_min) / y_resol);
+
+
+		int source_i=0 ;
+		//int indices[nbr_dimension];
+
+		//convert sample values to indices
+		//for(i = 0; i < 2; i++){
+		//	indices[i] = (int)( (sample[i] - model->param_list[i].lower_limit) / (float)model->param_list[i].resolution);
+		//}
+		source_i = posterior.indices_to_index(indices);
+		/**/
+		fprintf(console_logfile, "exp x: %f\n", sample[0] );
+		fprintf(console_logfile, "exp y: %f\n", sample[1] );
+		fprintf(console_logfile, "source index: %d\n", source_i);
+		
 		calculate_history_distribution(history, mean, stddev);
-		likelihood_gas_hit(history, sample, &plume_model, mean, stddev);
-		/*
-		fprintf(outputFile, "After\n");
-		for (int i = 0; i < history.size; i++){
-			fprintf(outputFile,"%f, %d\n", history.measurement[i], history.gas_hit_event[i]);
-		}
-		*/
+		likelihood_gas_hit(history, sample, source_i, &plume_model, mean, stddev);
+		
 	}
 	
+	fclose(console_logfile);
+
 	// final logs
 	log_history();
 	log_experiment_time();
+	log_visited_list();
 	cleaning_up();
 
-	//fclose(outputFile);
+	
     //free the allocated memory to obstacle array
     for(int i = 0; i < nbr_obs; i++)
     	delete[] obstacles[i];

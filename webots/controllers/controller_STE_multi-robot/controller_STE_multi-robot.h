@@ -170,9 +170,8 @@ double pseudo_gaussian_plume_model(double robot_position[], double wind_intensit
 double likelihood(struct history history, double *parameters, PlumeModel *model);
 //TEST
 double likelihood2(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
-double calculate_measurement_logit(double data, double centrality, double scale);
 
-double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev);
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();

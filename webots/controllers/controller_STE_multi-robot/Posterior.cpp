@@ -449,7 +449,7 @@ void Posterior::exhaustive_evaluation(struct history &history){
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood2(history, sample, i, model); //with precomputed maps
 		}
 		if (simulation_parameters.gasFeature == GASHIT){
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model, mean, stddev);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev); 
 		}
 		// add the new value to the sum
 		sum += pdf[i];

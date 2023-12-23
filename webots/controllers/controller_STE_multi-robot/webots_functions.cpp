@@ -125,6 +125,11 @@ void init(){
 	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
     sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+
+
+	// TEST to keep some debugging console input
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
@@ -147,6 +152,12 @@ void init(){
 	fclose(gas_hit_variance_map_logfile);
 	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
 	fclose(experiment_time_logfile);
+	visited_list_logfile = fopen(visited_list_logfile_name, "w");
+	fclose(visited_list_logfile);
+
+	//TEST
+	console_logfile = fopen(console_logfile_name, "w");
+	fclose(experiment_time_logfile);
 
     // get the configuration
     //default values for the simulation parameters
@@ -155,7 +166,7 @@ void init(){
 	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio //NO_PROCESSING
 	//17. velocity multiplier 18. wind speed multiplier 19. sampling distance threshold (default 0)
 	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.  11.     12.             13.           14.       15.  16. 17.
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX,RANDOM, GASHIT, visitedList_ON, BELIEF, 10, 10, 1.0, 0.75, 0};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX,INFORMATIVE_CLUSTERING, GASHIT, visitedList_ON, BELIEF, 10, 10, 1.0, 0.75, 0};
     
 	// cell_measurements each_cell;LAWNMOWER
 	// for (int i = 0; i <plume_model.x_bins; i++){
@@ -243,6 +254,15 @@ void init(){
 		if(ok) printf("wind param : %f\n", simulation_parameters.sampling_dist_thresh);
 		fclose(sim_param_file);
 	}
+	
+	int release_amount = 53;
+	if(access("../../data/plugin_parameters/releaseAmount.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/plugin_parameters/releaseAmount.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &release_amount);
+		if(ok) printf("release rate param : %d\n", release_amount);
+		fclose(sim_param_file);
+	}
+	
 	//write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
@@ -268,6 +288,7 @@ void init(){
 	fprintf(sim_param_file, "vel_factor %f\n", simulation_parameters.vel_factor);
 	fprintf(sim_param_file, "wind_factor %f\n", simulation_parameters.wind_factor);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", simulation_parameters.sampling_dist_thresh);
+	fprintf(sim_param_file, "release_amount %d\n", release_amount);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){

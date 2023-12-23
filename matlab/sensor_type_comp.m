@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_range_threshold/rr_comp_bin_range_rel_con_err_info_clust_m0_d0.1_k10_max_iter_50';
+general_folder = '/home/durancea/plume_model_learning/Results/rel_in_con_info_clust_rr_comp/map_1';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -152,7 +152,8 @@ xlabel('Sensor Type');
 ylabel('Error (m)');
 title('Error on x');
 subplot(1,3,2);
-plot([0 length(unique(sensor_type))], [0 0], 'g');
+sensor_type_char = cellfun(@num2str, sensor_type, 'UniformOutput', false);
+plot([0 length(unique(sensor_type_char))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,2), sensor_type,'Colors',custom_color);
 error_y = error_list(:,2);

@@ -1,6 +1,6 @@
 clear all; close all; clc;
 
-general_folder='/home/durancea/plume_model_learning/Results/bin_model_thresh_only/bin_model_threshold_only/0/1702499325739/101';
+general_folder='/home/durancea/plume_model_learning/Results/tmp_test_debug/1703356617456/101';
 %experiment_path = uigetdir(general_folder);
 %experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -29,13 +29,13 @@ entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
 cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv'])
 real_source_position = params.source_position;
-if (params.gas_feature == 0)
+% if (params.gas_feature == 0)
     % use gas concentration as gas feature
     gas_information_map = dlmread([experiment_file_path,'/gas_information_map.csv']);
-end
-if (params.gas_feature == 1)
-    gas_information_map = dlmread([experiment_file_path,'/gas_hit_variance_map.csv']);
-end
+% end
+% if (params.gas_feature == 1)
+%     gas_information_map = dlmread([experiment_file_path,'/gas_hit_variance_map.csv']);
+% end
 
 x=linspace(3,12.75,20);
 y=linspace(0,4,20);
@@ -82,10 +82,11 @@ for i=1:size(pdf,1)
     view(180,90);  colormap(mymap); 
     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
     ax.TitleFontSizeMultiplier = 2;
+    
     subplot(1,3,3)
     % the last iteration the gas variance map won't update
     if i == size(pdf,1)
-        imagesc(y,x,reshape(gas_information_map(i-1,1:end-1),params.nbins(1), params.nbins(2))); hold on
+         imagesc(y,x,reshape(gas_information_map(i-1,1:end-1),params.nbins(1), params.nbins(2))); hold on
         if params.planning_strategy == 5
             cluster_num = cluster_bounding_boxes(i-1,1);
             if cluster_num > 0
@@ -108,14 +109,16 @@ for i=1:size(pdf,1)
             min_gas = min(gas_information_map_this_iteration);
             threshold = ((max_gas-min_gas)*ratio +min_gas);
             gas_information_map_this_iteration(gas_information_map_this_iteration < threshold) = 0;
-            imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on
+            imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas
             if cluster_num > 0
                 for cluster_idx = 1 : cluster_num
+                    disp(cluster_idx)
+                    disp(cluster_num)
                     x1 = cluster_bounding_boxes(i, 3 + (cluster_idx-1)*4);
                     y1 = cluster_bounding_boxes(i, 4 + (cluster_idx-1)*4);
                     x2 = cluster_bounding_boxes(i, 5 + (cluster_idx-1)*4);
                     y2 = cluster_bounding_boxes(i, 6 + (cluster_idx-1)*4);
-                    rectangle('Position',[y1 x1 (y2-y1) (x2-x1)],'EdgeColor', "#A2142F",'LineWidth',2)
+                    rectangle('Position',[y1 x1 (y2-y1) (x2-x1)],'EdgeColor', "#FFB300",'LineWidth',2)
                     hold on
                 end
             end

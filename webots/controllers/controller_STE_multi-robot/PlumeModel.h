@@ -77,7 +77,7 @@ public:
 	virtual double concentration(double cell_position[], double param_list[])=0;
 	//virtual void get_pos_list_idx(vector<Position> robot_position, int nbr, int idx[], int idy[])=0;
 	virtual double concentration(int idx, int idy, double param_list[])=0;
-	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg, vector<float> &c_std)=0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg)=0;
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
 	
@@ -229,7 +229,7 @@ public:
 	double concentration(double cell_position[], double param_list[]);
 	//void get_pos_list_idx(vector<Position> robot_position, int nbr, int idx[], int idy[]);
 	double concentration(int idx, int idy, double param_list[]);
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg, vector<float> &c_std);
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 
