@@ -1329,6 +1329,14 @@ void goal_outside_obstacles(Position * goal){
 	
     //goal inside obstacle
 	if (idx != -1){
+		// mark the cell as visited so that never plans to go there again
+		if (simulation_parameters.visitedList == visitedList_ON){
+			int pos_coord[2];
+			pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
+			pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+			int idx = posterior.indices_to_index(pos_coord);
+			cell_visited_list[idx] = 1;
+		}
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
@@ -1362,6 +1370,14 @@ void goal_outside_obstacles(Position * goal){
 
 	//oustide arena
     if (position_outside_arena(*goal)){
+		// mark the cell as visited so that never plans to go there again
+		if (simulation_parameters.visitedList == visitedList_ON){
+			int pos_coord[2];
+			pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
+			pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+			int idx = posterior.indices_to_index(pos_coord);
+			cell_visited_list[idx] = 1;
+		}
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;

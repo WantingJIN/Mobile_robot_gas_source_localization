@@ -56,7 +56,7 @@ for r in 53 #30 53 80 120 200
 			cp /home/durancea/plume_model_learning/Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 			#for k in {1..3} 1
-			for ((k=7; k<=$nbr_source_pos; k++)) 
+			for ((k=1; k<=$nbr_source_pos; k++)) 
 			do
 				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
 				echo $source_pos_x $source_pos_y > $source_pos_filename
