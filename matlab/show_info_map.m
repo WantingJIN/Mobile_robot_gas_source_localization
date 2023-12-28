@@ -1,6 +1,6 @@
 clear all; close all; clc;
 
-general_folder='/home/durancea/plume_model_learning/Results/debug_visited_list/1703369505195/101';
+general_folder='/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/fixed_th/penatlyx2.5/1/1703794591572/101';
 %experiment_path = uigetdir(general_folder);
 %experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -9,6 +9,8 @@ anim_folder=[general_folder '/info'] ;
 if(~exist(anim_folder,'dir'))
     mkdir(anim_folder);
 end
+
+clustering = 1;
 
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
 visited_list = dlmread([experiment_file_path, '/visited_list.csv']);
@@ -28,8 +30,12 @@ measurements = dlmread([experiment_file_path, '/measurement_history.csv']); %mea
 position_history = dlmread([experiment_file_path, '/position_history.csv']); %position_history
 entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
-cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv'])
+if clustering~=0
+    cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv'])
+end
 real_source_position = params.source_position;
+
+if clustering~=0
 % if (params.gas_feature == 0)
     % use gas concentration as gas feature
     gas_information_map = dlmread([experiment_file_path,'/gas_information_map.csv']);
@@ -37,6 +43,7 @@ real_source_position = params.source_position;
 % if (params.gas_feature == 1)
 %     gas_information_map = dlmread([experiment_file_path,'/gas_hit_variance_map.csv']);
 % end
+end 
 
 x=linspace(3,12.75,20);
 y=linspace(0,4,20);
@@ -88,7 +95,8 @@ for i=1:size(pdf,1)
     % the last iteration the gas variance map won't update
     if i == size(pdf,1)
          imagesc(y,x,reshape(gas_information_map(i-1,1:end-1),params.nbins(1), params.nbins(2))); hold on
-        if params.planning_strategy == 5
+%         if params.planning_strategy == 5
+         if clustering~=0
             cluster_num = cluster_bounding_boxes(i-1,1);
             if cluster_num > 0
                 for cluster_idx = 1 : cluster_num
@@ -102,7 +110,8 @@ for i=1:size(pdf,1)
             end
         end
     else
-        if params.planning_strategy == 5
+%         if params.planning_strategy == 5
+        if clustering~=0
             cluster_num = cluster_bounding_boxes(i,1);
             ratio = cluster_bounding_boxes(i,2);
             gas_information_map_this_iteration = gas_information_map(i,1:end-1);

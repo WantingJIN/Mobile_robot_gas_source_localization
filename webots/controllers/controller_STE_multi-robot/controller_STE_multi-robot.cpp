@@ -469,13 +469,13 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 
 
 	//absolute concentration values
-	
+
 	for (int i = 0; i < history.size; i++){
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 	}
 	
 
-	return (exp(-0.5 * sum_tmp)); // TEST history length div exp(-0.5 * sum_tmp / history.size)	
+	return (exp(-0.5 * sum_tmp));
 }
 
 
@@ -564,8 +564,10 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	int history_hit;
 	int model_hit;
 
+	double likelihood;
+
 	//--------------------------- fixed thresh -----------------------------
-	/*
+	/**/
 	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
 	 	if (history.measurement[i] < gas_hit_threshold)
@@ -580,10 +582,14 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	    if (history_hit != model_hit)
 	 	    sum_tmp += 1;
 	}
-	*/
+
+	sum_tmp *= 2.5;
+
+	likelihood = (exp(-sum_tmp));
+	
 
 	//-----model fixed threshold, penalty on relative concentration history ------- 
-	/**/
+	/*
 	double rel_hist_val = 0.0;
 	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
@@ -603,6 +609,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	}
 	
 	sum_tmp /= (0.9*0.9); 
+	*/
 
 	//-----------------------------dynamic threshold-------------------------------
 
@@ -732,7 +739,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
     //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
 	//double likelihood = (exp(-0.5 * sum_tmp));
 	//if(likelihood<0.25) likelihood = 0.0;
-	return (exp(-0.5 * sum_tmp)); //sum_tmp; //(exp(-0.5 * sum_tmp))
+	return likelihood; //sum_tmp; //(exp(-0.5 * sum_tmp))
 }
 
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
@@ -1167,19 +1174,36 @@ void informative_clustering_planning(){
 			}
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
-        // find the cloest point among candidate goals
+        // find the closest unvisited point among candidate goals
 		double min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
         for (int j = 0; j < candidate_goal.size(); j++) {
 			double dist = dist_to_goal(candidate_goal[j]);
 				if (dist < min_dist_to_robot) {
-					min_dist_to_robot = dist;
-					min_dist_to_robot_index = j;
+					if (simulation_parameters.visitedList == visitedList_ON){
+						int pos_coord[2];
+						pos_coord[0] =  floor((candidate_goal[j].x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((candidate_goal[j].y - source_y_min) / y_resol);
+						int idx = posterior.indices_to_index(pos_coord);
+						if (cell_visited_list[idx] == 0){
+							min_dist_to_robot = dist;
+							min_dist_to_robot_index = j;
+						}
+					} else {
+						min_dist_to_robot = dist;
+						min_dist_to_robot_index = j;
+					}
+					
 			}
 		}
-		goal_position.x = candidate_goal[min_dist_to_robot_index].x;
-		goal_position.y = candidate_goal[min_dist_to_robot_index].y;
-        goal_position.heading = 0;
+		if (min_dist_to_robot ==1000) {
+			informative_max_variance_point_planning();
+			return;
+		} else {
+			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+			goal_position.y = candidate_goal[min_dist_to_robot_index].y;
+			goal_position.heading = 0;
+		}
 
 		//TEST
 		fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
@@ -1359,6 +1383,14 @@ void goal_outside_obstacles(Position * goal){
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
 					// printf(">>> chose it as new position !!! \n");
+				} else {	
+					if (simulation_parameters.visitedList == visitedList_ON){
+						int pos_coord[2];
+						pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+						int idx = posterior.indices_to_index(pos_coord);
+						cell_visited_list[idx] = 1;
+					}
 				}
 			}
 		}
@@ -1405,7 +1437,15 @@ void goal_outside_obstacles(Position * goal){
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
 					// printf(">>> chose it as new position !!! \n");
-				}
+				}else{	
+					if (simulation_parameters.visitedList == visitedList_ON){
+						int pos_coord[2];
+						pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+						int idx = posterior.indices_to_index(pos_coord);
+						cell_visited_list[idx] = 1;
+					}
+				}	
 			}
 		}
 
@@ -1439,6 +1479,14 @@ void goal_outside_obstacles(Position * goal){
 				nearest_position.copy_position(candidates[i]);
 				break;
 				// printf(">>> chose it as new position !!! \n");
+			}else{	
+				if (simulation_parameters.visitedList == visitedList_ON){
+					int pos_coord[2];
+					pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
+					pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+					int idx = posterior.indices_to_index(pos_coord);
+					cell_visited_list[idx] = 1;
+				}
 			}
 		}
 		fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
@@ -1997,7 +2045,7 @@ int main(int argc, char **argv){
 
 
 
-
+	/**/
 	if (simulation_parameters.gasFeature == GASHIT){
 		double mean, stddev;
 		double sample[2];

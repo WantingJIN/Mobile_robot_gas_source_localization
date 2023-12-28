@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/durancea/plume_model_learning/Results/extra_visited');
+folder_list = dir('/home/durancea/plume_model_learning/Results/bin_fixed_corrected_map_1_penalty2.5/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -92,9 +92,12 @@ for i=1:exp_number
         f1 = figure('Position',[-686   629   570   418]);
         subplot(2,1,1);
         plot(measurements(:,3));
+        ylabel('Concentration');xlabel('Iteration');
         title('concentration measurement over time');
         subplot(2,1,2);
         plot(entropy(:,1));
+        xticks(1:size(entropy(:,1)));
+        ylabel('Entropy');xlabel('Iteration');
         title('entropy');
         
         % save

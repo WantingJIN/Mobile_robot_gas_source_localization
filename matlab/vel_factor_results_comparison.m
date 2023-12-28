@@ -2,14 +2,14 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_rel_con_err_info_clust_m0_d0.1_k10';
+general_folder = '/home/durancea/plume_model_learning/Results/very_slow_MOX_vel_comp_lawnmower';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
 
-use_time = 1;
+use_time = 0;
 use_cst_velocity=1;
 
 if(use_cst_velocity)
@@ -17,7 +17,7 @@ if(use_cst_velocity)
 else
     x_axis_title = x_axis_title;
 end
-
+%% dispatch
 for i=1:exp_number
     
     disp(i)
@@ -68,9 +68,9 @@ for i=1:number
     disp(folder_name)
     
     % multiple robots
-    robot_list = dir(folder_name);
-    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}));
-    robot_list = robot_list([robot_list.isdir]);
+    robot_list = dir(folder_name)
+    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}))
+    robot_list = robot_list([robot_list.isdir])
     ID = arrayfun(@(struct) str2num(struct.name),robot_list);
     % remove folders with unfinished jobs
     file_list = dir([folder_name '/**']);
@@ -109,41 +109,13 @@ for i=1:number
     convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
 end
 
-%% boxplots
-% f = figure('units','normalized','outerposition',[0 0 1 1]);
-% subplot(5,1,1)
-% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,1), map_nbr_list);
-% grid on;
-% title('error on x');
-% subplot(5,1,2);
-% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,2), map_nbr_list);
-% grid on;
-% title('error on y');
-% subplot(5,1,3);
-% boxplot(iteration_nbr_list, map_nbr_list);
-% grid on;
-% title('nbr iterations');
-% subplot(5,1,4);
-% boxplot(entropy_list, map_nbr_list);
-% grid on;
-% title('final entropy');
-% subplot(5,1,5);
-% boxplot(convergence_list, map_nbr_list);
-% grid on;
-% title('convergence');
-% 
-% %% save
-% saveas(f,[general_folder '/test_maps_results_comparison_all.png']);
 
+%% plot for thesis without time
 
 %% plot for thesis
 f = figure('Position',[-1561         656         715         615]);
 custom_color = [44,136,217]./255;
-subplot(1,3,1)
+subplot(1,2,1)
 plot([0 length(unique(vel_factor_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,1), vel_factor_list,'Colors',custom_color);
@@ -156,7 +128,7 @@ ylim([-1,10])
 xlabel(x_axis_title);
 ylabel('Error (m)');
 title('Error on x');
-subplot(1,3,2);
+subplot(1,2,2);
 plot([0 length(unique(vel_factor_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,2), vel_factor_list,'Colors',custom_color);
@@ -170,41 +142,6 @@ xlabel(x_axis_title);
 title('Error on y');
 ylabel('Error (m)');
 
-subplot(1,3,3);
-
-if(use_time)
-    boxplot(exp_time_list, vel_factor_list,'Colors',custom_color);
-    lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-    set(lines, 'Color', 'r');
-    set(findobj(gca,'type','line'),'linew',1.2)
-    grid on;
-    ylim([0,max(exp_time_list)+1])
-    xlabel(x_axis_title);
-    ylabel('Time (s)');
-    title('Total experiment time');
-else
-    boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
-    lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-    set(lines, 'Color', 'r');
-    set(findobj(gca,'type','line'),'linew',1.2)
-    grid on;
-    ylim([0,max(iteration_nbr_list)+1])
-    xlabel(x_axis_title);
-    ylabel('nb iterations');
-    title('nb iterations');
-end
-
-
-% subplot(1,3,3);
-% boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([0,50])
-% xlabel('Linear velocity constant');
-% title('nbr iterations');
-% hold on
 
 %% calculate success rate
 success_case = 0;
@@ -228,3 +165,94 @@ saveas(f,[general_folder '/test_maps_results_comparison.png']);
 %% save the statistical result for t-test
 save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
 
+
+
+
+% %% plot for thesis
+% f = figure('Position',[-1561         656         715         615]);
+% custom_color = [44,136,217]./255;
+% subplot(1,3,1)
+% plot([0 length(unique(vel_factor_list))], [0 0], 'g');
+% hold on;
+% boxplot(error_list(:,1), vel_factor_list,'Colors',custom_color);
+% error_x = error_list(:,1);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([-1,10])
+% xlabel(x_axis_title);
+% ylabel('Error (m)');
+% title('Error on x');
+% subplot(1,3,2);
+% plot([0 length(unique(vel_factor_list))], [0 0], 'g');
+% hold on;
+% boxplot(error_list(:,2), vel_factor_list,'Colors',custom_color);
+% error_y = error_list(:,2);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([-3,4])
+% xlabel(x_axis_title);
+% title('Error on y');
+% ylabel('Error (m)');
+% 
+% subplot(1,3,3);
+% 
+% if(use_time)
+%     boxplot(exp_time_list, vel_factor_list,'Colors',custom_color);
+%     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+%     set(lines, 'Color', 'r');
+%     set(findobj(gca,'type','line'),'linew',1.2)
+%     grid on;
+%     ylim([0,max(exp_time_list)+1])
+%     xlabel(x_axis_title);
+%     ylabel('Time (s)');
+%     title('Total experiment time');
+% else
+%     boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
+%     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+%     set(lines, 'Color', 'r');
+%     set(findobj(gca,'type','line'),'linew',1.2)
+%     grid on;
+%     ylim([0,max(iteration_nbr_list)+1])
+%     xlabel(x_axis_title);
+%     ylabel('nb iterations');
+%     title('nb iterations');
+% end
+% 
+% 
+% % subplot(1,3,3);
+% % boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
+% % lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% % set(lines, 'Color', 'r');
+% % set(findobj(gca,'type','line'),'linew',1.2)
+% % grid on;
+% % ylim([0,50])
+% % xlabel('Linear velocity constant');
+% % title('nbr iterations');
+% % hold on
+% 
+% %% calculate success rate
+% success_case = 0;
+% for i = 1: size (error_x,1)
+%     if (abs(error_x(i))) < 1 && (abs(error_y(i))<0.5)
+%         success_case = success_case+1;
+%     end
+% end
+% success_rate = success_case/size(error_x,1)
+% 
+% annotation(f,'textbox',...
+%     [0.25 0.01 0.504365076491284 0.0473684201637904],...
+%     'String',{'Success rate:',num2str(success_rate)},...
+%     'LineStyle','none',...
+%     'HorizontalAlignment','center',...
+%     'FontWeight','bold',...
+%     'FontSize',12,...
+%     'FitBoxToText','off');
+% 
+% saveas(f,[general_folder '/test_maps_results_comparison.png']);
+% %% save the statistical result for t-test
+% save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
+% 

@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/rel_in_con_info_clust_rr_comp/map_1';
+general_folder = '/home/durancea/plume_model_learning/Results/sensor_type_influence';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -133,12 +133,11 @@ end
 % 
 % %% save
 % saveas(f,[general_folder '/test_maps_results_comparison_all.png']);
-
-
+%% plot for thesis
 %% plot for thesis
 f = figure('Position',[-1561         656         715         615]);
 custom_color = [44,136,217]./255;
-subplot(1,3,1)
+subplot(1,2,1)
 plot([0 length(unique(sensor_type))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,1), sensor_type,'Colors',custom_color);
@@ -151,7 +150,12 @@ ylim([-1,10])
 xlabel('Sensor Type');
 ylabel('Error (m)');
 title('Error on x');
-subplot(1,3,2);
+
+% % For the x-axis labels in the first subplot
+% set(gca,'FontWeight', 'bold', 'FontSize', 12);
+set(gca,'FontSize', 12);
+
+subplot(1,2,2);
 sensor_type_char = cellfun(@num2str, sensor_type, 'UniformOutput', false);
 plot([0 length(unique(sensor_type_char))], [0 0], 'g');
 hold on;
@@ -166,31 +170,8 @@ xlabel('Sensor Type');
 title('Error on y');
 ylabel('Error (m)');
 
-if(use_iteration)
-    subplot(1,3,3);
-    boxplot(exp_time_list, sensor_type,'Colors',custom_color);
-    lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-    set(lines, 'Color', 'r');
-    set(findobj(gca,'type','line'),'linew',1.2)
-    grid on;
-    ylim([0,max(exp_time_list)+1])
-    xlabel('Sensor Type');
-    ylabel('Time (s)');
-    title('Total experiment time');
-else
-    subplot(1,3,3);
-    boxplot(iteration_nbr_list, sensor_type,'Colors',custom_color);
-    lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-    set(lines, 'Color', 'r');
-    set(findobj(gca,'type','line'),'linew',1.2)
-    grid on;
-    ylim([0,max(iteration_nbr_list)+1])
-    xlabel('Experiment');
-    ylabel('nbr iterations');
-    title('Total nbr iterations'); 
-end
 
-
+set(gca,'FontSize', 12);
 
 % subplot(1,3,3);
 % boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
@@ -202,6 +183,79 @@ end
 % xlabel('Sensor Type');
 % title('nbr iterations');
 % hold on
+
+% %% plot for thesis
+% f = figure('Position',[-1561         656         715         615]);
+% custom_color = [44,136,217]./255;
+% subplot(1,3,1)
+% plot([0 length(unique(sensor_type))], [0 0], 'g');
+% hold on;
+% boxplot(error_list(:,1), sensor_type,'Colors',custom_color);
+% error_x = error_list(:,1);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([-1,10])
+% xlabel('Sensor Type');
+% ylabel('Error (m)');
+% title('Error on x');
+% 
+% % % For the x-axis labels in the first subplot
+% % set(gca,'FontWeight', 'bold', 'FontSize', 12);
+% % set(gca,'FontSize', 12);
+% 
+% subplot(1,3,2);
+% sensor_type_char = cellfun(@num2str, sensor_type, 'UniformOutput', false);
+% plot([0 length(unique(sensor_type_char))], [0 0], 'g');
+% hold on;
+% boxplot(error_list(:,2), sensor_type,'Colors',custom_color);
+% error_y = error_list(:,2);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([-3,4])
+% xlabel('Sensor Type');
+% title('Error on y');
+% ylabel('Error (m)');
+% 
+% if(use_iteration)
+%     subplot(1,3,3);
+%     boxplot(exp_time_list, sensor_type,'Colors',custom_color);
+%     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+%     set(lines, 'Color', 'r');
+%     set(findobj(gca,'type','line'),'linew',1.2)
+%     grid on;
+%     ylim([0,max(exp_time_list)+1])
+%     xlabel('Sensor Type');
+%     ylabel('Time (s)');
+%     title('Total experiment time');
+% else
+%     subplot(1,3,3);
+%     boxplot(iteration_nbr_list, sensor_type,'Colors',custom_color);
+%     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+%     set(lines, 'Color', 'r');
+%     set(findobj(gca,'type','line'),'linew',1.2)
+%     grid on;
+%     ylim([0,max(iteration_nbr_list)+1])
+%     xlabel('Sensor Type');
+%     ylabel('nbr iterations');
+%     title('Total nbr iterations'); 
+% end
+% 
+% 
+% 
+% % subplot(1,3,3);
+% % boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
+% % lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% % set(lines, 'Color', 'r');
+% % set(findobj(gca,'type','line'),'linew',1.2)
+% % grid on;
+% % ylim([0,50])
+% % xlabel('Sensor Type');
+% % title('nbr iterations');
+% % hold on
 
 %% calculate success rate
 success_case = 0;

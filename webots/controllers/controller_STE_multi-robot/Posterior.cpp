@@ -175,7 +175,7 @@ int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_ele
 	}
 	//error detection
 	if(index < 0 || index >= a_nbr_element){ 
-		printf("ERROR if indices_to_index : index = %d\n", index);
+		printf("ERROR in indices_to_index : index = %d\n", index);
 		index = 0;
 	}
 	return index;
