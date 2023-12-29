@@ -46,7 +46,7 @@ echo $vel_factor_filename
 #{0..8}
 for r in 53 #30 53 80 120 200
 	do
-		for m in 1 # 3 5 10 #0 1 3 5 10 #0 1 2 
+		for m in 0 1 # 3 5 10 #0 1 3 5 10 #0 1 2 
 		do
 			echo $r > $rr_filename
 			echo $m > $map_nbr_filename

@@ -583,9 +583,12 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	 	    sum_tmp += 1;
 	}
 
-	sum_tmp *= 2.5;
-
+	sum_tmp *= 0.6; //best result with exp 0.5
 	likelihood = (exp(-sum_tmp));
+
+	//sum_tmp *= 0.5;
+	//likelihood = 1-tanh(sum_tmp);
+
 	
 
 	//-----model fixed threshold, penalty on relative concentration history ------- 
@@ -609,6 +612,50 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	}
 	
 	sum_tmp /= (0.9*0.9); 
+	likelihood = (exp(-0.5*sum_tmp));
+	*/
+
+	//-----------------dynamic threshold and constant penalty--------------------------
+	/*
+	// gas hit event: dynamic threshold
+	double lamda = 0.7; //0.5;
+	// threshold for history measurments
+	double his_thrs = 0.0;
+    double prev_his_thrs = 0.0;
+	// threshold for model measurements
+	double mod_thrs = 0.0;
+	double prev_mod_thrs = 0.0;
+	// hit event for history and model
+    int history_hit;
+	int model_hit;
+
+	
+	for (int i = 0; i < history.size; i++){
+
+		//Dynamic threshold
+		if (i == 0){
+			prev_his_thrs = history.measurement[i];
+			his_thrs = history.measurement[i];
+			prev_mod_thrs = model_c_avg[i];
+			mod_thrs = model_c_avg[i];
+		}else{
+			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
+			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+		}
+		
+        // decide whether the gas hit event happens
+		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
+		history.gas_hit_event[i] = history_hit;
+		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
+
+        // update the likelihood based on the similarity of the hit event
+		if (history_hit != model_hit){
+			sum_tmp +=1;
+		}
+		prev_his_thrs = his_thrs; 
+		prev_mod_thrs = mod_thrs;
+	}
+	likelihood = (exp(-0.5*sum_tmp));
 	*/
 
 	//-----------------------------dynamic threshold-------------------------------
@@ -1028,10 +1075,11 @@ void informative_max_variance_point_planning(){
 	//if (simulation_parameters.gasFeature == CONCENTRATION){
 		for (int i = 0; i< x_nbins*y_nbins; i++){
 			if (simulation_parameters.visitedList == visitedList_ON){
-				if (gas_information_map[i] > max_info && cell_visited_list[i] == 0){
+				if (gas_information_map[i] >= max_info && cell_visited_list[i] == 0){ //TODO changed to >=
 					max_info = gas_information_map[i];
 					max_info_index = i;
 				} 
+				/*
 				// if all cells have the same likelihood take a random one
 				else if (gas_information_map[i] == max_info && cell_visited_list[i] == 0){
 					sum++;
@@ -1041,6 +1089,7 @@ void informative_max_variance_point_planning(){
 						fprintf(console_logfile, "Rand index %d\n", max_info_index);
 					}
 				} 
+				*/
 			}else{
 				if (gas_information_map[i] > max_info){
 					max_info = gas_information_map[i];
@@ -1364,39 +1413,96 @@ void goal_outside_obstacles(Position * goal){
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
+		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
+		Position nearest_unvisited_position(*goal); //TEST
 		Position candidates[4] = {	Position(obstacles[idx][0], goal->y, 0), 
 									Position(obstacles[idx][2], goal->y, 0),
 									Position(goal->x, obstacles[idx][1], 0),
 									Position(goal->x, obstacles[idx][3], 0)};
+
+		int unvisited = 0;
+
 		// for each candidate position
 		for(int i=0; i<4; i++){
 			//check if the distance to candidate is smaller than others
 			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
-			if(goal->distance_from(candidates[i]) < min_dist){
+
+			//TEST give priority to unvisited cells
+			/*
+			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
+				int pos_coord[2];
+				pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+				pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
+				int idx = posterior.indices_to_index(pos_coord);
+				if (cell_visited_list[idx] == 0){
+					//if so, then this is the nearest position
+					nearest_unvisited_position.copy_position(candidates[i]);
+					min_dist_unvisited = goal->distance_from(candidates[i]);
+					// printf(">>> chose it as new position !!! \n");
+				}
+			}
+			*/
+			if(goal->distance_from(candidates[i]) <= min_dist){ //TEST <= instead of <
 				// printf(">>> best sor far\n");
 				//if so, then check if that position is not in another obstacle and it's inside the arena
 				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
 				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1){
-					//if so, then this is the nearest position
+					// mark the cell as visited so that never plans to go there again
+					/*
+					if (simulation_parameters.visitedList == visitedList_ON){
+						int pos_coord[2];
+						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
+						int idx = posterior.indices_to_index(pos_coord);
+						if (cell_visited_list[idx] == 0){
+							//if so, then this is the nearest position
+							nearest_position.copy_position(candidates[i]);
+							min_dist = goal->distance_from(candidates[i]);
+							// printf(">>> chose it as new position !!! \n");
+							}
+					*/
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
-					// printf(">>> chose it as new position !!! \n");
+					/*
+					} else {
+						//if so, then this is the nearest position
+						nearest_position.copy_position(candidates[i]);
+						min_dist = goal->distance_from(candidates[i]);
+						// printf(">>> chose it as new position !!! \n");
+					}
+					*/
 				} else {	
 					if (simulation_parameters.visitedList == visitedList_ON){
 						int pos_coord[2];
-						pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
-						pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
 						int idx = posterior.indices_to_index(pos_coord);
 						cell_visited_list[idx] = 1;
 					}
 				}
 			}
 		}
+		/*
+		if (min_dist==10000.0){
+			printf(">>> Recursive call ");
+			informative_max_variance_point_planning();
+			goal_outside_obstacles(goal); //TEST recursive call
+		}
+		*/
 		//change the goal position using the pointer
 	    printf(">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		fprintf(console_logfile, ">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		
+		//give priority to unvisited cells
+		/*
+		if (min_dist_unvisited < 10000.0){
+			goal->copy_position(nearest_unvisited_position);
+		} else {
+			goal->copy_position(nearest_position);
+		}	
+		*/
 		goal->copy_position(nearest_position);
 	}
 
@@ -1413,7 +1519,9 @@ void goal_outside_obstacles(Position * goal){
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
+		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
+		Position nearest_unvisited_position(*goal); //TEST
 		Position candidates[8] = {	Position(float(XMIN + SAFETY_MARGIN), goal->y, 0), 
 									Position(float(XMAX - SAFETY_MARGIN), goal->y, 0),
 									Position(goal->x, float(YMIN + SAFETY_MARGIN), 0),
@@ -1424,36 +1532,84 @@ void goal_outside_obstacles(Position * goal){
 									Position(float(XMAX - SAFETY_MARGIN), float(YMAX - SAFETY_MARGIN), 0)};
 		// for each candidate position
 		for(int i=0; i<8; i++){
+
+			//TEST give priority to unvisited cells
+			/*
+			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
+				int pos_coord[2];
+				pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+				pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
+				int idx = posterior.indices_to_index(pos_coord);
+				if (cell_visited_list[idx] == 0){
+					//if so, then this is the nearest position
+					nearest_unvisited_position.copy_position(candidates[i]);
+					min_dist_unvisited = goal->distance_from(candidates[i]);
+					// printf(">>> chose it as new position !!! \n");
+				}
+			}
+			*/
 			//check if the distance to candidate is smaller than others
 			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
-			if(goal->distance_from(candidates[i]) < min_dist){
+			if(goal->distance_from(candidates[i]) <= min_dist){
 				//printf("candidates position is: %f %f\n", candidates[i].x, candidates[i].y);
 				// printf(">>> best sor far\n");
 				//if so, then check if that position is not in another obstacle and it's inside the arena
 				//printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
 				//printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
-					//if so, then this is the nearest position
+					/*
+					if (simulation_parameters.visitedList == visitedList_ON){
+						int pos_coord[2];
+						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
+						int idx = posterior.indices_to_index(pos_coord);
+						if (cell_visited_list[idx] == 0){
+							//if so, then this is the nearest position
+							nearest_position.copy_position(candidates[i]);
+							min_dist = goal->distance_from(candidates[i]);
+							// printf(">>> chose it as new position !!! \n");
+							}
+					} else {
+						//if so, then this is the nearest position
+						nearest_position.copy_position(candidates[i]);
+						min_dist = goal->distance_from(candidates[i]);
+						// printf(">>> chose it as new position !!! \n");
+					}
+					*/
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
-					// printf(">>> chose it as new position !!! \n");
 				}else{	
 					if (simulation_parameters.visitedList == visitedList_ON){
 						int pos_coord[2];
-						pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
-						pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
 						int idx = posterior.indices_to_index(pos_coord);
 						cell_visited_list[idx] = 1;
 					}
 				}	
 			}
 		}
-
+		/*
+		if (min_dist==10000.0){
+			printf(">>> Recursive call "); //was too slow
+			informative_max_variance_point_planning();
+			goal_outside_obstacles(goal); //TEST recursive call	
+		}
+		*/
 		fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		
+		//give priority to unvisited cells
+		/*
+		if (min_dist_unvisited < 10000.0){
+			goal->copy_position(nearest_unvisited_position);
+		} else {
+			goal->copy_position(nearest_position);
+		}	
+		*/
 		goal->copy_position(nearest_position);
 
 	}
-	//TEST
+	//:qke sure that the chosen goql is not too close from the robot current position so that it zill not instqntqneously be reqched
 	double dist_candidate_goal = goal->distance_from(current_position);
 	fprintf(console_logfile, ">>> Candidate goal %f %f \n", goal->x, goal->y);
 	fprintf(console_logfile, ">>> Current position %f %f \n", current_position.x, current_position.y);
@@ -1462,7 +1618,8 @@ void goal_outside_obstacles(Position * goal){
 		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
 		fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
-		float min_dist = 10000.0;
+		//float min_dist = 10000.0;
+		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
 		Position candidates[8] = {	Position(goal->x+min_dist_to_current, goal->y+min_dist_to_current, 0),
 									Position(goal->x+min_dist_to_current, goal->y-min_dist_to_current, 0),
@@ -1477,13 +1634,19 @@ void goal_outside_obstacles(Position * goal){
 			if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i]) && current_position.distance_from(candidates[i])>min_dist_to_current){
 				//Take the first candidate that satisfies the condition
 				nearest_position.copy_position(candidates[i]);
-				break;
+				int pos_coord[2];
+				pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+				pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
+				int idx = posterior.indices_to_index(pos_coord);
+				if (cell_visited_list[idx] == 0){
+					break; // give priority to unvisited cell
+				}
 				// printf(">>> chose it as new position !!! \n");
 			}else{	
 				if (simulation_parameters.visitedList == visitedList_ON){
 					int pos_coord[2];
-					pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
-					pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
+					pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
+					pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
 					int idx = posterior.indices_to_index(pos_coord);
 					cell_visited_list[idx] = 1;
 				}
@@ -1493,11 +1656,9 @@ void goal_outside_obstacles(Position * goal){
 		goal->copy_position(nearest_position);
 	}
 
-
 	//change the goal position using the pointer
 	//printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 	//fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-	
 	
 }
 
