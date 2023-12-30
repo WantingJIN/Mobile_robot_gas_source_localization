@@ -148,6 +148,8 @@ double time_before_measuring;
 double time_after_measuring;
 double navigation_sampling_time_sum = 0;
 
+
+
 // test computation time of the estimation part
 long long estimating_time_sum = 0;
 
@@ -434,8 +436,8 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 	
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
+	// --------------------------relative concentration error---------------------------
 	/*
-	// test relative error
 	double mean, stddev, rel_model_val, rel_hist_val;
 	calculate_history_distribution(history, mean, stddev);
 	double	model_mean;
@@ -467,9 +469,8 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 	sum_tmp /= (2*0.15*0.15); //(2*0.15*0.15);
 	*/
 
-
-	//absolute concentration values
-
+	// --------------------------absolute concentration error---------------------------
+	
 	for (int i = 0; i < history.size; i++){
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
 	}
@@ -557,7 +558,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//old
 	//model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 
-	//with precomputed map
+	//with precomputed map is much faster
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
 
@@ -567,7 +568,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	double likelihood;
 
 	//--------------------------- fixed thresh -----------------------------
-	/**/
+	/*
 	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
 	 	if (history.measurement[i] < gas_hit_threshold)
@@ -583,16 +584,16 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	 	    sum_tmp += 1;
 	}
 
-	sum_tmp *= 0.6; //best result with exp 0.5
+	sum_tmp *= 0.5; //best result with exp 0.5
 	likelihood = (exp(-sum_tmp));
 
 	//sum_tmp *= 0.5;
 	//likelihood = 1-tanh(sum_tmp);
-
+	*/
 	
 
 	//-----model fixed threshold, penalty on relative concentration history ------- 
-	/*
+	
 	double rel_hist_val = 0.0;
 	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
@@ -611,12 +612,93 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 		history.gas_hit_event[i] = model_hit; //will have to be re-run at the end of the algo with the expected source location as input for plotting
 	}
 	
-	sum_tmp /= (0.9*0.9); 
-	likelihood = (exp(-0.5*sum_tmp));
-	*/
+	sum_tmp *= 0.8;
+	likelihood = (exp(-sum_tmp));
+	
 
 	//-----------------dynamic threshold and constant penalty--------------------------
+
+	// NEW version with threshold saved between iterations because global variable
+
+		// gas hit event: dynamic threshold
 	/*
+	double lamda = 0.8; //0.5;
+	double his_thrs = 0;
+	double mod_thrs = 0;
+	static double max_con = 0.0;
+	static double min_con = 10000.0;
+	static int max_idx = 0;
+	static int min_idx = 0;
+
+	//Dynamic threshold
+	if (history.size<=1){
+		max_con = history.measurement[0];
+		min_con = history.measurement[0];
+		max_idx = 0;
+		min_idx = 0;
+	}else{
+		if (history.measurement[history.size-1]>max_con ){
+			max_con = history.measurement[history.size-1];
+			max_idx = history.size-1;
+		}else if (history.measurement[history.size-1]<min_con){
+			min_con = history.measurement[history.size-1];
+			min_idx = history.size-1;
+		}
+		his_thrs = min_con+(max_con-min_con)*0.5;
+		mod_thrs = model_c_avg[min_idx]+(model_c_avg[max_idx]-model_c_avg[min_idx])*0.5;
+	}
+	for (int i = 0; i < history.size; i++){
+        // decide whether the gas hit event happens
+		history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+		history.gas_hit_event[i] = history_hit;
+		model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
+        // update the likelihood based on the similarity of the hit event
+		if (history_hit != model_hit){
+			sum_tmp +=1;
+		}
+	}
+	//sum_tmp *= 0.5;
+	sum_tmp *= 2;
+	likelihood = (exp(-sum_tmp));	
+	*/
+	/* very bad because if many low concentrations measuredm th is too loz qnd many models fit
+	// gas hit event: dynamic threshold
+	double lamda = 0.8; //0.5;
+	double his_thrs = 0;
+	double mod_thrs = 0;
+	//for saving previous dynamic threshold
+	static double prev_his_thrs = 0.0;
+	static double prev_mod_thrs = 0.0;
+
+	//Dynamic threshold
+	if (history.size <= 1){ // if first measurement
+		prev_his_thrs = history.measurement[0];
+		his_thrs = history.measurement[0];
+		prev_mod_thrs = model_c_avg[0];
+		mod_thrs = model_c_avg[0];
+	}else{
+		//update threshold with last measurement
+		his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[history.size-1];
+		mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[history.size-1];
+	}
+	//store for next iteration
+	prev_his_thrs = his_thrs; 
+	prev_mod_thrs = mod_thrs;
+	for (int i = 0; i < history.size; i++){
+        // decide whether the gas hit event happens
+		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
+		history.gas_hit_event[i] = history_hit;
+		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
+        // update the likelihood based on the similarity of the hit event
+		if (history_hit != model_hit){
+			sum_tmp +=1;
+		}
+	}
+	sum_tmp *= 0.5;
+	likelihood = (exp(-sum_tmp));
+	*/
+	
+	/* //OLD VERSION MAKES NO SENSE
 	// gas hit event: dynamic threshold
 	double lamda = 0.7; //0.5;
 	// threshold for history measurments
@@ -625,10 +707,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	// threshold for model measurements
 	double mod_thrs = 0.0;
 	double prev_mod_thrs = 0.0;
-	// hit event for history and model
-    int history_hit;
-	int model_hit;
-
+	
 	
 	for (int i = 0; i < history.size; i++){
 
@@ -655,7 +734,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 		prev_his_thrs = his_thrs; 
 		prev_mod_thrs = mod_thrs;
 	}
-	likelihood = (exp(-0.5*sum_tmp));
+	sum_tmp *= 0.5;
+	likelihood = (exp(-sum_tmp));
 	*/
 
 	//-----------------------------dynamic threshold-------------------------------
@@ -1079,9 +1159,9 @@ void informative_max_variance_point_planning(){
 					max_info = gas_information_map[i];
 					max_info_index = i;
 				} 
-				/*
+				
 				// if all cells have the same likelihood take a random one
-				else if (gas_information_map[i] == max_info && cell_visited_list[i] == 0){
+				else if (gas_information_map[i] == max_info){
 					sum++;
 					if (sum == x_nbins*y_nbins -2){
 						fprintf(console_logfile, "Uniform distrib \n");
@@ -1089,7 +1169,7 @@ void informative_max_variance_point_planning(){
 						fprintf(console_logfile, "Rand index %d\n", max_info_index);
 					}
 				} 
-				*/
+				
 			}else{
 				if (gas_information_map[i] > max_info){
 					max_info = gas_information_map[i];

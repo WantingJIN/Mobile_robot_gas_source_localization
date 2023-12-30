@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_correct_info_clust';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/abs_con/release_amount_robustness';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -182,7 +182,7 @@ else
     set(findobj(gca,'type','line'),'linew',1.2)
     grid on;
     ylim([0,max(iteration_nbr_list)+1])
-    xlabel('Experiment');
+    xlabel('Release Amount');
     ylabel('nbr iterations');
     title('Total nbr iterations'); 
 end

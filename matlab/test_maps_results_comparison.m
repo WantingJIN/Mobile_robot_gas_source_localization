@@ -2,7 +2,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/fixed_th_exp/penaltyx0.5';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/dynamic_th_minmax/avg_penx2';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -95,8 +95,8 @@ for i=1:number
     end
     traj_length_list(i) = traj_length_sum;
 end
-
-%% boxplots
+% 
+% % boxplots
 % f = figure('units','normalized','outerposition',[0 0 1 1]);
 % subplot(5,1,1)
 % plot([0 length(unique(map_nbr_list))], [0 0], 'g');
@@ -126,55 +126,10 @@ end
 % %% save
 % saveas(f,[general_folder '/test_maps_results_comparison_all.png']);
 
-% %% plot for thesis
-% f = figure('Position',[-1561         656         715         615]);
-% custom_color = [44,136,217]./255;
-% subplot(1,3,1)
-% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
-% error_x = error_list(:,1);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([-1,10])
-% xlabel('Map number');
-% ylabel('Error (m)');
-% title('Error on x');
-% 
-% subplot(1,3,2);
-% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
-% error_y = error_list(:,2);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([-3,4])
-% xlabel('Map number');
-% title('Error on y');
-% ylabel('Error (m)');
-% 
-% subplot(1,3,3);
-% boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([0,60])
-% xlabel('Map number');
-% title('nbr iterations');
-% 
-% 
-% hold on
-
-
 %% plot for thesis
-f = figure('Position',[-1561         656         1215         615]);
+f = figure('Position',[-1561         656         715         615]);
 custom_color = [44,136,217]./255;
-subplot(1,5,1)
+subplot(1,3,1)
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
@@ -188,7 +143,7 @@ xlabel('Map number');
 ylabel('Error (m)');
 title('Error on x');
 
-subplot(1,5,2);
+subplot(1,3,2);
 plot([0 length(unique(map_nbr_list))], [0 0], 'g');
 hold on;
 boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
@@ -202,7 +157,7 @@ xlabel('Map number');
 title('Error on y');
 ylabel('Error (m)');
 
-subplot(1,5,3);
+subplot(1,3,3);
 boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
@@ -212,33 +167,78 @@ ylim([0,60])
 xlabel('Map number');
 title('nbr iterations');
 
-subplot(1,5,4)
-plot([0 length(unique(map_nbr_list))], [0 0], 'g');
-hold on;
-boxplot(exp_time_list, map_nbr_list,'Colors',custom_color);
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'r');
-set(findobj(gca,'type','line'),'linew',1.2)
-grid on;
-%ylim([-3,4])
-xlabel('Map number');
-title('Experiment time');
-ylabel('Time (s)');
-
-subplot(1,5,5)
-plot([0 length(unique(map_nbr_list))], [0 0], 'g');
-hold on;
-boxplot(traj_length_list, map_nbr_list,'Colors',custom_color);
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'r');
-set(findobj(gca,'type','line'),'linew',1.2)
-grid on;
-%ylim([-3,4])
-xlabel('Map number');
-title('Traveling distance');
-ylabel('Distance (m)');
 
 hold on
+
+
+% %% plot for thesis
+% f = figure('Position',[-1561         656         1215         615]);
+% custom_color = [44,136,217]./255;
+% subplot(1,5,1)
+% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+% hold on;
+% boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
+% error_x = error_list(:,1);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([-1,10])
+% xlabel('Map number');
+% ylabel('Error (m)');
+% title('Error on x');
+% 
+% subplot(1,5,2);
+% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+% hold on;
+% boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
+% error_y = error_list(:,2);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([-3,4])
+% xlabel('Map number');
+% title('Error on y');
+% ylabel('Error (m)');
+% 
+% subplot(1,5,3);
+% boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% ylim([0,60])
+% xlabel('Map number');
+% title('nbr iterations');
+% 
+% subplot(1,5,4)
+% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+% hold on;
+% boxplot(exp_time_list, map_nbr_list,'Colors',custom_color);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% %ylim([-3,4])
+% xlabel('Map number');
+% title('Experiment time');
+% ylabel('Time (s)');
+% 
+% subplot(1,5,5)
+% plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+% hold on;
+% boxplot(traj_length_list, map_nbr_list,'Colors',custom_color);
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% %ylim([-3,4])
+% xlabel('Map number');
+% title('Traveling distance');
+% ylabel('Distance (m)');
+% 
+% hold on
 
 
 %% calculate success rate
