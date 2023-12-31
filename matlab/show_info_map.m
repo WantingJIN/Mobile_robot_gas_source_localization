@@ -1,6 +1,6 @@
 clear all; close all; clc;
 
-general_folder='/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/rel_con/release_amount_robustness/53/1703887058540/101';
+general_folder='/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/dynamic_th_memory/lamda0.5pen0.5/0/1704039812796/101';
 %experiment_path = uigetdir(general_folder);
 %experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;

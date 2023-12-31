@@ -149,7 +149,6 @@ double time_after_measuring;
 double navigation_sampling_time_sum = 0;
 
 
-
 // test computation time of the estimation part
 long long estimating_time_sum = 0;
 
@@ -593,7 +592,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	
 
 	//-----model fixed threshold, penalty on relative concentration history ------- 
-	
+	/*
 	double rel_hist_val = 0.0;
 	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
@@ -614,13 +613,11 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	
 	sum_tmp *= 0.8;
 	likelihood = (exp(-sum_tmp));
-	
+	*/
 
 	//-----------------dynamic threshold and constant penalty--------------------------
 
-	// NEW version with threshold saved between iterations because global variable
-
-		// gas hit event: dynamic threshold
+	//-------------------------min max avg threshold-------------------------------
 	/*
 	double lamda = 0.8; //0.5;
 	double his_thrs = 0;
@@ -661,82 +658,45 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	sum_tmp *= 2;
 	likelihood = (exp(-sum_tmp));	
 	*/
-	/* very bad because if many low concentrations measuredm th is too loz qnd many models fit
-	// gas hit event: dynamic threshold
-	double lamda = 0.8; //0.5;
+
+
+	//-----------------------------adaptive threshold-------------------------------
+	/*
+	double lamda = 0.5; //0.5;
 	double his_thrs = 0;
 	double mod_thrs = 0;
-	//for saving previous dynamic threshold
-	static double prev_his_thrs = 0.0;
-	static double prev_mod_thrs = 0.0;
-
-	//Dynamic threshold
-	if (history.size <= 1){ // if first measurement
-		prev_his_thrs = history.measurement[0];
-		his_thrs = history.measurement[0];
-		prev_mod_thrs = model_c_avg[0];
-		mod_thrs = model_c_avg[0];
-	}else{
-		//update threshold with last measurement
-		his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[history.size-1];
-		mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[history.size-1];
-	}
-	//store for next iteration
-	prev_his_thrs = his_thrs; 
-	prev_mod_thrs = mod_thrs;
-	for (int i = 0; i < history.size; i++){
-        // decide whether the gas hit event happens
-		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
-		history.gas_hit_event[i] = history_hit;
-		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
-        // update the likelihood based on the similarity of the hit event
-		if (history_hit != model_hit){
-			sum_tmp +=1;
-		}
-	}
-	sum_tmp *= 0.5;
-	likelihood = (exp(-sum_tmp));
-	*/
-	
-	/* //OLD VERSION MAKES NO SENSE
-	// gas hit event: dynamic threshold
-	double lamda = 0.7; //0.5;
-	// threshold for history measurments
-	double his_thrs = 0.0;
-    double prev_his_thrs = 0.0;
-	// threshold for model measurements
-	double mod_thrs = 0.0;
 	double prev_mod_thrs = 0.0;
-	
-	
-	for (int i = 0; i < history.size; i++){
+	double prev_his_thrs = 0.0;
 
-		//Dynamic threshold
+	//Dynamic thresholds computation
+	for (int i = 0; i < history.size; i++){
 		if (i == 0){
 			prev_his_thrs = history.measurement[i];
 			his_thrs = history.measurement[i];
 			prev_mod_thrs = model_c_avg[i];
 			mod_thrs = model_c_avg[i];
-		}else{
-			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
-			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
 		}
-		
-        // decide whether the gas hit event happens
-		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
-		history.gas_hit_event[i] = history_hit;
-		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
+		his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
+		mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+		//store history threshold for next iteration
+		prev_his_thrs = his_thrs; 
+		prev_mod_thrs = mod_thrs;
+	}
 
+	for (int i = 0; i < history.size; i++){
+        // decide whether the gas hit event happens
+		history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+		history.gas_hit_event[i] = history_hit;
+		model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
         // update the likelihood based on the similarity of the hit event
 		if (history_hit != model_hit){
 			sum_tmp +=1;
 		}
-		prev_his_thrs = his_thrs; 
-		prev_mod_thrs = mod_thrs;
 	}
 	sum_tmp *= 0.5;
 	likelihood = (exp(-sum_tmp));
 	*/
+
 
 	//-----------------------------dynamic threshold-------------------------------
 
@@ -2287,6 +2247,7 @@ int main(int argc, char **argv){
 
 
 	/**/
+	//Quickfix to have correct plots with mode fixed th
 	if (simulation_parameters.gasFeature == GASHIT){
 		double mean, stddev;
 		double sample[2];
@@ -2296,15 +2257,8 @@ int main(int argc, char **argv){
 
 		indices[0] =  floor((sample[0]- source_x_min) / x_resol);
 		indices[1] =  floor((sample[1] - source_y_min) / y_resol);
-
-
 		int source_i=0 ;
-		//int indices[nbr_dimension];
 
-		//convert sample values to indices
-		//for(i = 0; i < 2; i++){
-		//	indices[i] = (int)( (sample[i] - model->param_list[i].lower_limit) / (float)model->param_list[i].resolution);
-		//}
 		source_i = posterior.indices_to_index(indices);
 		/**/
 		fprintf(console_logfile, "exp x: %f\n", sample[0] );
