@@ -1,3 +1,7 @@
+% Compares the GSL performance for difference gas release amounts
+% Plots distance to true source location along y and x and the number of
+% iterations for convergence
+
 clear all; clc; %close all;
 
 %% dispatch

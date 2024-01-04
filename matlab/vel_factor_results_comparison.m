@@ -1,3 +1,7 @@
+% Compares the GSL performance for different velocities
+% Plots distance to true source location along y and x and the number of
+% iterations or time for convergence
+
 clear all; clc; %close all;
 
 %% dispatch
@@ -9,8 +13,8 @@ folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
 
-use_time = 0;
-use_cst_velocity=1;
+use_time = 0; % 1 to plot true time and 0 for number of iterations
+use_cst_velocity=1; % 1 for cconstant velocity and 0 if multiplicative factor on default controller
 
 if(use_cst_velocity)
     x_axis_title = 'Constant linear velocity (mm/s)';

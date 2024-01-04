@@ -1,3 +1,5 @@
+% Compares the GSL performance for different sampling periods
+
 clear all; clc; %close all;
 
 %% dispatch

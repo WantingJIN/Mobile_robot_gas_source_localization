@@ -1,3 +1,6 @@
+%  Plots and stores the posterior PDF map of the source location at
+%  successive iterations in anim_folder
+
 clear all; close all; clc;
 
 general_folder='/home/durancea/plume_model_learning/Results/robot_vel_influence/d0comp/0.8/1703600421486/101';

@@ -1,6 +1,7 @@
-clear all; close all; clc;
+% Plots robot trajectory with collected measurements, posterior PDF map and
+% navigation planning results
 
-general_folder='/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/dynamic_th_memory/lamda0.5pen0.5/0/1704039812796/101';
+general_folder='/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/fixed_th_tanh/penaltyx0.5nav_faster/1/1703868436468/101';
 %experiment_path = uigetdir(general_folder);
 %experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -11,9 +12,15 @@ if(~exist(anim_folder,'dir'))
 end
 
 clustering = 1;
+visited_listd_true = 0;
 
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
-visited_list = dlmread([experiment_file_path, '/visited_list.csv']);
+if isfile([experiment_file_path, '/visited_list.csv'])
+     visited_list = dlmread([experiment_file_path, '/visited_list.csv']);
+     visited_list_true = 1
+else
+    disp('c')
+end
 map_folder=[general_folder '/map'];
 params = my_text2struct([experiment_file_path,'/param_log.csv']); 
 map_nbr = params.map_nbr;
@@ -68,7 +75,7 @@ hold off;
 xlim([0 4])
 ylim([2 13])
 ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
-title(['Trajectory and Measurements']);
+title(['        Trajectory \newline and Measurements']);
 ax.TitleFontSizeMultiplier = 2;
 
 %% show pdf
@@ -156,17 +163,18 @@ for i=1:size(pdf,1)
     hold on
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);
-    if (params.info_feature == 0)
-        title(['Concentration variance map \newline           iteration ', num2str(i)]);
-    elseif (params.info_feature == 1)
-        title(['Concentration mean map \newline           iteration ', num2str(i)]);
-    end
+%     if (params.info_feature == 0)
+%         title(['Concentration variance map \newline           iteration ', num2str(i)]);
+%     elseif (params.info_feature == 1)
+     title(['Belief clustering result \newline           iteration ', num2str(i)]);
+%     end
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
     colorbar;caxis([0 Inf]);
     hold off;
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
+    ax.TitleFontSizeMultiplier = 2;
 
     drawnow
 
@@ -187,40 +195,44 @@ close(f1);
 close all
 
 %% show visited list
-f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-imagesc(y,x,reshape(visited_list(1,1:end-1),params.nbins(1),params.nbins(2)));
-hold on
-plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
-hold on
-plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
-if (gas_feature == 1)
-    scatter(position_history(:,3),position_history(:,2),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-elseif (gas_feature == 0)
-    scatter(position_history(:,3),position_history(:,2),10,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-end
-load MyColormap2; colormap(mymap); 
-axis equal; axis([-0.1,4.1,2.4,12.6]);
-view(180,90);
-colorbar;caxis([0 Inf]);
-hold off;
-xlim([0 4])
-ylim([2 13])
-ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
-title(['Trajectory and Measurements']);
-ax.TitleFontSizeMultiplier = 2;
-drawnow
+if visited_list_true~=0
+    disp('show visited list') 
+    f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
+    imagesc(y,x,reshape(visited_list(1,1:end-1),params.nbins(1),params.nbins(2)));
+    hold on
+    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    hold on
+    plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
+    if (gas_feature == 1)
+        scatter(position_history(:,3),position_history(:,2),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+    elseif (gas_feature == 0)
+        scatter(position_history(:,3),position_history(:,2),10,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+    end
+    load MyColormap2; colormap(mymap); 
+    axis equal; axis([-0.1,4.1,2.4,12.6]);
+    view(180,90);
+%     colorbar;caxis([0 Inf]);
+    hold off;
+    xlim([0 4])
+    ylim([2 13])
+    ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
+    camroll(90)
+    title(['Trajectory and Visited Cells']);
+    ax.TitleFontSizeMultiplier = 2;
+    drawnow
 
-% Save the figure
-img_filename = [anim_folder, '/visited.png'];
-try
-    saveas(f, img_filename);
-    disp(['Image ', num2str(i), ' saved successfully.']);
-catch
-    disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
-end
-% Close the figure 
-%close(f);
-%close all
+    % Save the figure
+    img_filename = [anim_folder, '/visited.png'];
+    try
+        saveas(f, img_filename);
+        disp(['Image ', num2str(i), ' saved successfully.']);
+    catch
+        disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
+    end
+    % Close the figure 
+    %close(f);
+    close all
+end 
 
 %% show dispersion map
 % f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);

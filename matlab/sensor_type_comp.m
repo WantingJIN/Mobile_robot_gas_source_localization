@@ -1,3 +1,7 @@
+% Compares the GSL performance for sensor names
+% Plots distance to true source location along y and x and the number of
+% iterations or time for convergence
+
 clear all; clc; %close all;
 
 %% dispatch
@@ -9,41 +13,7 @@ folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
 
-use_iteration = 0;
-
-
-% for i=1:exp_number
-%     % the name of the folder
-%     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
-%     % the content of the folder
-%     robot_list = dir(folder_name);
-%     robot_list = robot_list(~ismember({robot_list.name},{'.','..'}));
-%     robot_list = robot_list([robot_list.isdir]);
-%     % the IDs of the robots
-%     ID = arrayfun(@(struct) str2double(struct.name),robot_list);
-%     
-%     % skip if it's not a job folder
-%     if(~exist([folder_name, '/', num2str(ID(1)), '/param_log.csv'],'file')), continue; end
-%     
-%     % get simulation's parameter values
-%     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
-%     
-%     % remove folders with unfinished jobs
-%     file_list = dir([folder_name '/**']);
-%     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
-%     entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
-%     if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
-% 
-%     % the right path of the folder
-%     new_path = [general_folder '/' num2str(params.vel_factor)];
-% 
-%     % move the folder with its friends in the right path
-%     if(~exist(new_path,'dir'))
-%         mkdir(new_path);
-%     end
-%     movefile(folder_name, new_path);
-% end
-%%
+use_iteration = 0; % else use true time
 
 % choose the folders
 folder_list = dir([general_folder '/**']);

@@ -1,7 +1,10 @@
+%  Plots and stores the robot trajectory, entropy and concentration
+%  measurements for all experiments in folder_list
+
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/dynamic_th_memory/lamda0.5pen0.5/3');
+folder_list = dir('/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/fixed_th_tanh/penaltyx0.5nav_faster/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -175,22 +178,6 @@ for i=1:exp_number
         axis([-inf inf source_position_min(2) source_position_max(2)]);
         title('Y');
         legend('show');  % Display the legend
-        
-%         subplot(3,2,1);
-%         plot(expected_a_posteriori(:,2),'*-');
-%         hold on; axis([-inf inf source_position_min(1) source_position_max(1)]);
-%         plot(max_a_posteriori(:,2),'d-b')
-%         plot([0 size(max_a_posteriori,1)],[source_real_position(1), source_real_position(1)],'g');
-%         grid on;
-%         title('X');
-%         
-%         subplot(3,2,3);
-%         plot(expected_a_posteriori(:,3),'*-');
-%         hold on;
-%         plot(max_a_posteriori(:,3),'d-b')
-%         plot([0 size(max_a_posteriori,1)],[source_real_position(2), source_real_position(2)],'g');
-%         grid on; axis([-inf inf source_position_min(2) source_position_max(2)]);
-%         title('Y');
         
         subplot(3,2,2);
         plot(expected_a_posteriori(:,4),'*-');

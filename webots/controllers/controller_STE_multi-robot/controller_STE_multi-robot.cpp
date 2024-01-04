@@ -465,7 +465,7 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 		}
 		sum_tmp += pow(rel_model_val-rel_hist_val, 2);
 	}
-	sum_tmp /= (2*0.15*0.15); //(2*0.15*0.15);
+	sum_tmp /= (2*0.15*0.15); //best (2*0.15*0.15);
 	*/
 
 	// --------------------------absolute concentration error---------------------------
@@ -535,9 +535,7 @@ double calculate_measurement_gaussian_CDF(double data, double mean, double stdde
 
 
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev){
-	float sigmaE = 0.15; //s 125; //simulation_parameters.likelihood_error; //0.1;
-	float sigmaD = 0.01; //125; //0.01; //125;
-	double sum_tmp = 0; //0; 0 if sum 1 if mult
+	double sum_tmp = 0; 
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 	
 	vector<float> model_c_avg(history.size); 
@@ -615,10 +613,10 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	likelihood = (exp(-sum_tmp));
 	*/
 
-	//-----------------dynamic threshold and constant penalty--------------------------
+	//-----------------dynamic thresholds and constant penalty--------------------------
 
 	//-------------------------min max avg threshold-------------------------------
-	/*
+	
 	double lamda = 0.8; //0.5;
 	double his_thrs = 0;
 	double mod_thrs = 0;
@@ -654,10 +652,9 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 			sum_tmp +=1;
 		}
 	}
-	//sum_tmp *= 0.5;
-	sum_tmp *= 2;
+	//sum_tmp *= 1;
 	likelihood = (exp(-sum_tmp));	
-	*/
+	
 
 
 	//-----------------------------adaptive threshold-------------------------------
@@ -697,136 +694,42 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	likelihood = (exp(-sum_tmp));
 	*/
 
-
-	//-----------------------------dynamic threshold-------------------------------
-
+	//-----------adaptive threshold for future dynamic environment---------------------
+	// For this to work, the environmental parameters such as wind speed will have
+	// to be stored and used as input of the model concentrations
 	/*
-	// gas hit event: dynamic threshold
-	double lamda = 0.5; //0.5;
-	// threshold for history measurments
-	double his_thrs = 0.0;
-    double prev_his_thrs = 0.0;
-	// threshold for model measurements
-	double mod_thrs = 0.0;
+	double lamda = 0.5;
+	double his_thrs = 0;
+	double mod_thrs = 0;
 	double prev_mod_thrs = 0.0;
-	// hit event for history and model
-    int history_hit;
-	int model_hit;
-	double pdf_data = 0.0;
+	double prev_his_thrs = 0.0;
 
-	//TEST
-	double below_hist_th_proba = 0.0;
-	double below_model_th_proba = 0.0;
-	double rel_err_proba = 0.0;
-	double rel_model_val = 0.0;
-
-
-	//TODO put in a function
-	double model_mean, model_stddev;
-	model_stddev = 0.01;
-	if (model_c_avg.size() !=0){
-		double sum = 0;
-		sum = std::accumulate(model_c_avg.begin(), model_c_avg.end(), 0.0);
-		model_mean = sum / model_c_avg.size();
-		double sq_sum = std::inner_product(model_c_avg.begin(), model_c_avg.end(), model_c_avg.begin(), 0.0);
-		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
-			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
-	}
-	else model_mean = mean;
-
-	//TEST update if range change
-	double max_con = 0;
-	double min_con = 0;
-	*/
-	/*
 	for (int i = 0; i < history.size; i++){
-
-		//Dynamic threshold
-		
 		if (i == 0){
 			prev_his_thrs = history.measurement[i];
 			his_thrs = history.measurement[i];
 			prev_mod_thrs = model_c_avg[i];
 			mod_thrs = model_c_avg[i];
-			pdf_data = 1.0;
-			//TEST update if range change
-			max_con = history.measurement[i];
-			min_con = history.measurement[i];
-		}else{
-			//TEST range change:only update the threshold if the range of values changes
-			if (history.measurement[i]>max_con ){
-				his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
-				mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
-				max_con = history.measurement[i];
-			}else if (history.measurement[i]<min_con){
-				his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
-				mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
-				min_con = history.measurement[i];
-			}
-			//old dynamic threshold
-			/*
-			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
-			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
-			*/
-			//old
-			/*
-			if (stddev == 0){
-				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
-				stddev = 0.01; //si;ply to avoid errorm probably need to re;ove
-			}
-			else
-				pdf_data = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-			*/
-		/*
 		}
-		
+		his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
+		mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+		//store history threshold for next iteration
+		prev_his_thrs = his_thrs; 
+		prev_mod_thrs = mod_thrs;
         // decide whether the gas hit event happens
-		history_hit = (history.measurement[i] > prev_his_thrs) ? 1 : 0;
+		history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
 		history.gas_hit_event[i] = history_hit;
-		model_hit = (model_c_avg[i] > prev_mod_thrs) ? 1 : 0;
+		model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
         // update the likelihood based on the similarity of the hit event
-		
-
-
-	
-		
-
-
-		//TEST absolute concentration penalty (same as likelihood for concentration)
-		/*
-		sigmaE = simulation_parameters.likelihood_error;
-		sigmaD = 0; //125;
-		if (history_hit != model_hit)
-			sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD); //(2*sigmaD*sigmaD)//(sigmaE*sigmaE + sigmaD*sigmaD);
-		*/
-		
-
-
-
-
-		//TEST simple score does not zork
-		/*
 		if (history_hit != model_hit){
 			sum_tmp +=1;
 		}
-		*/
-		/*
-		prev_his_thrs = his_thrs; 
-		prev_mod_thrs = mod_thrs;
-		
 	}
+	sum_tmp *= 0.5;
+	likelihood = (exp(-sum_tmp));
 	*/
 
-	//TEST for rel concentration penalty
-	//sum_tmp /= (2*0.15*0.15); //2*0.05*0.05 // best for bin rel 2*0.15*0.15
-
-	//TEST for constant thresh on model data only
-	//sum_tmp /= (0.9*0.9); 
-
-    //printf("likelihood: %f\n", exp(-0.5 * sum_tmp));
-	//double likelihood = (exp(-0.5 * sum_tmp));
-	//if(likelihood<0.25) likelihood = 0.0;
-	return likelihood; //sum_tmp; //(exp(-0.5 * sum_tmp))
+	return likelihood; 
 }
 
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
@@ -1093,7 +996,7 @@ void calculate_information_gain_with_variance(){
 			}
 		}
 		log_gas_information_map();
-	//TEST remove gas hit var feature
+	//gas hit var feature does not work well
 	/*
 	} else if (simulation_parameters.gasFeature == GASHIT){
 		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
@@ -1204,45 +1107,8 @@ void informative_clustering_planning(){
 		informative_max_variance_point_planning();
 		return;
 	} else{
-		//TEST
-		fprintf(console_logfile, "clusters found \n");
-		// find the cluster with the shortest distance to robot
-		// double min_dist = 100;
-		// int min_dist_index = 0;
-		// for (int i = 0; i < clusters_bounding_box.size(); i++){
-        //     // calculate the center of the cluster
-		// 	Position cell_center;
-		// 	cell_center.x = (clusters_bounding_box[i].first.x + clusters_bounding_box[i].second.x)/2;
-		// 	cell_center.y = (clusters_bounding_box[i].first.y + clusters_bounding_box[i].second.y)/2;
-		// 	double dist = dist_to_goal(cell_center);
-		// 	if (dist < min_dist){
-		// 		min_dist = dist;
-		// 		min_dist_index = i;
-		// 	}
-		// }
-        // Position cluster_vertex[4] = {Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].first.y, 0), 
-		// 							Position(clusters_bounding_box[min_dist_index].first.x, clusters_bounding_box[min_dist_index].second.y, 0),
-		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].first.y, 0),
-		// 							Position(clusters_bounding_box[min_dist_index].second.x, clusters_bounding_box[min_dist_index].second.y, 0)};
-		// // find the vertex of the cluster with the shortest and largest distance to robot
-		// double min_dist_to_robot = 100;
-		// double max_dist_to_robot = 0;
-		// int min_dist_to_robot_index = 0;
-		// int max_dist_to_robot_index = 0;
-		// for (int i = 0; i < 4; i++){
-		// 	double dist = dist_to_goal(cluster_vertex[i]);
-		// 	if (dist < min_dist_to_robot){
-		// 		min_dist_to_robot = dist;
-		// 		min_dist_to_robot_index = i;
-		// 	}
-		// 	if (dist > max_dist_to_robot){
-		// 		max_dist_to_robot = dist;
-		// 		max_dist_to_robot_index = i;
-		// 	}
-		// }							
-        // goal_position.x = cluster_vertex[max_dist_to_robot_index].x;
-		// goal_position.y = cluster_vertex[max_dist_to_robot_index].y;
-        // goal_position.heading = 0;
+		//fprintf(console_logfile, "clusters found \n");
+		//Find furthest vertex of each cluster
 		double max_dist_to_robot;
 		int max_dist_to_robot_index;
 		vector<Position> candidate_goal;
@@ -1294,9 +1160,8 @@ void informative_clustering_planning(){
 			goal_position.heading = 0;
 		}
 
-		//TEST
-		fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
-		fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+		//fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
+		//fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 
 }
@@ -1468,7 +1333,7 @@ void goal_outside_obstacles(Position * goal){
 			//check if the distance to candidate is smaller than others
 			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 
-			//TEST give priority to unvisited cells
+			//TEST give priority to unvisited cells was much slower
 			/*
 			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
 				int pos_coord[2];
@@ -1479,7 +1344,6 @@ void goal_outside_obstacles(Position * goal){
 					//if so, then this is the nearest position
 					nearest_unvisited_position.copy_position(candidates[i]);
 					min_dist_unvisited = goal->distance_from(candidates[i]);
-					// printf(">>> chose it as new position !!! \n");
 				}
 			}
 			*/
@@ -1489,32 +1353,12 @@ void goal_outside_obstacles(Position * goal){
 				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
 				// printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1){
-					// mark the cell as visited so that never plans to go there again
-					/*
-					if (simulation_parameters.visitedList == visitedList_ON){
-						int pos_coord[2];
-						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
-						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
-						int idx = posterior.indices_to_index(pos_coord);
-						if (cell_visited_list[idx] == 0){
-							//if so, then this is the nearest position
-							nearest_position.copy_position(candidates[i]);
-							min_dist = goal->distance_from(candidates[i]);
-							// printf(">>> chose it as new position !!! \n");
-							}
-					*/
+					//not in obstacle
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
-					/*
-					} else {
-						//if so, then this is the nearest position
-						nearest_position.copy_position(candidates[i]);
-						min_dist = goal->distance_from(candidates[i]);
-						// printf(">>> chose it as new position !!! \n");
-					}
-					*/
 				} else {	
 					if (simulation_parameters.visitedList == visitedList_ON){
+						// mark the cell as visited so that never plans to go there again
 						int pos_coord[2];
 						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
 						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
@@ -1524,32 +1368,17 @@ void goal_outside_obstacles(Position * goal){
 				}
 			}
 		}
-		/*
-		if (min_dist==10000.0){
-			printf(">>> Recursive call ");
-			informative_max_variance_point_planning();
-			goal_outside_obstacles(goal); //TEST recursive call
-		}
-		*/
 		//change the goal position using the pointer
 	    printf(">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-		fprintf(console_logfile, ">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		//fprintf(console_logfile, ">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		
-		//give priority to unvisited cells
-		/*
-		if (min_dist_unvisited < 10000.0){
-			goal->copy_position(nearest_unvisited_position);
-		} else {
-			goal->copy_position(nearest_position);
-		}	
-		*/
 		goal->copy_position(nearest_position);
 	}
 
 	//oustide arena
     if (position_outside_arena(*goal)){
-		// mark the cell as visited so that never plans to go there again
 		if (simulation_parameters.visitedList == visitedList_ON){
+			// mark the cell as visited so that never plans to go there again
 			int pos_coord[2];
 			pos_coord[0] =  floor((goal->x - source_x_min) / x_resol);
 			pos_coord[1] =  floor((goal->y - source_y_min) / y_resol);
@@ -1557,7 +1386,7 @@ void goal_outside_obstacles(Position * goal){
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
-		// otherwise, lets try 4 different candidates
+		// otherwise, lets try 8 different candidates
 		float min_dist = 10000.0;
 		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
@@ -1573,7 +1402,7 @@ void goal_outside_obstacles(Position * goal){
 		// for each candidate position
 		for(int i=0; i<8; i++){
 
-			//TEST give priority to unvisited cells
+			//TEST give priority to unvisited cells was much slower
 			/*
 			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
 				int pos_coord[2];
@@ -1584,7 +1413,6 @@ void goal_outside_obstacles(Position * goal){
 					//if so, then this is the nearest position
 					nearest_unvisited_position.copy_position(candidates[i]);
 					min_dist_unvisited = goal->distance_from(candidates[i]);
-					// printf(">>> chose it as new position !!! \n");
 				}
 			}
 			*/
@@ -1597,25 +1425,6 @@ void goal_outside_obstacles(Position * goal){
 				//printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
 				//printf(">>> outside the arena ? %d \n", position_outside_arena(candidates[i]));
 				if(candidates[i].is_in_obstacle_list(obstacles, nbr_obs) == -1 && !position_outside_arena(candidates[i])){
-					/*
-					if (simulation_parameters.visitedList == visitedList_ON){
-						int pos_coord[2];
-						pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
-						pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
-						int idx = posterior.indices_to_index(pos_coord);
-						if (cell_visited_list[idx] == 0){
-							//if so, then this is the nearest position
-							nearest_position.copy_position(candidates[i]);
-							min_dist = goal->distance_from(candidates[i]);
-							// printf(">>> chose it as new position !!! \n");
-							}
-					} else {
-						//if so, then this is the nearest position
-						nearest_position.copy_position(candidates[i]);
-						min_dist = goal->distance_from(candidates[i]);
-						// printf(">>> chose it as new position !!! \n");
-					}
-					*/
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
 				}else{	
@@ -1629,36 +1438,19 @@ void goal_outside_obstacles(Position * goal){
 				}	
 			}
 		}
-		/*
-		if (min_dist==10000.0){
-			printf(">>> Recursive call "); //was too slow
-			informative_max_variance_point_planning();
-			goal_outside_obstacles(goal); //TEST recursive call	
-		}
-		*/
-		fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-		
-		//give priority to unvisited cells
-		/*
-		if (min_dist_unvisited < 10000.0){
-			goal->copy_position(nearest_unvisited_position);
-		} else {
-			goal->copy_position(nearest_position);
-		}	
-		*/
+		//fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
 
 	}
-	//:qke sure that the chosen goql is not too close from the robot current position so that it zill not instqntqneously be reqched
+	//make sure that the chosen goal is not too close from the robot current position so that it will not instantaneously be reached
 	double dist_candidate_goal = goal->distance_from(current_position);
-	fprintf(console_logfile, ">>> Candidate goal %f %f \n", goal->x, goal->y);
-	fprintf(console_logfile, ">>> Current position %f %f \n", current_position.x, current_position.y);
-	fprintf(console_logfile, ">>> Dist from current %f \n", dist_candidate_goal);
+	//fprintf(console_logfile, ">>> Candidate goal %f %f \n", goal->x, goal->y);
+	//fprintf(console_logfile, ">>> Current position %f %f \n", current_position.x, current_position.y);
+	//fprintf(console_logfile, ">>> Dist from current %f \n", dist_candidate_goal);
 	if (goal->distance_from(current_position)<min_dist_to_current){
 		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
-		fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
+		//fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
-		//float min_dist = 10000.0;
 		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
 		Position candidates[8] = {	Position(goal->x+min_dist_to_current, goal->y+min_dist_to_current, 0),
@@ -2084,16 +1876,13 @@ void state_moving(){
 		}
 	}
 	//verify if arrived to the goal if applicable
-	fprintf(console_logfile, "check dist to end goal \n");
-	fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+	//fprintf(console_logfile, "check dist to end goal \n");
+	//fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	if(dist_to_goal(goal_position) > 0.05){
 
 		if(i == path.end()){
 			fprintf(console_logfile, "path end goal reached \n");
 		}
-
-		//TEST go to before
-		//go_to_goal(*i);
 
 		//move
 		fprintf(console_logfile, "check i ");
@@ -2101,9 +1890,9 @@ void state_moving(){
 			fprintf(console_logfile,"my position (%f, %f) - my i goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
 			printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-			fprintf(console_logfile,"my position (%f, %f) - my i++ goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			//fprintf(console_logfile,"my position (%f, %f) - my i++ goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}
-		go_to_goal(*i); //why is it after
+		go_to_goal(*i); 
 		//obstacle avoidance if necessary
 		// if(obstacle_or_not() == 1){
 		// 	FSM.state = STATE_OBSTACLE_AVOIDANCE;
@@ -2111,17 +1900,15 @@ void state_moving(){
 		// 	return;
 		// }
 		set_wheels_speed(speed[0],speed[1]);
-		//TEST
-		fprintf(console_logfile, "speeds %f, %f \n", speed[0], speed[1]);
+		//fprintf(console_logfile, "speeds %f, %f \n", speed[0], speed[1]);
 		//log the position
 		//log_position();
 	}else{
-		//TEST
-		fprintf(console_logfile, "goal reached \n");
+		//fprintf(console_logfile, "goal reached \n");
 
-		if(i == path.end()){
-			fprintf(console_logfile, "path end goal reached \n");
-		}
+		//if(i == path.end()){
+		//	fprintf(console_logfile, "path end goal reached \n");
+		//}
 
 		set_wheels_speed(0,0);
 		sampleBuffer.reset_all();
@@ -2183,29 +1970,16 @@ int main(int argc, char **argv){
 		plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 	}
 
-
-
-	//TEST precompute gas maps
-	printf("before TEST precomp: entering precomputation \n");
+	//Precompute gas concentration maps for all possible source locations, resolution 20x20
 	plume_model.initialize_information_matrix();
 	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
-	//precompute_concentration_maps(); 
 
-
-
-	//TEST filepath
-
+	//File for saving console messages
 	printf("Test filepath\n");
 	printf("%s", console_logfile_name);
 	console_logfile = fopen(console_logfile_name, "a");
     if (console_logfile != nullptr) {
-        // Write to the file at multiple locations
-        fprintf(console_logfile, "Text at location 1\n");
-
-        // ... additional code ...
-
-        //fclose(console_logfile);
-        printf("Text written to file successfully.\n");
+        fprintf(console_logfile, "Console messages \n");
     } else {
         fprintf(stderr, "Unable to open the file.\n");
     }
@@ -2244,9 +2018,6 @@ int main(int argc, char **argv){
 	}
 
 
-
-
-	/**/
 	//Quickfix to have correct plots with mode fixed th
 	if (simulation_parameters.gasFeature == GASHIT){
 		double mean, stddev;
@@ -2260,10 +2031,9 @@ int main(int argc, char **argv){
 		int source_i=0 ;
 
 		source_i = posterior.indices_to_index(indices);
-		/**/
-		fprintf(console_logfile, "exp x: %f\n", sample[0] );
-		fprintf(console_logfile, "exp y: %f\n", sample[1] );
-		fprintf(console_logfile, "source index: %d\n", source_i);
+		//fprintf(console_logfile, "exp x: %f\n", sample[0] );
+		//fprintf(console_logfile, "exp y: %f\n", sample[1] );
+		//fprintf(console_logfile, "source index: %d\n", source_i);
 		
 		calculate_history_distribution(history, mean, stddev);
 		likelihood_gas_hit(history, sample, source_i, &plume_model, mean, stddev);

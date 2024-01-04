@@ -1,3 +1,5 @@
+% Plots robot trajectory with visited cells map
+
 clear all; close all; clc;
 
 general_folder='/home/durancea/plume_model_learning/Results/1703671246493/101';

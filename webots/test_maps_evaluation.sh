@@ -11,14 +11,8 @@ sampling_prd_filename="/home/durancea/plume_model_learning/webots/data/simulatio
 MCMC_exhaustive_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/MCMC_or_exhaustive_eval.txt"
 vel_factor_filename="/home/durancea/plume_model_learning/webots/data/simulation_parameters/vel_factor.txt" 
 rr_filename="/home/durancea/plume_model_learning/webots/data/plugin_parameters/releaseAmount.txt"
-# use environment 0: obstacle free enviroment
-#p=10
-#echo $p > $sampling_prd_filename
-#use exhaustive search
 s=0
 echo $s > $MCMC_exhaustive_filename
-
-
 
 nbr_source_pos=10
 source_pos_x=12.7
@@ -36,17 +30,16 @@ else
     echo "Folder does not exist."
 fi
 
-v=1
+v=1 # 1 for default controller
 # save previous velocity value
 tmp=$(cat "$vel_factor_filename") 
 echo $v > $vel_factor_filename
-
 echo $vel_factor_filename
 
-#{0..8}
+# release amount
 for r in 53 #30 53 80 120 200
 	do
-		for m in 0 1 3 5 10 #0 1 2 
+		for m in 0 1 3 5 10 #0 1  
 		do
 			echo $r > $rr_filename
 			echo $m > $map_nbr_filename
@@ -71,7 +64,7 @@ done
 echo $tmp > $vel_factor_filename
 
 r=53
-echo "$r" > $wb_folder/data/plugin_parameters/releaseAmount.txt
+echo "$r" > $rr_filename
 
 now=$(date +"%T")
 echo "End time : $now"

@@ -1,14 +1,20 @@
+% Compares the GSL performance in different map environments
+% Plots distance to true source location along y and x and the nu;ber of
+% iterations for convergence
+% Optionnally plot measurement time and distance travelled by the robot as
+% well
+
 clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/dynamic_th_memory/lamda0.5pen0.5';
+general_folder = '/home/durancea/plume_model_learning/Results/con_info_clust_d0_m_comp_k10';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
 
-plotall = 1;
+plotall = 0; %1 to add measurement time and distance travelled by the robot to final plot
 
 for i=1:exp_number
     % the name of the folder
