@@ -80,7 +80,7 @@ extern char gas_hit_variance_map_logfile_name[512];
 extern char experiment_time_logfile_name[512];
 extern char visited_list_logfile_name[512];
 
-//TEST
+//for storing debugging info
 extern FILE* console_logfile;
 extern char console_logfile_name[512];
 

@@ -433,16 +433,6 @@ void DeepCFDPlumeModel2D::initialize_information_matrix(){
 	initialize_cell_measurement_list();
 }
 
-// TEST
-/*
-void DeepCFDPlumeModel2D::precompute_gas_maps(){
-    //initialize the dispersion map list
-	initialize_gas_concentration_map_list();
-
-	//initialize the cell measurements list
-	initialize_cell_measurement_list();
-}
-*/
 
 int DeepCFDPlumeModel2D::get_source_position_params_nbr(){
 	return 2;
@@ -541,80 +531,6 @@ double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_i
 
 }
 
-// TEST returns concentration for ONE set of parameters and ONE position
-double DeepCFDPlumeModel2D::concentration(double cell_position[], double param_list[]){
-	float sx = param_list[0];
-	float sy = param_list[1];
-	float px = cell_position[0];
-	float py = cell_position[1];
-	double c_avg = 0;
-
-	// Calculate the revert distance to the estimated gas source
-    x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
-    std::vector<torch::jit::IValue> inputs;
-    //transpose the tensor
-    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
-    // NOTE: The input tensor must be a float tensor
-    inputs.push_back(x_trans.to(torch::kFloat).to(device));
-    //std::cout << x_trans[0][1] << std::endl;
-    // Execute the model and turn its output into a tensor.
-    at::Tensor output = DeepCFD(inputs).toTensor();
-    //std::cout << output << std::endl;
-    
-    int idx_x = round((px - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
-    int idx_y = round((py - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-
-    //std::cout<< "idx_x is: "<<idx_x;
-    //std::cout<< " idx_y is: "<<idx_y << std::endl;
-   
-    c_avg = output[0][0][idx_y][idx_x].item<float>();
-    //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
-    
-    return c_avg;
-}
-
-// TEST returns concentration for ONE set of parameters and ONE position
-double DeepCFDPlumeModel2D::concentration(int idx, int idy, double param_list[]){
-	float sx = param_list[0];
-	float sy = param_list[1];
-	double c_avg = 0;
-
-	// Calculate the revert distance to the estimated gas source
-    x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/r_torch.size(0)) = 1 / torch::sqrt( (sx - r_torch).pow(2) + (sy - c_torch).pow(2) );
-    std::vector<torch::jit::IValue> inputs;
-    //transpose the tensor
-    torch::Tensor x_trans = x.permute({0, 1, 3, 2});
-    // NOTE: The input tensor must be a float tensor
-    inputs.push_back(x_trans.to(torch::kFloat).to(device));
-    //std::cout << x_trans[0][1] << std::endl;
-    // Execute the model and turn its output into a tensor.
-    at::Tensor output = DeepCFD(inputs).toTensor();
-    //std::cout << output << std::endl;
-
-    //std::cout<< "idx_x is: "<<idx_x;
-    //std::cout<< " idx_y is: "<<idx_y << std::endl;
-   
-    c_avg = output[0][0][idy][idx].item<float>();
-    //std::cout << "The estimated concentration at (" << sx <<  ", " << sy  << "; " <<px << ", " << py << ") is " << output[0][0][idx_y][idx_x].item<float>() << std::endl;
-    
-    return c_avg;
-}
-
-/*
-// TEST returns indices for history of robot positions
-void DeepCFDPlumeModel2D::get_pos_list_idx(vector<Position> robot_position, int nbr, int idx[], int idy[]){
-
-
-	for(int i=0; i<nbr; i++){
-		idx[i] = round((robot_position[i].x - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
-    	idy[i] = round((robot_position[i].y - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-		//std::cout<< "idx_x is: "<<idx_x;
-		//std::cout<< " idx_y is: "<<idx_y << std::endl;
-	}
-
-}
-*/
-
 
 //returns a list of concentrations for ONE set of parameters and A LIST of positions
 void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std){
@@ -641,15 +557,6 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
     at::Tensor output = DeepCFD(inputs).toTensor();
     //std::cout << output << std::endl;
 
-
-	//TEST correct
-	//int idx_sx = round((sx - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
-	//int idx_sy = round((sy - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
-	//printf("In 64 map, source idx: sx %d, sy %d\n", idx_sx, idx_sy);
-	//printf("Which should correspond in 20 map to : sx %d, sy %d\n", int(floor(idx_sx/3.2)), int(floor(idx_sy/3.2)));
-
-
-
 	for (int i=0; i < nbr; i++) {
         int idx_x = round((px[i] - min(r_torch[0]).item<float>())/(r_torch[1][0] - r_torch[0][0]).item<float>());
         int idx_y = round((py[i] - min(c_torch[0]).item<float>())/(c_torch[0][1] - c_torch[0][0]).item<float>());
@@ -670,64 +577,9 @@ void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int n
 
 }
 
-/*
-// test 64x64
-void DeepCFDPlumeModel2D::initialize_precomp_gas_concentration_map_list(){
-// initialize gas dispersion list
-// calculate the gas concentration map for each possible source location
-// first scan y axis then x axis; the same order as the pdf
-	for (int j = 0; j < 64; j++)
-	{
-		for (int i = 0; i < 64; i++)
-		{
-			GasDispersionMap gas_map(i,j);
-			calculate_gas_concentration_map(gas_map);
 
 
-
-
-
-
-
-
-
-
-
-			precomp_gas_con_map_list.push_back(gas_map);
-		}
-	}
-	//TEST
-	printf("size of gas map list along y ie rows %ld \n", precomp_gas_con_map_list.size());
-	printf("Test retrieve a measurement %f \n", precomp_gas_con_map_list[0].gasConcentrationMap[1][1]);
-	//printf("size of gas map list along x ie cols %d \n", gas_con_map_list[0].size());
-}
-
-
-
-// TODO - possible improvement: only store the variance of the gas concentration map
-void DeepCFDPlumeModel2D::initialize_cell_measurement_list(){
-	// initialize cell meausurements list
-	for (int j = 0; j < y_nbins; j++)
-	{
-		for (int i = 0; i < x_nbins; i++)
-		{
-			CellMeasurements cell_measurements(i,j);
-			cell_lists.push_back(cell_measurements);
-		}
-	}
-	for (auto &cell : cell_lists){
-		for (auto &gas_map : gas_con_map_list){
-			float con = gas_map.get_concentration(cell.idx_x, cell.idx_y);
-			cell.add_measurement(con);
-			cell.add_gas_hit(con);
-		}
-	}
-}
-*/
-
-
-//old 20x20
-
+//20x20 sized map
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list
 // calculate the gas concentration map for each possible source location
@@ -741,10 +593,6 @@ void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 			gas_con_map_list.push_back(gas_map);
 		}
 	}
-	//TEST
-	printf("size of gas map list along y ie rows %ld \n", gas_con_map_list.size());
-	printf("Test retrieve a measurement %f \n", gas_con_map_list[0].gasConcentrationMap[1][1]);
-	//printf("size of gas map list along x ie cols %d \n", gas_con_map_list[0].size());
 }
 
 // TODO - possible improvement: only store the variance of the gas concentration map

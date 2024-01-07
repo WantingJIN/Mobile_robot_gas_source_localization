@@ -434,7 +434,7 @@ void Posterior::exhaustive_evaluation(struct history &history){
 	printf("nbr_dimension %d\n ", nbr_dimension);
 	printf("nbr_element %d\n ", nbr_element);
     double mean, stddev;
-	if (simulation_parameters.gasFeature == GASHIT){
+	if (simulation_parameters.gasFeature == GASHIT || RELATIVE_CONCENTRATION){
 		calculate_history_distribution(history, mean, stddev);
 	}
 	//for each element of the pdf
@@ -446,7 +446,10 @@ void Posterior::exhaustive_evaluation(struct history &history){
 		//check the gas feature selected
 		if (simulation_parameters.gasFeature == CONCENTRATION){
 			//pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood2(history, sample, i, model); //with precomputed maps
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); //with precomputed maps
+		}
+		if (simulation_parameters.gasFeature == RELATIVE_CONCENTRATION){
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model, mean, stddev); 
 		}
 		if (simulation_parameters.gasFeature == GASHIT){
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev); 

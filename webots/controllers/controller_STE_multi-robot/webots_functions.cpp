@@ -127,8 +127,7 @@ void init(){
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
 
-
-	// TEST to keep some debugging console input
+	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
@@ -155,7 +154,7 @@ void init(){
 	visited_list_logfile = fopen(visited_list_logfile_name, "w");
 	fclose(visited_list_logfile);
 
-	//TEST
+	// text file for storing debugging info
 	console_logfile = fopen(console_logfile_name, "w");
 	fclose(experiment_time_logfile);
 
@@ -166,7 +165,7 @@ void init(){
 	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio //NO_PROCESSING
 	//17. velocity multiplier 18. wind speed multiplier 19. sampling distance threshold (default 0)
 	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.  11.     12.             13.           14.       15.  16. 17.
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX,INFORMATIVE_CLUSTERING, GASHIT, visitedList_ON, BELIEF, 10, 10, 1.0, 0.75, 0};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX,INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON, BELIEF, 10, 10, 1.0, 0.75, 0};
     
 	// cell_measurements each_cell;LAWNMOWER
 	// for (int i = 0; i <plume_model.x_bins; i++){

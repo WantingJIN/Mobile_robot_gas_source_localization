@@ -22,10 +22,6 @@
 
 using namespace std;
 
-//TEST sleep
-#include <unistd.h>
-#include <webots/robot.h>
-
 //Global Variables
 
 // log files
@@ -50,7 +46,7 @@ FILE* gas_hit_variance_map_logfile;
 FILE* experiment_time_logfile;
 FILE* visited_list_logfile;
 
-//TEST
+//text file for storing some prints for debugging
 FILE* console_logfile;
 
 char goalposition_logfile_name[512];
@@ -72,7 +68,7 @@ char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
 
-//TEST
+//text file for storing some prints for debugging
 char console_logfile_name[512];
 
 // finite state machine
@@ -147,20 +143,17 @@ double time_after_moving;
 double time_before_measuring;
 double time_after_measuring;
 double navigation_sampling_time_sum = 0;
+long long estimating_time_sum = 0; // computation time of the estimation part
 
-
-// test computation time of the estimation part
-long long estimating_time_sum = 0;
-
-// TEST precpmputed gas maps
+//precomputed gas maps
 double c_avg[x_nbins*y_nbins][x_nbins*y_nbins]; //left: source position, right: estimated cell position
 
-//TEST last position for measurement update
+//store last position for minimum distance threshold in measurement update
 Position last_measurement_pos;
 
 
 // =========================== FUNCTIONS ================================ //
-//random value sampled from a nromal distribution
+//random value sampled from a normal distribution
 double randn(double mu, double sigma){
 	//taken from https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
 	double U1, U2, W, mult;
@@ -222,11 +215,6 @@ double dist_to_goal(Position goal){
     double dx, dy;
     dx = goal.x - current_position.x;
     dy = goal.y - current_position.y;
-
-	//TEST
-	double tmp = sqrt(dx*dx + dy*dy);
-	fprintf(console_logfile,"Inside dist to goal function my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, goal.x, goal.y);
-	fprintf(console_logfile, "dist to goal %f \n", tmp);
     return sqrt(dx*dx + dy*dy);
 }
 
@@ -412,8 +400,8 @@ void log_experiment_time(){
 // ====================== ESTIMATION functions ========================= //
 
 
-// TEST get values directly from precomputed maps
-double likelihood2(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model){ 
+// Likelihood with concentration values from precomputed gas maps
+double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model){ 
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; //125;
 	double sum_tmp = 0;
@@ -435,10 +423,39 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 	
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
-	// --------------------------relative concentration error---------------------------
-	/*
-	double mean, stddev, rel_model_val, rel_hist_val;
-	calculate_history_distribution(history, mean, stddev);
+	//absolute concentration error
+	for (int i = 0; i < history.size; i++){
+		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
+	}
+	
+
+	return (exp(-0.5 * sum_tmp));
+}
+
+
+// Likelihood for relative concentration with precomputed gas maps
+double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev){ 
+	float sigma = 0.15;
+	double sum_tmp = 0;
+	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
+
+	vector<float> model_c_avg(history.size); 
+
+	int nbr = history.size;
+	float px[nbr], py[nbr];
+	int idx[nbr], idy[nbr];
+
+	// get indices in the map
+	for(int i=0; i<nbr; i++){
+		px[i] = history.position[i].x;
+		py[i] = history.position[i].y;
+		idx[i] =  floor((px[i]- source_x_min) / x_resol);
+		idy[i] =  floor((py[i] - source_y_min) / y_resol);
+	}
+	
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+
+	double rel_model_val, rel_hist_val; //mean, stddev, 
 	double	model_mean;
 	double	model_stddev = 0.01;
 	if (model_c_avg.size() !=0){
@@ -465,16 +482,8 @@ double likelihood2(struct history history, double *parameters, int soure_pos_idx
 		}
 		sum_tmp += pow(rel_model_val-rel_hist_val, 2);
 	}
-	sum_tmp /= (2*0.15*0.15); //best (2*0.15*0.15);
-	*/
-
-	// --------------------------absolute concentration error---------------------------
+	sum_tmp /= (2*sigma*sigma); //best (2*0.15*0.15);
 	
-	for (int i = 0; i < history.size; i++){
-		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-	}
-	
-
 	return (exp(-0.5 * sum_tmp));
 }
 
@@ -558,7 +567,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//with precomputed map is much faster
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
-
 	int history_hit;
 	int model_hit;
 
@@ -590,7 +598,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	
 
 	//-----model fixed threshold, penalty on relative concentration history ------- 
-	/*
+	
 	double rel_hist_val = 0.0;
 	int gas_hit_threshold  = 1000;
 	for (int i = 0; i < history.size; i++){
@@ -611,12 +619,12 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	
 	sum_tmp *= 0.8;
 	likelihood = (exp(-sum_tmp));
-	*/
+	
 
 	//-----------------dynamic thresholds and constant penalty--------------------------
 
 	//-------------------------min max avg threshold-------------------------------
-	
+	/*
 	double lamda = 0.8; //0.5;
 	double his_thrs = 0;
 	double mod_thrs = 0;
@@ -654,10 +662,10 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	}
 	//sum_tmp *= 1;
 	likelihood = (exp(-sum_tmp));	
-	
+	*/
 
 
-	//-----------------------------adaptive threshold-------------------------------
+	//-------------adaptive threshold- based on recent measurements------------------------------
 	/*
 	double lamda = 0.5; //0.5;
 	double his_thrs = 0;
@@ -1008,8 +1016,7 @@ void calculate_information_gain_with_variance(){
 
 void informative_max_variance_point_planning(){
 	printf("informative path planning based on variance \n");
-	//TEST
-	fprintf(console_logfile, "informative path planning based on variance \n");
+	//fprintf(console_logfile, "informative path planning based on variance \n");
 	double best_point[2]={0};
 	// find the maximal variance in gas variance map
 	double max_info = 0;
@@ -1079,13 +1086,12 @@ void informative_max_variance_point_planning(){
     // The goal position is very close to current postion, swith to greedy planning
 	if(dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh))){
 		printf("The goal position is very close to current postion, switch to greedy planning \n");
-		//TEST
-		fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
+		//fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
 		greedy_planning();
 	}
 
-	fprintf(console_logfile, "planned goal position : %f %f \n", goal_position.x, goal_position.y);
-	fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+	//fprintf(console_logfile, "planned goal position : %f %f \n", goal_position.x, goal_position.y);
+	//fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 
 }
@@ -1320,7 +1326,7 @@ void goal_outside_obstacles(Position * goal){
 		float min_dist = 10000.0;
 		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
-		Position nearest_unvisited_position(*goal); //TEST
+		Position nearest_unvisited_position(*goal); // for testing priority to unvisited cells
 		Position candidates[4] = {	Position(obstacles[idx][0], goal->y, 0), 
 									Position(obstacles[idx][2], goal->y, 0),
 									Position(goal->x, obstacles[idx][1], 0),
@@ -1333,7 +1339,7 @@ void goal_outside_obstacles(Position * goal){
 			//check if the distance to candidate is smaller than others
 			// printf(">>> distance from candidate %f %f = %f\n", candidates[i].x, candidates[i].y, goal->distance_from(candidates[i]));
 
-			//TEST give priority to unvisited cells was much slower
+			//give priority to unvisited cells but was much slower
 			/*
 			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
 				int pos_coord[2];
@@ -1347,7 +1353,7 @@ void goal_outside_obstacles(Position * goal){
 				}
 			}
 			*/
-			if(goal->distance_from(candidates[i]) <= min_dist){ //TEST <= instead of <
+			if(goal->distance_from(candidates[i]) <= min_dist){ 
 				// printf(">>> best sor far\n");
 				//if so, then check if that position is not in another obstacle and it's inside the arena
 				// printf(">>> inside another obstacle ? %d\n", candidates[i].is_in_obstacle_list(obstacles, nbr_obs));
@@ -1390,7 +1396,7 @@ void goal_outside_obstacles(Position * goal){
 		float min_dist = 10000.0;
 		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
-		Position nearest_unvisited_position(*goal); //TEST
+		Position nearest_unvisited_position(*goal); //to give priority to unvisited cells
 		Position candidates[8] = {	Position(float(XMIN + SAFETY_MARGIN), goal->y, 0), 
 									Position(float(XMAX - SAFETY_MARGIN), goal->y, 0),
 									Position(goal->x, float(YMIN + SAFETY_MARGIN), 0),
@@ -1402,7 +1408,7 @@ void goal_outside_obstacles(Position * goal){
 		// for each candidate position
 		for(int i=0; i<8; i++){
 
-			//TEST give priority to unvisited cells was much slower
+			//give priority to unvisited cells but was much slower
 			/*
 			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
 				int pos_coord[2];

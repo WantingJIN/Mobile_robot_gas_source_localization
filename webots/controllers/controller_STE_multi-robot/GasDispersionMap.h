@@ -17,8 +17,6 @@ class GasDispersionMap{
         double sy;
         double gasConcentrationMap[x_nbins][y_nbins];
         //constructor
-        //GasDispersionMap(int index_sx, int index_sy);
-        //TEST
         GasDispersionMap(int index_sx, int index_sym);
         void log_map(const char *, char writing_mode);
         double get_concentration(int idx_x, int idx_y);

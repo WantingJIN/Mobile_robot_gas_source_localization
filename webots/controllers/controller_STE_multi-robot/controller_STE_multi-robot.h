@@ -63,6 +63,7 @@ typedef enum planningStrategy{
 typedef enum gasFeature{
 	CONCENTRATION = 0,
 	GASHIT = 1,
+	RELATIVE_CONCENTRATION = 2,
 }eGasFeature;
 
 typedef enum visitedList{
@@ -167,10 +168,12 @@ void state_obstacle_avoidance();
 void informative_path_planning_based_on_variance();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
+//old
 double likelihood(struct history history, double *parameters, PlumeModel *model);
-//TEST
-double likelihood2(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
-
+//new likelihood with precomputed gas maps
+double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
+//new likelihood for relative concentrations
+double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
@@ -188,8 +191,5 @@ void do_odometry();
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
 void calculate_history_distribution(struct history history, double &mean, double &stddev);
 
-//NEW TEST
-void get_concentration_list(vector<Position> robot_position, int nbr, int source_idx, PlumeModel *model);
-void precompute_concentration_maps(PlumeModel *model);
 
 #endif

@@ -53,6 +53,13 @@ Simulation parameters are set in `webots_functions.cpp `in the simulation_parame
 
 In order to be able to run the code with different parameters without having to recompile everything, some of the parameter values are taken from text files for which paths are specified in `webots_functions.cpp`. These text files are in  `your-path-of-project/webots/data/simulation_parameters`.
 
+There are three available types of likelihood to choose from in the simulation_parameters:
+
+- CONCENTRATION: for the original likelihood computation with the absolute concentration error
+- RELATIVE_CONCENTRATION: for the likelihood based on the error between measured and modeled relative measurements computed as cumulative density functions
+- GASHIT: for the approach with gas detection events. Different gas hit strategies have been proposed and are commented in the likelihood_gas_hit function in `controller_STE_multi-robot.cpp` for future modifications
+
+
 To run the code in different environment maps in simulation, different sh files are provided with examples of how to vary the tested simulation parameters.
 
 The most straightforward example is `your-path-to-project/webots/test_maps_evaluation.sh`, which runs experiments in different test maps. The gas source release rate can also be modified here. It is defined in the file `your-path-to-project/webots/data/plugin_parameters/releaseAmount.txt`. In the file, remove the  '--no-rendering' option to visualize the 3D simulation in Webots. Each configuration is tested for a number of source locations equally spread along the y direction defined by the user as nbr_source_pos.
