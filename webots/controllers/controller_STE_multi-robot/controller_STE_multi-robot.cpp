@@ -1857,7 +1857,7 @@ void state_moving(){
 		}
 		if (sample_counter > simulation_parameters.sampling_period){
 			if (!position_outside_arena(current_position)){
-				//TEST
+				//Sampling distance threshold
 				float dist_to_last_measurement = sqrt(pow(current_position.x-last_measurement_pos.x,2)+pow(current_position.y-last_measurement_pos.y,2));
 				if((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh){
 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});

@@ -6,7 +6,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/abs_con/release_amount_robustness';
+general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/rel_con/release_amount_robustness';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -105,36 +105,6 @@ for i=1:number
     convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
 end
 
-%% boxplots
-% f = figure('units','normalized','outerposition',[0 0 1 1]);
-% subplot(5,1,1)
-% plot([0 length(unique(release_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,1), release_list);
-% grid on;
-% title('error on x');
-% subplot(5,1,2);
-% plot([0 length(unique(release_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,2), release_list);
-% grid on;
-% title('error on y');
-% subplot(5,1,3);
-% boxplot(iteration_nbr_list, release_list);
-% grid on;
-% title('nbr iterations');
-% subplot(5,1,4);
-% boxplot(entropy_list, release_list);
-% grid on;
-% title('final entropy');
-% subplot(5,1,5);
-% boxplot(convergence_list, release_list);
-% grid on;
-% title('convergence');
-% 
-% %% save
-% saveas(f,[general_folder '/test_maps_results_comparison_all.png']);
-
 
 %% plot for thesis
 f = figure('Position',[-1561         656         715         615]);
@@ -185,24 +155,14 @@ else
     set(lines, 'Color', 'r');
     set(findobj(gca,'type','line'),'linew',1.2)
     grid on;
-    ylim([0,max(iteration_nbr_list)+1])
+%     ylim([0,max(iteration_nbr_list)+1])
+    ylim([0,60])
     xlabel('Release Amount');
     ylabel('nbr iterations');
     title('Total nbr iterations'); 
 end
 
 
-
-% subplot(1,3,3);
-% boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([0,50])
-% xlabel('Release Amount');
-% title('nbr iterations');
-% hold on
 
 %% calculate success rate
 success_case = 0;

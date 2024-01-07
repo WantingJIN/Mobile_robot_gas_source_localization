@@ -317,7 +317,7 @@ void odor_read(double *sensor_reading, double &odor_concentration){
         // For the MOX sensor, the sensor properties are modeled as a first-order system
 		if (simulation_parameters.gasSensor == MOX){
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			//double tau_r = 5.19; // time constant for the rise (TGS2600)
+			//double tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
 			//ouble tau_d = 19.74; // time constant for the decay
 			//double tau_r = 2.06; // time constant for the rise (slow sensor)
 			//double tau_d = 4.53; // time constant for the decay
