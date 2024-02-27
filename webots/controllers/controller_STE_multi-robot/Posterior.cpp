@@ -418,7 +418,6 @@ void Posterior::MCMC_evaluation(struct history history){
 
 //exhaustive evaluation of all the values of the posterior pdf
 void Posterior::exhaustive_evaluation(struct history &history){
-	printf("exhaustive evaluation\n");
 	int i=0;
 	double sample[nbr_dimension];
     double mean, stddev;

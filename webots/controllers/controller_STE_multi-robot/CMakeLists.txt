@@ -8,7 +8,6 @@ get_filename_component(PROJECT ${CMAKE_SOURCE_DIR} NAME)  # controller directory
 
 project(${PROJECT})
 
-set(WEBOTS_HOME "/home/wjin/Softwares/webots-R2021b/webots")
 # compile with libtorch
 set(CMAKE_PREFIX_PATH /home/wjin/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
 # set(MatIO_DIR "/home/wjin/Softwares/matio-1.5.23")

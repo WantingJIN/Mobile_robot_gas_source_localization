@@ -4,7 +4,6 @@
 #include "controller_STE_multi-robot.h"
 #include "PlumeModel.h"
 #include "Position.h"
-#include "CellMeasurements.h"
 
 class Posterior{ 
     public: 

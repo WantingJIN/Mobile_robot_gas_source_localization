@@ -17,8 +17,6 @@
 //#include "aStar.h"
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
-#include "CellMeasurements.h"
-#include "GasDispersionMap.h"
 
 using namespace std;
 
@@ -84,8 +82,6 @@ int sample_counter = 0;
 //plume model
 DeepCFDPlumeModel2D plume_model;
 
-// vector of the cell_measurements
-vector<CellMeasurements> cell_measurements_list; 
 // gas information map
 double gas_information_map[x_nbins*y_nbins] = {0};
 double gas_hit_variance_map[x_nbins*y_nbins] = {0};
@@ -117,10 +113,6 @@ GasMap2D gas_map(0.2, 2, 1, 0.75, 0.3);
 int nbr_obs = 4;
 float margin = 0.16;
 float ** obstacles = NULL;
-// float obstacles[][4] = {{5-margin, static_cast<float>(5.5+margin), static_cast<float>(2.5-margin), 4+margin}, 
-							// {5-margin, 8+margin, static_cast<float>(2.5-margin), 3+margin}, 
-							// {9-margin, 12+margin, 1-margin, static_cast<float>(1.5+margin)}, 
-							// {static_cast<float>(11.5-margin), 12+margin, 0-margin, static_cast<float>(1.5+margin)}};
 std::list<Position> path;
 std::list<Position>::iterator i;
 
@@ -277,9 +269,6 @@ void log_measurements(){
 	double time = wb_robot_get_time();
 	measurements_logfile = fopen(measurements_logfile_name, "a");
 	fprintf(measurements_logfile,"%d, %f, %f, %f\n", FSM.n_cycles, sampleBuffer.average_wind_intensity, sampleBuffer.average_concentration, time);
-	//for (i = 0; i < ODOR_FILTER_LENGTH; i++)
-	//	fprintf(measurements_logfile,"%f, ", measurements.odor_sample_memory.buffer[i]);
-	//fprintf(measurements_logfile,"\n");
 	fclose(measurements_logfile);
 }
 
@@ -373,13 +362,6 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	float sigmaD = 0; //125;
 	double sum_tmp = 0;
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
-	
-	// for each sample, getting the model concentration and calculate the likelihood
-	// double model_concentration = 0;
-	// for (int i = 0; i < history.size; i++){
-	// 	model_concentration = model->concentration(history.position[i], sampleBuffer.average_wind_intensity, parameters);
-	// 	sum_tmp += pow(history.measurement[i] - model_concentration, 2) / (sigmaE*sigmaE + sigmaD*sigmaD);
-	// }
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
@@ -584,77 +566,7 @@ void information_gain_navigation_approx(){
 			fake_history.size--;
 	}
 }
-/*
-void information_gain_navigation_predictive(){
-	int s=0, c=0;
-	float p0 = 0.5; //50 cm
-	double reward=0, max_reward = -100;
-	double position[1][3] = {{0}};
-	
-	for(c=0; c<3; c++){
-		for(s=-1; s<=1; s=s+2){
-			position[0][0] = current_position[0];
-			position[0][1] = current_position[1];
-			position[0][2] = current_position[2];
-			position[0][c] += s*p0;
-			if(VERBOSE) printf("[%d] position : %f %f %f\n", ID, position[0][0],position[0][1],position[0][2]);
-			if(position_outside_arena(position[0])) continue;
-			reward = target_evaluation(position);
-			if(VERBOSE) printf("[%d] reward: %f _______________________\n", ID, reward);
-			if(reward > max_reward ){
-				max_reward = reward;
-				goal_position[0] = position[0][0];
-				goal_position[1] = position[0][1];
-				goal_position[2] = position[0][2];
-			}
-		}
-	}
-	if(VERBOSE) printf("[%d] goal_position : %f %f %f\n", ID, goal_position[0],goal_position[1],goal_position[2]);
-}
 
-double target_evaluation(double position[][3]){
-	int i = 0;
-	double predictive[N_CONCENTRATION_LEVEL] = {0};
-	double sum_predictive = 0;
-	double DKLs[N_CONCENTRATION_LEVEL] = {0};
-	double reward = 0;
-	//double entropy_values[N_CONCENTRATION_LEVEL] = {0};
-	//double reward2 = 0;
-
-	//calculate max concentration value based on current estimation
-	float max_concentration = pseudo_gaussian_plume_model(posterior.expected_value.source_position, measurements.wind_intensity, posterior.expected_value);
-	if(VERBOSE) printf("[%d] max_concentration : %f\n", ID, max_concentration);
-	//for each level of concentration
-	for(i=0; i<N_CONCENTRATION_LEVEL; i++){
-		history.measurement[FSM.n_cycles] = i*max_concentration/(N_CONCENTRATION_LEVEL-1);
-		//printf("measurement level %d: %f\n", i, measurement_history[FSM.n_cycles]);
-		//calculate the predictive posterior and it's expected value P(i*max_concentration/(N_CONCENTRATION_LEVEL-1))
-		predictive[i] = posterior_predictive(history.measurement[FSM.n_cycles], position);
-		//printf("P(x~) = %f\n", predictive[i]);
-		sum_predictive += predictive[i];
-		//calculate posterior
-		//memcpy(future_posterior.pdf, zero.pdf, sizeof zero.pdf);//memcpy(future_posterior_3D, zero_posterior, sizeof zero_posterior);
-		//future_posterior.sum = 0;
-		future_posterior.copy_posterior(zero);
-		//posterior_fct(future_posterior, measurement_history, FSM.n_cycles); //future_posterior_3D, &sum_future_posterior,
-		future_posterior.MCMC_evaluation(history);
-		//log_posterior_pdf_3D(future_posterior_3D, "../../../Results/tmp_future_posterior.csv", "a");
-		//DKL of each posterior
-		//DKLs[i] = Kullback_Leibler_divergence(posterior.pdf, posterior.sum, future_posterior.pdf, future_posterior.sum);
-		DKLs[i] = posterior.Kullback_Leibler_divergence(future_posterior);
-		//printf("DKL: %f \n",DKLs[i]);
-		//entropy_values[i] = entropy(future_posterior_3D, sum_future_posterior);
-	}
-	for(i=0; i<N_CONCENTRATION_LEVEL; i++){
-		//weighted DKL with predictive expected value
-		reward += (predictive[i]/sum_predictive) * DKLs[i];
-		//reward2 += (predictive[i]/sum_predictive) * entropy_values[i];
-		//printf("predictive: %f, DKL: %f, reward: %f   ---   predictive: %f, entropy: %f, reward: %f\n", 
-			//predictive[i]/sum_predictive,DKLs[i],reward, predictive[i]/sum_predictive,entropy_values[i],reward2);
-	}
-	return reward;
-}
-*/
 void balance_exploration_exploitation(float gloabl_local_search_ratio){
 	float ratio = gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
@@ -662,42 +574,13 @@ void balance_exploration_exploitation(float gloabl_local_search_ratio){
 		goal_position.x,goal_position.y, plume_model.max_a_post_value[0],plume_model.max_a_post_value[1]);
 	vec1[0] = goal_position.x - current_position.x; //exploration
 	vec1[1] = goal_position.y - current_position.y;
- 	//vec1[2] = goal_position[2] - current_position[2]; 
-	//vec2[0] = posterior.max_a_posteriori.source_position[0] - current_position[0]; //exploitation (source) //estimated_source_parameters //max_a_post_source_parameters
-	//vec2[1] = posterior.max_a_posteriori.source_position[1] - current_position[1];
 	vec2[0] = plume_model.max_a_post_value[0] - current_position.x; //TODO: to improve
 	vec2[1] = plume_model.max_a_post_value[1] - current_position.y;
-	//vec2[2] = estimated_source_parameters.source_position[2] - current_position[2];
 	goal_position.x = current_position.x + ratio*vec1[0] + (1-ratio)*vec2[0];
 	goal_position.y = current_position.y + ratio*vec1[1] + (1-ratio)*vec2[1];
 	goal_position.heading = 0;//current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
 	//printf("new goal position : %f %f %f\n", goal_position[0],goal_position[1],goal_position[2]);
 }
-/*
-void heterogeneous_navigation(){
-	//ID of the robot decides what it does
-	switch (ID){
-		case 101 : 
-			// just move to more informative point
-			information_gain_navigation_approx(posterior.expected_value.source_position);
-			balance_exploration_exploitation(0.8);
-			break;
-		case 102 :
-			information_gain_navigation_approx(posterior.expected_value.source_position);
-			balance_exploration_exploitation(0.2);
-			// just move to maximum a posterior point
-			//goal_position[0] = posterior.max_a_posteriori.source_position[0];
-			//goal_position[1] = posterior.max_a_posteriori.source_position[1];
-			//goal_position[2] = 0;
-			break;
-		case 103 :
-			// Random
-			goal_position[0] = 1;//(randu() * (XMAX - SAFETY_MARGIN*2)) + SAFETY_MARGIN;  //position in m
-    		goal_position[1] = 1;//(randu() * (YMAX - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
-    		goal_position[2] = 0;
-			break;
-	}
-}*/
 
 void greedy_planning(){
 	double best_point[2]={0};
@@ -746,7 +629,7 @@ void lawnmower_planning(){
 	}
 }
 
-void calculate_information_gain_with_variance(){
+void calculate_information_gain(){
 	if (simulation_parameters.gasFeature == CONCENTRATION){
 		if (simulation_parameters.infoFeature == VARIANCE){
 			plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
@@ -766,8 +649,7 @@ void calculate_information_gain_with_variance(){
 }
 
 
-void informative_max_variance_point_planning(){
-	printf("informative path planning based on variance \n");
+void informative_point_planning(){
 	double best_point[2]={0};
 	// find the maximal variance in gas variance map
 	double max_info = 0;
@@ -828,7 +710,7 @@ void informative_clustering_planning(){
 	clusters_bounding_box = clustering_information_blocks(gas_information_map);
 	if (clusters_bounding_box.size() == 0){
 		printf("no cluster found \n");
-		informative_max_variance_point_planning();
+		informative_point_planning();
 		return;
 	} else{
 		// find the cluster with the shortest distance to robot
@@ -1304,7 +1186,7 @@ void state_estimating(){
 		posterior.exhaustive_evaluation(history);
 	}
 	
-	printf("sum posterior : %f \n", posterior.sum);
+	//printf("sum posterior : %f \n", posterior.sum);
 	posterior.process();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
@@ -1328,8 +1210,8 @@ void state_estimating(){
 	
 	
 	//check if time is up
-	//if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1){
+	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
+	if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1){
 		//the end
 		FSM.state = STATE_FINISHED;
 		// log the finish time stamp
@@ -1354,8 +1236,8 @@ void state_updategoal(){
 	    balance_expected_maximal_pdf();
 		break;
     case INFORMATIVE:
-		calculate_information_gain_with_variance();
-	    informative_max_variance_point_planning();
+		calculate_information_gain();
+	    informative_point_planning();
 		break;
 	case RANDOM:
 		random_planning();
@@ -1364,7 +1246,7 @@ void state_updategoal(){
 		lawnmower_planning();
 		break;	
     case INFORMATIVE_CLUSTERING:
-        calculate_information_gain_with_variance();
+        calculate_information_gain();
 		informative_clustering_planning();
 		break;
 	case INFORMATIVE_KLD:
@@ -1403,7 +1285,7 @@ void state_updategoal(){
 			log_trajectory(p);
 		}
 		i = path.begin();
-		printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+		//printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		//send the goal to the supervisor
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
@@ -1462,7 +1344,7 @@ void state_moving(){
 		//move
 		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
 			i++;
-			printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			//printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}
 		go_to_goal(*i);
 		//obstacle avoidance if necessary

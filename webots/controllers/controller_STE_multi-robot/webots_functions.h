@@ -116,9 +116,7 @@ void send_msg(Message msg);
 void set_wheels_speed(double speed1, double speed2);
 void cleaning_up();
 void next_iteration_time();
-void obstacle_avoidance_k3();
 void obstacle_avoidance_k4();
-void obstacle_avoidance_k4_fa();
 
 double generateGaussianNoise(double mean, double variance);
 

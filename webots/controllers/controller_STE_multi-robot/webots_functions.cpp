@@ -154,16 +154,9 @@ void init(){
 	//5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
 	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
 	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.      11.                   12.         13.           14.       15.  16.
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, INFORMATIVE_KLD, CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
     
-	// cell_measurements each_cell;
-	// for (int i = 0; i <plume_model.x_bins; i++){
-	// 	for (int j = 0; j <plume_model.y_bins; j++){
-	// 		each_cell.idx = i;
-	// 		each_cell.idy = j;
-	// 		cell_measurements_list.push_back(each_cell);
-	// 	}
-	// }
+
 	//read simulation parameters
 	FILE* sim_param_file;
 	int ok = 0;
@@ -234,7 +227,7 @@ void init(){
 	fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
+	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
 	fprintf(sim_param_file, "data_processing_mode %d\n", simulation_parameters.processingMode);
 	fprintf(sim_param_file, "gas_sensor_type %d\n", simulation_parameters.gasSensor);
@@ -368,51 +361,6 @@ int obstacle_or_not(){
 	return 0;
 }
 
-void obstacle_avoidance_k3(){
-	//if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
-	double khepera3_matrix[9][2] = {{-5000,-5000},{-20000,40000},{-30000,50000},{-70000,70000},{70000,-60000},
-	{50000,-40000},{40000,-20000},{-5000,-5000},{-10000,-10000}};
-	//{ {-5000, -5000}, {-20000, 40000}, {-30000,50000}, {-70000, 70000}, {70000, -60000},
-									//{50000, -40000}, {40000, -20000}, {-5000, -5000}, {-10000, -10000} };
-	double sensors_value[SENSOR_NUMBER];
-	double range = 2000;
-	
-	//if no obstacle,
-	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
-		//printf("no obstacle anymore..XXXXXXX\n");
-		//wb_differential_wheels_set_speed(0,0);
-		set_wheels_speed(0,0);
-		//back to moving
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		return;
-	}
-
-	//get the values of the sensors
-	//printf("sensor values : ");
-	for (int i = 0; i < SENSOR_NUMBER; i++){
-		sensors_value[i] = wb_distance_sensor_get_value(infrared_sensors[i]);
-		//printf("%f ", sensors_value[i]);
-	}
-	//printf("\n");
-
-	//adjust the speed to avoid the obstacle
-	for (int i = 0; i < 2; i++){
-		//printf("i = %d\n", i);
-		speed[i] = 0.0;
-		//printf("speed[%d] = %f\n", i, speed[i]);
-		for (int j = 0; j < SENSOR_NUMBER; j++){
-			//printf("j = %d\n", j);
-			speed[i] += khepera3_matrix[j][i] * (1.0 - (sensors_value[j] / range));
-			//printf("speed[%d] = %f\n", i, speed[i]);
-		}
-		//printf("works until here\n");
-		speed[i] = BOUND(speed[i], -MAX_SPEED, MAX_SPEED);
-	}
-	//wb_differential_wheels_set_speed(speed[0],speed[1]);
-	set_wheels_speed(speed[0],speed[1]);
-}
-
 void obstacle_avoidance_k4(){
 	//if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
 	//IR sensors on K4 are respectively : {back_left, left, front_left, front, front_right, right, back_right, back}
@@ -434,114 +382,19 @@ void obstacle_avoidance_k4(){
 		return;
 	}
 
-	//adjust the speed to avoid the obstacle
-	//double speed_offset = 0.2 * (MAX_SPEED - 0.03 * wb_distance_sensor_get_value(infrared_sensors[3]));
-    //double speed_delta = 0.03 * wb_distance_sensor_get_value(infrared_sensors[2]) - 0.03 * wb_distance_sensor_get_value(infrared_sensors[4]);
-
-	//wb_differential_wheels_set_speed(speed[0],speed[1]);
-	//set_wheels_speed(BOUND(speed_offset + speed_delta, -MAX_SPEED, MAX_SPEED),BOUND(speed_offset - speed_delta, -MAX_SPEED, MAX_SPEED));
-
-	//get the values of the sensors
-	//printf("sensor values : ");
 	for (int i = 0; i < SENSOR_NUMBER; i++){
 		sensors_value[i] = wb_distance_sensor_get_value(infrared_sensors[i]);
-		//printf("%f ", sensors_value[i]);
 	}
-	//printf("\n");
-	//printf("\n%f ", sensors_value[4]);
 
 	//adjust the speed to avoid the obstacle
 	for (int i = 0; i < 2; i++){
-		//printf("i = %d\n", i);
-		//speed[i] = 0.0;
-		//printf("speed[%d] = %f\n", i, speed[i]);
 		for (int j = 0; j < SENSOR_NUMBER; j++){
-			//printf("j = %d\n", j);
-			//speed[i] += khepera4_matrix[j][i] * sensors_value[j]/20.0;
 			speed[i] += (khepera4_matrix[j][i]*-12) * (1.0 - (sensors_value[j] / range));
-			//printf("speed[%d] = %f\n", i, speed[i]);
 		}
-		//printf("works until here\n");
 		speed[i] = BOUND(speed[i], -MAX_SPEED, MAX_SPEED);
 	}
 	//wb_differential_wheels_set_speed(speed[0],speed[1]);
 	//printf("[%d] speed final = %f %f\n", ID, speed[0], speed[1]);
-	set_wheels_speed(speed[0],speed[1]);
-}
-
-void obstacle_avoidance_k4_cyrill(){ //
-	//if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
-	static double weights [SENSOR_NUMBER] = {0, 0.3, 0.3, 0.05, 0.3, 0.3, 0, 0}; 
-	float speed_delta_l = 0;
-    float speed_delta_r = 0;
-	double sensors_value[SENSOR_NUMBER];
-	double range = 1024;
-	double aggressivity = 5*3;
-	double threshold = 0.146*range;
-	float speed_offset = 0.25*MAX_SPEED - (wb_distance_sensor_get_value(infrared_sensors[3])/range);
-	
-	//if no obstacle,
-	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
-		//printf("no obstacle anymore..XXXXXXX\n");
-		//wb_differential_wheels_set_speed(0,0);
-		set_wheels_speed(0,0);
-		//back to moving
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		return;
-	}
-
-	for (int i = 0; i < SENSOR_NUMBER; i++){
-		sensors_value[i] = wb_distance_sensor_get_value(infrared_sensors[i]);
-		//printf("%f ", sensors_value[i]);
-	}
-
-	
-	for(int i=0; i<(SENSOR_NUMBER/2)-1; i++){
-      if (sensors_value[i]*aggressivity >= threshold){
-        speed_delta_l = speed_delta_l + weights[i]*(sensors_value[i]/range)*aggressivity;
-      }
-    }
-    for(int i=SENSOR_NUMBER/2; i<SENSOR_NUMBER; i++){
-      if (sensors_value[i]*aggressivity >= threshold){
-        speed_delta_r = speed_delta_r + weights[i]*(sensors_value[i]/range)*aggressivity;
-      }
-    }
-
-	/* Speed input for each wheel */
-    float speed_left = 0.03151771*(speed_offset + speed_delta_l - speed_delta_r)*MAX_SPEED;
-    float speed_right = 0.03151771*(speed_offset + speed_delta_r - speed_delta_l)*MAX_SPEED;
-
-    set_wheels_speed(speed_left,speed_right);
-}
-
-void obstacle_avoidance_k4_fa(){
-	double khepera4_matrix[8][2] = {{0,0},{1,0},{2,0},{-2, 2},{0,2},{0,1},{0,0},{0,0}};
-	double sensors_value[SENSOR_NUMBER];
-	//double range = 1024;
-	
-	//if no obstacle,
-	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
-		set_wheels_speed(0,0);
-		//back to moving
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		return;
-	}
-
-	//get the values of the sensors
-	for (int i = 0; i < SENSOR_NUMBER; i++){
-		sensors_value[i] = wb_distance_sensor_get_value(infrared_sensors[i]);
-	}
-
-	//adjust the speed to avoid the obstacle
-	for (int i = 0; i < 2; i++){
-		//speed[i] = 0.0;
-		for (int j = 0; j < SENSOR_NUMBER; j++){
-			speed[i] += (khepera4_matrix[j][i] * sensors_value[j]/20.0);
-		}
-		speed[i] = BOUND(speed[i], -MAX_SPEED, MAX_SPEED);
-	}
 	set_wheels_speed(speed[0],speed[1]);
 }
 
