@@ -19,7 +19,7 @@
 #include <webots/emitter.h>
 #include <webots/supervisor.h>
 #include <webots/robot.h>
-#include "../controller_STE_clean/Message.h"
+#include "../controller_STE_multi-robot/Message.h"
 
 #define MAX_NB_ROBOTS   3
 #define STEP_SIZE       64
@@ -201,7 +201,7 @@ int main(void){
             // if message was addressed to supervisor
             if(msg.receiver_ID == 0){
                 //terminate ?
-                if((msg.position[0] == -1) && (msg.position[1] == -1)){
+                if((msg.position.x == -1) && (msg.position.y == -1)){
                     //eliminate the robot that finished and its target indicator
                     double robot_position[3] = {-10,-10,0};
                     wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("n",msg.sender_ID)),"translation"), robot_position);
@@ -214,8 +214,9 @@ int main(void){
                         break;
                 }else{
                     // move the target point for each robot
-                    if(VERBOSE) printf("received position : %f %f for ID [%d]\n", msg.position[0] , msg.position[1], msg.sender_ID);
-                    wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("goal_",msg.sender_ID)),"translation"), msg.position);
+                    if(VERBOSE) printf("received position : %f %f for ID [%d]\n", msg.position.x , msg.position.y, msg.sender_ID);
+                    double robot_goal[3] = {msg.position.x, msg.position.y, 0.0};
+                    wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("goal_",msg.sender_ID)),"translation"), robot_goal);
                 }
             }
             wb_receiver_next_packet(receiver[0]);

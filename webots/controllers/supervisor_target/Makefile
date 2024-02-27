@@ -45,9 +45,8 @@
 ###-----------------------------------------------------------------------------
 
 ### Do not modify: this includes Webots global Makefile.include
-CXX_SOURCES = ../controller_STE_clean/Message.cpp supervisor_target.cpp
+CXX_SOURCES = ../controller_STE_multi-robot/Message.cpp ../controller_STE_multi-robot/Position.cpp supervisor_target.cpp
 
-WEBOTS_HOME = /home/wjin/Softwares/webots-R2021b/webots
 WK4T_LIB = -lk4_webots
 
 USE_C_API = true
