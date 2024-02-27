@@ -721,7 +721,7 @@ void random_planning(){
 		goal_position.heading = 0;
         goal_position.x = (((double)rand() / (double)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;;
         goal_position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
-    } while(goal_position.is_in_obstacle_list(obstacles, nbr_obs));
+    } while(goal_position.is_in_obstacle_list(obstacles, nbr_obs)!=-1);
 
 }
 
