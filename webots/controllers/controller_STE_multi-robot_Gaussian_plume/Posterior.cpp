@@ -1,4 +1,4 @@
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <algorithm>
 #include <iterator>
 #include <fstream>
@@ -297,7 +297,7 @@ void Posterior::process(){
 	// }
 	// printf("\n");
 	//log
-	//const char* str = "/home/wjin/Workspace/continuous_STE/Results/pdf.csv";
+	//const char* str = "/home/durancea/plume_model_learning/Results/pdf.csv";
 	//log_pdf(str, 'a');
 	// const char* str2 = "/data/FaezehRahbar/Projects/Data-driven_plume_model/Results/pdf_marginal.csv";
 	// log_marginal_pdf(str2, 'a');

@@ -3,9 +3,9 @@
 now=$(date +"%T")
 echo "Start time : $now"
 
-webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
+webots="/usr/local/bin/webots"
 webots_folder="../webots"
-map_nbr_filename="/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt"
+map_nbr_filename="/home/durancea/plume_model_learning/webots/data/map_nbr.txt"
 
 
 #{0..8}

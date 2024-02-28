@@ -49,7 +49,7 @@
 C_SOURCES = vector3d.c odor_filter.c 
 CXX_SOURCES = Message.cpp PlumeModel.cpp Posterior.cpp webots_functions.cpp controller_STE_clean.cpp
 
-WEBOTS_HOME = /home/wjin/Softwares/webots-R2021b/webots
+WEBOTS_HOME = /usr/local/bin/webots
 WK4T_LIB = -lk4_webots
 
 USE_C_API = true

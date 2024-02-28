@@ -3,6 +3,7 @@
 #include "GasDispersionMap.h"
 #include <fstream>
 
+
 GasDispersionMap::GasDispersionMap(int index_sx, int index_sy){
 	idx_sx = index_sx;
 	idx_sy = index_sy;

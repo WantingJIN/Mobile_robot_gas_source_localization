@@ -1,0 +1,92 @@
+export SHELL:=/bin/bash
+export SESSION_MANAGER:=local/disalpc43:@/tmp/.ICE-unix/1782,unix/disalpc43:/tmp/.ICE-unix/1782
+export QT_ACCESSIBILITY:=1
+export COLORTERM:=truecolor
+export XDG_CONFIG_DIRS:=/etc/xdg/xdg-ubuntu:/etc/xdg
+export M4:=m4
+export XDG_MENU_PREFIX:=gnome-
+export GNOME_DESKTOP_SESSION_ID:=this-is-deprecated
+export WEBOTS_HOME:=/usr/local/webots
+export OECORE_SDK_VERSION:=1.8
+export PKG_CONFIG_PATH:=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi/usr/lib/pkgconfig
+export GDB:=arm-poky-linux-gnueabi-gdb
+export CCACHE_PATH:=/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin:/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi:/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin:/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi:
+export SDKTARGETSYSROOT:=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export LC_ADDRESS:=de_CH.UTF-8
+export GNOME_SHELL_SESSION_MODE:=ubuntu
+export LC_NAME:=de_CH.UTF-8
+export SSH_AUTH_SOCK:=/run/user/172165/keyring/ssh
+export CPP:=arm-poky-linux-gnueabi-gcc -E  -march=armv7-a -mfloat-abi=hard -mfpu=neon -mtune=cortex-a8 --sysroot=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export TARGET_PREFIX:=arm-poky-linux-gnueabi-
+export XMODIFIERS:=@im=ibus
+export DESKTOP_SESSION:=ubuntu
+export LC_MONETARY:=de_CH.UTF-8
+export SSH_AGENT_PID:=1747
+export GTK_MODULES:=gail:atk-bridge
+export DBUS_STARTER_BUS_TYPE:=session
+export PWD:=/home/durancea/plume_model_learning/Khepera/STE_K4_client
+export XDG_SESSION_DESKTOP:=ubuntu
+export LOGNAME:=durancea
+export XDG_SESSION_TYPE:=x11
+export GPG_AGENT_INFO:=/run/user/172165/gnupg/S.gpg-agent:0:1
+export CXX:=arm-poky-linux-gnueabi-g++  -march=armv7-a -mfloat-abi=hard -mfpu=neon -mtune=cortex-a8 --sysroot=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export CXXFLAGS:= -O2 -pipe -g -feliminate-unused-debug-types
+export XAUTHORITY:=/run/user/172165/gdm/Xauthority
+export OECORE_NATIVE_SYSROOT:=/opt/poky/1.8/sysroots/i686-pokysdk-linux
+export WINDOWPATH:=2
+export LDFLAGS:=-Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+export HOME:=/home/durancea
+export USERNAME:=durancea
+export IM_CONFIG_PHASE:=1
+export LC_PAPER:=de_CH.UTF-8
+export LANG:=en_US.UTF-8
+export LS_COLORS:=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+export XDG_CURRENT_DESKTOP:=ubuntu:GNOME
+export VTE_VERSION:=6003
+export KCFLAGS:=--sysroot=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export OECORE_TARGET_SYSROOT:=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export GNOME_TERMINAL_SCREEN:=/org/gnome/Terminal/screen/4eecf972_876a_44b3_afea_6f690d7c270b
+export CPPFLAGS:=
+export LD:=arm-poky-linux-gnueabi-ld  --sysroot=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export INVOCATION_ID:=851bbd08e3f54fa6b8c635b5fa07aee8
+export MANAGERPID:=1319
+export K4_ROOT:=/home/durancea/khepera4
+export LESSCLOSE:=/usr/bin/lesspipe %s %s
+export XDG_SESSION_CLASS:=user
+export LC_IDENTIFICATION:=de_CH.UTF-8
+export TERM:=xterm-256color
+export PYTHONHOME:=/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr
+export LESSOPEN:=| /usr/bin/lesspipe %s
+export USER:=durancea
+export GNOME_TERMINAL_SERVICE:=:1.342
+export AR:=arm-poky-linux-gnueabi-ar
+export AS:=arm-poky-linux-gnueabi-as 
+export ARCH:=arm
+export DISPLAY:=:1
+export SHLVL:=1
+export NM:=arm-poky-linux-gnueabi-nm
+export LC_TELEPHONE:=de_CH.UTF-8
+export QT_IM_MODULE:=ibus
+export LC_MEASUREMENT:=de_CH.UTF-8
+export DBUS_STARTER_ADDRESS:=unix:path=/run/user/172165/bus,guid=ec4d25d1c894409f762a24a965639e99
+export XDG_RUNTIME_DIR:=/run/user/172165
+export OECORE_DISTRO_VERSION:=1.8
+export PKG_CONFIG_SYSROOT_DIR:=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export OECORE_ACLOCAL_OPTS:=-I /opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/share/aclocal
+export OBJCOPY:=arm-poky-linux-gnueabi-objcopy
+export LC_TIME:=de_CH.UTF-8
+export STRIP:=arm-poky-linux-gnueabi-strip
+export JOURNAL_STREAM:=8:58431
+export XDG_DATA_DIRS:=/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop
+export OBJDUMP:=arm-poky-linux-gnueabi-objdump
+export CONFIG_SITE:=/opt/poky/1.8/site-config-cortexa8hf-vfp-neon-poky-linux-gnueabi
+export PATH:=/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin:/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi:/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin:/opt/poky/1.8/sysroots/i686-pokysdk-linux/usr/bin/arm-poky-linux-gnueabi:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/durancea/khepera4/Scripts:/home/durancea/khepera4/Modules
+export CC:=arm-poky-linux-gnueabi-gcc  -march=armv7-a -mfloat-abi=hard -mfpu=neon -mtune=cortex-a8 --sysroot=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export GDMSESSION:=ubuntu
+export CFLAGS:= -O2 -pipe -g -feliminate-unused-debug-types
+export DBUS_SESSION_BUS_ADDRESS:=unix:path=/run/user/172165/bus,guid=ec4d25d1c894409f762a24a965639e99
+export CROSS_COMPILE:=arm-poky-linux-gnueabi-
+export CONFIGURE_FLAGS:=--target=arm-poky-linux-gnueabi --host=arm-poky-linux-gnueabi --build=i686-linux --with-libtool-sysroot=/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi
+export RANLIB:=arm-poky-linux-gnueabi-ranlib
+export LC_NUMERIC:=de_CH.UTF-8
+export _:=/usr/bin/env

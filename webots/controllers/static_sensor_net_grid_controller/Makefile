@@ -70,7 +70,7 @@
 ### Do not modify: this includes Webots global Makefile.include
 CXX_SOURCES = tinyxml2.cpp SampleBuffer.cpp static_sensor_net_grid_controller.cpp
 
-WEBOTS_HOME = /usr/local/webots
+WEBOTS_HOME = /usr/local/bin/webots
 WK4T_LIB = -lk4_webots
 
 USE_C_API = true

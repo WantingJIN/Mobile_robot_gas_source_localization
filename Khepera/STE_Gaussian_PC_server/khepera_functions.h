@@ -10,7 +10,7 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
-//#include <Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 
 // extern "C" {
 //     #include "khepera4.h"

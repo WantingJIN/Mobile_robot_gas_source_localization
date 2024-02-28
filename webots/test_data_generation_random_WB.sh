@@ -1,6 +1,6 @@
 #!/bin/bash
 
-webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
+webots="/usr/local/bin/webots"
 wb_folder=`pwd`
 wind_map_folder=$wb_folder/../openfoam/test_maps
 cd $wind_map_folder

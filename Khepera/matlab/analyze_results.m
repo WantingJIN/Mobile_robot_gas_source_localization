@@ -4,7 +4,7 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Khepera/Results_0818/stop_sense_kld';
+general_folder = '/home/durancea/plume_model_learning/Khepera/Results_0818/stop_sense_kld';
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103', 'pc', 'k4'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));

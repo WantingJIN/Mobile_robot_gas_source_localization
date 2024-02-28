@@ -1,12 +1,15 @@
+% Compares the GSL performance for different sampling periods
+
 clear all; clc; %close all;
 
 %% dispatch
 % the general folder
 general_folder = '../Results/0804_test_continous_sampling_lawnmower';
 folder_list = dir(general_folder);
-folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
+folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
+
 
 for i=1:exp_number
     % the name of the folder

@@ -3,7 +3,7 @@ clear all; close all; clc;
 work_station = "Desktop";
 % work_station = "Laptop"
 if work_station == "Desktop"
-    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
+    root_path = '/home/durancea/plume_model_learning/Khepera';
 else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end

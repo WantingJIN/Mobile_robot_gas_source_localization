@@ -14,7 +14,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <cmath>
 #include <cstdlib> // for getenv
 #include "PlumeModel.h"
@@ -64,6 +64,7 @@ typedef enum planningStrategy{
 typedef enum gasFeature{
 	CONCENTRATION = 0,
 	GASHIT = 1,
+	RELATIVE_CONCENTRATION = 2,
 }eGasFeature;
 
 typedef enum visitedList{
@@ -105,6 +106,9 @@ struct simulation_parameters{
 	eInfoFeature infoFeature;
 	int sampling_period;
 	float cluster_entropy_ratio;
+	float vel_factor;
+	float wind_factor;
+	float sampling_dist_thresh;
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -165,8 +169,13 @@ void state_obstacle_avoidance();
 void informative_path_planning_based_on_variance();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
+//old
 double likelihood(struct history history, double *parameters, PlumeModel *model);
-double likelihood_gas_hit(struct history &history, double *parameters, PlumeModel *model, double mean, double stddev);
+//new likelihood with precomputed gas maps
+double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
+//new likelihood for relative concentrations
+double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();
@@ -182,5 +191,6 @@ void do_odometry();
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
 void calculate_history_distribution(struct history history, double &mean, double &stddev);
+
 
 #endif

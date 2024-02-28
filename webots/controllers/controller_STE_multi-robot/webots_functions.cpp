@@ -125,6 +125,10 @@ void init(){
 	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
     sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+
+	// to save some debugging console input
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
 	//create / reinitialize log files (might be unnecessary)
 	measurements_logfile = fopen(measurements_logfile_name, "w");
@@ -146,6 +150,12 @@ void init(){
 	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
 	fclose(gas_hit_variance_map_logfile);
 	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
+	fclose(experiment_time_logfile);
+	visited_list_logfile = fopen(visited_list_logfile_name, "w");
+	fclose(visited_list_logfile);
+
+	// text file for storing debugging info
+	console_logfile = fopen(console_logfile_name, "w");
 	fclose(experiment_time_logfile);
 
     // get the configuration
@@ -196,13 +206,6 @@ void init(){
 		if(ok) printf("scenario : %d\n", simulation_parameters.scenario);
 		fclose(sim_param_file);
 	}
-
-	if(access("../../data/simulation_parameters/sampling_period.txt", F_OK) != -1 ){
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_period.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.sampling_period);
-		if(ok) printf("sampling_period : %d\n", simulation_parameters.sampling_period);
-		fclose(sim_param_file);
-	}
 	if(access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1 ){
 		sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
 		ok = fscanf(sim_param_file, "%f", &simulation_parameters.cluster_entropy_ratio);
@@ -215,6 +218,42 @@ void init(){
 		if(ok) printf("scenario : %d\n", simulation_parameters.map_nbr);
 		fclose(sim_param_file);
 	}
+		if(access("../../data/simulation_parameters/vel_factor.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/vel_factor.txt", "r");
+		ok = fscanf(sim_param_file, "%f", &simulation_parameters.vel_factor);
+		if(ok) printf("vel param : %f\n", simulation_parameters.vel_factor);
+		fclose(sim_param_file);
+	}
+	if(access("../../data/simulation_parameters/sampling_period.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/sampling_period.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &simulation_parameters.sampling_period);
+		if(ok) printf("sampling_period : %d\n", simulation_parameters.sampling_period);
+		fclose(sim_param_file);
+		// Test adaptive sampling period
+		//simulation_parameters.sampling_period = int(100-167*simulation_parameters.vel_factor);
+		//printf("sampling period modified: %d\n", simulation_parameters.sampling_period);
+	}
+	if(access("../../data/simulation_parameters/wind_factor.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/wind_factor.txt", "r");
+		ok = fscanf(sim_param_file, "%f", &simulation_parameters.wind_factor);
+		if(ok) printf("wind param : %f\n", simulation_parameters.wind_factor);
+		fclose(sim_param_file);
+	}
+	if(access("../../data/simulation_parameters/sampling_dist_thresh.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/simulation_parameters/sampling_dist_thresh.txt", "r");
+		ok = fscanf(sim_param_file, "%f", &simulation_parameters.sampling_dist_thresh);
+		if(ok) printf("wind param : %f\n", simulation_parameters.sampling_dist_thresh);
+		fclose(sim_param_file);
+	}
+	
+	int release_amount = 53;
+	if(access("../../data/plugin_parameters/releaseAmount.txt", F_OK) != -1 ){
+		sim_param_file = fopen("../../data/plugin_parameters/releaseAmount.txt", "r");
+		ok = fscanf(sim_param_file, "%d", &release_amount);
+		if(ok) printf("release rate param : %d\n", release_amount);
+		fclose(sim_param_file);
+	}
+	
 	//write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
@@ -237,6 +276,10 @@ void init(){
 	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
 	fprintf(sim_param_file, "sampling_period %d\n", simulation_parameters.sampling_period);
 	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
+	fprintf(sim_param_file, "vel_factor %f\n", simulation_parameters.vel_factor);
+	fprintf(sim_param_file, "wind_factor %f\n", simulation_parameters.wind_factor);
+	fprintf(sim_param_file, "sampling_dist_thresh %f\n", simulation_parameters.sampling_dist_thresh);
+	fprintf(sim_param_file, "release_amount %d\n", release_amount);
 	fclose(sim_param_file);
 
 	if((ID-100) > simulation_parameters.number_of_robots){
@@ -265,11 +308,11 @@ void odor_read(double *sensor_reading, double &odor_concentration){
         // For the MOX sensor, the sensor properties are modeled as a first-order system
 		if (simulation_parameters.gasSensor == MOX){
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			// double tau_r = 1.3; // time constant for the rise
-			// double tau_d = 2.0; // time constant for the decay
-			// double tau_r = 2.06; // time constant for the rise
-			// double tau_d = 4.53; // time constant for the decay
-			double tau_r = 0.72; // time constant for the rise
+			//double tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
+			//ouble tau_d = 19.74; // time constant for the decay
+			//double tau_r = 2.06; // time constant for the rise (slow sensor)
+			//double tau_d = 4.53; // time constant for the decay
+			double tau_r = 0.72; // time constant for the rise (our default sensor)
 			double tau_d = 0.92; // time constant for the decay
 			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n] 
 			// where wc is the cut-off frequency and Ts is the sampling period
@@ -300,7 +343,13 @@ void odor_read(double *sensor_reading, double &odor_concentration){
 			double mean = 0.0;
 			double variance = 10000;
 			double sensor_noise = generateGaussianNoise(mean, variance);
-			*sensor_reading += sensor_noise;
+			// gaussian noise
+			//*sensor_reading += sensor_noise;
+			// constant error
+			//*sensor_reading += 200.0;
+			//scaling error
+			*sensor_reading *= 2.0;
+
 			if (*sensor_reading < 0)
 				*sensor_reading = 0;
 		}

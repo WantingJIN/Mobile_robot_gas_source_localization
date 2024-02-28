@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <iostream>
-//#include <Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 
 extern "C" {
     #include "khepera4.h"

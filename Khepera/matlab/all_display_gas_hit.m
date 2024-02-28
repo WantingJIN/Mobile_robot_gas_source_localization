@@ -1,7 +1,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/Experimental_Results/Results_0727');
+folder_list = dir('/home/durancea/plume_model_learning/Results/Experimental_Results/Results_0727');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -68,7 +68,7 @@ for i=1:exp_number
     % obstacles
     obstacles_x=[];
     obstacles_y=[];
-    obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/' num2str(5) '_obstacles.txt'];
+    obst_file = ['/home/durancea/plume_model_learning/Khepera/Data/Obstacle_lists/' num2str(5) '_obstacles.txt'];
     obst_fileID = fopen(obst_file);
     C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
     for k=1:length(C{1,1})

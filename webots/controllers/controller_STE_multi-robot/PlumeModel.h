@@ -21,7 +21,7 @@
 #include <cmath>
 #include "CellMeasurements.h"
 #include "GasDispersionMap.h"	
-//#include <Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 
 //#include "pyhelper.hpp"
 using namespace std;
@@ -73,6 +73,8 @@ public:
 	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
+	//read from precomputed maps
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg)=0;
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
 	
@@ -211,9 +213,13 @@ public:
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 
+
 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
+
+	//read from precomputed maps
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 

@@ -1,4 +1,4 @@
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 #include <algorithm>
 #include <iterator>
 #include <fstream>
@@ -175,7 +175,7 @@ int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_ele
 	}
 	//error detection
 	if(index < 0 || index >= a_nbr_element){ 
-		printf("ERROR if indices_to_index : index = %d\n", index);
+		printf("ERROR in indices_to_index : index = %d\n", index);
 		index = 0;
 	}
 	return index;
@@ -420,28 +420,36 @@ void Posterior::MCMC_evaluation(struct history history){
 void Posterior::exhaustive_evaluation(struct history &history){
 	int i=0;
 	double sample[nbr_dimension];
+	printf("nbr_dimension %d\n ", nbr_dimension);
+	printf("nbr_element %d\n ", nbr_element);
     double mean, stddev;
-	if (simulation_parameters.gasFeature == GASHIT){
+	if (simulation_parameters.gasFeature == GASHIT || RELATIVE_CONCENTRATION){
 		calculate_history_distribution(history, mean, stddev);
 	}
 	//for each element of the pdf
 	for(i = 0; i < nbr_element; i++){
 		//convert index 'i' to set of parameter values 'sample'
-		index_to_param_values(i, sample);
-		//calculate the posterior of 'sample'
-		// check the gas feature
+		index_to_param_values(i, sample); //returns source nb i sx qnd sy coordinates in the map
+
+		//calculate the posterior distribution of source term param 'sample'
+		//check the gas feature selected
 		if (simulation_parameters.gasFeature == CONCENTRATION){
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);
+			//pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); //with precomputed maps
+		}
+		if (simulation_parameters.gasFeature == RELATIVE_CONCENTRATION){
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model, mean, stddev); 
 		}
 		if (simulation_parameters.gasFeature == GASHIT){
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, model, mean, stddev);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev); 
 		}
-		//printf("%f, ", pdf[i]);
-		//add the new value to the sum
+		// add the new value to the sum
 		sum += pdf[i];
 	}
-	//printf("\n");
 }
+
+
+
 
 //relative entropy calculation between one posterior pdf and another P
 double Posterior::Kullback_Leibler_divergence(Posterior P){

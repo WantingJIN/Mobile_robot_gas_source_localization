@@ -4,7 +4,7 @@ wb_folder=`pwd`
 wind_map_folder=$wb_folder/../openfoam/training_random/training_random_wind0.75_angle0/
 results_map=$wb_folder/../Results/training_random/
 cd $wind_map_folder
-webots="/home/wjin/Softwares/webots-R2021b/webots/webots"
+webots="/usr/local/bin/webots"
 
 mkdir -p $wb_folder/log
 # for every wind map

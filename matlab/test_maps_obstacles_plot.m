@@ -4,24 +4,17 @@ clear all; close all; clc;
 
 folder_path = '../openfoam/test_maps';
 figure(1)
-[ha, pos] = tight_subplot(2,3,[.03 .03],[.03 .03],[.05 .02])
-cmap = [ repmat([255,255,255]./255,0,1)               % < 0
-    repmat([0 0 0]./255,33,1)          % 0 - 0.33
-%    repmat([255, 204, 0]./255,100,1)          % 0.33 - 1
-%    repmat([153, 102, 255]./255,250,1)         % 1 - 2.5
-%    repmat([102, 255, 51]./255,500,1)            % 2.5 - 5
-%    repmat([255, 0, 255]./255,1100,1)         % 5 - 11
-%    repmat([0 112 255]./255,2300,1)          % 11 - 23
-%    repmat([255 255 0]./255,3500,1)          % 23 - 35
-%    repmat([255 170 0]./255,5000,1)          % 35 - 50
-   repmat([255,255,255]./255,5001,1)            % > 50
+[ha, pos] = tight_subplot(4,3,[.03 .03],[.03 .03],[.05 .02]);
+cmap = [ repmat([255,255,255]./255,0,1)      % < 0
+         repmat([0 0 0]./255,33,1)           % 0 - 0.33
+         repmat([255,255,255]./255,5001,1)   % > 50
 ];
-map_nbr = [0 1 2 3 5 10];
+
+map_nbr = [0 1 2 3 4 5 6 7 8 9 10];
 for i=1:size(map_nbr,2)
     folder_name = ['../openfoam/test_maps/map' num2str(map_nbr(i)) '/map' num2str(map_nbr(i)) '_wind0.75/'];
     obstacles = load([folder_name num2str(map_nbr(i)) '_obstacle.mat']);
     p = 1:size(map_nbr,2);
-    %subplot(1,3,p(i));
     axes(ha(i));
     set(gcf,'position',[600,600,1000,250]);
     imagesc(obstacles.X2(1,:), obstacles.Y2(:,1), obstacles.obstacle_map);
@@ -32,10 +25,8 @@ for i=1:size(map_nbr,2)
     set(gca, 'YDir','normal')
     ax = gca;
     colormap(cmap)
-    %title([num2str(p(i))]);
-    %ax.TitleFontSizeMultiplier =2
 end
-%set(ha(1:8),'XTickLabel',''); set(ha(1:8),'YTickLabel','')
+
 saveas(gcf,[folder_path '/' 'physical_test_map_total' '.png']);
 % %%
 % for i=1:size(map_nbr,2)
