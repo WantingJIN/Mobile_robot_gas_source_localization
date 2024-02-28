@@ -881,7 +881,7 @@ void lawnmower_planning(){
 }
 
 void calculate_information_gain(){
-	if (simulation_parameters.gasFeature == CONCENTRATION){
+	//if (simulation_parameters.gasFeature == CONCENTRATION){
 		if (simulation_parameters.infoFeature == VARIANCE){
 			plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
 		} else if (simulation_parameters.infoFeature == MEAN){
@@ -893,6 +893,7 @@ void calculate_information_gain(){
 			}
 		}
 		log_gas_information_map();
+	//}
 	//gas hit var feature does not work well
 	/*
 	} else if (simulation_parameters.gasFeature == GASHIT){
@@ -1044,7 +1045,7 @@ void informative_clustering_planning(){
 			}
 		}
 		if (min_dist_to_robot ==1000) {
-			informative_max_variance_point_planning();
+			informative_point_planning();
 			return;
 		} else {
 			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
