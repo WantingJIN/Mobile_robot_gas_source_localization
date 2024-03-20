@@ -4,11 +4,9 @@ dataTable = table();
 
 %% load the data
 % the general folder
-% general_folder_list = ["/home/durancea/plume_model_learning/Results/ICRA2024/0816_informative_KLD_stop_sense_MOX",...
-%     "/home/durancea/plume_model_learning/Results/ICRA2024/0816_informative_KLD_continunous_MOX",...
-%     "/home/durancea/plume_model_learning/Results/ICRA2024/0816_informative_KLD_visit_sense_MOX"];
-general_folder_list = ["/home/durancea/plume_model_learning/Khepera/Results_0818/stop_sense_kld",...
-    "/home/durancea/plume_model_learning/Khepera/Results_0818/continuous_clustering_ratio10"];
+general_folder_list = ["/home/wjin/Workspace/continuous_STE/Khepera/ICRA_2024_Results/continuous_clustering_ratio10",...
+    "/home/wjin/Workspace/continuous_STE/Khepera/ICRA_2024_Results/stop_sense_kld"];
+
 
 
 num_comp = size(general_folder_list,2);
@@ -20,7 +18,7 @@ for i = 1:num_comp
 end
 
 %% box plot of comparing the method
-f = figure('Position',[-1561         656         1715         415]);
+f = figure('Position',[-1561         656         1815         615]);
 [ha, pos] = tight_subplot(1,5,[.2 .04],[.15 .1],[.03 .01])
 %sgtitle("Physical Experiments", 'FontSize',20)
 mapOrder = [2 , 5, 10];
@@ -40,7 +38,7 @@ ax.XGrid = 'on';
 ax.YGrid = 'off';
 ylim([-1,10])
 %ylabel('(m)')
-title('Error in x (m)')
+title('Error in x [m]')
 legend(["KLD-stop-sense","cluster-motion-sense"],'FontSize',8)
 xlabel('Map id');
 %subplot(1,5,2)
@@ -55,7 +53,7 @@ ax.XGrid = 'on';
 ax.YGrid = 'off';
 ylim([-2,2])
 %ylabel('(m)')
-title('Error in y (m)')
+title('Error in y [m]')
 legend(["KLD-stop-sense","cluster-motion-sense"],'FontSize',8)
 xlabel('Map id');
 %subplot(1,5,3)
@@ -83,7 +81,7 @@ ax = gca;
 ax.XGrid = 'on';
 ax.YGrid = 'off';
 %ylabel('(s)')
-title('Experiment time(s)')
+title('Localization time [s]')
 legend(["KLD-stop-sense","cluster-motion-sense"],'FontSize',8)
 xlabel('Map id');
 
@@ -98,7 +96,7 @@ ax = gca;
 ax.XGrid = 'on';
 ax.YGrid = 'off';
 %ylabel('(m)')
-title('Trajectory length (m)')
+title('Trajectory length [m]')
 legend(["KLD-stop-sense","cluster-motion-sense"],'FontSize',8)
 xlabel('Map id');
 
