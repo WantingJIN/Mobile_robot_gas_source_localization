@@ -438,6 +438,7 @@ void Posterior::exhaustive_evaluation(struct history &history){
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); //with precomputed maps
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_CONCENTRATION){
+			
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model, mean, stddev); 
 		}
 		if (simulation_parameters.gasFeature == GASHIT){

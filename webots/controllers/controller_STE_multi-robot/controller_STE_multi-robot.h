@@ -190,6 +190,7 @@ void do_odometry();
 
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
+vector<double> calculate_measurements_list_gaussian_CDF(vector<double> data_list, double mean, double stddev);
 void calculate_history_distribution(struct history history, double &mean, double &stddev);
 
 

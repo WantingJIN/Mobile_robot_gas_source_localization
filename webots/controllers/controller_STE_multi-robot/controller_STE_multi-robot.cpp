@@ -526,6 +526,13 @@ double calculate_measurement_gaussian_CDF(double data, double mean, double stdde
 	return cdf;
 }
 
+vector<double> calculate_measurements_list_gaussian_CDF(vector<double> data_list, double mean, double stddev){
+	vector<double> rel_meas_list;
+	for (int i = 0; i < data_list.size(); i++){
+		rel_meas_list.push_back(calculate_measurement_gaussian_CDF(data_list[i], mean, stddev));
+	}
+	return rel_meas_list;
+}
 
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev){
 	double sum_tmp = 0; 
@@ -1746,7 +1753,6 @@ void state_moving(){
 		}
 
 		//move
-		fprintf(console_logfile, "check i ");
 		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
 			fprintf(console_logfile,"my position (%f, %f) - my i goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
@@ -1760,15 +1766,9 @@ void state_moving(){
 		// 	return;
 		// }
 		set_wheels_speed(speed[0],speed[1]);
-		//fprintf(console_logfile, "speeds %f, %f \n", speed[0], speed[1]);
-		//log the position
-		//log_position();
+	
 	}else{
-		//fprintf(console_logfile, "goal reached \n");
-
-		//if(i == path.end()){
-		//	fprintf(console_logfile, "path end goal reached \n");
-		//}
+		
 
 		set_wheels_speed(0,0);
 		sampleBuffer.reset_all();
