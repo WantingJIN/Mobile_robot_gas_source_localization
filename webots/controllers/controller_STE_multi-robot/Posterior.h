@@ -59,6 +59,7 @@ class Posterior{
     //log the posterior pdf
     void log_pdf(const char * file_name, char writing_mode);
     void log_marginal_pdf(const char * file_name, char writing_mode);
+    void log_relative_history_meas(const char * file_name, const char writing_mode, const vector<double> rel_history_meas);
 
 }; 
 

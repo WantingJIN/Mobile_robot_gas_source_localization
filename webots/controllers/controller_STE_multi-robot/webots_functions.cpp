@@ -126,37 +126,8 @@ void init(){
     sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
-
-	// to save some debugging console input
+	// // to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
-
-	//create / reinitialize log files (might be unnecessary)
-	measurements_logfile = fopen(measurements_logfile_name, "w");
-    fclose(measurements_logfile);
-    goalposition_logfile = fopen(goalposition_logfile_name, "w");
-    fclose(goalposition_logfile);
-    expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "w");
-    fclose(expected_a_posteriori_logfile);
-    max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "w");
-    fclose(max_a_posteriori_logfile);
-    entropy_logfile = fopen(entropy_logfile_name, "w");
-    fclose(entropy_logfile);
-    trajectory_logfile = fopen(trajectory_logfile_name, "w");
-    fclose(trajectory_logfile);
-	gas_concentration_map_logfile = fopen(gas_concentration_map_logfile_name, "w");
-	fclose(gas_concentration_map_logfile);
-	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "w");
-	fclose(gas_information_map_logfile);
-	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
-	fclose(gas_hit_variance_map_logfile);
-	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
-	fclose(experiment_time_logfile);
-	visited_list_logfile = fopen(visited_list_logfile_name, "w");
-	fclose(visited_list_logfile);
-
-	// text file for storing debugging info
-	console_logfile = fopen(console_logfile_name, "w");
-	fclose(experiment_time_logfile);
 
     // get the configuration
     //default values for the simulation parameters
@@ -164,9 +135,8 @@ void init(){
 	//5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
 	//11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
 	//index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.      11.                   12.         13.           14.       15.  16.
-    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
+    simulation_parameters = (struct simulation_parameters) {30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, INFORMATIVE_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
     
-
 	//read simulation parameters
 	FILE* sim_param_file;
 	int ok = 0;
@@ -246,7 +216,7 @@ void init(){
 		fclose(sim_param_file);
 	}
 	
-	int release_amount = 53;
+	int release_amount;
 	if(access("../../data/plugin_parameters/releaseAmount.txt", F_OK) != -1 ){
 		sim_param_file = fopen("../../data/plugin_parameters/releaseAmount.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &release_amount);

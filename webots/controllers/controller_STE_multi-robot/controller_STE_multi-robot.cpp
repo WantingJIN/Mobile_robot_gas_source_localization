@@ -352,7 +352,7 @@ void log_history(){
     //FILE * measurement_history_logfile;
     measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
-		printf("history.measurement[%d] = %d\n", i, history.gas_hit_event[i]);
+		//printf("history.measurement[%d] = %d\n", i, history.gas_hit_event[i]);
 		fprintf(measurement_history_logfile,"%d, %f, %d\n", i, history.measurement[i], history.gas_hit_event[i]);
 	}
     fclose(measurement_history_logfile);
@@ -426,7 +426,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev){ 
+double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model){ 
 	float sigma = 0.15;
 	double sum_tmp = 0;
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
@@ -458,14 +458,8 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
 			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
 	}
-	else model_mean = mean;
 	for (int i = 0; i < history.size; i++){
-		if (stddev == 0){
-			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
-		}
-		else{
-			rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-		}
+		rel_hist_val = rel_history_list[i];
 		if (model_stddev == 0){
 			rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01);
 		}
@@ -526,12 +520,11 @@ double calculate_measurement_gaussian_CDF(double data, double mean, double stdde
 	return cdf;
 }
 
-vector<double> calculate_measurements_list_gaussian_CDF(vector<double> data_list, double mean, double stddev){
-	vector<double> rel_meas_list;
+void calculate_measurements_list_gaussian_CDF(vector<double>& rel_meas_list, vector<double> data_list, double mean, double stddev){
 	for (int i = 0; i < data_list.size(); i++){
 		rel_meas_list.push_back(calculate_measurement_gaussian_CDF(data_list[i], mean, stddev));
 	}
-	return rel_meas_list;
+
 }
 
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev){

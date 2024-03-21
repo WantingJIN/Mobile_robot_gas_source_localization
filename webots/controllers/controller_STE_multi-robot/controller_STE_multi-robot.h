@@ -174,7 +174,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 //new likelihood with precomputed gas maps
 double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
 //new likelihood for relative concentrations
-double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
+double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
@@ -190,7 +190,7 @@ void do_odometry();
 
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
-vector<double> calculate_measurements_list_gaussian_CDF(vector<double> data_list, double mean, double stddev);
+void calculate_measurements_list_gaussian_CDF(vector<double>& rel_meas_list, vector<double> data_list, double mean, double stddev);
 void calculate_history_distribution(struct history history, double &mean, double &stddev);
 
 

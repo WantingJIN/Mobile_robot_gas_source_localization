@@ -420,11 +420,18 @@ void Posterior::MCMC_evaluation(struct history history){
 void Posterior::exhaustive_evaluation(struct history &history){
 	int i=0;
 	double sample[nbr_dimension];
+	vector<double> relative_history_meas;
 	printf("nbr_dimension %d\n ", nbr_dimension);
 	printf("nbr_element %d\n ", nbr_element);
     double mean, stddev;
 	if (simulation_parameters.gasFeature == GASHIT || RELATIVE_CONCENTRATION){
 		calculate_history_distribution(history, mean, stddev);
+		if (stddev == 0){
+			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, 0.01);
+		} else {
+			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, stddev);
+		}
+		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}
 	//for each element of the pdf
 	for(i = 0; i < nbr_element; i++){
@@ -439,7 +446,7 @@ void Posterior::exhaustive_evaluation(struct history &history){
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_CONCENTRATION){
 			
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model, mean, stddev); 
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model); 
 		}
 		if (simulation_parameters.gasFeature == GASHIT){
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev); 
@@ -534,6 +541,18 @@ void Posterior::log_pdf(const char * file_name, char writing_mode){
 	fprintf(posterior_pdf_3D, "%.9f\n", pdf[nbr_element-1]);
 
 	fclose(posterior_pdf_3D);
+}
+
+void Posterior::log_relative_history_meas(const char * file_name, const char writing_mode, const vector<double> rel_history_meas){
+	FILE * log_relative_history_meas_file = fopen(file_name, &writing_mode);
+
+	for(int i = 0; i < rel_history_meas.size() - 1; i++){
+		fprintf(log_relative_history_meas_file, "%.9f, ", rel_history_meas[i]);
+	}
+	fprintf(log_relative_history_meas_file, "%.9f\n", rel_history_meas[rel_history_meas.size() - 1]);
+
+
+	fclose(log_relative_history_meas_file);
 }
 
 void Posterior::log_marginal_pdf(const char * file_name, char writing_mode){
