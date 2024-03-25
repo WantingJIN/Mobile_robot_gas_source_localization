@@ -1,7 +1,8 @@
 % Plots robot trajectory with collected measurements, posterior PDF map and
 % navigation planning results
+clc; clear all
 
-general_folder='../Results/rel_con_source_boundary/0';
+general_folder='../Results/rel_con_PID_source_boundary_sigma_0.22/10';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;

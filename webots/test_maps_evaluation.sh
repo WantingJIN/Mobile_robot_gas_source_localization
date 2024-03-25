@@ -3,7 +3,7 @@
 now=$(date +"%T")
 echo "Start time : $now"
 
-webots="/usr/local/bin/webots"
+webots=$WEBOTS_HOME/webots
 webots_folder="../webots"
 map_nbr_filename="../webots/data/map_nbr.txt"
 source_pos_filename="../webots/data/source_pos.txt"
@@ -14,7 +14,7 @@ rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
 s=0
 echo $s > $MCMC_exhaustive_filename
 
-nbr_source_pos=10
+nbr_source_pos=7
 source_pos_x=12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
@@ -39,13 +39,13 @@ echo $vel_factor_filename
 # release amount
 for r in 53 #30 53 80 120 200
 	do
-		for m in 0 1 3 5 10 #0 1  
+		for m in 1 10 #0 1  
 		do
 			echo $r > $rr_filename
 			echo $m > $map_nbr_filename
 			# wind map and obstacle list
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind1/"$m".txt data/plugin_parameters/wind_map.txt
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind1/"$m"_obstacles.txt data/obstacle_list.txt
+			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
+			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
 			cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 			#for k in {1..3} 1

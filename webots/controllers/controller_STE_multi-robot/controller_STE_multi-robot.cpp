@@ -427,7 +427,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 
 // Likelihood for relative concentration with precomputed gas maps
 double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model){ 
-	float sigma = 0.15;
+	float sigma = 0.22;
 	double sum_tmp = 0;
 	if(sampleBuffer.average_wind_intensity == 0) printf("NO WIND, BYE BYE!\n");
 
