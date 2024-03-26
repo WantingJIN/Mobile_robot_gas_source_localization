@@ -154,6 +154,7 @@ extern struct FSM FSM;
 struct history
 {
 	int size;
+	vector<int> FSM_iter;
 	// Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
 	// double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
 	vector<Position> position;

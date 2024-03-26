@@ -375,7 +375,7 @@ void log_history()
 	for (int i = 0; i < history.size; i++)
 	{
 		// printf("history.measurement[%d] = %d\n", i, history.gas_hit_event[i]);
-		fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.measurement[i], history.gas_hit_event[i], FSM.n_cycles);
+		fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.measurement[i], history.gas_hit_event[i], history.FSM_iter[i]);
 	}
 	fclose(measurement_history_logfile);
 
@@ -1530,6 +1530,7 @@ void state_measuring()
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement.push_back(sample_from_map[i]);
 				history.gas_hit_event.push_back(0);
+				history.FSM_iter.push_back(FSM.n_cycles);
 				history.size++;
 				// mark the cell as visited
 				if (simulation_parameters.visitedList == visitedList_ON)
@@ -1555,6 +1556,7 @@ void state_measuring()
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement.push_back(sample_in_motion.measurement[i]);
 				history.gas_hit_event.push_back(0);
+				history.FSM_iter.push_back(FSM.n_cycles);
 				history.size++;
 				// mark the cell as visited
 				if (simulation_parameters.visitedList == visitedList_ON)
@@ -1592,6 +1594,7 @@ void state_measuring()
 		// history.measurement[history.size] = sampleBuffer.average_concentration;
 		history.measurement.push_back(sampleBuffer.average_concentration);
 		history.gas_hit_event.push_back(0);
+		history.FSM_iter.push_back(FSM.n_cycles);
 		history.size++;
 		// mark the current cell as visited
 		if (simulation_parameters.visitedList == visitedList_ON)
@@ -1644,6 +1647,7 @@ void state_measuring()
 				// history.measurement[history.size] = sampleBuffer.average_concentration;
 				history.measurement.push_back(sampleBuffer.average_concentration);
 				history.gas_hit_event.push_back(0);
+				history.FSM_iter.push_back(FSM.n_cycles);
 				history.size++;
 				history_print(history);
 			}
@@ -1683,6 +1687,7 @@ void state_measuring()
 			history.position.push_back({current_position.x, current_position.y, 0});
 			history.measurement.push_back(sampleBuffer.average_concentration);
 			history.gas_hit_event.push_back(0);
+			history.FSM_iter.push_back(FSM.n_cycles);
 			history.size++;
 			history_print(history);
 		}
