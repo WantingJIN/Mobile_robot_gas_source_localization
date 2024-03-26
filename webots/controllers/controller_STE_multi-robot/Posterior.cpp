@@ -463,16 +463,18 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	printf("nbr_dimension %d\n ", nbr_dimension);
 	printf("nbr_element %d\n ", nbr_element);
 	double mean, stddev;
-	if (simulation_parameters.gasFeature == GASHIT || RELATIVE_CONCENTRATION)
+	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
 	{
-		calculate_history_distribution(history, mean, stddev);
-		if (stddev == 0)
+		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
+		if (simulation_parameters.relativeMethod == CDF)
 		{
-			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, 0.01);
-		}
-		else
-		{
+			calculate_data_distribution(history.measurement, mean, stddev);
 			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, stddev);
+			
+		}
+		else if (simulation_parameters.relativeMethod == NORMALIZATION)
+		{
+			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
 		}
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}

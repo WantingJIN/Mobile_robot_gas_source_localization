@@ -190,7 +190,7 @@ long long current_timestamp()
 	struct timeval te;
 	gettimeofday(&te, NULL);						     // get current time
 	long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // caculate milliseconds
-	printf("milliseconds: %lld\n", milliseconds);
+	//printf("milliseconds: %lld\n", milliseconds);
 	return milliseconds;
 }
 
@@ -375,7 +375,7 @@ void log_history()
 	for (int i = 0; i < history.size; i++)
 	{
 		// printf("history.measurement[%d] = %d\n", i, history.gas_hit_event[i]);
-		fprintf(measurement_history_logfile, "%d, %f, %d\n", i, history.measurement[i], history.gas_hit_event[i]);
+		fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.measurement[i], history.gas_hit_event[i], FSM.n_cycles);
 	}
 	fclose(measurement_history_logfile);
 
@@ -424,7 +424,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
-	vector<float> model_c_avg(history.size);
+	vector<double> model_c_avg(history.size);
 
 	int nbr = history.size;
 	float px[nbr], py[nbr];
@@ -458,7 +458,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
-	vector<float> model_c_avg(history.size);
+	vector<double> model_c_avg(history.size);
 
 	int nbr = history.size;
 	float px[nbr], py[nbr];
@@ -475,29 +475,22 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
-	double rel_model_val, rel_hist_val; // mean, stddev,
+	vector<double> rel_model_list;
 	double model_mean;
-	double model_stddev = 0.01;
-	if (model_c_avg.size() != 0)
-	{
-		double sum = 0;
-		sum = std::accumulate(model_c_avg.begin(), model_c_avg.end(), 0.0);
-		model_mean = sum / model_c_avg.size();
-		double sq_sum = std::inner_product(model_c_avg.begin(), model_c_avg.end(), model_c_avg.begin(), 0.0);
-		if (sq_sum / model_c_avg.size() - model_mean * model_mean > 0)
-			model_stddev = std::sqrt(sq_sum / model_c_avg.size() - model_mean * model_mean);
+	double model_stddev;
+	if (simulation_parameters.relativeMethod == NORMALIZATION){
+		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
+	}else if (simulation_parameters.relativeMethod == CDF){
+		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
+		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
 	}
+	
+	double rel_model_val, rel_hist_val; // mean, stddev,
 	for (int i = 0; i < history.size; i++)
 	{
 		rel_hist_val = rel_history_list[i];
-		if (model_stddev == 0)
-		{
-			rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, 0.01);
-		}
-		else
-		{
-			rel_model_val = calculate_measurement_gaussian_CDF(model_c_avg[i], model_mean, model_stddev);
-		}
+		rel_model_val = rel_model_list[i];
+		//printf("rel_hist_val: %f, rek_model_val: %f \n", rel_hist_val, rel_model_val);
 		sum_tmp += pow(rel_model_val - rel_hist_val, 2);
 	}
 	sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
@@ -528,20 +521,20 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	return (exp(-0.5 * sum_tmp));
 }
 
-void calculate_history_distribution(struct history history, double &mean, double &stddev)
+void calculate_data_distribution(vector<double> data_list, double &mean, double &stddev)
 {
 	double sum = 0;
 	double sum2 = 0;
-	for (int i = 0; i < history.size; i++)
+	for (int i = 0; i < data_list.size(); i++)
 	{
-		sum += history.measurement[i];
+		sum += data_list[i];
 	}
-	mean = sum / history.size;
-	for (int i = 0; i < history.size; i++)
+	mean = sum / data_list.size();
+	for (int i = 0; i < data_list.size(); i++)
 	{
-		sum2 += pow(history.measurement[i] - mean, 2);
+		sum2 += pow(data_list[i] - mean, 2);
 	}
-	stddev = sqrt(sum2 / history.size);
+	stddev = sqrt(sum2 / data_list.size());
 	// printf("mean: %f, variance: %f\n", mean, variance);
 }
 
@@ -554,9 +547,30 @@ double calculate_measurement_gaussian_CDF(double data, double mean, double stdde
 
 void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev)
 {
+	if (stddev == 0)
+		stddev = 0.01;
 	for (int i = 0; i < data_list.size(); i++)
 	{
 		rel_meas_list.push_back(calculate_measurement_gaussian_CDF(data_list[i], mean, stddev));
+	}
+}
+
+void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list)
+{
+	// normalize the measurements with max and min values
+	double max_val = *max_element(data_list.begin(), data_list.end());
+	double min_val = *min_element(data_list.begin(), data_list.end());
+	//printf("max: %f, min: %f\n", max_val, min_val);
+	
+	for (int i = 0; i < data_list.size(); i++)
+	{
+		if (max_val == min_val){
+			relative_history_meas.push_back(0);
+		}
+		else{
+			relative_history_meas.push_back((data_list[i] - min_val) / (max_val - min_val));
+		}
+		//printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
 	}
 }
 
@@ -566,7 +580,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
-	vector<float> model_c_avg(history.size);
+	vector<double> model_c_avg(history.size);
 
 	int nbr = history.size;
 	float px[nbr], py[nbr];
@@ -1694,7 +1708,6 @@ void state_estimating()
 		printf("[%d] estimating...\n", ID);
 
 	long long time_before_estimating = current_timestamp();
-	printf("Test dummy current estimation beginning : %lld\n", time_before_estimating);
 
 	static long long dummy_est_sum = 0;
 
@@ -1992,17 +2005,7 @@ int main(int argc, char **argv)
 	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// File for saving console messages
-	printf("Test filepath\n");
-	printf("%s", console_logfile_name);
 	console_logfile = fopen(console_logfile_name, "a");
-	if (console_logfile != nullptr)
-	{
-		fprintf(console_logfile, "Console messages \n");
-	}
-	else
-	{
-		fprintf(stderr, "Unable to open the file.\n");
-	}
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED)
@@ -2061,7 +2064,7 @@ int main(int argc, char **argv)
 		// fprintf(console_logfile, "exp y: %f\n", sample[1] );
 		// fprintf(console_logfile, "source index: %d\n", source_i);
 
-		calculate_history_distribution(history, mean, stddev);
+		calculate_data_distribution(history.measurement, mean, stddev);
 		likelihood_gas_hit(history, sample, source_i, &plume_model, mean, stddev);
 	}
 

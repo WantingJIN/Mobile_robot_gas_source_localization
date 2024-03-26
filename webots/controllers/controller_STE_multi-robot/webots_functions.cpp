@@ -140,8 +140,9 @@ void init()
 	// 1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
 	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
 	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
-	// index of parameter:                                   1.   2.   3.   4. 5. 6. 7.   8.                   9.          10.      11.                   12.         13.           14.       15.  16.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_ON, BELIEF, 10, 10};
+	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod
+	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.
+	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, BELIEF, 10, 10, 1, 0.75, 0.1, NORMALIZATION};
 
 	// read simulation parameters
 	FILE *sim_param_file;
@@ -282,6 +283,7 @@ void init()
 	fprintf(sim_param_file, "wind_factor %f\n", simulation_parameters.wind_factor);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", simulation_parameters.sampling_dist_thresh);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
+	fprintf(sim_param_file, "relative_method %d\n", simulation_parameters.relativeMethod);
 	fclose(sim_param_file);
 
 	if ((ID - 100) > simulation_parameters.number_of_robots)

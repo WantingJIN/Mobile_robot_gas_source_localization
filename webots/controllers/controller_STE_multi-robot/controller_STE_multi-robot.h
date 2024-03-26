@@ -85,6 +85,12 @@ typedef enum infoFeature
 	BELIEF = 2,
 } eInfoFeature;
 
+typedef enum relativeMethod
+{
+	NORMALIZATION = 0,
+	CDF = 1,
+} eRelativeMethod;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -99,25 +105,26 @@ struct parameters_set
 // simulation paramters
 struct simulation_parameters
 {
-	float likelihood_error;
-	float gloabl_local_search_ratio;
-	int MCMC_iteration_num;
-	int MCMC_or_exhaustive_eval; // 1 for MCMC, 0 for exhaustive evaluation
-	int number_of_robots;
-	int scenario;
-	int map_nbr;
-	eSamplingMode samplingMode;
-	eProcessingMode processingMode;
-	eGasSensor gasSensor;
-	ePlanningStrategy planningStrategy;
-	eGasFeature gasFeature;
-	eVisitedList visitedList;
-	eInfoFeature infoFeature;
-	int sampling_period;
-	float cluster_entropy_ratio;
-	float vel_factor;
-	float wind_factor;
-	float sampling_dist_thresh;
+	float likelihood_error;  //1
+	float gloabl_local_search_ratio; //2
+	int MCMC_iteration_num; //3
+	int MCMC_or_exhaustive_eval; // 4: 1 for MCMC, 0 for exhaustive evaluation
+	int number_of_robots; //5
+	int scenario; //6
+	int map_nbr; //7
+	eSamplingMode samplingMode; //8
+	eProcessingMode processingMode; //9
+	eGasSensor gasSensor; //10
+	ePlanningStrategy planningStrategy; //11
+	eGasFeature gasFeature; //12
+	eVisitedList visitedList; //13
+	eInfoFeature infoFeature; //14
+	int sampling_period; //15
+	float cluster_entropy_ratio; //16
+	float vel_factor; //17
+	float wind_factor; //18
+	float sampling_dist_thresh; //19
+	eRelativeMethod relativeMethod; //20
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -205,6 +212,6 @@ void do_odometry();
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
 void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev);
-void calculate_history_distribution(struct history history, double &mean, double &stddev);
-
+void calculate_data_distribution(vector<double> data, double &mean, double &stddev);
+void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list);
 #endif

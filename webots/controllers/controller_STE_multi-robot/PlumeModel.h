@@ -74,7 +74,7 @@ public:
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 	// read from precomputed maps
-	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg) = 0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) = 0;
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
 
@@ -215,7 +215,7 @@ public:
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	// read from precomputed maps
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg);
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
 
 	double approx_concentration(Position robot_position, double wind_intensity);
 
