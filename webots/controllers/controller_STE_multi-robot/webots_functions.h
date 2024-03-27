@@ -79,6 +79,15 @@ extern char gas_hit_variance_map_logfile_name[512];
 extern char experiment_time_logfile_name[512];
 extern char visited_list_logfile_name[512];
 
+// read logfile from the experiment
+extern char logfile_folder_name[256];
+extern FILE* experiment_measurements_logfile;
+extern char experiment_measurements_logfile_name[512];
+extern FILE* experiment_goalposition_logfile;
+extern char experiment_goalposition_logfile_name[512];
+extern FILE* experiment_position_logfile;
+extern char experiment_position_logfile_name[512];
+
 // for storing debugging info
 extern FILE *console_logfile;
 extern char console_logfile_name[512];

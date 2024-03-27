@@ -91,6 +91,11 @@ typedef enum relativeMethod
 	CDF = 1,
 } eRelativeMethod;
 
+typedef enum SimuMode{
+	ONLINE = 0,
+	OFFLINE = 1,
+}eSimuMode;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -125,6 +130,7 @@ struct simulation_parameters
 	float wind_factor; //18
 	float sampling_dist_thresh; //19
 	eRelativeMethod relativeMethod; //20
+	eSimuMode simuMode; //21
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -139,6 +145,8 @@ typedef enum state
 	STATE_MOVING = 3,
 	STATE_FINISHED = 5,
 	STATE_OBSTACLE_AVOIDANCE = 6,
+	STATE_READ_ALL = 7,
+	STATE_READ_INITIAL = 8,
 } eState;
 
 // finite state machine
@@ -186,6 +194,8 @@ void state_updategoal();
 void state_moving();
 void state_waiting();
 void state_obstacle_avoidance();
+void state_read_positions_measurements();
+void state_read_initial_position_measurement();
 
 // planning strategy
 void informative_path_planning_based_on_variance();

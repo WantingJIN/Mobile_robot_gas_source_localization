@@ -69,6 +69,15 @@ char visited_list_logfile_name[512];
 // text file for storing some prints for debugging
 char console_logfile_name[512];
 
+// read data from file
+char logfile_folder_name[256];
+FILE* experiment_measurements_logfile;
+char experiment_measurements_logfile_name[512];
+FILE* experiment_position_logfile;
+char experiment_position_logfile_name[512];
+FILE* experiment_goalposition_logfile;
+char experiment_goalposition_logfile_name[512];
+
 // define the global parameter - the root path of the project
 const char *workspacePath = getenv("STE_DDPM_ROOT");
 
@@ -190,7 +199,7 @@ long long current_timestamp()
 	struct timeval te;
 	gettimeofday(&te, NULL);						     // get current time
 	long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // caculate milliseconds
-	//printf("milliseconds: %lld\n", milliseconds);
+	// printf("milliseconds: %lld\n", milliseconds);
 	return milliseconds;
 }
 
@@ -478,19 +487,22 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	vector<double> rel_model_list;
 	double model_mean;
 	double model_stddev;
-	if (simulation_parameters.relativeMethod == NORMALIZATION){
+	if (simulation_parameters.relativeMethod == NORMALIZATION)
+	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-	}else if (simulation_parameters.relativeMethod == CDF){
+	}
+	else if (simulation_parameters.relativeMethod == CDF)
+	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
 	}
-	
+
 	double rel_model_val, rel_hist_val; // mean, stddev,
 	for (int i = 0; i < history.size; i++)
 	{
 		rel_hist_val = rel_history_list[i];
 		rel_model_val = rel_model_list[i];
-		//printf("rel_hist_val: %f, rek_model_val: %f \n", rel_hist_val, rel_model_val);
+		// printf("rel_hist_val: %f, rek_model_val: %f \n", rel_hist_val, rel_model_val);
 		sum_tmp += pow(rel_model_val - rel_hist_val, 2);
 	}
 	sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
@@ -560,17 +572,19 @@ void calculate_normalized_relative_measurements(vector<double> &relative_history
 	// normalize the measurements with max and min values
 	double max_val = *max_element(data_list.begin(), data_list.end());
 	double min_val = *min_element(data_list.begin(), data_list.end());
-	//printf("max: %f, min: %f\n", max_val, min_val);
-	
+	// printf("max: %f, min: %f\n", max_val, min_val);
+
 	for (int i = 0; i < data_list.size(); i++)
 	{
-		if (max_val == min_val){
+		if (max_val == min_val)
+		{
 			relative_history_meas.push_back(0);
 		}
-		else{
+		else
+		{
 			relative_history_meas.push_back((data_list[i] - min_val) / (max_val - min_val));
 		}
-		//printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
+		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
 	}
 }
 
@@ -1511,6 +1525,74 @@ void state_waiting()
 	}
 }
 
+void state_read_initial_position_measurement()
+{
+	printf("Enter state read initial position\n");
+	int d,iter;
+	float f1, f2, f3, f4, f5, f6, f7, f8;
+	double t;
+	char line[256];
+	start_timestamp = wb_robot_get_time();
+
+	// Read the goal position
+	if (!feof(experiment_goalposition_logfile))
+	{
+		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
+		goal_position.x = f1;
+		goal_position.y = f2;
+		goal_position.heading = 0;
+		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+		fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
+		history.size++;
+		history.measurement.push_back(f4);
+		fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
+		history.position.push_back({f6, f7, f8});
+		current_position.x = f6;
+		current_position.y = f7;
+		current_position.heading = f8;
+		printf("measurement @ position (%f, %f, %f) is %f\n", current_position.x, current_position.y, current_position.heading,f4);
+		
+	}
+	sampleBuffer.average_wind_intensity =1;
+	FSM.state = STATE_ESTIMATING;
+      FSM.hook = state_estimating;
+}
+
+void state_read_positions_measurements()
+{
+	printf("Enter state read goal and measurment\n");
+	int d,iter;
+	float f1, f2, f3, f4, f5, f6, f7, f8;
+	double t;
+	char line[256];
+
+	// Read the goal position
+	if (!feof(experiment_goalposition_logfile))
+	{
+		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
+		goal_position.x = f1;
+		goal_position.y = f2;
+		goal_position.heading = 0;
+		//printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+
+		while (dist_to_goal(goal_position) > 0.05)
+		{
+			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
+			history.size++;
+			history.measurement.push_back(f4);
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
+			history.position.push_back({f6, f7, f8});
+			current_position.x = f6;
+			current_position.y = f7;
+			current_position.heading = f8;
+			//printf("measurement @ position (%f, %f, %f) is %f\n", current_position.x, current_position.y, current_position.heading,f4);
+		}
+	}
+	sampleBuffer.average_wind_intensity =1;
+	FSM.state = STATE_ESTIMATING;
+      FSM.hook = state_estimating;
+}
+
 void state_measuring()
 {
 	// printf("measuring sample number %d\n", measurements.n_samples);
@@ -1775,13 +1857,19 @@ void state_estimating()
 		// log the finish time stamp
 		end_timestamp = wb_robot_get_time();
 		printf("end time stamp: %f\n", end_timestamp);
-		printf("Current state is STATE_FINISHED");
+		printf("Current state is STATE_FINISHED\n");
 	}
 	else
 	{
-		// update goal
-		FSM.state = STATE_UPDATEGOAL;
-		FSM.hook = state_updategoal;
+		if(simulation_parameters.simuMode == ONLINE){
+			// update goal
+			FSM.state = STATE_UPDATEGOAL;
+			FSM.hook = state_updategoal;
+		} else {
+			FSM.state = STATE_READ_ALL;
+			FSM.hook  = state_read_positions_measurements;
+		}
+		
 	}
 }
 
@@ -2076,11 +2164,13 @@ int main(int argc, char **argv)
 	fclose(console_logfile);
 
 	// final logs
-	log_history();
-	log_experiment_time();
-	log_visited_list();
-	cleaning_up();
-
+	if (simulation_parameters.simuMode == ONLINE)
+	{
+		log_history();
+		log_experiment_time();
+		log_visited_list();
+		cleaning_up();
+	}
 	// free the allocated memory to obstacle array
 	for (int i = 0; i < nbr_obs; i++)
 		delete[] obstacles[i];
