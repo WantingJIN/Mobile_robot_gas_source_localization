@@ -118,6 +118,8 @@ extern int n_time_step;
 
 extern struct simulation_parameters simulation_parameters;
 
+extern double real_source_pos[3];
+
 void init();
 void odor_read(double *sensor_reading, double &odor_concentration);
 void wind_read(double *intensity, double *angle);

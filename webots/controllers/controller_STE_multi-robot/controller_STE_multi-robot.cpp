@@ -155,6 +155,9 @@ double c_avg[x_nbins * y_nbins][x_nbins * y_nbins]; // left: source position, ri
 // store last position for minimum distance threshold in measurement update
 Position last_measurement_pos;
 
+// real source position
+double real_source_pos[3] = {0, 0, 0};
+
 // =========================== FUNCTIONS ================================ //
 // random value sampled from a normal distribution
 double randn(double mu, double sigma)
@@ -462,6 +465,10 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 // Likelihood for relative concentration with precomputed gas maps
 double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
 {
+	int pos_coord[2];
+	pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
+      pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
+	int real_source_idx = posterior.indices_to_index(pos_coord);
 	float sigma = 0.22;
 	double sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
@@ -496,13 +503,16 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
 	}
-
+      // if (real_source_idx == soure_pos_idx){
+	// 	printf("real source pos: %f, %f, %f\n", real_source_pos[0], real_source_pos[1], real_source_pos[2]);
+	// }
 	double rel_model_val, rel_hist_val; // mean, stddev,
 	for (int i = 0; i < history.size; i++)
 	{
 		rel_hist_val = rel_history_list[i];
 		rel_model_val = rel_model_list[i];
-		// printf("rel_hist_val: %f, rek_model_val: %f \n", rel_hist_val, rel_model_val);
+		// if (real_source_idx == soure_pos_idx)
+		// 	printf("hist_val:%f, rel_hist_val: %f, model_val: %f, rel_model_val: %f @ pos (%f, %f)\n", history.measurement[i],rel_hist_val, model_c_avg[i], rel_model_val, history.position[i].x, history.position[i].y);
 		sum_tmp += pow(rel_model_val - rel_hist_val, 2);
 	}
 	sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
@@ -576,7 +586,7 @@ void calculate_normalized_relative_measurements(vector<double> &relative_history
 
 	for (int i = 0; i < data_list.size(); i++)
 	{
-		if (max_val == min_val)
+		if (abs(max_val-min_val)< 0.1)
 		{
 			relative_history_meas.push_back(0);
 		}
@@ -911,6 +921,8 @@ void balance_exploration_exploitation(float gloabl_local_search_ratio)
 
 void greedy_planning()
 {
+      printf("Enter greedy planning \n");
+	fprintf(console_logfile, "Enter greedy planning \n");
 	double best_point[2] = {0};
 	// Adaptive greedy planning based on entropy
 	// if (posterior.entropy > 4){
@@ -918,7 +930,6 @@ void greedy_planning()
 	// } else {
 	// 	posterior.XYmarginal_distance_combined(current_position, 0.75, best_point);
 	// }
-	printf("greedy planning \n");
 	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
 	// printf("best point: %f %f \n", best_point[0], best_point[1]);
 	goal_position.x = best_point[0];
@@ -928,6 +939,8 @@ void greedy_planning()
 
 void random_planning()
 {
+	printf("Enter random planning \n");
+	fprintf(console_logfile, "Enter random planning \n");
 	do
 	{
 		goal_position.heading = 0;
@@ -938,6 +951,7 @@ void random_planning()
 
 void lawnmower_planning()
 {
+	printf("Enter lawnmower planning \n");
 	int static direction = 1;
 	double x_step = 1.0;
 	double y_step = 4;
@@ -992,6 +1006,8 @@ void calculate_information_gain()
 
 void informative_point_planning()
 {
+	printf("Enter informative point planning \n");
+	fprintf(console_logfile, "Enter informative point planning \n");
 	double best_point[2] = {0};
 	// find the maximal variance in gas variance map
 	double max_info = 0;
@@ -1002,23 +1018,22 @@ void informative_point_planning()
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
-			if (gas_information_map[i] >= max_info && cell_visited_list[i] == 0)
-			{ // TODO changed to >=
+			if (gas_information_map[i] > max_info && cell_visited_list[i] == 0)
+			{ 
 				max_info = gas_information_map[i];
 				max_info_index = i;
 			}
-
-			// if all cells have the same likelihood take a random one
-			else if (gas_information_map[i] == max_info)
-			{
-				sum++;
-				if (sum == x_nbins * y_nbins - 2)
-				{
-					fprintf(console_logfile, "Uniform distrib \n");
-					max_info_index = rand() % x_nbins * y_nbins;
-					fprintf(console_logfile, "Rand index %d\n", max_info_index);
-				}
-			}
+			// // if all cells have the same likelihood take a random one
+			// else if (gas_information_map[i] == max_info)
+			// {
+			// 	sum++;
+			// 	if (sum == x_nbins * y_nbins - 2)
+			// 	{
+			// 		fprintf(console_logfile, "Uniform distrib \n");
+			// 		max_info_index = rand() % x_nbins * y_nbins;
+			// 		fprintf(console_logfile, "Rand index %d\n", max_info_index);
+			// 	}
+			// }
 		}
 		else
 		{
@@ -1028,38 +1043,31 @@ void informative_point_planning()
 				max_info_index = i;
 			}
 			// if all cells have the same likelihood take a random one
-			else if (gas_information_map[i] == max_info)
-			{
-				sum++;
-				if (sum == x_nbins * y_nbins - 2)
-				{
-					fprintf(console_logfile, "Uniform distrib \n");
-					max_info_index = rand() % x_nbins * y_nbins;
-					fprintf(console_logfile, "Rand index %d\n", max_info_index);
-				}
-			}
+			// else if (gas_information_map[i] == max_info)
+			// {
+			// 	sum++;
+			// 	if (sum == x_nbins * y_nbins - 2)
+			// 	{
+			// 		fprintf(console_logfile, "Uniform distrib \n");
+			// 		max_info_index = rand() % x_nbins * y_nbins;
+			// 		fprintf(console_logfile, "Rand index %d\n", max_info_index);
+			// 	}
+			// }
 		}
 	}
-	fprintf(console_logfile, "chosen index %d\n", max_info_index);
-	fprintf(console_logfile, "sum %d\n", sum);
-	// gas hit var feature does not work well
-	/*
-	} else if (simulation_parameters.gasFeature == GASHIT){
-		for (int i = 0; i< x_nbins*y_nbins; i++){
-			if (simulation_parameters.visitedList == visitedList_ON){
-				if (gas_hit_variance_map[i] > max_info && cell_visited_list[i] == 0){
-					max_info = gas_hit_variance_map[i];
-					max_info_index = i;
-				}
-			}else{
-				if (gas_hit_variance_map[i] > max_info){
-					max_info = gas_hit_variance_map[i];
-					max_info_index = i;
-				}
-			}
-		}
+	fprintf(console_logfile, "max_info : %f , max_info_iter: %d\n", max_info, max_info_index);
+
+	if (max_info == 0.0) // all the informative points have been visited
+	{
+		printf("all the informative points have been visited \n");
+		fprintf(console_logfile, "all the informative points have been visited \n");
+		random_planning();
+		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+		fprintf(console_logfile, "planned goal position : %f %f \n", goal_position.x, goal_position.y);
+	      fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+		return;
 	}
-	*/
+
 	posterior.index_to_param_values(max_info_index, best_point);
 
 	goal_position.x = best_point[0];
@@ -1070,12 +1078,9 @@ void informative_point_planning()
 	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
 	{
 		printf("The goal position is very close to current postion, switch to greedy planning \n");
-		// fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
+		fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
 		greedy_planning();
 	}
-
-	// fprintf(console_logfile, "planned goal position : %f %f \n", goal_position.x, goal_position.y);
-	// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 }
 
@@ -1090,6 +1095,8 @@ vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double gas_info
 
 void informative_clustering_planning()
 {
+	printf("Enter informative clustering planning \n");
+	
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
 	clusters_bounding_box = clustering_information_blocks(gas_information_map);
 	if (clusters_bounding_box.size() == 0)
@@ -1573,6 +1580,11 @@ void state_read_positions_measurements()
 		goal_position.x = f1;
 		goal_position.y = f2;
 		goal_position.heading = 0;
+		int pos_coord[2];
+		pos_coord[0] = floor((goal_position.x - source_x_min) / x_resol);
+		pos_coord[1] = floor((goal_position.y - source_y_min) / y_resol);
+		int idx = posterior.indices_to_index(pos_coord);
+		cell_visited_list[idx] = 1;
 		//printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
 		while (dist_to_goal(goal_position) > 0.05)
@@ -1861,20 +1873,14 @@ void state_estimating()
 	}
 	else
 	{
-		if(simulation_parameters.simuMode == ONLINE){
-			// update goal
-			FSM.state = STATE_UPDATEGOAL;
-			FSM.hook = state_updategoal;
-		} else {
-			FSM.state = STATE_READ_ALL;
-			FSM.hook  = state_read_positions_measurements;
-		}
-		
+		FSM.state = STATE_UPDATEGOAL;
+		FSM.hook = state_updategoal;
 	}
 }
 
 void state_updategoal()
 {
+	fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 	if (VERBOSE)
 		printf("[%d] updating the goal\n", ID);
 	switch (simulation_parameters.planningStrategy)
@@ -1942,9 +1948,16 @@ void state_updategoal()
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
 		// move to the goal position
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		time_before_moving = wb_robot_get_time();
+		if(simulation_parameters.simuMode == ONLINE){
+			// update goal
+			FSM.state = STATE_MOVING;
+			FSM.hook = state_moving;
+			time_before_moving = wb_robot_get_time();
+		} else {
+			FSM.state = STATE_READ_ALL;
+			FSM.hook  = state_read_positions_measurements;
+		}
+		
 	}
 }
 
@@ -2103,7 +2116,10 @@ int main(int argc, char **argv)
 	// //main loop
 	while (FSM.state != STATE_FINISHED)
 	{
-		update_position();
+		if (simulation_parameters.simuMode == ONLINE)
+		{
+			update_position();
+		}
 		// if we are not stopped to sample, let's log the trajectory
 		/*if(speed[0]!=0 && speed[1]!=0){
 			log_trajectory();

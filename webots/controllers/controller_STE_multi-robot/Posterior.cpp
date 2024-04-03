@@ -482,7 +482,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	for (i = 0; i < nbr_element; i++)
 	{
 		// convert index 'i' to set of parameter values 'sample'
-		index_to_param_values(i, sample); // returns source nb i sx qnd sy coordinates in the map
+		index_to_param_values(i, sample); // returns source nb i sx and sy coordinates in the map
 
 		// calculate the posterior distribution of source term param 'sample'
 		// check the gas feature selected

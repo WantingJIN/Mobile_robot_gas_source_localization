@@ -132,7 +132,7 @@ void init()
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment and scan
-      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_source_boundary_normalization_2nd/10/1711469529838/101", workspacePath);
+      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_cdf/rel_con_MOX_source_boundary_cdf/10/1712062974290/101", workspacePath);
 	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
@@ -144,7 +144,7 @@ void init()
 	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
 	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode
 	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.            21.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, BELIEF, 10, 10, 1, 0.75, 0.1, NORMALIZATION, OFFLINE};
+	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, INFORMATIVE_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, BELIEF, 10, 10, 1, 0.75, 0.1, CDF, ONLINE};
 
 	// read simulation parameters
 	FILE *sim_param_file;
@@ -258,6 +258,29 @@ void init()
 			printf("release rate param : %d\n", release_amount);
 		fclose(sim_param_file);
 	}
+	//FIXME - temporary solution to read the source position 0328
+
+	if (simulation_parameters.simuMode == ONLINE){
+		if (access("../../data/source_pos.txt", F_OK) != -1) {
+			FILE * sim_param_file = fopen("../../data/source_pos.txt", "r");
+			int ok = fscanf(sim_param_file, "%lf %lf", &real_source_pos[0], &real_source_pos[1]);
+			real_source_pos[2] = 0.13;
+			if(ok) printf("source of gas : %lf %lf %lf\n", real_source_pos[0], real_source_pos[1], real_source_pos[2]);
+			fclose(sim_param_file);  
+		}
+	}else if (simulation_parameters.simuMode == OFFLINE){
+		char experiment_source_pos_logfile_name[512];
+		char* source_str = (char*) malloc(100 * sizeof(char)); 
+            sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
+		printf("%s\n",experiment_source_pos_logfile_name);
+		if (access(experiment_source_pos_logfile_name, F_OK) != -1) {
+			FILE * sim_param_file = fopen(experiment_source_pos_logfile_name, "r");
+			int ok = fscanf(sim_param_file, "%s %lf %lf %lf",source_str, &real_source_pos[0], &real_source_pos[1], &real_source_pos[2]);
+			if(ok) printf("source of gas : %lf %lf %lf\n", real_source_pos[0], real_source_pos[1], real_source_pos[2]);
+			fclose(sim_param_file);  
+		}
+	}
+
 
       // experiment results folder
 	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
