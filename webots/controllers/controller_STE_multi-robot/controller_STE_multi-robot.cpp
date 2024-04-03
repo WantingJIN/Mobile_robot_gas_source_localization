@@ -1057,7 +1057,8 @@ void informative_point_planning()
 	}
 	fprintf(console_logfile, "max_info : %f , max_info_iter: %d\n", max_info, max_info_index);
 
-	if (max_info == 0.0) // all the informative points have been visited
+      double epsilon = 1e-9; 
+      if (fabs(max_info - 0.0) < epsilon) // all the informative points have been visited
 	{
 		printf("all the informative points have been visited \n");
 		fprintf(console_logfile, "all the informative points have been visited \n");
