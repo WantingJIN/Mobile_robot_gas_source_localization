@@ -1022,18 +1022,7 @@ void informative_point_planning()
 			{ 
 				max_info = gas_information_map[i];
 				max_info_index = i;
-			}
-			// // if all cells have the same likelihood take a random one
-			// else if (gas_information_map[i] == max_info)
-			// {
-			// 	sum++;
-			// 	if (sum == x_nbins * y_nbins - 2)
-			// 	{
-			// 		fprintf(console_logfile, "Uniform distrib \n");
-			// 		max_info_index = rand() % x_nbins * y_nbins;
-			// 		fprintf(console_logfile, "Rand index %d\n", max_info_index);
-			// 	}
-			// }
+			}		
 		}
 		else
 		{
@@ -1041,18 +1030,7 @@ void informative_point_planning()
 			{
 				max_info = gas_information_map[i];
 				max_info_index = i;
-			}
-			// if all cells have the same likelihood take a random one
-			// else if (gas_information_map[i] == max_info)
-			// {
-			// 	sum++;
-			// 	if (sum == x_nbins * y_nbins - 2)
-			// 	{
-			// 		fprintf(console_logfile, "Uniform distrib \n");
-			// 		max_info_index = rand() % x_nbins * y_nbins;
-			// 		fprintf(console_logfile, "Rand index %d\n", max_info_index);
-			// 	}
-			// }
+			}		
 		}
 	}
 	fprintf(console_logfile, "max_info : %f , max_info_iter: %d\n", max_info, max_info_index);
