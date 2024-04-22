@@ -57,11 +57,10 @@ typedef enum gasSensor
 typedef enum planningStrategy
 {
 	GREEDY = 0,
-	INFORMATIVE = 1,
 	BALANCE_MAXIMAL_EXPECTED = 2,
 	RANDOM = 3,
 	LAWNMOWER = 4,
-	INFORMATIVE_CLUSTERING = 5,
+	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
 } ePlanningStrategy;
 
@@ -82,7 +81,6 @@ typedef enum infoFeature
 {
 	VARIANCE = 0,
 	MEAN = 1,
-	BELIEF = 2,
 } eInfoFeature;
 
 typedef enum relativeMethod
@@ -197,10 +195,6 @@ void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
 
-// planning strategy
-void informative_path_planning_based_on_variance();
-
-double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 // old
 double likelihood(struct history history, double *parameters, PlumeModel *model);
 // new likelihood with precomputed gas maps

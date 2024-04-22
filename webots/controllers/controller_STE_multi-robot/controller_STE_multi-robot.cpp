@@ -986,28 +986,19 @@ void calculate_information_gain()
 	{
 		plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
 	}
-	if (simulation_parameters.infoFeature == BELIEF)
+	printf("gas information map is: \n");
+	for (int i = 0; i < x_nbins * y_nbins; i++)
 	{
-		for (int i = 0; i < x_nbins * y_nbins; i++)
-		{
-			gas_information_map[i] = posterior.pdf[i];
-		}
+		printf("%f, ", gas_information_map[i]);
 	}
-	log_gas_information_map();
-	//}
-	// gas hit var feature does not work well
-	/*
-	} else if (simulation_parameters.gasFeature == GASHIT){
-		plume_model.calculate_weighted_gas_hit_variance_map(gas_hit_variance_map, posterior.pdf);
-		log_gas_hit_variance_map();
-	}
-	*/
+	printf("\n");
 }
 
-void informative_point_planning()
+void maximal_information_planning()
 {
-	printf("Enter informative point planning \n");
-	fprintf(console_logfile, "Enter informative point planning \n");
+	printf("Enter maximal information planning \n");
+	fprintf(console_logfile, "Enter maximal information planning \n");
+	calculate_information_gain();
 	double best_point[2] = {0};
 	// find the maximal variance in gas variance map
 	double max_info = 0;
@@ -1042,8 +1033,6 @@ void informative_point_planning()
 		fprintf(console_logfile, "all the informative points have been visited \n");
 		random_planning();
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-		fprintf(console_logfile, "planned goal position : %f %f \n", goal_position.x, goal_position.y);
-	      fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 		return;
 	}
 
@@ -1062,26 +1051,83 @@ void informative_point_planning()
 	}
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 }
+void maximal_belief_planning()
+{
+	printf("Enter maximal belief planning \n");
+	fprintf(console_logfile, "Enter maximal belief planning \n");
+	double best_point[2] = {0};
+	// find the maximal variance in gas variance map
+	double max_pdf = 0;
+	int max_pdf_index = 0;
+	int sum = 0;
+	// if (simulation_parameters.gasFeature == CONCENTRATION){
+	for (int i = 0; i < x_nbins * y_nbins; i++)
+	{
+		if (simulation_parameters.visitedList == visitedList_ON)
+		{
+			if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0)
+			{ 
+				max_pdf = posterior.pdf[i];
+				max_pdf_index = i;
+			}		
+		}
+		else
+		{
+			if (posterior.pdf[i] > max_pdf)
+			{
+				max_pdf = posterior.pdf[i];
+				max_pdf_index = i;
+			}		
+		}
+	}
+	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
 
-vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double gas_information_map[])
+      double epsilon = 1e-9; 
+      if (fabs(max_pdf - 0.0) < epsilon) // all the probable points have been visited
+	{
+		printf("all the probable points have been visited \n");
+		fprintf(console_logfile, "all the probable points have been visited \n");
+		maximal_information_planning();
+		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+		return;
+	}
+
+	posterior.index_to_param_values(max_pdf_index, best_point);
+
+	goal_position.x = best_point[0];
+	goal_position.y = best_point[1];
+	goal_position.heading = 0;
+
+	// The goal position is very close to current postion, swith to greedy planning
+	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+	{
+		printf("The goal position is very close to current postion, switch to greedy planning \n");
+		fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
+		greedy_planning();
+	}
+	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+}
+
+
+vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double information_map[])
 {
 	// dbscan clustering
 	// param: x_eps, y_eps, minPts, ratio
 	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0 - posterior.entropy / simulation_parameters.cluster_entropy_ratio));
-	dbscan.run(gas_information_map);
+	dbscan.run(information_map);
 	return dbscan.cluster_bounding_boxes;
 }
 
-void informative_clustering_planning()
+void belief_clustering_planning()
 {
-	printf("Enter informative clustering planning \n");
+	printf("Enter belief clustering planning \n");
 	
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	clusters_bounding_box = clustering_information_blocks(gas_information_map);
+	clusters_bounding_box = clustering_information_blocks(posterior.pdf);
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
-		informative_point_planning();
+		maximal_belief_planning();
 		return;
 	}
 	else
@@ -1140,7 +1186,7 @@ void informative_clustering_planning()
 		}
 		if (min_dist_to_robot == 1000)
 		{
-			informative_point_planning();
+			maximal_belief_planning();
 			return;
 		}
 		else
@@ -1870,19 +1916,14 @@ void state_updategoal()
 	case BALANCE_MAXIMAL_EXPECTED:
 		balance_expected_maximal_pdf();
 		break;
-	case INFORMATIVE:
-		calculate_information_gain();
-		informative_point_planning();
-		break;
 	case RANDOM:
 		random_planning();
 		break;
 	case LAWNMOWER:
 		lawnmower_planning();
 		break;
-	case INFORMATIVE_CLUSTERING:
-		calculate_information_gain();
-		informative_clustering_planning();
+	case BELIEF_CLUSTERING:
+		belief_clustering_planning();
 		break;
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
@@ -2078,12 +2119,6 @@ int main(int argc, char **argv)
 	char label2[255];
 	sprintf(label2, "Reading: %d\n", 0);
 	wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
-	if (simulation_parameters.infoFeature == MEAN || simulation_parameters.infoFeature == VARIANCE)
-	{
-		// initialize the clustering algorithm
-		plume_model.initialize_information_matrix();
-		plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
-	}
 
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
 	plume_model.initialize_information_matrix();
