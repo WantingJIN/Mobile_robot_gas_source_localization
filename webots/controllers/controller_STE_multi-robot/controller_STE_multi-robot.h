@@ -87,6 +87,7 @@ typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
 	CDF = 1,
+	M_DISTANCE = 2,
 } eRelativeMethod;
 
 typedef enum SimuMode{
@@ -216,7 +217,10 @@ void do_odometry();
 
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
+double calculate_measurement_M_distance(double data, double mean, double stddev);
 void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev);
+void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev);
 void calculate_data_distribution(vector<double> data, double &mean, double &stddev);
 void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list);
+
 #endif

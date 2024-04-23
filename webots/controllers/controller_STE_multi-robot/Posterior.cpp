@@ -472,7 +472,12 @@ void Posterior::exhaustive_evaluation(struct history &history)
 			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, stddev);
 			
 		}
-		else if (simulation_parameters.relativeMethod == NORMALIZATION)
+		if (simulation_parameters.relativeMethod == M_DISTANCE){
+			calculate_data_distribution(history.measurement, mean, stddev);
+			printf("mean %f, stddev %f\n", mean, stddev);
+			calculate_measurements_list_M_distance(relative_history_meas, history.measurement, mean, stddev);
+		}
+		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
 		}

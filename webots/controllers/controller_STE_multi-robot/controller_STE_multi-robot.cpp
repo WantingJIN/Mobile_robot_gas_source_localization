@@ -498,7 +498,12 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
 	}
-	else if (simulation_parameters.relativeMethod == CDF)
+	if (simulation_parameters.relativeMethod == M_DISTANCE)
+	{
+		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
+		calculate_measurements_list_M_distance(rel_model_list, model_c_avg, model_mean, model_stddev);
+	}
+	if (simulation_parameters.relativeMethod == CDF)
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
@@ -567,6 +572,13 @@ double calculate_measurement_gaussian_CDF(double data, double mean, double stdde
 	return cdf;
 }
 
+double calculate_measurement_M_distance(double data, double mean, double stddev)
+{
+	double m_distance = (data - mean)/ stddev;
+	//printf("data: %f, m_distance: %f\n", data, m_distance);
+	return m_distance;
+}
+
 void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev)
 {
 	if (stddev == 0)
@@ -575,6 +587,17 @@ void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vec
 	{
 		rel_meas_list.push_back(calculate_measurement_gaussian_CDF(data_list[i], mean, stddev));
 	}
+}
+void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev)
+{
+	if (stddev == 0)
+		stddev = 0.01;
+	//printf("mean: %f, stddev: %f\n", mean, stddev);
+	for (int i = 0; i < data_list.size(); i++)
+	{
+		rel_meas_list.push_back(calculate_measurement_M_distance(data_list[i], mean, stddev));
+	}
+
 }
 
 void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list)
