@@ -144,7 +144,7 @@ void init()
 	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
 	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode
 	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.            21.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, BELIEF_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, M_DISTANCE, ONLINE};
+	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, BELIEF_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, EMPIRICAL_CDF, ONLINE};
 
 	// read simulation parameters
 	FILE *sim_param_file;

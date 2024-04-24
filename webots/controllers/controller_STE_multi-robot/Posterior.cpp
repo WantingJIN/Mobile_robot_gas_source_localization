@@ -466,7 +466,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
-		if (simulation_parameters.relativeMethod == CDF)
+		if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
 		{
 			calculate_data_distribution(history.measurement, mean, stddev);
 			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, stddev);
@@ -480,6 +480,14 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
+		}
+		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
+		{
+			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement);
+			for (int i = 0; i < relative_history_meas.size(); i++)
+			{
+				printf("meas: %f, relative meas %f\n", history.measurement[i], relative_history_meas[i]);
+			}
 		}
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}

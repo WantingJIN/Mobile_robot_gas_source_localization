@@ -469,7 +469,8 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
       pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
 	int real_source_idx = posterior.indices_to_index(pos_coord);
-	float sigma = 0.22;
+	//float sigma = 0.22;// works well for Gaussian CDF
+	float sigma = 0.3;
 	double sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
@@ -503,10 +504,14 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_M_distance(rel_model_list, model_c_avg, model_mean, model_stddev);
 	}
-	if (simulation_parameters.relativeMethod == CDF)
+	if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
+	}
+	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
+	{
+		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
 	}
       // if (real_source_idx == soure_pos_idx){
 	// 	printf("real source pos: %f, %f, %f\n", real_source_pos[0], real_source_pos[1], real_source_pos[2]);
@@ -598,8 +603,27 @@ void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vecto
 		rel_meas_list.push_back(calculate_measurement_M_distance(data_list[i], mean, stddev));
 	}
 
-}
 
+}
+void calculate_measurements_list_empirical_CDF(vector<double> &relative_history_meas, vector<double> data_list)
+{
+	if (data_list.size() == 1) {
+		relative_history_meas.push_back(0);
+		return;
+	}
+	vector<double> sortedData = data_list;
+	sort(sortedData.begin(), sortedData.end());
+
+	// Calculate ECDF
+	vector<double> ecdf(data_list.size());
+	for (size_t i = 0; i < data_list.size(); ++i) {
+		// Count the number of observations less than or equal to the current value
+		size_t count = count_if(sortedData.begin(), sortedData.end(),
+							[&](double x) { return x < data_list[i]; });
+		// Calculate proportion
+		relative_history_meas.push_back(static_cast<double>(count) / data_list.size());
+	}
+}
 void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list)
 {
 	// normalize the measurements with max and min values
@@ -1009,12 +1033,12 @@ void calculate_information_gain()
 	{
 		plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
 	}
-	printf("gas information map is: \n");
-	for (int i = 0; i < x_nbins * y_nbins; i++)
-	{
-		printf("%f, ", gas_information_map[i]);
-	}
-	printf("\n");
+	// printf("gas information map is: \n");
+	// for (int i = 0; i < x_nbins * y_nbins; i++)
+	// {
+	// 	printf("%f, ", gas_information_map[i]);
+	// }
+	// printf("\n");
 }
 
 void maximal_information_planning()
