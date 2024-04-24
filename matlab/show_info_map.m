@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/rel_con_PID_source_boundary_sigma_0.22/10';
+general_folder='../Results/relative_con_source_boundary/2';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -44,14 +44,18 @@ if clustering~=0
 end
 real_source_position = params.source_position;
 
-if clustering~=0
+%if clustering~=0
 % if (params.gas_feature == 0)
     % use gas concentration as gas feature
-    gas_information_map = dlmread([experiment_file_path,'/gas_information_map.csv']);
+    %gas_information_map = dlmread([experiment_file_path,'/gas_information_map.csv']);
 % end
 % if (params.gas_feature == 1)
 %     gas_information_map = dlmread([experiment_file_path,'/gas_hit_variance_map.csv']);
 % end
+%end
+
+if (params.planning_strategy == 5)
+    gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 end 
 
 x=linspace(3,12.75,20);
@@ -111,7 +115,7 @@ for i=1:size(pdf,1)
     % -------plot information map of each iter------------%
     % the last iteration the information map won't update
     if i == size(pdf,1)
-         imagesc(y,x,reshape(gas_information_map(i-1,1:end-1),params.nbins(1), params.nbins(2))); hold on
+         imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
          if params.planning_strategy == 5
              if clustering~=0
                 cluster_num = cluster_bounding_boxes(i-1,1);
@@ -132,7 +136,7 @@ for i=1:size(pdf,1)
             if clustering~=0
                 cluster_num = cluster_bounding_boxes(i,1);
                 ratio = cluster_bounding_boxes(i,2);
-                gas_information_map_this_iteration = gas_information_map(i,1:end-1);
+                gas_information_map_this_iteration = gas_information_map(i,1:end);
                 max_gas = max(gas_information_map_this_iteration);
                 min_gas = min(gas_information_map_this_iteration);
                 threshold = ((max_gas-min_gas)*ratio +min_gas);
