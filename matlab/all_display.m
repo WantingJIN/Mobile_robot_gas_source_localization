@@ -23,6 +23,7 @@ for i=1:exp_number
 
     f1all = figure('Position',[-1561   656   570   418]);
     f2all = figure('Name','measurements','Position',[686 656 794 418]); 
+    f0 = figure('Name','Expected a posteriori evolution','Position', [-1599, 1, 300, 486]);
     
     for j=1:params.number_of_robots
         % data :
@@ -74,16 +75,21 @@ for i=1:exp_number
         
         % overlaped for all robots
         figure(f1all);
-        subplot(2,1,1);
+        subplot(3,1,1);
         hold on;
-        plot(measurements(:,4),measurements(:,3));
+        plot(measurement_history(:,2));
         title('concentration measurement over time');
         hold off;
-        subplot(2,1,2);
+        subplot(3,1,2);
         hold on;
         plot(entropy(:,2),entropy(:,1),'DisplayName',['ID ', num2str(ID(j))]);
         title('entropy');
+        subplot(3,1,3);
+        hold on;
+        histogram(measurement_history(:,2));
+        title('measurement histogram');
         hold off;
+
         
         figure(f2all);
         axes0 = axes('Parent',f2all,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
@@ -117,8 +123,7 @@ for i=1:exp_number
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Expected a posteriori %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        f0 = figure('Name','Expected a posteriori evolution','Position', [-1599, 1, 300, 486]);
-        
+        figure(f0);
         
         % Subplot 1: X-coordinate estimation
         subplot(2,1,1);
@@ -162,10 +167,6 @@ for i=1:exp_number
         % plot(max_a_posteriori(:,6),'d-b')
         % grid on; axis([-inf inf b_y_min b_y_max]);
         % title('sigma_b');
-
-        saveas(f0,[folder_name_ID '/estimation_evolution.png']);
-        close(f0);
-        
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Marginals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -270,7 +271,9 @@ for i=1:exp_number
     % save
     saveas(f1all,[folder_name '/measurements_entropy.png']);
     saveas(f2all,[folder_name '/trajectory.png']);
+    saveas(f0,[folder_name_ID '/estimation_evolution.png']);    
     
     close(f1all); 
     close(f2all);
+    close(f0);
 end
