@@ -470,7 +470,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
       pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
 	int real_source_idx = posterior.indices_to_index(pos_coord);
 	//float sigma = 0.22;// works well for Gaussian CDF
-	float sigma = 0.3;
+	float sigma = 0.35;// works well for Empirical CDF
 	double sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
