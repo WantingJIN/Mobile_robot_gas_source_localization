@@ -493,6 +493,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
 	vector<double> rel_model_list;
+	vector<double> pdf_model_list;
 	double model_mean;
 	double model_stddev;
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
@@ -508,14 +509,13 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
+		sigma = 0.22;// works well for Gaussian CDF
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
+		sigma = 0.35;// works well for Empirical CDF
 	}
-      // if (real_source_idx == soure_pos_idx){
-	// 	printf("real source pos: %f, %f, %f\n", real_source_pos[0], real_source_pos[1], real_source_pos[2]);
-	// }
 	double rel_model_val, rel_hist_val; // mean, stddev,
 	for (int i = 0; i < history.size; i++)
 	{
@@ -528,6 +528,52 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
 
 	return (exp(-0.5 * sum_tmp));
+}
+
+double likelihood_pdf(struct history &history, vector<double> pdf_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
+{
+	int pos_coord[2];
+	pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
+      pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
+	int real_source_idx = posterior.indices_to_index(pos_coord);
+	if (sampleBuffer.average_wind_intensity == 0)
+		printf("NO WIND, BYE BYE!\n");
+
+	vector<double> model_c_avg(history.size);
+      float sigma = 0.35;
+	int nbr = history.size;
+	float px[nbr], py[nbr];
+	int idx[nbr], idy[nbr];
+
+	// get indices in the map
+	for (int i = 0; i < nbr; i++)
+	{
+		px[i] = history.position[i].x;
+		py[i] = history.position[i].y;
+		idx[i] = floor((px[i] - source_x_min) / x_resol);
+		idy[i] = floor((py[i] - source_y_min) / y_resol);
+	}
+
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+
+	vector<double> rel_model_list;
+	vector<double> pdf_model_list;
+      //printf("enter calculating model concentration pdf!\n");
+	calculate_measurement_list_probablistic_distribution(pdf_model_list, model_c_avg);
+	// compare between the two pdfs
+	// calculate the KL divergence
+	//printf("enter calculating kld!\n");
+	double kl_divergence = 0;
+	for (int i = 0; i < pdf_model_list.size(); i++)
+	{	
+		if (pdf_model_list[i] > 0.0 && pdf_history_list[i] > 0.0)
+		{
+			kl_divergence += pdf_model_list[i] * log(pdf_model_list[i] /pdf_history_list[i]);
+			
+		}
+	}
+	//printf("kl_divergence: %f\n", kl_divergence);
+	return (exp(-pow(kl_divergence,2)/(sigma*sigma)));
 }
 
 // ASSUMPTION : Using the history of measurements, but only one robot is operating
@@ -605,10 +651,10 @@ void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vecto
 
 
 }
-void calculate_measurements_list_empirical_CDF(vector<double> &relative_history_meas, vector<double> data_list)
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list)
 {
 	if (data_list.size() == 1) {
-		relative_history_meas.push_back(0);
+		rel_meas_list.push_back(0);
 		return;
 	}
 	vector<double> sortedData = data_list;
@@ -621,10 +667,10 @@ void calculate_measurements_list_empirical_CDF(vector<double> &relative_history_
 		size_t count = count_if(sortedData.begin(), sortedData.end(),
 							[&](double x) { return x < data_list[i]; });
 		// Calculate proportion
-		relative_history_meas.push_back(static_cast<double>(count) / data_list.size());
+		rel_meas_list.push_back(static_cast<double>(count) / data_list.size());
 	}
 }
-void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list)
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
 	// normalize the measurements with max and min values
 	double max_val = *max_element(data_list.begin(), data_list.end());
@@ -635,14 +681,55 @@ void calculate_normalized_relative_measurements(vector<double> &relative_history
 	{
 		if (abs(max_val-min_val)< 0.1)
 		{
-			relative_history_meas.push_back(0);
+			rel_meas_list.push_back(0);
 		}
 		else
 		{
-			relative_history_meas.push_back((data_list[i] - min_val) / (max_val - min_val));
+			rel_meas_list.push_back((data_list[i] - min_val) / (max_val - min_val));
 		}
 		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
 	}
+}
+
+void calculate_measurement_list_probablistic_distribution(vector<double> &pdf_meas_list, vector<double> data_list)
+{
+	// find the max and min values
+	double max_val = *max_element(data_list.begin(), data_list.end());
+	double min_val = *min_element(data_list.begin(), data_list.end());
+	int data_size = data_list.size();
+	int n_bins = 10;
+	if (abs(max_val - min_val) < 1e-2 )
+	{
+		printf("max and min are the same! set uniform distribution\n");
+		// uniform distribution
+		for (int i = 0; i < n_bins; i++){
+			pdf_meas_list.push_back(double(1.0)/double(n_bins));
+		}
+		return;
+	}
+	// classfiy the data into bins
+	double bin_width = (max_val - min_val)/ double(n_bins);
+	vector<int> bin_count(n_bins, 0);
+	for (int i = 0; i < data_size; i++)
+	{
+		if (data_list[i] < 0)
+			data_list[i] = 0;
+		int bin_idx = floor(data_list[i]- min_val / bin_width);
+		if (bin_idx > n_bins-1)
+			bin_idx = n_bins-1;
+		if (bin_idx < 0)
+			bin_idx = 0;
+		bin_count[bin_idx]++;
+	}
+	// calculate the probability of each bin
+	//printf("pdf is: ");
+	for (int i = 0; i < n_bins; i++)
+	{
+
+		pdf_meas_list.push_back(double(bin_count[i]) / double(data_size));
+		//printf("%f, ", double(bin_count[i]) / double(data_size));
+	}
+	//printf("\n");
 }
 
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev)
@@ -889,7 +976,7 @@ bool position_outside_arena(Position p)
 void information_gain_navigation_approx()
 {
 	float p0 = 0.5; // 50 cm
-	double DKL = 0, max_DKL = -100, max_meas = -100;
+	double KLD = 0, max_KLD = -100, max_meas = -100;
 	// double position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
@@ -935,11 +1022,11 @@ void information_gain_navigation_approx()
 		// future_posterior.copy_posterior(zero);
 		future_posterior.MCMC_evaluation(fake_history);
 		// calculate the expected information gain
-		DKL = posterior.Kullback_Leibler_divergence(future_posterior);
+		KLD = posterior.Kullback_Leibler_divergence(future_posterior);
 		// printf("DKL: %f _______________________\n", DKL);
-		if (DKL > max_DKL)
+		if (KLD > max_KLD)
 		{
-			max_DKL = DKL;
+			max_KLD = KLD;
 			goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
 			goal_position.y = tmp_position.y;
 			goal_position.heading = 0;
@@ -1367,7 +1454,7 @@ void joint_planning()
 	}
 }
 
-void DKL_MAP_distance(float gloabl_local_search_ratio)
+void KLD_MAP_distance(float gloabl_local_search_ratio)
 {
 	double best_point[2] = {0};
 	posterior.XYmarginal_distance_combined(current_position, gloabl_local_search_ratio, best_point);
@@ -1974,7 +2061,7 @@ void state_updategoal()
 		break;
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
-		DKL_MAP_distance(1.0);
+		KLD_MAP_distance(1.0);
 		break;
 	default:
 		break;

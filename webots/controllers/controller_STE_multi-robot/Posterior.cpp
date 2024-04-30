@@ -460,8 +460,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	double sample[nbr_dimension];
 	vector<double> relative_history_meas;
-	printf("nbr_dimension %d\n ", nbr_dimension);
-	printf("nbr_element %d\n ", nbr_element);
+	vector<double> pdf_history_meas;
 	double mean, stddev;
 	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
 	{
@@ -484,12 +483,12 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 		{
 			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement);
-			for (int i = 0; i < relative_history_meas.size(); i++)
-			{
-				printf("meas: %f, relative meas %f\n", history.measurement[i], relative_history_meas[i]);
-			}
 		}
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
+	}
+	if (simulation_parameters.gasFeature == PDF)
+	{
+		calculate_measurement_list_probablistic_distribution(pdf_history_meas, history.measurement);
 	}
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -509,6 +508,10 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
 		}
+		if (simulation_parameters.gasFeature == PDF)
+		{
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_pdf(history, pdf_history_meas, sample, i, model);
+		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev);
@@ -521,7 +524,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 // relative entropy calculation between one posterior pdf and another P
 double Posterior::Kullback_Leibler_divergence(Posterior P)
 {
-	double DKL = 0;
+	double KLD = 0;
 	int i = 0;
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -529,11 +532,11 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 		if (pdf[i] > 0 && P.pdf[i] > 0)
 		{
 			// DKL += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
-			DKL += (P.pdf[i] / P.sum) * log((P.pdf[i] / P.sum) / pdf[i]);
+			KLD += (P.pdf[i] / P.sum) * log((P.pdf[i] / P.sum) / pdf[i]);
 			// P is not normalized, but its sum was calculated and updated
 		}
 	}
-	return DKL;
+	return KLD;
 }
 
 // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf

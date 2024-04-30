@@ -69,6 +69,7 @@ typedef enum gasFeature
 	CONCENTRATION = 0,
 	GASHIT = 1,
 	RELATIVE_CONCENTRATION = 2,
+	PDF = 3,
 } eGasFeature;
 
 typedef enum visitedList
@@ -204,6 +205,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 // new likelihood for relative concentrations
 double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
+double likelihood_pdf(struct history &history, vector<double> pdf_history_list, double *parameters, int soure_pos_idx, PlumeModel *model);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();
@@ -223,6 +225,7 @@ void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vec
 void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list);
 void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev);
 void calculate_data_distribution(vector<double> data, double &mean, double &stddev);
-void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list);
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list);
+void calculate_measurement_list_probablistic_distribution(vector<double> &pdf_meas_list, vector<double> data_list);
 
 #endif
