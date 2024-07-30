@@ -66,9 +66,11 @@ typedef enum planningStrategy
 
 typedef enum gasFeature
 {
-	CONCENTRATION = 0,
+	//CONCENTRATION = 0,
+	ABSOLUTE_VALUE = 0,
 	GASHIT = 1,
-	RELATIVE_CONCENTRATION = 2,
+	//RELATIVE_CONCENTRATION = 2,
+	RELATIVE_VALUE = 2,
 	PDF = 3,
 } eGasFeature;
 
@@ -92,10 +94,17 @@ typedef enum relativeMethod
 	EMPIRICAL_CDF = 3,
 } eRelativeMethod;
 
-typedef enum SimuMode{
+typedef enum simuMode{
 	ONLINE = 0,
 	OFFLINE = 1,
 }eSimuMode;
+
+typedef enum calibrationMode
+{
+	OFF = 0,
+	LINEAR = 1,
+	NOLINEAR = 2,
+} eCalibrationMode;
 
 // parameters to estimate
 struct parameters_set
@@ -132,7 +141,9 @@ struct simulation_parameters
 	float sampling_dist_thresh; //19
 	eRelativeMethod relativeMethod; //20
 	eSimuMode simuMode; //21
+	eCalibrationMode calibrationMode; //22
 };
+
 extern struct simulation_parameters simulation_parameters;
 
 // states of the finite state machine

@@ -142,9 +142,9 @@ void init()
 	// 1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
 	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
 	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
-	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode
-	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.            21.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, BELIEF_CLUSTERING, PDF, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, GAUSSIAN_CDF, ONLINE};
+	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode 22.calibrationMode
+	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.    21.    22.
+	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, BELIEF_CLUSTERING,RELATIVE_VALUE, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, NORMALIZATION, ONLINE, OFF};
 
 	// read simulation parameters
 	FILE *sim_param_file;
@@ -353,6 +353,7 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 	{
 		// printf("odor measurement : %f \n",odor_measurement);
 		//  For PID sensor, the sensor reading is equal to the odor concentration
+		
 		if (simulation_parameters.gasSensor == PID)
 		{
 			*sensor_reading = odor_concentration;
@@ -362,7 +363,7 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 		{
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
 			// double tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
-			// ouble tau_d = 19.74; // time constant for the decay
+			// double tau_d = 19.74; // time constant for the decay
 			// double tau_r = 2.06; // time constant for the rise (slow sensor)
 			// double tau_d = 4.53; // time constant for the decay
 			double tau_r = 0.72; // time constant for the rise (our default sensor)
@@ -407,7 +408,35 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			if (*sensor_reading < 0)
 				*sensor_reading = 0;
 		}
+		
+		if (simulation_parameters.calibrationMode == LINEAR)
+		{
+			double raw_reading_before_calibration;
+			linear_reverse_con_to_raw_reading(sensor_reading, raw_reading_before_calibration);
+			*sensor_reading = raw_reading_before_calibration;
+		}
+		if (simulation_parameters.calibrationMode == NOLINEAR)
+		{
+			double raw_reading_before_calibration;
+			nolinear_reverse_con_to_raw_reading(sensor_reading, raw_reading_before_calibration);
+			*sensor_reading = raw_reading_before_calibration;
+		}
 	}
+}
+
+void linear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
+{
+	double a = 3.0;
+	double b = 99.0;
+	MOX_sensor_reading = (*odor_concentration - b)/a;
+	if (MOX_sensor_reading < 0)
+		MOX_sensor_reading = 0;
+}
+void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
+{
+	MOX_sensor_reading = pow(*odor_concentration/10,3);
+	if (MOX_sensor_reading < 0)
+		MOX_sensor_reading = 0;
 }
 
 void wind_read(double *intensity, double *angle)

@@ -133,7 +133,8 @@ void set_wheels_speed(double speed1, double speed2);
 void cleaning_up();
 void next_iteration_time();
 void obstacle_avoidance_k4();
-
+void linear_reverse_con_to_raw_reading(double* concentration, double &sensor_reading);
+void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading);
 double generateGaussianNoise(double mean, double variance);
 
 #endif
