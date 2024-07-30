@@ -2,8 +2,8 @@
  * File:          controller_STE_multi-robot.cpp
  * Date:          Jan 2019
  * Description:   The goal is to estimate the source terms including the position
- * Author:        Faezeh Rahbar
- * Modifications: 26/01/2019
+ * Author:        Faezeh Rahbar; Wanting Jin
+ * Modifications: 30/07/2024
  */
 
 // custom libraries
@@ -245,24 +245,27 @@ void go_to_goal(Position goal)
 	// vector to the goal in robot coordinates
 	float x = movement[0] * cosf(current_position.heading) + movement[1] * sinf(current_position.heading);  // x in robot coordinates
 	float z = -movement[0] * sinf(current_position.heading) + movement[1] * cosf(current_position.heading); // z in robot coordinates
-	float bearing = atan2(z, x) - PI / 2;											  //[-PI, PI]
-	// printf("bearing : %f \n", bearing/PI*180);
-
+	float bearing = atan2(z, x) - PI / 2;											 
+	//printf("bearing : %f \n", bearing/PI*180);
+      
+	double k_rho = 0.2;   // gain for linear velocity
+	double k_theta = k_rho * 5.0; // gain for angular velocity; 5.0 is the ratio between the two gains, where is a good value to reach the goal
 	// angular and linear velocity
-	float w = 1 * sinf(bearing);
+	// the maximal speed of Khepera is 0.8m/s, so that the maximal velocity factor is 4
+	float w = simulation_parameters.vel_factor * k_theta * sinf(bearing);
+
+	// ORIGINAL CONTROLLER
+	float u = simulation_parameters.vel_factor * k_rho * cosf(bearing); // default vel factor is 1
 
 	// LINEAR VELOCITY CONTROLLER
 	// int dir = (cosf(bearing)>0)-(cosf(bearing)<0);
 	// float u = simulation_parameters.vel_factor * dir * (abs(bearing)<=0.2) + (abs(bearing)>0.2) * 0.2 * cosf(bearing); //simulation_parameters.vel_factor * 0.2 * cosf(bearing);
 
-	// ORIGINAL CONTROLLER
-	float u = simulation_parameters.vel_factor * 0.2 * cosf(bearing); // default vel factor is 1
-
-	// printf("linear v : %f; angular w : %f \n", u, w);
+	printf("linear v : %f; angular w : %f \n", u, w);
 	// wheels speed
-	speed[0] = (u - AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS; // 10 is a speed-up factor
+	speed[0] = (u - AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS; 
 	speed[1] = (u + AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS;
-	// printf("speed : %f %f \n", speed[0], speed[1]);
+	printf("speed : %f %f \n", speed[0], speed[1]);
 }
 
 // show the measurement history on screen
