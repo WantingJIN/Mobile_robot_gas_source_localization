@@ -499,6 +499,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
+		sigma = 0.35; //works well for Normalization
 	}
 	if (simulation_parameters.relativeMethod == M_DISTANCE)
 	{
@@ -1111,7 +1112,6 @@ void lawnmower_planning()
 
 void calculate_information_gain()
 {
-	// if (simulation_parameters.gasFeature == CONCENTRATION){
 	if (simulation_parameters.infoFeature == VARIANCE)
 	{
 		plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
@@ -1138,7 +1138,6 @@ void maximal_information_planning()
 	double max_info = 0;
 	int max_info_index = 0;
 	int sum = 0;
-	// if (simulation_parameters.gasFeature == CONCENTRATION){
 	for (int i = 0; i < x_nbins * y_nbins; i++)
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
@@ -1194,7 +1193,6 @@ void maximal_belief_planning()
 	double max_pdf = 0;
 	int max_pdf_index = 0;
 	int sum = 0;
-	// if (simulation_parameters.gasFeature == CONCENTRATION){
 	for (int i = 0; i < x_nbins * y_nbins; i++)
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
@@ -2189,7 +2187,7 @@ void state_moving()
 			i++;
 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}
-		go_to_goal(*i);
+		go_to_goal(*i);  
 		// obstacle avoidance if necessary
 		//  if(obstacle_or_not() == 1){
 		//  	FSM.state = STATE_OBSTACLE_AVOIDANCE;

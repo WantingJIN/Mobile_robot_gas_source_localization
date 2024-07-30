@@ -462,7 +462,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	vector<double> relative_history_meas;
 	vector<double> pdf_history_meas;
 	double mean, stddev;
-	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
+	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
@@ -498,12 +498,12 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 		// calculate the posterior distribution of source term param 'sample'
 		// check the gas feature selected
-		if (simulation_parameters.gasFeature == CONCENTRATION)
+		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
 			// pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); // with precomputed maps
 		}
-		if (simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
+		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
 
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
