@@ -6,7 +6,7 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/rel_con/release_amount_robustness';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/release_amount_robustness/relative_value_normalization/1';
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -55,11 +55,11 @@ folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
 folder_list = folder_list([folder_list.isdir]);
-number = length(folder_list);
+numExperiments = length(folder_list);
 
 
 %% get data
-for i=1:number
+for i=1:numExperiments
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     % multiple robots
     robot_list = dir(folder_name);
@@ -87,10 +87,10 @@ for i=1:number
     
     % Time test
     exp_time_file = readtable([folder_name, '/', num2str(ID(1)), '/experiment_time.csv']);
-    nav_time = exp_time_file(2,2);
-    comp_time = exp_time_file(3,2);
-    exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
-    
+    % nav_time = exp_time_file(2,2);
+    % comp_time = exp_time_file(3,2);
+    % exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
+    exp_time_list(i) = exp_time_file(1,5).Var5; 
     
     % error on X and Y (col 5 and 6)
     max_a_post = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
