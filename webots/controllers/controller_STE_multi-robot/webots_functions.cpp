@@ -144,7 +144,7 @@ void init()
 	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
 	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode 22.calibrationMode
 	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.    21.    22.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, BELIEF_CLUSTERING,RELATIVE_VALUE, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, NORMALIZATION, ONLINE, OFF};
+	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, VERY_SLOW_MOX, BELIEF_CLUSTERING,ABSOLUTE_VALUE, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, NORMALIZATION, ONLINE, OFF};
 
 	// read simulation parameters
 	FILE *sim_param_file;
@@ -359,15 +359,27 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			*sensor_reading = odor_concentration;
 		}
 		// For the MOX sensor, the sensor properties are modeled as a first-order system
-		if (simulation_parameters.gasSensor == MOX)
+		if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == SLOW_MOX 
+		|| simulation_parameters.gasSensor == VERY_SLOW_MOX)
 		{
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			// double tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
-			// double tau_d = 19.74; // time constant for the decay
 			// double tau_r = 2.06; // time constant for the rise (slow sensor)
 			// double tau_d = 4.53; // time constant for the decay
-			double tau_r = 0.72; // time constant for the rise (our default sensor)
-			double tau_d = 0.92; // time constant for the decay
+			double tau_r,tau_d;
+			if (simulation_parameters.gasSensor == MOX){
+				tau_r = 0.72; // time constant for the rise (our default sensor)
+				tau_d = 0.92; // time constant for the decay
+			}
+			if (simulation_parameters.gasSensor == SLOW_MOX){
+				tau_r = 2.06; // time constant for the rise (slow sensor)
+				tau_d = 4.53; // time constant for the decay
+			}
+			if (simulation_parameters.gasSensor == VERY_SLOW_MOX){
+				tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
+			      tau_d = 19.74; // time constant for the decay
+
+			}
+
 			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n]
 			// where wc is the cut-off frequency and Ts is the sampling period
 			double alpha;

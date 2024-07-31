@@ -2,29 +2,22 @@
 % Plots distance to true source location along y and x and the number of
 % iterations or time for convergence
 
-clear all; clc; %close all;
-
+clear all; clc; close all;
+dataTable = table();
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/very_slow_MOX_vel_comp_lawnmower';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
+dispatched_folder = [general_folder,'speed_test/very_slow_MOX'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
 
-use_time = 0; % 1 to plot true time and 0 for number of iterations
-use_cst_velocity=1; % 1 for cconstant velocity and 0 if multiplicative factor on default controller
-
-if(use_cst_velocity)
-    x_axis_title = 'Constant linear velocity (mm/s)';
-else
-    x_axis_title = x_axis_title;
-end
-%% dispatch
+x_axis_title = 'Constant linear velocity (m/s)';
+% dispatch
 for i=1:exp_number
-    
-    disp(i)
+
     % the name of the folder
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     % the content of the folder
@@ -33,13 +26,13 @@ for i=1:exp_number
     robot_list = robot_list([robot_list.isdir]);
     % the IDs of the robots
     ID = arrayfun(@(struct) str2double(struct.name),robot_list);
-    
+
     % skip if it's not a job folder
     if(~exist([folder_name, '/', num2str(ID(1)), '/param_log.csv'],'file')), continue; end
-    
+
     % get simulation's parameter values
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
-    
+
     % remove folders with unfinished jobs
     file_list = dir([folder_name '/**']);
     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
@@ -47,7 +40,7 @@ for i=1:exp_number
     %if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
-    new_path = [general_folder '/' num2str(params.vel_factor)];
+    new_path = [dispatched_folder,'/',num2str(params.vel_factor)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))
@@ -55,106 +48,195 @@ for i=1:exp_number
     end
     movefile(folder_name, new_path);
 end
-%%
+%
 
 % choose the folders
-folder_list = dir([general_folder '/**']);
+folder_list = dir([dispatched_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
-folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
+folder_list = folder_list(~ismember({folder_list.folder}, dispatched_folder));
 folder_list = folder_list([folder_list.isdir]);
-number = length(folder_list);
+numExperiments = length(folder_list);
 
 %% get data
-for i=1:number
+for i=1:numExperiments
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
-    
-    disp('folder_name')
-    disp(folder_name)
-    
     % multiple robots
-    robot_list = dir(folder_name)
-    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}))
-    robot_list = robot_list([robot_list.isdir])
+    robot_list = dir(folder_name);
+    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}));
+    robot_list = robot_list([robot_list.isdir]);
     ID = arrayfun(@(struct) str2num(struct.name),robot_list);
     % remove folders with unfinished jobs
     file_list = dir([folder_name '/**']);
-    % if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
+    if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
     entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
-  
     % ground truth and other params
-    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']); 
-    if (use_cst_velocity) 
-        vel_factor_list(i,1) = params.vel_factor*813;
-    else
-        vel_factor_list(i,1) = params.vel_factor;
-    end
+    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
+    map_nbr = params.map_nbr;
+    robot_vel = params.vel_factor*0.2;
+
+    % exp_time_file = readtable([folder_name, '/', num2str(ID(1)), '/experiment_time.csv']);
+    % nav_time = exp_time_file(2,2);
+    % comp_time = exp_time_file(3,2);
+    % exp_time= nav_time.Var2 + comp_time.Var2; 
+
     % stats
-    expected_a_posteriori_file = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
-    iteration_nbr_list(i) = size(expected_a_posteriori_file,1);
-    expected_a_posteriori(i,1:2) = expected_a_posteriori_file(end,2:3);
-    
-    if(use_time)
-        exp_time_file = readtable([folder_name, '/', num2str(ID(1)), '/experiment_time.csv']);
-        nav_time = exp_time_file(2,2);
-        comp_time = exp_time_file(3,2);
-        exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
+    expected_a_posteriori_file = dlmread([folder_name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
+    iteration_nbr = size(expected_a_posteriori_file,1);
+    expected_a_posteriori(1:2) = expected_a_posteriori_file(end,2:3);
+    if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
+    if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
+    error(1) = params.source_position(1) - expected_a_posteriori(1);
+    error(2) = params.source_position(2) - expected_a_posteriori(2);
+    entropy_file = dlmread([folder_name, '/' num2str(ID(1)), '/entropy.csv']);
+    entropy(1) = entropy_file(end,1);
+    max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
+    max_a_post(1:2) = max_a_post_file(end,2:3);
+    convergence_list(1) = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
+    % time taken for each run 
+    measurements = dlmread([folder_name, '/' num2str(ID(1)), '/measurements.csv']);
+    exp_time = measurements(end,4);
+    % traveling_distance
+    trajectory = dlmread([folder_name, '/' num2str(ID(1)), '/trajectory.csv']);
+    traj_length_sum = 0;
+    for iter = 2:size(trajectory,1)
+        traj_length_sum = traj_length_sum + sqrt((trajectory(iter,2)-trajectory(iter-1,2))^2 + (trajectory(iter,3) - trajectory(iter-1,3))^2); 
     end
+    traj_length= traj_length_sum;
     
-    % error on X and Y (col 5 and 6)
-    max_a_post = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
-    if(isnan(expected_a_posteriori(i,1))), expected_a_posteriori(i,1) = max_a_post(end,2); end
-    if(isnan(expected_a_posteriori(i,2))), expected_a_posteriori(i,2) = max_a_post(end,3); end
-    error_list(i,1) = params.source_position(1) - expected_a_posteriori(i,1);
-    error_list(i,2) = params.source_position(2) - expected_a_posteriori(i,2);
-    entropy = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/entropy.csv']);
-    entropy_list(i,1) = entropy(end,1);
+    % strategy
+    sampling_mode_idx = params.sampling_mode;
+    sampling_mode = "";
+    switch sampling_mode_idx
+        case 0
+            sampling_mode = "sense in motion";
+        case 1
+            sampling_mode = "stop sense go";
+        case 2
+            sampling_mode = "visit sense go";
+    end
+
+    planning_mode_idx = params.planning_strategy;
+    planning_mode = "";
+    switch planning_mode_idx
+        case 0
+            planning_mode = "greedy";
+        case 5
+            planning_mode = "belief clustering";
+        case 6
+            planning_mode = "informative kld";
+    end
+
+    sensor_mode_idx = params.gas_sensor_type;
+    sensor_mode = "";
+    switch sensor_mode_idx
+        case 0 
+            sensor_mode = "PID";
+        case 1
+            sensor_mode = "MOX";
+        case 3
+            sensor_mode = "slow MOX";
+        case 4
+            sensor_mode = "very slow MOX";
+    end
+
+    gas_feature_idx = params.gas_feature;
+    gas_feature = "";
+    switch gas_feature_idx
+        case 0
+            gas_feature = "absolute value";
+        case 1
+            gas_feature = "gas hit";
+        case 2 
+            gas_feature = "relative value";
+    end
+            
+    estimate_error=sqrt(error(1)^2+error(2)^2);
+    % Create a temporary table for the current experiment
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error, gas_feature, robot_vel);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error', 'gas_feature', 'robot_vel'};
     
-    max_a_post_list(i,1:2) = max_a_post(end,2:3);
-    convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
+    % Append the temporary table to the main dataTable
+    dataTable = [dataTable; tempTable];
 end
 
+% Save the table to a file (e.g., CSV or MAT)
+writetable(dataTable, [dispatched_folder '/experiment_data.csv']); % Save as CSV
+% save([general_folder '/experiment_data.mat'], 'dataTable');     % Save as MAT
 
-%% plot for thesis without time
+disp('Experiment data saved.');
 
-%% plot for thesis
-f = figure('Position',[-1561         656         715         615]);
+%% plot the result for this folder 
+f = figure('Position',[-1561         656         2015         1215]);
 custom_color = [44,136,217]./255;
-subplot(1,2,1)
-plot([0 length(unique(vel_factor_list))], [0 0], 'g');
+subplot(1,5,1)
+plot([0 length(unique(dataTable.robot_vel))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,1), vel_factor_list,'Colors',custom_color);
-error_x = error_list(:,1);
+boxplot(dataTable.x_error, dataTable.robot_vel,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([-1,10])
-xlabel(x_axis_title);
+xlabel('Robot speed (m/s)');
 ylabel('Error (m)');
 title('Error on x');
-subplot(1,2,2);
-plot([0 length(unique(vel_factor_list))], [0 0], 'g');
+subplot(1,5,2);
+plot([0 length(unique(dataTable.robot_vel))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,2), vel_factor_list,'Colors',custom_color);
-error_y = error_list(:,2);
+boxplot(dataTable.y_error, dataTable.robot_vel,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([-3,4])
-xlabel(x_axis_title);
+xlabel('Robot speed (m/s)');
 title('Error on y');
 ylabel('Error (m)');
+subplot(1,5,3);
+boxplot(dataTable.iteration, dataTable.robot_vel,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+ylim([0,40])
+xlabel('Robot speed (m/s)');
+title('nbr iterations');
+subplot(1,5,4)
+plot([0 length(unique(dataTable.robot_vel))], [0 0], 'g');
+hold on;
+boxplot(dataTable.exp_time, dataTable.robot_vel,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+% ylim([0,300])
+xlabel('Robot speed (m/s)');
+title('Experiment time');
+ylabel('Time (s)');
+subplot(1,5,5)
+plot([0 length(unique(dataTable.robot_vel))], [0 0], 'g');
+hold on;
+boxplot(dataTable.traj_length, dataTable.robot_vel,'Colors',custom_color);
+% ylim([0,50])
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%ylim([-3,4])
+xlabel('Robot speed (m/s)');
+title('Traveling distance');
+ylabel('Distance (m)');
 
+hold on
 
-%% calculate success rate
+%% calculate general success rate
 success_case = 0;
-for i = 1: size (error_x,1)
-    if (abs(error_x(i))) < 1 && (abs(error_y(i))<0.5)
+for i = 1: size (dataTable.x_error,1)
+    if (abs(dataTable.x_error(i))) < 1 && (abs(dataTable.y_error(i))<0.5)
         success_case = success_case+1;
     end
 end
-success_rate = success_case/size(error_x,1)
+success_rate = success_case/size(dataTable.x_error,1);
 
 annotation(f,'textbox',...
     [0.25 0.01 0.504365076491284 0.0473684201637904],...
@@ -165,98 +247,28 @@ annotation(f,'textbox',...
     'FontSize',12,...
     'FitBoxToText','off');
 
-saveas(f,[general_folder '/test_maps_results_comparison.png']);
-%% save the statistical result for t-test
-save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
-
-
-
-
-% %% plot for thesis
-% f = figure('Position',[-1561         656         715         615]);
-% custom_color = [44,136,217]./255;
-% subplot(1,3,1)
-% plot([0 length(unique(vel_factor_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,1), vel_factor_list,'Colors',custom_color);
-% error_x = error_list(:,1);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([-1,10])
-% xlabel(x_axis_title);
-% ylabel('Error (m)');
-% title('Error on x');
-% subplot(1,3,2);
-% plot([0 length(unique(vel_factor_list))], [0 0], 'g');
-% hold on;
-% boxplot(error_list(:,2), vel_factor_list,'Colors',custom_color);
-% error_y = error_list(:,2);
-% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% set(lines, 'Color', 'r');
-% set(findobj(gca,'type','line'),'linew',1.2)
-% grid on;
-% ylim([-3,4])
-% xlabel(x_axis_title);
-% title('Error on y');
-% ylabel('Error (m)');
-% 
-% subplot(1,3,3);
-% 
-% if(use_time)
-%     boxplot(exp_time_list, vel_factor_list,'Colors',custom_color);
-%     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-%     set(lines, 'Color', 'r');
-%     set(findobj(gca,'type','line'),'linew',1.2)
-%     grid on;
-%     ylim([0,max(exp_time_list)+1])
-%     xlabel(x_axis_title);
-%     ylabel('Time (s)');
-%     title('Total experiment time');
-% else
-%     boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
-%     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-%     set(lines, 'Color', 'r');
-%     set(findobj(gca,'type','line'),'linew',1.2)
-%     grid on;
-%     ylim([0,max(iteration_nbr_list)+1])
-%     xlabel(x_axis_title);
-%     ylabel('nb iterations');
-%     title('nb iterations');
-% end
-% 
-% 
-% % subplot(1,3,3);
-% % boxplot(iteration_nbr_list, vel_factor_list,'Colors',custom_color);
-% % lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-% % set(lines, 'Color', 'r');
-% % set(findobj(gca,'type','line'),'linew',1.2)
-% % grid on;
-% % ylim([0,50])
-% % xlabel('Linear velocity constant');
-% % title('nbr iterations');
-% % hold on
-% 
-% %% calculate success rate
-% success_case = 0;
-% for i = 1: size (error_x,1)
-%     if (abs(error_x(i))) < 1 && (abs(error_y(i))<0.5)
-%         success_case = success_case+1;
-%     end
-% end
-% success_rate = success_case/size(error_x,1)
-% 
-% annotation(f,'textbox',...
-%     [0.25 0.01 0.504365076491284 0.0473684201637904],...
-%     'String',{'Success rate:',num2str(success_rate)},...
-%     'LineStyle','none',...
-%     'HorizontalAlignment','center',...
-%     'FontWeight','bold',...
-%     'FontSize',12,...
-%     'FitBoxToText','off');
-% 
-% saveas(f,[general_folder '/test_maps_results_comparison.png']);
-% %% save the statistical result for t-test
-% save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
-% 
+%% calculate success rate for each case  
+robot_vel_cases = unique(dataTable.robot_vel);
+number_vel_case = length(robot_vel_cases);
+success_rate_list = zeros(number_vel_case,1);
+for i = 1:number_vel_case
+    success_case = 0;
+    Tsub = dataTable(dataTable.robot_vel == robot_vel_cases(i),:);
+    for j = 1: size (Tsub.x_error,1)
+        if (abs(Tsub.x_error(j))) < 1 && (abs(Tsub.y_error(j))<0.5)
+            success_case = success_case+1;
+        end
+    end
+    success_rate_list(i) = success_case/size(Tsub.x_error,1);
+    str= append('speed = ', num2str(robot_vel_cases(i)),  ": ",  num2str(success_rate_list(i)));
+    annotation(f,'textbox',...
+    [0.25 0.01, 0.2*i, 0.015 ],...
+    'String',str,...
+    'LineStyle','none',...
+    'HorizontalAlignment','center',...
+    'FontWeight','bold',...
+    'FontSize',12,...
+    'FitBoxToText','off');
+end
+success_rate_list
+saveas(f,[dispatched_folder '/test_maps_results_comparison.png']);

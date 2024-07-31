@@ -52,6 +52,8 @@ typedef enum gasSensor
 	PID = 0,
 	MOX = 1,
 	NOISY_MOX = 2,
+	SLOW_MOX = 3,
+	VERY_SLOW_MOX = 4,
 } eGasSensor;
 
 typedef enum planningStrategy

@@ -261,11 +261,11 @@ void go_to_goal(Position goal)
 	// int dir = (cosf(bearing)>0)-(cosf(bearing)<0);
 	// float u = simulation_parameters.vel_factor * dir * (abs(bearing)<=0.2) + (abs(bearing)>0.2) * 0.2 * cosf(bearing); //simulation_parameters.vel_factor * 0.2 * cosf(bearing);
 
-	printf("linear v : %f; angular w : %f \n", u, w);
+	//printf("linear v : %f; angular w : %f \n", u, w);
 	// wheels speed
 	speed[0] = (u - AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS; 
 	speed[1] = (u + AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS;
-	printf("speed : %f %f \n", speed[0], speed[1]);
+	//printf("speed : %f %f \n", speed[0], speed[1]);
 }
 
 // show the measurement history on screen
