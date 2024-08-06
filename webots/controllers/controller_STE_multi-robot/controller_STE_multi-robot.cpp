@@ -125,7 +125,7 @@ double previous_sensor_reading = 0.0;
 
 // gas map
 // param: sigma, gamma, scaling_param, wind_speed, rco
-GasMap2D gas_map(0.2, 2, 1, 0.75, 0.3);
+GasMap2D gas_map(0.2, 4, 1, 0.75, 0.3);
 
 // obstacles definitions
 int nbr_obs = 4;
@@ -1773,7 +1773,7 @@ void state_measuring()
 	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
 		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL)
+		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
 			for (int i = 0; i < sample_in_motion.size; i++)
@@ -2127,12 +2127,22 @@ void state_moving()
 		double odor_concentration = 0.0;
 		double reverse_sensor_reading = 0.0;
 		odor_read(&instant_concentration, odor_concentration);
-		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL)
+		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
-			// FIXME: temporary attemp for reverse sensor model
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			double tau_r = 1.3;		  // 5.19; //1.3; // time constant for the rise
-			double tau_d = 2.0;		  // 19.74; //2.0;
+			double tau_r = 0, tau_d = 0; 
+			if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX){
+				tau_r = 0.72;   // time constant for the rise (our default sensor)		  
+			      tau_d = 0.92;   // time constant for the decay		  
+			}
+			if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX){
+				tau_r = 2.06;   // time constant for the rise (slow sensor)	  
+			      tau_d = 4.53;   // time constant for the decay	  
+			}
+			if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX){
+				tau_r = 5.19;   // time constant for the rise (very slow MOX TGS2600)	  
+			      tau_d = 19.74;  // time constant for the decay	  
+			}
 			double alpha = 0.0;
 			if (instant_concentration > previous_sensor_reading) // rising phase
 				alpha = tau_r / Ts;
@@ -2145,7 +2155,7 @@ void state_moving()
 			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_REVERSE_SENSOR_MODEL)
+		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}

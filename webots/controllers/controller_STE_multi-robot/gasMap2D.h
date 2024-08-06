@@ -16,16 +16,14 @@ using namespace std;
 #define map_x_nbins 64
 #define map_y_nbins 64
 
+#define MAP_VERBOSE 0
 struct KernelParameters
 {
-  float sigma;
-  float gamma;
-  float scaling_param;
+  float sigma;    // the kernel size in terms of no-wind
+  float gamma;    // the stretching factor of the kernel in the wind direvciton
+  float scaling_param;  // use to balance between the confidence with the measurement and background (currently not used)
   float wind_speed;
-  float rco;
-  float wmin;
-  float rmin;
-  float rmax;
+  float rco;     // the range of influence of the kernel
 };
 
 class GasMap2D

@@ -5,6 +5,9 @@
 #include "PlumeModel.h"
 #include "Position.h"
 
+// for storing debugging info
+extern FILE *console_logfile;
+
 class Posterior
 {
 public:

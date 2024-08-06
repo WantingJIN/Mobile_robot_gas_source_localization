@@ -43,8 +43,8 @@ typedef enum processingMode
 {
 	NO_PROCESSING = 0,
 	KERNEL_MAPPING = 1,
-	REVERSE_SENSOR_MODEL = 2,
-	MAPPING_AND_REVERSE_SENSOR_MODEL = 3,
+	DECONVOLUTION = 2,
+	MAPPING_AND_DECONVOLUTION = 3,
 } eProcessingMode;
 
 typedef enum gasSensor
@@ -54,6 +54,8 @@ typedef enum gasSensor
 	NOISY_MOX = 2,
 	SLOW_MOX = 3,
 	VERY_SLOW_MOX = 4,
+	NOISY_SLOW_MOX = 5,
+	NOISY_VERY_SLOW_MOX = 6,
 } eGasSensor;
 
 typedef enum planningStrategy

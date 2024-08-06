@@ -4,7 +4,7 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '../Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/ind_meeting/relative_normalization';
 % choose the folders
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
@@ -30,15 +30,13 @@ for i = 1:numExperiments
     expected_a_posteriori_file = dlmread([folder_name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
     iteration_nbr = size(expected_a_posteriori_file,1);
     expected_a_posteriori(1:2) = expected_a_posteriori_file(end,2:3);
-    % error on X and Y (col 5 and 6)
-    max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
     if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
     if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
     error(1) = params.source_position(1) - expected_a_posteriori(1);
     error(2) = params.source_position(2) - expected_a_posteriori(2);
     entropy_file = dlmread([folder_name, '/' num2str(ID(1)), '/entropy.csv']);
     entropy(1) = entropy_file(end,1);
-    
+    max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
     max_a_post(1:2) = max_a_post_file(end,2:3);
     convergence_list(1) = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
     % time taken for each run 
