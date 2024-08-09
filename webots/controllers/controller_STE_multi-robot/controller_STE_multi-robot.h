@@ -110,6 +110,14 @@ typedef enum calibrationMode
 	NOLINEAR = 2,
 } eCalibrationMode;
 
+typedef enum gasHitMethod
+{
+	FIXED_THRES = 0,
+	MIN_MAX_THRES = 1,
+	SLIDING_WINDOW_THRES = 2,
+	FIXED_THRES_AND_GAUSSIAN_CDF = 3,
+} eGasHitMethod;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -146,6 +154,7 @@ struct simulation_parameters
 	eRelativeMethod relativeMethod; //20
 	eSimuMode simuMode; //21
 	eCalibrationMode calibrationMode; //22
+	eGasHitMethod gasHitMethod; //23
 };
 
 extern struct simulation_parameters simulation_parameters;

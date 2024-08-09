@@ -464,7 +464,13 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	vector<double> relative_history_meas;
 	vector<double> pdf_history_meas;
 	double mean, stddev;
-	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_VALUE)
+
+	if (simulation_parameters.gasFeature == GASHIT)
+	{
+		printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
+		calculate_data_distribution(history.measurement, mean, stddev);
+	}
+	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
@@ -507,7 +513,6 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
 		}
 		if (simulation_parameters.gasFeature == PDF)

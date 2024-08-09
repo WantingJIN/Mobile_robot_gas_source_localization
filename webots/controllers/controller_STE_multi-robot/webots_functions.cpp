@@ -142,9 +142,9 @@ void init()
 	// 1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
 	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
 	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
-	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode 22.calibrationMode
-	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.    21.    22.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, DECONVOLUTION, VERY_SLOW_MOX, BELIEF_CLUSTERING, ABSOLUTE_VALUE, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, EMPIRICAL_CDF, ONLINE, OFF};
+	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode 22.calibrationMode 23.gasHitMethod
+	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.         11.          12.         13.         14.      15. 16. 17. 18.  19.     20.           21.   22.     23.
+	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, BELIEF_CLUSTERING, GASHIT, visitedList_ON, VARIANCE, 1, 10, 10, 0.75, 0.1, EMPIRICAL_CDF, ONLINE, OFF, SLIDING_WINDOW_THRES};
 
 	// read simulation parameters
 	FILE *sim_param_file;
@@ -315,6 +315,8 @@ void init()
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
 	fprintf(sim_param_file, "relative_method %d\n", simulation_parameters.relativeMethod);
 	fprintf(sim_param_file, "simu_mode %d\n", simulation_parameters.simuMode);
+	fprintf(sim_param_file, "calibration_mode %d\n", simulation_parameters.calibrationMode);
+	fprintf(sim_param_file, "gas_hit_method %d\n", simulation_parameters.gasHitMethod);
 	fclose(sim_param_file);
 
 	if ((ID - 100) > simulation_parameters.number_of_robots)
