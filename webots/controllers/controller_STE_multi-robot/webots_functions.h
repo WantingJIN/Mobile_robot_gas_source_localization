@@ -21,6 +21,7 @@ extern "C"
 }
 #include "controller_STE_multi-robot.h"
 #include "Message.h"
+#include "SimulationParameters.h"
 
 #define WEBOTS 1
 #define KHEPERA 0
@@ -116,9 +117,9 @@ extern struct friends friends[MAX_NB_ROBOTS];
 
 extern int n_time_step;
 
-extern struct simulation_parameters simulation_parameters;
-
 extern double real_source_pos[3];
+
+extern SimulationParameters simulation_parameters;
 
 void init();
 void odor_read(double *sensor_reading, double &odor_concentration);

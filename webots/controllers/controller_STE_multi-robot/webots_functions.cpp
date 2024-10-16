@@ -137,119 +137,13 @@ void init()
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
 
-	// get the configuration
-	// default values for the simulation parameters
-	// 1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
-	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
-	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
-	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode 22.calibrationMode 23.gasHitMethod
-	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.         11.          12.         13.         14.      15. 16. 17. 18.  19.     20.           21.   22.     23.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, PID, BELIEF_CLUSTERING, GASHIT, visitedList_ON, VARIANCE, 1, 10, 10, 0.75, 0.1, EMPIRICAL_CDF, ONLINE, OFF, SLIDING_WINDOW_THRES};
+      // load the simulation parameters
+      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
+      simulation_parameters.rewrite_parameters_from_file();
 
-	// read simulation parameters
 	FILE *sim_param_file;
 	int ok = 0;
-	if (access("../../data/simulation_parameters/likelihood_error.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/likelihood_error.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.likelihood_error);
-		if (ok)
-			printf("likelihood_error : %f\n", simulation_parameters.likelihood_error);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/gloabl_local_search_ratio.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/gloabl_local_search_ratio.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.gloabl_local_search_ratio);
-		if (ok)
-			printf("gloabl_local_search_ratio : %f\n", simulation_parameters.gloabl_local_search_ratio);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/MCMC_iteration_num.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/MCMC_iteration_num.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_iteration_num);
-		if (ok)
-			printf("MCMC_iteration_num : %d\n", simulation_parameters.MCMC_iteration_num);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_or_exhaustive_eval);
-		if (ok)
-			printf("MCMC_or_exhaustive_eval : %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.number_of_robots);
-		if (ok)
-			printf("number_of_robots : %d\n", simulation_parameters.number_of_robots);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/scenario.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/scenario.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.scenario);
-		if (ok)
-			printf("scenario : %d\n", simulation_parameters.scenario);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.cluster_entropy_ratio);
-		if (ok)
-			printf("cluster_entropy_ratio : %f\n", simulation_parameters.cluster_entropy_ratio);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/map_nbr.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/map_nbr.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
-		if (ok)
-			printf("scenario : %d\n", simulation_parameters.map_nbr);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/vel_factor.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/vel_factor.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.vel_factor);
-		if (ok)
-			printf("vel param : %f\n", simulation_parameters.vel_factor);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/sampling_period.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_period.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.sampling_period);
-		if (ok)
-			printf("sampling_period : %d\n", simulation_parameters.sampling_period);
-		fclose(sim_param_file);
-		// Test adaptive sampling period
-		// simulation_parameters.sampling_period = int(100-167*simulation_parameters.vel_factor);
-		// printf("sampling period modified: %d\n", simulation_parameters.sampling_period);
-	}
-	if (access("../../data/simulation_parameters/wind_factor.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/wind_factor.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.wind_factor);
-		if (ok)
-			printf("wind param : %f\n", simulation_parameters.wind_factor);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/sampling_dist_thresh.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_dist_thresh.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.sampling_dist_thresh);
-		if (ok)
-			printf("wind param : %f\n", simulation_parameters.sampling_dist_thresh);
-		fclose(sim_param_file);
-	}
-
-	int release_amount;
+      int release_amount;
 	if (access("../../data/plugin_parameters/releaseAmount.txt", F_OK) != -1)
 	{
 		sim_param_file = fopen("../../data/plugin_parameters/releaseAmount.txt", "r");
@@ -258,7 +152,6 @@ void init()
 			printf("release rate param : %d\n", release_amount);
 		fclose(sim_param_file);
 	}
-	//FIXME - temporary solution to read the source position 0328
 
 	if (simulation_parameters.simuMode == ONLINE){
 		if (access("../../data/source_pos.txt", F_OK) != -1) {
@@ -290,34 +183,13 @@ void init()
 	// write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
-	fprintf(sim_param_file, "likelihood_error %f\n", simulation_parameters.likelihood_error);
-	fprintf(sim_param_file, "gloabl_local_search_ratio %f\n", simulation_parameters.gloabl_local_search_ratio);
-	fprintf(sim_param_file, "MCMC_iteration_num %d\n", simulation_parameters.MCMC_iteration_num);
-	fprintf(sim_param_file, "MCMC_or_exhaustive_eval %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-	fprintf(sim_param_file, "number_of_robots %d\n", simulation_parameters.number_of_robots);
-	fprintf(sim_param_file, "scenario %d\n", simulation_parameters.scenario);
-	fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
-	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
-	fprintf(sim_param_file, "data_processing_mode %d\n", simulation_parameters.processingMode);
-	fprintf(sim_param_file, "gas_sensor_type %d\n", simulation_parameters.gasSensor);
-	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
-	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
-	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
-	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
-	fprintf(sim_param_file, "sampling_period %d\n", simulation_parameters.sampling_period);
-	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
-	fprintf(sim_param_file, "vel_factor %f\n", simulation_parameters.vel_factor);
-	fprintf(sim_param_file, "wind_factor %f\n", simulation_parameters.wind_factor);
-	fprintf(sim_param_file, "sampling_dist_thresh %f\n", simulation_parameters.sampling_dist_thresh);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
-	fprintf(sim_param_file, "relative_method %d\n", simulation_parameters.relativeMethod);
-	fprintf(sim_param_file, "simu_mode %d\n", simulation_parameters.simuMode);
-	fprintf(sim_param_file, "calibration_mode %d\n", simulation_parameters.calibrationMode);
-	fprintf(sim_param_file, "gas_hit_method %d\n", simulation_parameters.gasHitMethod);
 	fclose(sim_param_file);
+
+	simulation_parameters.log_simulation_parameters(config_logfile_name);
 
 	if ((ID - 100) > simulation_parameters.number_of_robots)
 	{

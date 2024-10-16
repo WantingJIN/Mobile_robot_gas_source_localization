@@ -119,7 +119,7 @@ struct friends friends[MAX_NB_ROBOTS];
 
 int n_time_step = 0;
 
-struct simulation_parameters simulation_parameters;
+SimulationParameters simulation_parameters;
 
 double previous_sensor_reading = 0.0;
 
@@ -866,7 +866,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//REVIEW - check the paper further
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES)
 	{
-		double lamda = 0.2; //0.5;
+		double lamda = 0.5; //0.5;
 		double his_thrs = 0;
 		double mod_thrs = 0;
 		double prev_mod_thrs = 0.0;
@@ -895,7 +895,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp +=1;
 			}
 		}
-		sum_tmp *= 0.5;
+		sum_tmp *= 0.8;
 		likelihood = (exp(-sum_tmp));
 	}
 
@@ -1939,15 +1939,15 @@ void state_estimating()
 	// reinitialize
 	posterior.pdf_reset();
 	// estimation
-	if (simulation_parameters.MCMC_or_exhaustive_eval)
+	if (simulation_parameters.MCMC_or_exhaustive_eval == MCMC)
 	{
 		printf("going for MCMC\n");
 		posterior.MCMC_evaluation(history);
 	}
-	else
+	if (simulation_parameters.MCMC_or_exhaustive_eval == EXHAUSTIVE)
 	{
 		printf("going for exhaustive\n");
-		posterior.exhaustive_evaluation(history);
+		posterior.exhaustive_evaluation(history); 
 	}
 	// only when using MCMC
 	if (posterior.dirac_flag)
