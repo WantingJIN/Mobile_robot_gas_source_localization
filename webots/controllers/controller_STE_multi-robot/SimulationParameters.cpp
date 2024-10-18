@@ -205,66 +205,66 @@ void SimulationParameters::rewrite_parameters_from_file(){
 	// read simulation parameters
 	FILE *sim_param_file;
 	int ok = 0;
-	if (access("../../data/simulation_parameters/likelihood_error.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/likelihood_error.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &likelihood_error);
-		if (ok)
-			printf("likelihood_error : %f\n", likelihood_error);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/global_local_search_ratio.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/global_local_search_ratio.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &global_local_search_ratio);
-		if (ok)
-			printf("gloabl_local_search_ratio : %f\n", global_local_search_ratio);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/MCMC_iteration_num.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/MCMC_iteration_num.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &MCMC_iteration_num);
-		if (ok)
-			printf("MCMC_iteration_num : %d\n", MCMC_iteration_num);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", F_OK) != -1)
-	{     
-		int temp_int;
-		sim_param_file = fopen("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &temp_int);
-		MCMC_or_exhaustive_eval = (eEvaluationMethod)temp_int;
-		if (ok)
-			printf("MCMC_or_exhaustive_eval : %d\n", MCMC_or_exhaustive_eval);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &number_of_robots);
-		if (ok)
-			printf("number_of_robots : %d\n", number_of_robots);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/scenario.txt", F_OK) != -1)
-	{     
-		int temp_int;
-		sim_param_file = fopen("../../data/simulation_parameters/scenario.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &temp_int);
-		scenario = (eScenario)temp_int;
-		if (ok)
-			printf("scenario : %d\n", scenario);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &cluster_entropy_ratio);
-		if (ok)
-			printf("cluster_entropy_ratio : %f\n", cluster_entropy_ratio);
-		fclose(sim_param_file);
-	}
+	// if (access("../../data/simulation_parameters/likelihood_error.txt", F_OK) != -1)
+	// {
+	// 	sim_param_file = fopen("../../data/simulation_parameters/likelihood_error.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%f", &likelihood_error);
+	// 	if (ok)
+	// 		printf("likelihood_error : %f\n", likelihood_error);
+	// 	fclose(sim_param_file);
+	// }
+	// if (access("../../data/simulation_parameters/global_local_search_ratio.txt", F_OK) != -1)
+	// {
+	// 	sim_param_file = fopen("../../data/simulation_parameters/global_local_search_ratio.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%f", &global_local_search_ratio);
+	// 	if (ok)
+	// 		printf("gloabl_local_search_ratio : %f\n", global_local_search_ratio);
+	// 	fclose(sim_param_file);
+	// }
+	// if (access("../../data/simulation_parameters/MCMC_iteration_num.txt", F_OK) != -1)
+	// {
+	// 	sim_param_file = fopen("../../data/simulation_parameters/MCMC_iteration_num.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%d", &MCMC_iteration_num);
+	// 	if (ok)
+	// 		printf("MCMC_iteration_num : %d\n", MCMC_iteration_num);
+	// 	fclose(sim_param_file);
+	// }
+	// if (access("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", F_OK) != -1)
+	// {     
+	// 	int temp_int;
+	// 	sim_param_file = fopen("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%d", &temp_int);
+	// 	MCMC_or_exhaustive_eval = (eEvaluationMethod)temp_int;
+	// 	if (ok)
+	// 		printf("MCMC_or_exhaustive_eval : %d\n", MCMC_or_exhaustive_eval);
+	// 	fclose(sim_param_file);
+	// }
+	// if (access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1)
+	// {
+	// 	sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%d", &number_of_robots);
+	// 	if (ok)
+	// 		printf("number_of_robots : %d\n", number_of_robots);
+	// 	fclose(sim_param_file);
+	// }
+	// if (access("../../data/simulation_parameters/scenario.txt", F_OK) != -1)
+	// {     
+	// 	int temp_int;
+	// 	sim_param_file = fopen("../../data/simulation_parameters/scenario.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%d", &temp_int);
+	// 	scenario = (eScenario)temp_int;
+	// 	if (ok)
+	// 		printf("scenario : %d\n", scenario);
+	// 	fclose(sim_param_file);
+	// }
+	// if (access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1)
+	// {
+	// 	sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
+	// 	ok = fscanf(sim_param_file, "%f", &cluster_entropy_ratio);
+	// 	if (ok)
+	// 		printf("cluster_entropy_ratio : %f\n", cluster_entropy_ratio);
+	// 	fclose(sim_param_file);
+	// }
 	if (access("../../data/map_nbr.txt", F_OK) != -1)
 	{
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");

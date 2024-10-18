@@ -20,7 +20,6 @@ void init()
 {
 	if (VERBOSE)
 		printf("initialization\n");
-	char *pPath;
 
 	start_time = current_timestamp();
 
@@ -93,54 +92,10 @@ void init()
 	get_gps_position(&current_position);
 	goal_position.copy_position(current_position);
 	printf("initial goal position %f %f %f\n", goal_position.x, goal_position.y, goal_position.heading);
-
-	// log files names
-	pPath = getenv("WB_WORKING_DIR");
-	if (pPath != NULL)
-	{
-		if (VERBOSE)
-			printf("The current path is: %s\n", pPath);
-		sprintf(folder_name, "%s/%lld", pPath, current_timestamp());
-		mkdir(folder_name, 0755);
-	}
-	else
-	{
-		sprintf(folder_name, "../../../Results/current"); // create a new folder for log files
-		mkdir(folder_name, 0755);
-		sprintf(folder_name, "../../../Results/current/%d", ID); // create a new folder for log files
-		mkdir(folder_name, 0755);
-	}
-	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
-	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
-	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
-	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
-	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
-	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
-	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
-	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
-	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
-	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
-	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
-	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
-	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
-	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
-	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
-	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
-	// // to save some debugging console input
-	sprintf(console_logfile_name, "%s/console.txt", folder_name);
-
-      // Running STE offline : run STE from loaded data of previous simulation
-	// log name of the experiment and scan
-      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_cdf/rel_con_MOX_source_boundary_cdf/10/1712062974290/101", workspacePath);
-	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
-	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
-	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
-
-      // load the simulation parameters
-      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
-      simulation_parameters.rewrite_parameters_from_file();
-
+      
+	// set the log file names
+	set_logfile_names();
+	
 	FILE *sim_param_file;
 	int ok = 0;
       int release_amount;
@@ -540,4 +495,56 @@ double generateGaussianNoise(double mean, double variance)
 	static std::mt19937 gen(rd());
 	std::normal_distribution<double> dist(mean, std::sqrt(variance));
 	return dist(gen);
+}
+
+void set_logfile_names()
+{
+	// log files names
+	char *pPath;
+	pPath = getenv("WB_WORKING_DIR");
+	if (pPath != NULL)
+	{
+		if (VERBOSE)
+			printf("The current path is: %s\n", pPath);
+		sprintf(folder_name, "%s/%lld", pPath, current_timestamp());
+		mkdir(folder_name, 0755);
+	}
+	else
+	{
+		sprintf(folder_name, "../../../Results/current"); // create a new folder for log files
+		mkdir(folder_name, 0755);
+		sprintf(folder_name, "../../../Results/current/%d", ID); // create a new folder for log files
+		mkdir(folder_name, 0755);
+	}
+	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
+	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
+	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
+	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
+	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
+	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
+	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
+	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
+	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
+	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
+	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
+	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
+	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
+	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+	// // to save some debugging console input
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+
+      // Running STE offline : run STE from loaded data of previous simulation
+	// log name of the experiment and scan
+      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_cdf/rel_con_MOX_source_boundary_cdf/10/1712062974290/101", workspacePath);
+	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
+	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
+	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
+
+      // load the simulation parameters
+      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
+      simulation_parameters.rewrite_parameters_from_file();
+
 }
