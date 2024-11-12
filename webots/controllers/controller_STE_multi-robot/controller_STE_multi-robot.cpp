@@ -711,7 +711,7 @@ void calculate_measurement_list_probablistic_distribution(vector<double> &pdf_me
 		}
 		return;
 	}
-	// classfiy the data into bins
+	// classify the data into bins
 	double bin_width = (max_val - min_val)/ double(n_bins);
 	vector<int> bin_count(n_bins, 0);
 	for (int i = 0; i < data_size; i++)
@@ -765,28 +765,23 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 
 	double likelihood;
 	
+	//-----model and measurement fixed threshold, penalty on gas hit event difference-------
 	if (simulation_parameters.gasHitMethod == FIXED_THRES){
-		int gas_hit_threshold  = 1000;
 		for (int i = 0; i < history.size; i++){
-			if (history.measurement[i] < gas_hit_threshold)
+			if (history.measurement[i] < simulation_parameters.gas_hit_threshold)
 				history_hit = 0;
 			else
 				history_hit = 1;
 			history.gas_hit_event[i] = history_hit;
-			if (model_c_avg[i] < gas_hit_threshold)
+			if (model_c_avg[i] < simulation_parameters.gas_hit_threshold)
 				model_hit = 0;
 			else
 				model_hit = 1;
 		if (history_hit != model_hit)
 			sum_tmp += 1;
 		}
-
 		sum_tmp *= 0.5; //best result with exp 0.5
 		likelihood = (exp(-sum_tmp));
-
-		//sum_tmp *= 0.5;
-		//likelihood = 1-tanh(sum_tmp);
-
 	}
 
 	//-----model fixed threshold, penalty on relative concentration history -------
@@ -863,10 +858,9 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	
 
 	//-------------adaptive threshold- based on recent measurements------------------------------
-	//REVIEW - check the paper further
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES)
 	{
-		double lamda = 0.5; //0.5;
+		double lamda = 0.8; //0.5;
 		double his_thrs = 0;
 		double mod_thrs = 0;
 		double prev_mod_thrs = 0.0;
@@ -895,7 +889,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp +=1;
 			}
 		}
-		sum_tmp *= 0.8;
+		sum_tmp *= 1.0;
 		likelihood = (exp(-sum_tmp));
 	}
 
@@ -1023,23 +1017,6 @@ void balance_exploration_exploitation(float gloabl_local_search_ratio)
 	// printf("new goal position : %f %f %f\n", goal_position[0],goal_position[1],goal_position[2]);
 }
 
-void greedy_planning()
-{
-      printf("Enter greedy planning \n");
-	fprintf(console_logfile, "Enter greedy planning \n");
-	double best_point[2] = {0};
-	// Adaptive greedy planning based on entropy
-	// if (posterior.entropy > 4){
-	// 	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
-	// } else {
-	// 	posterior.XYmarginal_distance_combined(current_position, 0.75, best_point);
-	// }
-	posterior.XYmarginal_distance_combined(current_position, 1.0, best_point);
-	// printf("best point: %f %f \n", best_point[0], best_point[1]);
-	goal_position.x = best_point[0];
-	goal_position.y = best_point[1];
-	goal_position.heading = 0;
-}
 
 void random_planning()
 {
@@ -1137,21 +1114,6 @@ void maximal_information_planning()
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
 	}
-
-	posterior.index_to_param_values(max_info_index, best_point);
-
-	goal_position.x = best_point[0];
-	goal_position.y = best_point[1];
-	goal_position.heading = 0;
-
-	// The goal position is very close to current postion, swith to greedy planning
-	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-	{
-		printf("The goal position is very close to current postion, switch to greedy planning \n");
-		fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
-		greedy_planning();
-	}
-	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 }
 void maximal_belief_planning()
 {
@@ -1187,7 +1149,7 @@ void maximal_belief_planning()
       if (fabs(max_pdf - 0.0) < epsilon) // all the probable points have been visited
 	{
 		printf("all the probable points have been visited \n");
-		fprintf(console_logfile, "all the probable points have been visited \n");
+		fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
 		maximal_information_planning();
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
@@ -1199,12 +1161,12 @@ void maximal_belief_planning()
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
 
-	// The goal position is very close to current postion, swith to greedy planning
+	// The goal position is very close to current postion, swith to random planning
 	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
 	{
-		printf("The goal position is very close to current postion, switch to greedy planning \n");
-		fprintf(console_logfile, "The goal position is very close to current postion, switch to greedy planning \n");
-		greedy_planning();
+		printf("The goal position is very close to current postion, switch to random planning \n");
+		fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		random_planning();
 	}
 	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 }
@@ -1228,6 +1190,7 @@ void belief_clustering_planning()
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
+		fprintf(console_logfile, "no cluster found \n");
 		maximal_belief_planning();
 		return;
 	}
@@ -1261,6 +1224,7 @@ void belief_clustering_planning()
 		// find the closest unvisited point among candidate goals
 		double min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
+		bool find_goal = false;
 		for (int j = 0; j < candidate_goal.size(); j++)
 		{
 			double dist = dist_to_goal(candidate_goal[j]);
@@ -1276,17 +1240,20 @@ void belief_clustering_planning()
 					{
 						min_dist_to_robot = dist;
 						min_dist_to_robot_index = j;
+						find_goal = true;
 					}
 				}
 				else
 				{
 					min_dist_to_robot = dist;
 					min_dist_to_robot_index = j;
+					find_goal = true;
 				}
 			}
 		}
-		if (min_dist_to_robot == 1000)
+		if (!find_goal)
 		{
+			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
 			maximal_belief_planning();
 			return;
 		}
@@ -2012,7 +1979,7 @@ void state_updategoal()
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
-		greedy_planning();
+		maximal_belief_planning();
 		break;
 	case BALANCE_MAXIMAL_EXPECTED:
 		balance_expected_maximal_pdf();

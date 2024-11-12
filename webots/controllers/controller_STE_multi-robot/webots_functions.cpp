@@ -95,7 +95,7 @@ void init()
       
 	// set the log file names
 	set_logfile_names();
-	
+
 	FILE *sim_param_file;
 	int ok = 0;
       int release_amount;

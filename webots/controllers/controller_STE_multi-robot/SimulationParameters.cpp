@@ -127,7 +127,6 @@ SimulationParameters::SimulationParameters(){
 	sampling_period = 1; 
 	cluster_entropy_ratio = 10; 
 	vel_factor = 10; 
-	wind_factor = 0.75; 
 	sampling_dist_thresh = 0.1; 
 	relativeMethod = EMPIRICAL_CDF; 
 	gasHitMethod = SLIDING_WINDOW_THRES; 
@@ -152,7 +151,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			global_local_search_ratio = atof(value);
 		} else if (strcmp(key, "MCMC_or_exhaustive_eval") == 0) {
 			MCMC_or_exhaustive_eval = parse_evaluation_method(value);
-			printf("MCMC_or_exhaustive_eval : %d\n", MCMC_or_exhaustive_eval);
 		} else if (strcmp(key, "number_of_robots") == 0) {
 			number_of_robots = atoi(value);
 		} else if (strcmp(key, "scenario") == 0) {
@@ -181,14 +179,14 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			cluster_entropy_ratio = atof(value);
 		} else if (strcmp(key, "vel_factor") == 0) {
 			vel_factor = atof(value);
-		} else if (strcmp(key, "wind_factor") == 0) {
-			wind_factor = atof(value);
 		} else if (strcmp(key, "sampling_dist_thresh") == 0) {
 			sampling_dist_thresh = atof(value);
 		} else if (strcmp(key, "relativeMethod") == 0) {
 			relativeMethod = parse_relative_method(value);
 		} else if (strcmp(key, "gasHitMethod") == 0) {
 			gasHitMethod = parse_gas_hit_method(value);
+		} else if (strcmp(key, "gasHitThres") == 0) {
+			gas_hit_threshold = atoi(value);
 		} else if (strcmp(key, "calibrationMode") == 0) {
 			calibrationMode = parse_calibration_mode(value);
 		} else if (strcmp(key, "simuMode") == 0) {
@@ -205,96 +203,13 @@ void SimulationParameters::rewrite_parameters_from_file(){
 	// read simulation parameters
 	FILE *sim_param_file;
 	int ok = 0;
-	// if (access("../../data/simulation_parameters/likelihood_error.txt", F_OK) != -1)
-	// {
-	// 	sim_param_file = fopen("../../data/simulation_parameters/likelihood_error.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%f", &likelihood_error);
-	// 	if (ok)
-	// 		printf("likelihood_error : %f\n", likelihood_error);
-	// 	fclose(sim_param_file);
-	// }
-	// if (access("../../data/simulation_parameters/global_local_search_ratio.txt", F_OK) != -1)
-	// {
-	// 	sim_param_file = fopen("../../data/simulation_parameters/global_local_search_ratio.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%f", &global_local_search_ratio);
-	// 	if (ok)
-	// 		printf("gloabl_local_search_ratio : %f\n", global_local_search_ratio);
-	// 	fclose(sim_param_file);
-	// }
-	// if (access("../../data/simulation_parameters/MCMC_iteration_num.txt", F_OK) != -1)
-	// {
-	// 	sim_param_file = fopen("../../data/simulation_parameters/MCMC_iteration_num.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &MCMC_iteration_num);
-	// 	if (ok)
-	// 		printf("MCMC_iteration_num : %d\n", MCMC_iteration_num);
-	// 	fclose(sim_param_file);
-	// }
-	// if (access("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", F_OK) != -1)
-	// {     
-	// 	int temp_int;
-	// 	sim_param_file = fopen("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &temp_int);
-	// 	MCMC_or_exhaustive_eval = (eEvaluationMethod)temp_int;
-	// 	if (ok)
-	// 		printf("MCMC_or_exhaustive_eval : %d\n", MCMC_or_exhaustive_eval);
-	// 	fclose(sim_param_file);
-	// }
-	// if (access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1)
-	// {
-	// 	sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &number_of_robots);
-	// 	if (ok)
-	// 		printf("number_of_robots : %d\n", number_of_robots);
-	// 	fclose(sim_param_file);
-	// }
-	// if (access("../../data/simulation_parameters/scenario.txt", F_OK) != -1)
-	// {     
-	// 	int temp_int;
-	// 	sim_param_file = fopen("../../data/simulation_parameters/scenario.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%d", &temp_int);
-	// 	scenario = (eScenario)temp_int;
-	// 	if (ok)
-	// 		printf("scenario : %d\n", scenario);
-	// 	fclose(sim_param_file);
-	// }
-	// if (access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1)
-	// {
-	// 	sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
-	// 	ok = fscanf(sim_param_file, "%f", &cluster_entropy_ratio);
-	// 	if (ok)
-	// 		printf("cluster_entropy_ratio : %f\n", cluster_entropy_ratio);
-	// 	fclose(sim_param_file);
-	// }
+
 	if (access("../../data/map_nbr.txt", F_OK) != -1)
 	{
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &map_nbr);
 		if (ok)
 			printf("scenario : %d\n", map_nbr);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/vel_factor.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/vel_factor.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &vel_factor);
-		if (ok)
-			printf("vel param : %f\n", vel_factor);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/sampling_period.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_period.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &sampling_period);
-		if (ok)
-			printf("sampling_period : %d\n", sampling_period);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/sampling_dist_thresh.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_dist_thresh.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &sampling_dist_thresh);
-		if (ok)
-			printf("wind param : %f\n", sampling_dist_thresh);
 		fclose(sim_param_file);
 	}
 }
@@ -320,7 +235,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "sampling_period %d\n", sampling_period);
 	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", cluster_entropy_ratio);
 	fprintf(sim_param_file, "vel_factor %f\n", vel_factor);
-	fprintf(sim_param_file, "wind_factor %f\n", wind_factor);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fprintf(sim_param_file, "relative_method %d\n", relativeMethod);
 	fprintf(sim_param_file, "simu_mode %d\n", simuMode);
