@@ -96,6 +96,10 @@ void init()
 	// set the log file names
 	set_logfile_names();
 
+      // load the simulation parameters
+      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
+      simulation_parameters.rewrite_parameters_from_file();
+
 	FILE *sim_param_file;
 	int ok = 0;
       int release_amount;
@@ -542,9 +546,5 @@ void set_logfile_names()
 	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
-
-      // load the simulation parameters
-      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
-      simulation_parameters.rewrite_parameters_from_file();
 
 }

@@ -123,7 +123,7 @@ class SimulationParameters{
 		float cluster_entropy_ratio; 
 		float vel_factor; 
 		float sampling_dist_thresh; 
-		float gas_hit_threshold;
+		int gas_hit_threshold;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval; 
 		eScenario scenario; 

@@ -788,14 +788,13 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	
 	if (simulation_parameters.gasHitMethod == FIXED_THRES_AND_GAUSSIAN_CDF){
 		double rel_hist_val = 0.0;
-		int gas_hit_threshold = 1000;
 		for (int i = 0; i < history.size; i++)
 		{
 			if (stddev == 0)
 				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
 			else
 				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-			if (model_c_avg[i] < gas_hit_threshold)
+			if (model_c_avg[i] < simulation_parameters.gas_hit_threshold)
 			{
 				model_hit = 0;		 // for plotting
 				sum_tmp += rel_hist_val; // larger penalty if value detected is large and model has a miss
@@ -1114,7 +1113,14 @@ void maximal_information_planning()
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
 	}
+
+	posterior.index_to_param_values(max_info_index, best_point);
+
+	goal_position.x = best_point[0];
+	goal_position.y = best_point[1];
+	goal_position.heading = 0;
 }
+
 void maximal_belief_planning()
 {
 	printf("Enter maximal belief planning \n");
@@ -1154,21 +1160,11 @@ void maximal_belief_planning()
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
 	}
-
 	posterior.index_to_param_values(max_pdf_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
-
-	// The goal position is very close to current postion, swith to random planning
-	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-	{
-		printf("The goal position is very close to current postion, switch to random planning \n");
-		fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		random_planning();
-	}
-	printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 }
 
 
@@ -1435,6 +1431,7 @@ void goal_outside_obstacles(Position *goal)
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
+            fprintf(console_logfile, ">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);	
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
 		float min_dist_unvisited = 10000.0;
@@ -1494,6 +1491,7 @@ void goal_outside_obstacles(Position *goal)
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
+		fprintf(console_logfile, ">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 8 different candidates
 		float min_dist = 10000.0;
 		float min_dist_unvisited = 10000.0;
@@ -1551,15 +1549,20 @@ void goal_outside_obstacles(Position *goal)
 	}
 	// make sure that the chosen goal is not too close from the robot current position so that it will not instantaneously be reached
 	double dist_candidate_goal = goal->distance_from(current_position);
-	// fprintf(console_logfile, ">>> Candidate goal %f %f \n", goal->x, goal->y);
-	// fprintf(console_logfile, ">>> Current position %f %f \n", current_position.x, current_position.y);
-	// fprintf(console_logfile, ">>> Dist from current %f \n", dist_candidate_goal);
 	if (goal->distance_from(current_position) < min_dist_to_current)
 	{
+		if (simulation_parameters.visitedList == visitedList_ON)
+		{
+			// mark the cell as visited so that never plans to go there again
+			int pos_coord[2];
+			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
+			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
+			int idx = posterior.indices_to_index(pos_coord);
+			cell_visited_list[idx] = 1;
+		}
 		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
-		// fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
+		fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
 		//  otherwise, lets try 4 different candidates
-		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
 		Position candidates[8] = {Position(goal->x + min_dist_to_current, goal->y + min_dist_to_current, 0),
 						  Position(goal->x + min_dist_to_current, goal->y - min_dist_to_current, 0),
@@ -2002,22 +2005,17 @@ void state_updategoal()
 	}
 	if (FSM.state != STATE_FINISHED)
 	{
+		// The goal position is very close to current postion, swith to random planning
+		if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		{
+			printf("The goal position is very close to current postion, switch to random planning \n");
+			fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+			random_planning();
+		}
+
+		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		goal_outside_obstacles(&goal_position);
 		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-		//   aStar as;
-		//   if(as.search(current_position, goal_position, astar_map, 0)){
-		// as.path( path );
-		// i = path.begin();
-		// std::ofstream myfile;
-		// myfile.open("aStar_paths.txt", ios::app);
-		// for( std::list<Position>::iterator i = path.begin(); i != path.end(); i++ )
-		//    	myfile<< " " << i->x << ", " << i->y << ";";
-		//   	myfile<< std::endl;
-		//   	myfile.close();
-		//   }else{
-		//   	printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> aStar could not find a way!\n");
-		//   	as.search(current_position, goal_position, astar_map, 1);
-		//   }
 
 		// find the path using visibility graph
 		VisiLibity::Point start(current_position.x, current_position.y);

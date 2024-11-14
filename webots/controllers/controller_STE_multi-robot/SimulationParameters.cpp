@@ -233,13 +233,14 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "visited_list %d\n", visitedList);
 	fprintf(sim_param_file, "info_feature %d\n", infoFeature);
 	fprintf(sim_param_file, "sampling_period %d\n", sampling_period);
-	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", cluster_entropy_ratio);
+	fprintf(sim_param_file, "cluster_ratio %f\n", cluster_entropy_ratio);
 	fprintf(sim_param_file, "vel_factor %f\n", vel_factor);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fprintf(sim_param_file, "relative_method %d\n", relativeMethod);
 	fprintf(sim_param_file, "simu_mode %d\n", simuMode);
 	fprintf(sim_param_file, "calibration_mode %d\n", calibrationMode);
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
+	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
 	fclose(sim_param_file);
 
 }
