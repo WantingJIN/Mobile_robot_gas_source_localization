@@ -123,5 +123,5 @@ void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vecto
 void calculate_data_distribution(vector<double> data, double &mean, double &stddev);
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list);
 void calculate_measurement_list_probablistic_distribution(vector<double> &pdf_meas_list, vector<double> data_list);
-
+void information_clustering_planning();
 #endif

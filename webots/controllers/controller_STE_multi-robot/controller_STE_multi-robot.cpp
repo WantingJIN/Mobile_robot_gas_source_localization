@@ -780,7 +780,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 		if (history_hit != model_hit)
 			sum_tmp += 1;
 		}
-		sum_tmp *= 0.5; //best result with exp 0.5
+		sum_tmp *= 0.8; //best result with exp 0.5
 		likelihood = (exp(-sum_tmp));
 	}
 
@@ -1152,7 +1152,7 @@ void maximal_belief_planning()
 	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
 
       double epsilon = 1e-9; 
-      if (fabs(max_pdf - 0.0) < epsilon) // all the probable points have been visited
+      if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
 	{
 		printf("all the probable points have been visited \n");
 		fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
@@ -1187,7 +1187,7 @@ void belief_clustering_planning()
 	{
 		printf("no cluster found \n");
 		fprintf(console_logfile, "no cluster found \n");
-		maximal_belief_planning();
+		maximal_information_planning();
 		return;
 	}
 	else
@@ -1250,7 +1250,95 @@ void belief_clustering_planning()
 		if (!find_goal)
 		{
 			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
-			maximal_belief_planning();
+			maximal_information_planning();
+			return;
+		}
+		else
+		{
+			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+			goal_position.y = candidate_goal[min_dist_to_robot_index].y;
+			goal_position.heading = 0;
+		}
+
+		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
+		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+	}
+}
+
+void informative_clustering_planning()
+{
+	printf("Enter belief clustering planning \n");
+	
+	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
+	clusters_bounding_box = clustering_information_blocks(gas_information_map);
+	if (clusters_bounding_box.size() == 0)
+	{
+		printf("no cluster found \n");
+		fprintf(console_logfile, "no cluster found \n");
+		maximal_information_planning();
+		return;
+	}
+	else
+	{
+		// fprintf(console_logfile, "clusters found \n");
+		// Find furthest vertex of each cluster
+		double max_dist_to_robot;
+		int max_dist_to_robot_index;
+		vector<Position> candidate_goal;
+		for (int i = 0; i < clusters_bounding_box.size(); i++)
+		{
+			max_dist_to_robot = 0;
+			max_dist_to_robot_index = 0;
+			// calculate the distance of each vertex to robot
+			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0),
+								Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
+								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
+								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
+			for (int i = 0; i < 4; i++)
+			{
+				double dist = dist_to_goal(cluster_vertex[i]);
+				if (dist > max_dist_to_robot)
+				{
+					max_dist_to_robot = dist;
+					max_dist_to_robot_index = i;
+				}
+			}
+			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
+		}
+		// find the closest unvisited point among candidate goals
+		double min_dist_to_robot = 1000;
+		int min_dist_to_robot_index = 0;
+		bool find_goal = false;
+		for (int j = 0; j < candidate_goal.size(); j++)
+		{
+			double dist = dist_to_goal(candidate_goal[j]);
+			if (dist < min_dist_to_robot)
+			{
+				if (simulation_parameters.visitedList == visitedList_ON)
+				{
+					int pos_coord[2];
+					pos_coord[0] = floor((candidate_goal[j].x - source_x_min) / x_resol);
+					pos_coord[1] = floor((candidate_goal[j].y - source_y_min) / y_resol);
+					int idx = posterior.indices_to_index(pos_coord);
+					if (cell_visited_list[idx] == 0)
+					{
+						min_dist_to_robot = dist;
+						min_dist_to_robot_index = j;
+						find_goal = true;
+					}
+				}
+				else
+				{
+					min_dist_to_robot = dist;
+					min_dist_to_robot_index = j;
+					find_goal = true;
+				}
+			}
+		}
+		if (!find_goal)
+		{
+			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
+			maximal_information_planning();
 			return;
 		}
 		else
@@ -1996,6 +2084,9 @@ void state_updategoal()
 	case BELIEF_CLUSTERING:
 		belief_clustering_planning();
 		break;
+	case INFO_CLUSTERING:
+		informative_clustering_planning();
+		break;
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
 		KLD_MAP_distance(1.0);
@@ -2127,7 +2218,7 @@ void state_moving()
 		// move
 		if (dist_to_goal(*i) <= 0.05 && i != path.end())
 		{
-			fprintf(console_logfile, "my position (%f, %f) - my i goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}

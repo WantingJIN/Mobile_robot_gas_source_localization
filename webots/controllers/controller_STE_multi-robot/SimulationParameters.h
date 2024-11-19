@@ -50,6 +50,7 @@ typedef enum planningStrategy
 	LAWNMOWER = 4,
 	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
+	INFO_CLUSTERING = 7,
 } ePlanningStrategy;
 
 typedef enum gasFeature

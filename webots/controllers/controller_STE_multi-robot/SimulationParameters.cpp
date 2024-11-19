@@ -53,6 +53,7 @@ ePlanningStrategy parse_planning_strategy(const char* str) {
 	if (strcmp(str, "LAWNMOWER") == 0) return LAWNMOWER;
 	if (strcmp(str, "BELIEF_CLUSTERING") == 0) return BELIEF_CLUSTERING;
 	if (strcmp(str, "INFORMATIVE_KLD") == 0) return INFORMATIVE_KLD;
+	if (strcmp(str, "INFO_CLUSTERING") == 0) return INFO_CLUSTERING;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
 	exit(1);
 }
