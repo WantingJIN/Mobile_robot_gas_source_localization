@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/relative_con_source_boundary/2';
+general_folder='../Results/gas_hit/PID_fixed_thresh_1000/informative_clustering_maximal_info/sigma_0.8/1';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -11,19 +11,18 @@ anim_folder=[general_folder '/info'] ;
 if(~exist(anim_folder,'dir'))
     mkdir(anim_folder);
 end
-
+params = my_text2struct([experiment_file_path,'/param_log.csv']);       
 clustering = 1;
 visited_listd_true = 0;
-
+gas_feature = params.gas_feature;
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
 if isfile([experiment_file_path, '/visited_list.csv'])
      visited_list = dlmread([experiment_file_path, '/visited_list.csv']);
-     visited_list_true = 1
+     visited_list_true = 1;
 else
     disp('c')
 end
 map_folder=[general_folder '/map'];
-params = my_text2struct([experiment_file_path,'/param_log.csv']); 
 map_nbr = params.map_nbr;
 if map_nbr~=0
     obst_file = ['../Khepera/Data/Obstacle_lists/' num2str(map_nbr) '_obstacles.txt'];
@@ -35,7 +34,9 @@ if map_nbr~=0
     end
 end
 measurements = dlmread([experiment_file_path, '/measurement_history.csv']); %measurement_historyobstacles_x
-relative_measurements = dlmread([experiment_file_path, '/relative_measurements.csv']);
+if (gas_feature == 2)
+    relative_measurements = dlmread([experiment_file_path, '/relative_measurements.csv']);
+end
 position_history = dlmread([experiment_file_path, '/position_history.csv']); %position_history
 entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
@@ -63,7 +64,6 @@ y=linspace(0,4,20);
 
 trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
-gas_feature = params.gas_feature;
 
 %% show measurement
 f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);

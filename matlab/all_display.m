@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/rel_con_MOX_cdf/rel_con_MOX_source_inside_cdf/3');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/gas_hit/PID_fixed_thresh_1000/informative_clustering_maximal_info/sigma_0.8/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -75,16 +75,12 @@ for i=1:exp_number
         
         % overlaped for all robots
         figure(f1all);
-        subplot(3,1,1);
+        subplot(2,1,1);
         hold on;
         plot(measurement_history(:,2));
         title('concentration measurement over time');
         hold off;
-        subplot(3,1,2);
-        hold on;
-        plot(entropy(:,2),entropy(:,1),'DisplayName',['ID ', num2str(ID(j))]);
-        title('entropy');
-        subplot(3,1,3);
+        subplot(2,1,2);
         hold on;
         histogram(measurement_history(:,2));
         title('measurement histogram');
@@ -126,7 +122,7 @@ for i=1:exp_number
         figure(f0);
         
         % Subplot 1: X-coordinate estimation
-        subplot(2,1,1);
+        subplot(3,1,1);
         plot(expected_a_posteriori(:,2), '*-', 'DisplayName', 'Expected');  % Expected value for X-coordinate
         hold on;
         axis([-inf inf source_position_min(1) source_position_max(1)]);
@@ -136,8 +132,8 @@ for i=1:exp_number
         title('X');
         %legend('show');  % Display the legend
 
-        % Subplot 3: Y-coordinate estimation
-        subplot(2,1,2);
+        % Subplot 2: Y-coordinate estimation
+        subplot(3,1,2);
         plot(expected_a_posteriori(:,3), '*-', 'DisplayName', 'Expected');  % Expected value for Y-coordinate
         hold on;
         plot(max_a_posteriori(:,3), 'd-b', 'DisplayName', 'Max a posteriori');  % Maximum a posteriori estimate for Y-coordinate
@@ -146,6 +142,12 @@ for i=1:exp_number
         axis([-inf inf source_position_min(2) source_position_max(2)]);
         title('Y');
         legend('show');  % Display the legend
+        
+        % Subplot 3: X-coordinate estimation
+        subplot(3,1,3);
+        hold on;
+        plot(entropy(:,1),'DisplayName',['ID ', num2str(ID(j))]);
+        title('entropy');
         
         % subplot(3,2,2);
         % plot(expected_a_posteriori(:,4),'*-');
@@ -271,7 +273,7 @@ for i=1:exp_number
     % save
     saveas(f1all,[folder_name '/measurements_entropy.png']);
     saveas(f2all,[folder_name '/trajectory.png']);
-    saveas(f0,[folder_name_ID '/estimation_evolution.png']);    
+    saveas(f0,[folder_name '/estimation_evolution.png']);    
     
     close(f1all); 
     close(f2all);
