@@ -518,7 +518,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
-		sigma = 0.35;// works well for Empirical CDF
+		sigma = 0.4;// works well for Empirical CDF
 	}
 	double rel_model_val, rel_hist_val; // mean, stddev,
 	for (int i = 0; i < history.size; i++)
@@ -850,7 +850,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp +=1;
 			}
 		}
-		//sum_tmp *= 1;
+		sum_tmp *= 0.8;
 		likelihood = (exp(-sum_tmp));
 	}
 	
@@ -888,7 +888,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp +=1;
 			}
 		}
-		sum_tmp *= 1.0;
+		sum_tmp *= 0.6;
 		likelihood = (exp(-sum_tmp));
 	}
 
