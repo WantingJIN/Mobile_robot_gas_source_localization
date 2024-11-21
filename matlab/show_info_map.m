@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/gas_hit/PID_fixed_thresh_1000/informative_clustering_maximal_info/sigma_0.8/1';
+general_folder='../Results/relative_meas/test/9';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -25,7 +25,7 @@ end
 map_folder=[general_folder '/map'];
 map_nbr = params.map_nbr;
 if map_nbr~=0
-    obst_file = ['../Khepera/Data/Obstacle_lists/' num2str(map_nbr) '_obstacles.txt'];
+    obst_file = ['../openfoam/test_maps/map' num2str(map_nbr) '/map' num2str(map_nbr) '_wind0.75/' num2str(map_nbr) '_obstacles.txt'];
     obst_fileID = fopen(obst_file);
     C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
     for k=1:length(C{1,1})
