@@ -888,7 +888,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp +=1;
 			}
 		}
-		sum_tmp *= 0.6;
+		sum_tmp *= 0.8;
 		likelihood = (exp(-sum_tmp));
 	}
 
@@ -1187,7 +1187,8 @@ void belief_clustering_planning()
 	{
 		printf("no cluster found \n");
 		fprintf(console_logfile, "no cluster found \n");
-		maximal_information_planning();
+		maximal_belief_planning();
+		//maximal_information_planning();
 		return;
 	}
 	else
@@ -1250,7 +1251,8 @@ void belief_clustering_planning()
 		if (!find_goal)
 		{
 			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
-			maximal_information_planning();
+			//maximal_information_planning();
+			maximal_belief_planning();
 			return;
 		}
 		else

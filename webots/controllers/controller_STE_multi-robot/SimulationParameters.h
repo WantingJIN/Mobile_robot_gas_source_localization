@@ -125,6 +125,7 @@ class SimulationParameters{
 		float vel_factor; 
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
+		double R0;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval; 
 		eScenario scenario; 

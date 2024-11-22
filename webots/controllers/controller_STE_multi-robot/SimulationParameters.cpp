@@ -133,6 +133,7 @@ SimulationParameters::SimulationParameters(){
 	gasHitMethod = SLIDING_WINDOW_THRES; 
       calibrationMode = OFF;
 	simuMode = ONLINE; 
+	R0 = 100;
 }
 
 
@@ -190,6 +191,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			gas_hit_threshold = atoi(value);
 		} else if (strcmp(key, "calibrationMode") == 0) {
 			calibrationMode = parse_calibration_mode(value);
+		} else if (strcmp(key, "R0") == 0) {
+			R0 = atof(value);
 		} else if (strcmp(key, "simuMode") == 0) {
 			simuMode = parse_simu_mode(value);
 		} else {
@@ -242,6 +245,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "calibration_mode %d\n", calibrationMode);
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
+	fprintf(sim_param_file, "R0 %f\n", R0);
 	fclose(sim_param_file);
 
 }

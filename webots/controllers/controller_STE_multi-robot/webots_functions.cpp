@@ -264,7 +264,13 @@ void linear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_s
 }
 void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
 {
-	MOX_sensor_reading = pow(*odor_concentration/10,3);
+	// the odor concentration is actually simulating the sensor reading instead of the concentration on [ppm]
+	// in the datesheet, the detectable gases concentration range is from 10 to 500
+	// divide thhe simulated measurement by 100 to approximate the concentration in ppm
+	double Rs = pow(*odor_concentration/(100*1.488),-0.632) * simulation_parameters.R0;
+	double RL = 51.0; //kOhm
+	double Vc = 3.3; //V
+	MOX_sensor_reading = Vc * RL / (RL + Rs);  // the gas sensor output is the voltage of the loading resistor
 	if (MOX_sensor_reading < 0)
 		MOX_sensor_reading = 0;
 }
