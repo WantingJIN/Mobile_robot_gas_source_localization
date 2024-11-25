@@ -134,6 +134,7 @@ SimulationParameters::SimulationParameters(){
       calibrationMode = OFF;
 	simuMode = ONLINE; 
 	R0 = 100;
+	gas_sensor_noise_var = 40000;
 }
 
 
@@ -195,6 +196,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			R0 = atof(value);
 		} else if (strcmp(key, "simuMode") == 0) {
 			simuMode = parse_simu_mode(value);
+		} else if (strcmp(key, "gas_sensor_noise_var") == 0) {
+			gas_sensor_noise_var = atoi(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -246,6 +249,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
 	fprintf(sim_param_file, "R0 %f\n", R0);
+	fprintf(sim_param_file, "gas_sensor_noise_var %d\n", gas_sensor_noise_var);
 	fclose(sim_param_file);
 
 }

@@ -11,11 +11,12 @@ sampling_prd_filename="../webots/data/simulation_parameters/sampling_period.txt"
 MCMC_exhaustive_filename="../webots/data/simulation_parameters/MCMC_or_exhaustive_eval.txt"
 vel_factor_filename="../webots/data/simulation_parameters/vel_factor.txt" 
 rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
+config_file="../webots/data/config.txt"
 s=0
 echo $s > $MCMC_exhaustive_filename
 
-nbr_source_pos=7
-source_pos_x=12.7
+nbr_source_pos=10
+source_pos_x=10   # default: 12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
 source_pos_y_step=$(awk "BEGIN { print ($source_pos_y_max - $source_pos_y_min) / $nbr_source_pos }")
@@ -37,26 +38,30 @@ echo $v > $vel_factor_filename
 echo $vel_factor_filename
 
 # release amount
-for r in 53 #30 53 80 120 200
+for r in 10 53 200 # 10 120 200 30 53 80 # default release amount 53
 	do
-		for m in 1 10 #0 1  
+	      echo $r > $rr_filename
+		for m in 1 9 #1 2 3 5 10 #0 1  
 		do
-			echo $r > $rr_filename
-			echo $m > $map_nbr_filename
-			# wind map and obstacle list
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
-			cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
+		      echo $m > $map_nbr_filename
+			# for R in 100 800 1500
+			# do
+				# sed -i "s/^R0 *= *.*/R0 = $R/" "$config_file"
+				# wind map and obstacle list
+				cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
+				cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
+				cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
-			#for k in {1..3} 1
-			for ((k=1; k<=$nbr_source_pos; k++)) 
-			do
-				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
-				echo $source_pos_x $source_pos_y > $source_pos_filename
-				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' '--no-rendering' # &> wb_output.txt # >wb_output.txt
-				now=$(date +"%T")
-				echo "map $m  k $k  release amount $r end time $now"
-			done
+				#for k in {1..3} 1
+				for ((k=1; k<=$nbr_source_pos; k++)) 
+				do
+					source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
+					echo $source_pos_x $source_pos_y > $source_pos_filename
+					$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' '--no-rendering' # &> wb_output.txt # >wb_output.txt
+					now=$(date +"%T")
+					echo "map $m  k $k  release amount $r R $R end time $now"
+				done
+			# done	
 		done
 done
 
