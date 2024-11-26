@@ -127,6 +127,7 @@ class SimulationParameters{
 		int gas_hit_threshold;
 		float R0;
 		int gas_sensor_noise_var;
+	      float sigma;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 

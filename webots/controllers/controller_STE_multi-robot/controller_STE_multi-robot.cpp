@@ -502,7 +502,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-		sigma = 0.35; //works well for Normalization
+		sigma = 0.49; //works well for Normalization
 	}
 	if (simulation_parameters.relativeMethod == M_DISTANCE)
 	{
@@ -513,12 +513,12 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
-		sigma = 0.22;// works well for Gaussian CDF
+		sigma = 0.31;// works well for Gaussian CDF
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
-		sigma = 0.4;// works well for Empirical CDF
+		sigma = 0.45;// works well for Empirical CDF
 	}
 	double rel_model_val, rel_hist_val; // mean, stddev,
 	for (int i = 0; i < history.size; i++)
@@ -527,9 +527,10 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		rel_model_val = rel_model_list[i];
 		// if (real_source_idx == soure_pos_idx)
 		// 	printf("hist_val:%f, rel_hist_val: %f, model_val: %f, rel_model_val: %f @ pos (%f, %f)\n", history.measurement[i],rel_hist_val, model_c_avg[i], rel_model_val, history.position[i].x, history.position[i].y);
-		sum_tmp += pow(rel_model_val - rel_hist_val, 2);
+		// sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
 	}
-	sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
+	// sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
 
 	return (exp(-0.5 * sum_tmp));
 }
