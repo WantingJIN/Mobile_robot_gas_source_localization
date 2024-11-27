@@ -58,11 +58,6 @@
 
 #define VERBOSE 		1
 
-#define NO_COM_NO_COOR	0
-#define COM_NO_COOR		1
-#define COM_COOR 		2
-#define SCENARIO 		NO_COM_NO_COOR
-
 #define TIMEOUT         1000*1000 // miliseconds
 
 extern const char* workspacePath; 

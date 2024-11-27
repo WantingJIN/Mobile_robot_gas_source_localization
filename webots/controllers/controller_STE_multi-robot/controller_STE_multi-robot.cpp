@@ -860,7 +860,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//-------------adaptive threshold- based on recent measurements------------------------------
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES)
 	{
-		double lamda = 0.8; //0.5;
+		//double lamda = 0.8; //0.5;
 		double his_thrs = 0;
 		double mod_thrs = 0;
 		double prev_mod_thrs = 0.0;
@@ -874,8 +874,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				prev_mod_thrs = model_c_avg[i];
 				mod_thrs = model_c_avg[i];
 			}
-			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
-			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement[i];
+			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
 			//store history threshold for next iteration
 			prev_his_thrs = his_thrs;
 			prev_mod_thrs = mod_thrs;

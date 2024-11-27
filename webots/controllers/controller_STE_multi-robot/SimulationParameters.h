@@ -128,6 +128,7 @@ class SimulationParameters{
 		float R0;
 		int gas_sensor_noise_var;
 	      float sigma;
+		float lambda;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 
