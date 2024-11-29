@@ -111,12 +111,13 @@ SimulationParameters::SimulationParameters(){
 	//sampling_period = 1; 
 	cluster_entropy_ratio = 10; 
 	//vel_factor = 10; 
-	//sampling_dist_thresh = 0.1; 
+	sampling_dist_thresh = 0.1; 
 	relativeMethod = EMPIRICAL_CDF; 
 	gasHitMethod = SLIDING_WINDOW_THRES; 
       calibrationMode = OFF;
 	workingMode = EXPERIMENT;
 	measurement_error = 0;
+	sigma = 0.45;
 	//simuMode = ONLINE; 
 	//R0 = 100;
 	//gas_sensor_noise_var = 40000;
@@ -171,6 +172,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			workingMode = parse_work_mode(value);
 		} else if (strcmp(key, "measurement_error") == 0) {
 			measurement_error = atoi(value);
+		} else if (strcmp(key, "sigma") == 0) {
+			sigma = atof(value);	
+		} else if (strcmp(key, "sampling_dist_thresh") == 0) {
+			sampling_dist_thresh = atof(value);	
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -235,6 +240,9 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
 	fprintf(sim_param_file, "working_mode %d\n", workingMode);
+	fprintf(sim_param_file, "measurement_error %d\n", measurement_error);
+	fprintf(sim_param_file, "sigma %f\n", sigma);
+	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fclose(sim_param_file);
 }
 

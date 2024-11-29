@@ -71,9 +71,11 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
+	vector<int> FSM_iter;
 	vector<Position> position;
 	vector<double> measurement_avg;
 	vector<double> measurement_std;
+	vector<int> gas_hit_event;
 };
 
 // message structure
@@ -101,6 +103,7 @@ void state_obstacle_avoidance();
 void state_listen();
 void state_read_goal();
 void state_read_goal_measurement();
+void random_planning();
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose);
@@ -116,5 +119,7 @@ bool send_goal_to_robot(double x, double y);
 int obstacle_or_not();
 void do_odometry();
 
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list);
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list);
 
 #endif

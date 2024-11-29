@@ -64,6 +64,7 @@ char trajectory_logfile_name[256];
 char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
+char visited_list_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -515,7 +516,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
 	{
-		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
+		sum_tmp += pow(history.measurement_avg[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
 	}
 
 	return (exp(-0.5 * sum_tmp));
@@ -649,7 +650,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//-----model and measurement fixed threshold, penalty on gas hit event difference-------
 	if (simulation_parameters.gasHitMethod == FIXED_THRES){
 		for (int i = 0; i < history.size; i++){
-			if (history.measurement[i] < simulation_parameters.gas_hit_threshold)
+			if (history.measurement_avg[i] < simulation_parameters.gas_hit_threshold)
 				history_hit = 0;
 			else
 				history_hit = 1;
@@ -674,23 +675,24 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 		double mod_thrs = 0;
 		double prev_mod_thrs = 0.0;
 		double prev_his_thrs = 0.0;
+		double lambda = 0.8;
 
 		//Dynamic thresholds computation
 		for (int i = 0; i < history.size; i++){
 			if (i == 0){
-				prev_his_thrs = history.measurement[i];
-				his_thrs = history.measurement[i];
+				prev_his_thrs = history.measurement_avg[i];
+				his_thrs = history.measurement_avg[i];
 				prev_mod_thrs = model_c_avg[i];
 				mod_thrs = model_c_avg[i];
 			}
-			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement[i];
-			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
+			his_thrs = lambda * prev_his_thrs + (1 - lambda) * history.measurement_avg[i];
+			mod_thrs = lambda * prev_mod_thrs + (1 - lambda) * model_c_avg[i];
 			//store history threshold for next iteration
 			prev_his_thrs = his_thrs;
 			prev_mod_thrs = mod_thrs;
 
 			// decide whether the gas hit event happens
-			history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+			history_hit = (history.measurement_avg[i] > his_thrs) ? 1 : 0;
 			history.gas_hit_event[i] = history_hit;
 			model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
 			// update the likelihood based on the similarity of the hit event
@@ -728,10 +730,16 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model){
 
 
 // ======================= NAVIGATION functions ========================= //
-void random_navigation(){
-	goal_position.x = (randu() * (XMAX - SAFETY_MARGIN*2)) + SAFETY_MARGIN;  //position in m
-    	goal_position.y = (randu() * (YMAX - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
-    	goal_position.heading = 0;//(randu() * (ZMAX - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
+void random_planning()
+{
+	printf("Enter random planning \n");
+	fprintf(console_logfile, "Enter random planning \n");
+	do
+	{
+		goal_position.heading = 0;
+		goal_position.x = (((double)rand() / (double)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + XMIN;
+		goal_position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + YMIN;
+	} while (goal_position.is_in_obstacle_list(obstacles, nbr_obs) != -1);
 }
 
 bool position_outside_arena(Position p){
@@ -744,7 +752,7 @@ bool position_outside_arena(Position p){
 
 void information_gain_navigation_approx(){
 	float p0 = 0.5; //50 cm
-	double DKL=0, max_DKL=-100, max_meas=-100;
+	double KLD=0, max_KLD=-100, max_meas=-100;
 	//double position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
@@ -791,10 +799,10 @@ void information_gain_navigation_approx(){
 			//future_posterior.copy_posterior(zero);
 			future_posterior.MCMC_evaluation(fake_history);
 			//calculate the expected information gain
-			DKL = posterior.Kullback_Leibler_divergence(future_posterior);
-			// printf("DKL: %f _______________________\n", DKL);
-			if(DKL > max_DKL ){
-				max_DKL = DKL;
+			KLD = posterior.Kullback_Leibler_divergence(future_posterior);
+			// printf("KLD: %f _______________________\n", KLD);
+			if(KLD > max_KLD ){
+				max_KLD = KLD;
 				goal_position.x = tmp_position.x; // + (randu()-0.5)/5.0
 				goal_position.y = tmp_position.y;
 				goal_position.heading = 0;
@@ -805,8 +813,8 @@ void information_gain_navigation_approx(){
 	}
 }
 
-void balance_exploration_exploitation(float gloabl_local_search_ratio){
-	float ratio = gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+void balance_exploration_exploitation(float global_local_search_ratio){
+	float ratio = global_local_search_ratio;//simulation_parameters.global_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
 	printf("current_position : %f %f , goal position : %f %f , estimated source : %f %f \n", current_position.x,current_position.y,
 		goal_position.x,goal_position.y, plume_model.max_a_post_value[0],plume_model.max_a_post_value[1]);
@@ -1131,13 +1139,13 @@ void joint_planning(){
 	}
 }
 
-void DKL_MAP_distance(float global_local_search_ratio){
+void KLD_MAP_distance(float global_local_search_ratio){
 	double best_point[2]={0};
 	posterior.XYmarginal_distance_combined(current_position, global_local_search_ratio, best_point);
 	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-	float ratio = 0.3;//gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float ratio = 0.3;//global_local_search_ratio;//simulation_parameters.global_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
 	//printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
 	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);
@@ -1159,7 +1167,7 @@ void goal_outside_obstacles(Position *goal)
 	double min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
 	// is the goal position in an obstacle or out of arena or too close to current position?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
-	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) < min_dist_to_current)
+	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) > min_dist_to_current)
 	{
 		printf(">>> the goal is not in any obstacles or outside of the region\n");
 		return;
@@ -1402,7 +1410,7 @@ void state_estimating(){
 	
 	//check if time is up
 	//if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1){
+	if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1){
 		//the end
 		FSM.state = STATE_FINISHED;
 		end_timestamp = get_exp_time();
@@ -1415,28 +1423,39 @@ void state_estimating(){
 void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
 
-    switch (simulation_parameters.planningStrategy)
+     switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
-		greedy_planning();
+		maximal_belief_planning();
 		break;
-    case INFORMATIVE_KLD:
+	case RANDOM:
+		random_planning();
+		break;
+	case BELIEF_CLUSTERING:
+		belief_clustering_planning();
+		break;
+	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
-		DKL_MAP_distance(1.0);
-		break;
-	case INFORMATIVE_CLUSTERING:
-        calculate_information_gain_with_variance();
-		informative_clustering_planning();
+	      KLD_MAP_distance(1.0);
 		break;
 	default:
 		break;
 	}
-    goal_outside_obstacles(&goal_position);
+      // The goal position is very close to current postion, swith to random planning
+	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+	{
+		printf("The goal position is very close to current postion, switch to random planning \n");
+		fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		random_planning();
+	}
+
+	goal_outside_obstacles(&goal_position);
+
 	if (simulation_parameters.workingMode == VIDEO){
 		state_read_goal();
 	}
 
-    printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+      printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	switch(simulation_parameters.workingMode){
 		case EXPERIMENT:
 		{
@@ -1499,7 +1518,7 @@ void state_updategoal(){
 void state_listen(){
 	int success_recv_meas = -1;
 	int success_recv_size = -1;
-    double buffer[5] = {0};
+      double buffer[5] = {0};
 	int measurement_size = 0; 
     // first recive the size of the message queue
 	success_recv_size = read(sock, &measurement_size, sizeof(int));
@@ -1658,19 +1677,22 @@ int main(int argc, char **argv){
     	exit(1);
   	}
   	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
-	if (simulation_parameters.planningStrategy == INFORMATIVE_CLUSTERING){
-		// initialize the clustering algorithm
-		plume_model.initialize_information_matrix();
-	}
+	
+	// Precompute gas concentration maps for all possible source locations, resolution 20x20
+	plume_model.initialize_information_matrix();
+	//plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
+
+	// File for saving console messages
+	console_logfile = fopen(console_logfile_name, "a");
 
 	// main loop
 	while (FSM.state != STATE_FINISHED){
 		start_timestamp = get_exp_time();
 	   	//change state
-    	FSM.hook();
-    	//next
-    	next_iteration_time();
-    	n_time_step++;
+		FSM.hook();
+		//next
+		next_iteration_time();
+		n_time_step++;
 	}
 	// final logs
 	log_history();

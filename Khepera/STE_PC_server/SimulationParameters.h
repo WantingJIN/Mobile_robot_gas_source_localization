@@ -113,10 +113,10 @@ class SimulationParameters{
 		float global_local_search_ratio; 
 		float cluster_entropy_ratio; 
 		//float vel_factor; 
-		//float sampling_dist_thresh; 
+		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		int measurement_error;
-	      //float sigma;
+	      float sigma;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 

@@ -537,7 +537,7 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 	{
 		if (pdf[i] > 0 && P.pdf[i] > 0)
 		{
-			// DKL += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
+			// KLD += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
 			KLD += (P.pdf[i] / P.sum) * log((P.pdf[i] / P.sum) / pdf[i]);
 			// P is not normalized, but its sum was calculated and updated
 		}

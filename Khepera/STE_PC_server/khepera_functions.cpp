@@ -21,28 +21,16 @@ void init(){
 	string config_file = string(workspacePath) + "/Khepera/Data/config.txt";
       simulation_parameters.load_simulation_parameters_from_config(config_file.c_str());
       simulation_parameters.rewrite_parameters_from_file();
-
-	//write the simulation parameters
+      // write the simulation parameters
+	FILE *sim_param_file;
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
-	fprintf(sim_param_file, "likelihood_error %f\n", simulation_parameters.likelihood_error);
-	fprintf(sim_param_file, "gloabl_local_search_ratio %f\n", simulation_parameters.gloabl_local_search_ratio);
-	fprintf(sim_param_file, "MCMC_iteration_num %d\n", simulation_parameters.MCMC_iteration_num);
-	fprintf(sim_param_file, "MCMC_or_exhaustive_eval %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-	fprintf(sim_param_file, "number_of_robots %d\n", simulation_parameters.number_of_robots);
-	fprintf(sim_param_file, "scenario %d\n", simulation_parameters.scenario);
-      fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
-	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
-	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
-	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
-	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
-	fprintf(sim_param_file, "cluster_entropy_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
-	fprintf(sim_param_file, "measurement_error %f\n", simulation_parameters.measurement_error);
+	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fclose(sim_param_file);
 
+	simulation_parameters.log_simulation_parameters(config_logfile_name);
 
 	switch (simulation_parameters.workingMode){
 		case EXPERIMENT:
@@ -139,6 +127,7 @@ void set_logfile_names(){
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
+      sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
 
       sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
 	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);

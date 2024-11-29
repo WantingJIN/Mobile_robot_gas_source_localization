@@ -987,7 +987,7 @@ void information_gain_navigation_approx()
 		future_posterior.MCMC_evaluation(fake_history);
 		// calculate the expected information gain
 		KLD = posterior.Kullback_Leibler_divergence(future_posterior);
-		// printf("DKL: %f _______________________\n", DKL);
+		// printf("KLD: %f _______________________\n", KLD);
 		if (KLD > max_KLD)
 		{
 			max_KLD = KLD;
@@ -1503,9 +1503,9 @@ void goal_outside_obstacles(Position *goal)
 	double min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
 	// is the goal position in an obstacle or out of arena or too close to current position?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
-	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) < min_dist_to_current)
+	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) > min_dist_to_current)
 	{
-		printf(">>> the goal is not in any obstacles or outside of the region\n");
+		printf(">>> the goal is not in any obstacles or outside of the region; and far from current position\n");
 		return;
 	}
 

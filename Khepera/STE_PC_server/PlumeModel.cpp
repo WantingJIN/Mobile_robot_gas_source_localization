@@ -536,6 +536,14 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
     }
 }
 
+void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg)
+{
+	for (int i = 0; i < nbr; i++)
+	{
+		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
+	}
+}
+
 void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list(){
 // initialize gas dispersion list
 // calculate the gas concentration map for each possible source location
