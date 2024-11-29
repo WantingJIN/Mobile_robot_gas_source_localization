@@ -4,6 +4,7 @@
 struct sKhepera4 khepera4;
 struct sOdorboard odorboard;
 struct sWindSensorBoard windsensorboard;
+struct sBraitenberg braitenberg;
 double odor_baseline_value = 0;
 sMsg STmsg;
 sUdpMsg udp_msgR;
@@ -73,6 +74,9 @@ void init(){
 
 	//get the initial position
     odometry_track_start_pos(&ot,0,0);
+
+    // Initialization of braitenberg controller
+    braitenberg_init(&braitenberg);    
 
 	//log files names
    	sprintf(folder_name, "./log_STE_multi"); //create a new folder for log files
@@ -292,9 +296,10 @@ void establish_baseline(){
             updateCortexPos(&current_position);
         	go_to_goal(goal_position);  
         	//if obstacle, avoid
-        	if(obstacle_or_not() == 1)
-        		obstacle_avoidance(speed);
-        	set_wheels_speed(speed[0],speed[1]);
+        	// if(obstacle_or_not() == 1)
+        	// 	obstacle_avoidance(speed);
+        	// set_wheels_speed(speed[0],speed[1]);
+            braitenberg_run(&braitenberg);
         	usleep(SLEEP_PERIOD * 100);
     	}
     	//stop once reached
@@ -580,7 +585,7 @@ void go_to_goal(Position goal){
 }
 
 void obstacle_avoidance(double speed[2]){
-	//printf("I'm avoiding obstacles... \n");
+	printf("I'm avoiding obstacles... \n");
 	//double khepera3_matrix[9][2] = {{-50,-500},{-200,400},{-300,500},{150, 100},{500,-400},{400,-200},{-50,-50},{-100,-100}};
 	//double khepera3_matrix[8][2] = {{-1,1},{1,-1},{3,-3},{-3, -3},{-3,3},{-1,1},{1,-1},{0,0}};
     double khepera4_matrix[8][2] = {{-0,1},{1,-1},{2,-2},{-3, -2},{-2,2},{-1,1},{1,-0},{0,0}};
@@ -693,4 +698,67 @@ double calibrate_sensor_reading (double raw_reading){
         calibrated_reading = 0.0;
     }
     return calibrated_reading;
+}
+
+void braitenberg_run(struct sBraitenberg *braitenberg) {
+    int i;
+    int speed_left, speed_right;
+
+    // Take the next measurement
+    khepera4_infrared_proximity();
+
+    // Sum all sensor values with the Braitenberg bias and weights
+    speed_left = 0;
+    speed_right = 0;
+    for (i = 0; i < 12; i++) {
+        speed_left += (khepera4.infrared_proximity.sensor[i] + braitenberg->bias[i]) * braitenberg->weight_left[i];
+        speed_right += (khepera4.infrared_proximity.sensor[i] + braitenberg->bias[i]) * braitenberg->weight_right[i];
+    }
+
+    // Shift to be in the right order of magnitude
+    speed_left = speed_left / 10;
+    speed_right = speed_right / 10;
+
+    // Add the bias speed
+    speed_left += braitenberg->speed.left;
+    speed_right += braitenberg->speed.right;
+
+    // Set that speed
+    khepera4_drive_set_speed(speed_left, speed_right);
+    //printf("speed_left is %d, speed right is %d\n", speed_left, speed_right);
+
+    // Sleep
+    usleep(braitenberg->wait_us);
+    
+}
+
+void braitenberg_set_obstacle_avoidance(struct sBraitenberg *braitenberg, int aggressivity) {
+    braitenberg->weight_left[cKhepera4SensorsInfrared_BackLeft] = -1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Left] = 1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FrontLeft] = 3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FrontRight] = -3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Right] = -1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_BackRight] = 1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Back] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorLeft] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorFrontLeft] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorFrontRight] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorRight] = 0;
+
+    int i;
+    for (i = 0; i < 12; i++) {
+        braitenberg->weight_right[i] = -braitenberg->weight_left[i];
+        braitenberg->bias[i] = 20;
+    }
+    braitenberg->weight_right[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
+}
+
+void braitenberg_init(struct sBraitenberg *braitenberg) {
+    braitenberg_set_obstacle_avoidance(braitenberg, 1);
+    int speed = 200;
+    braitenberg->speed.left =  speed;
+    braitenberg->speed.right =  speed;
+    braitenberg->repeat =  0;
+    braitenberg->wait_us =  5000;
 }

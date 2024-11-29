@@ -574,12 +574,7 @@ void state_obstacle_avoidance(){
 		FSM.hook = state_moving;
 		return;
 	}
-
-	obstacle_avoidance(speed);
-	
-	//wb_differential_wheels_set_speed(speed[0],speed[1]);
-	set_wheels_speed(speed[0],speed[1]);
-	usleep(100 * 1000);
+	braitenberg_run(&braitenberg);
 }
 
 
