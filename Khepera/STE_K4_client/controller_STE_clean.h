@@ -126,11 +126,12 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
-	eSamplingMode samplingMode;
+	eSamplingMode samplingMode; 
 	eProcessingMode processingMode; 
 	eSensorCalibration sensorCalibration;
 	int sampling_period;
 	int wheel_speed;
+	float sampling_dist_thresh;
 };
 extern struct simulation_parameters simulation_parameters;
 

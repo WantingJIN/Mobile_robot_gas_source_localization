@@ -124,6 +124,9 @@ int finished = 0;
 
 bool set_odometry_pos_from_MCS = false;
 
+// store last position for minimum distance threshold in measurement update
+Position last_measurement_pos;
+
 //############################################### to fix
 int nb_robots = 1;
 int robots_ID_list[] = {101};
@@ -152,11 +155,11 @@ void do_odometry() {
 }
 
 double dist_to_goal(Position goal_position){
-    //Euclidean distance between current position to the goal
-    double dx, dy;
-    dx = goal_position.x-current_position.x;
-    dy = goal_position.y-current_position.y;
-    return sqrt(dx*dx+dy*dy);
+	//Euclidean distance between current position to the goal
+	double dx, dy;
+	dx = goal_position.x-current_position.x;
+	dy = goal_position.y-current_position.y;
+	return sqrt(dx*dx+dy*dy);
 }
 
 //show the measurement history on screen
@@ -290,14 +293,14 @@ void log_history(){
 	for (int i = 0; i < history.size; i++){
 		fprintf(position_history_logfile,"%d, %f, %f, %f\n", i, history.position[i].x,history.position[i].y,history.position[i].heading);
 	}
-    fclose(position_history_logfile);
-    // measurement
-    //FILE * measurement_history_logfile;
-    measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
+	fclose(position_history_logfile);
+	// measurement
+	//FILE * measurement_history_logfile;
+	measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
 		fprintf(measurement_history_logfile,"%d, %f, %f\n", i, history.measurement_avg[i], history.measurement_std[i]);
 	}
-    fclose(measurement_history_logfile);
+    	fclose(measurement_history_logfile);
    
 	//posterior 3D
 	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
@@ -326,7 +329,7 @@ void state_measuring(){
 	// printf("measuring sample number %d\n", sampleBuffer.n_samples);
 	std::vector<double> sample_from_map;
 	int history_size_before_sampling = history.size;
-    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
+      if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
 		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
@@ -388,8 +391,8 @@ void state_measuring(){
 	// send it to friends
 	// if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
 	// 	Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
-//   		send_msg(msg);
-//   	}
+	//   		send_msg(msg);
+	//   	}
 
 	double m_buffer[5] = {0};
 	int timeout = 10;
@@ -507,10 +510,22 @@ void state_moving(){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > simulation_parameters.sampling_period){
+			if (!position_outside_arena(current_position))
+			{
+				// Sampling distance threshold
+				float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				{
+					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+					sample_in_motion.measurement_avg.push_back(instant_concentration);
+					sample_in_motion.size++;
+
+					last_measurement_pos.x = current_position.x;
+					last_measurement_pos.y = current_position.y;
+					
+				}
+			}
 			sample_counter = 0;
-			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-			sample_in_motion.measurement_avg.push_back(instant_concentration);
-			sample_in_motion.size++;
 		}
 	}
 	if(dist_to_goal(goal_position) > 0.05){
