@@ -24,4 +24,4 @@ simuMode = ONLINE
 R0 = 1500
 gas_sensor_noise_var = 40000
 sigma = 0.45
-lambda = 1
+lambda = 0.8
