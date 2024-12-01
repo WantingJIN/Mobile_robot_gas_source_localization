@@ -1264,20 +1264,6 @@ void goal_outside_obstacles(Position *goal)
 		for (int i = 0; i < 8; i++)
 		{
 
-			// give priority to unvisited cells but was much slower
-			/*
-			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
-				int pos_coord[2];
-				pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
-				pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
-				int idx = posterior.indices_to_index(pos_coord);
-				if (cell_visited_list[idx] == 0){
-					//if so, then this is the nearest position
-					nearest_unvisited_position.copy_position(candidates[i]);
-					min_dist_unvisited = goal->distance_from(candidates[i]);
-				}
-			}
-			*/
 			// check if the distance to candidate is smaller than others
 			if (goal->distance_from(candidates[i]) < min_dist)
 			{
@@ -1358,11 +1344,9 @@ void goal_outside_obstacles(Position *goal)
 		}
 		fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
+		fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 	}
-
-	// change the goal position using the pointer
-	// printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-	// fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+	
 }
 
 // ============================== STATES ================================= //
@@ -1417,13 +1401,14 @@ void state_estimating(){
 	} else {
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
+		printf("go to update goal\n");
 	}
 }
 
 void state_updategoal(){
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
-
-     switch (simulation_parameters.planningStrategy)
+      
+      switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
 		maximal_belief_planning();
@@ -1449,7 +1434,7 @@ void state_updategoal(){
 		random_planning();
 	}
 
-	goal_outside_obstacles(&goal_position);
+	//goal_outside_obstacles(&goal_position);
 
 	if (simulation_parameters.workingMode == VIDEO){
 		state_read_goal();
@@ -1607,7 +1592,7 @@ void state_read_goal_measurement(){
 		// history.position[history.size].y = f2;
 
 		// // Move to estimating
-		//history_print(history);
+		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook = state_estimating;
 
@@ -1622,12 +1607,12 @@ void state_read_goal_measurement(){
 
 void state_read_goal(){
 	printf("Enter state read goal and measurment\n");
-    int d;
+	int d;
 	float f1, f2, f3; 
-    double t;
+	double t;
 	char line[256];
 
-    // Read the goal position
+    	// Read the goal position
 	if (!feof(experiment_goalposition_logfile)){
 		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
 		goal_position.x = f1;
@@ -1689,19 +1674,21 @@ int main(int argc, char **argv){
 	while (FSM.state != STATE_FINISHED){
 		start_timestamp = get_exp_time();
 	   	//change state
+		printf("state %d\n", FSM.state);
 		FSM.hook();
 		//next
 		next_iteration_time();
 		n_time_step++;
 	}
 	// final logs
+	printf("Find the source!\n");
 	log_history();
 	log_experiment_time();
 	cleaning_up();
 	//free the allocated memory to obstacle array
-    for(int i = 0; i < nbr_obs; i++)
-    	delete[] obstacles[i];
-	delete[] obstacles;
-	exit(0);
+	for(int i = 0; i < nbr_obs; i++)
+		delete[] obstacles[i];
+		delete[] obstacles;
+		exit(0);
 }
 

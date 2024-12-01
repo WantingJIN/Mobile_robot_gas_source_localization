@@ -204,18 +204,9 @@ void SimulationParameters::rewrite_parameters_from_file(){
 		sim_param_file = fopen("Data/params/map_nbr.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &map_nbr);
 		if (ok)
-			printf("scenario : %d\n", map_nbr);
+			printf("map : %d\n", map_nbr);
 		fclose(sim_param_file);
 	}
-
-	if(access("Data/params/working_mode.txt", F_OK) != -1 ){
-		sim_param_file = fopen("Data/params/working_mode.txt", "r");
-		int workingMode = 0;
-		ok = fscanf(sim_param_file, "%d", &workingMode);
-		if(ok) 
-			printf("working mode : %d\n", workingMode);
-		fclose(sim_param_file);
-      }
 }
 
 void SimulationParameters::log_simulation_parameters(const char *config_logfile_name){

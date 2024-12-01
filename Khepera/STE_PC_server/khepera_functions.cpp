@@ -123,31 +123,16 @@ void set_logfile_names(){
 
       // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
 	// log name of the experiment and scan
-      sprintf(logfile_folder_name, "%s/Khepera/Results_0818/continuous_clustering_ratio10/10/2023-08-18_16-54", workspacePath);
+      sprintf(logfile_folder_name, "%s/Khepera/ICRA_2024_Results/continuous_clustering_ratio10/10/2023-08-18_16-54", workspacePath);
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
       sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
       sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
 	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
 	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
-
-	//create / reinitialize log files (might be unnecessary)
-	measurements_logfile = fopen(measurements_logfile_name, "w");
-	fclose(measurements_logfile);
-	goalposition_logfile = fopen(goalposition_logfile_name, "w");
-	fclose(goalposition_logfile);
-	expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "w");
-	fclose(expected_a_posteriori_logfile);
-	max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "w");
-	fclose(max_a_posteriori_logfile);
-	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "w");
-	fclose(gas_information_map_logfile);
-	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
-	fclose(gas_hit_variance_map_logfile);
-	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
-	fclose(experiment_time_logfile);
 
 	// experiment results folder
 	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");

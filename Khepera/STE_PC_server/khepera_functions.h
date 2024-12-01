@@ -73,6 +73,10 @@ extern char scan_measurements_logfile_name[300];
 extern FILE* scan_position_logfile;
 extern char scan_position_logfile_name[300];
 
+// for storing debugging info
+extern FILE *console_logfile;
+extern char console_logfile_name[512];
+
 // finite state machine
 extern struct FSM FSM;
 // robot's measurements

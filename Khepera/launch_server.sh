@@ -51,8 +51,6 @@ cp /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacl
 # obstacle_source="$obsX $obsYMIN 13 $obsYMAX"
 # echo $obstacle_source >> /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
 #sed -i -e '$a>obstacle_source>' /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
-# start the server
-export PYTHONPATH=/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/STE_PC_server
 ./STE_PC_server/STE_PC_server
 
 # start the client
