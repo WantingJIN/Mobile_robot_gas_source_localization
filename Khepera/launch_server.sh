@@ -1,23 +1,22 @@
 #!/bin/bash
 
-
 # robot's ID
 # ID=103
 
 # set the map number
 map=2
-workingMode=1
 read -r source_x source_y <<<"12.7 1"
+config_file="Data/config.txt"
+workMode=EXPERIMENT
 
-echo $map > "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/map_nbr.txt"
-echo $workingMode > "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/params/working_mode.txt"
-echo $source_x $source_y > "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt"
+echo $map > $STE_DDPM_ROOT/Khepera/Data/params/map_nbr.txt
+sed -i "s/^workMode *= *.*/workMode = $workMode/" "$config_file"
+echo $source_x $source_y > $STE_DDPM_ROOT/Khepera/Data/source_position.txt
 # environment map
-# add the source position to the environment map to avoid collision with source location
-cp /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Env_map/test_map"$map".environment /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test_map.environment
+cp $STE_DDPM_ROOT/Khepera/Data/Env_map/test_map"$map".environment $STE_DDPM_ROOT/Khepera/Data/test_map.environment
 
 #delete last unfinished job
-result_folder_name="/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/log_STE_multi/"  # the folder to store the result for experiment that not finish
+result_folder_name=$STE_DDPM_ROOT/Khepera/log_STE_multi/  # the folder to store the result for experiment that not finish
 if [ -d "$result_folder_name" ]; then
     echo "Folder exists. Delete"
     rm -r "$result_folder_name"
@@ -25,6 +24,11 @@ if [ -d "$result_folder_name" ]; then
 else
     echo "Folder does not exist."
 fi
+cp $STE_DDPM_ROOT/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt
+
+./STE_PC_server/STE_PC_server
+
+
 # MarginY=0.2
 # MarginX=0.05
 # MINX=`echo $source_x - $MarginX | bc`
@@ -36,7 +40,6 @@ fi
 # # add the source 
 # # k4put /home/rahbar/Projects/DDPM_K4/Data/test_map.environment +$ID
 # # obstacle list
-cp /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
 # # k4put /home/rahbar/Projects/DDPM_K4/Data/obstacle_list.txt +$ID
 # read -r obstacle_nbr<"/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt"
 # obstacle_nbr_new=`echo $obstacle_nbr + 1 |tr -d $'\r'| bc`
@@ -51,8 +54,6 @@ cp /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacl
 # obstacle_source="$obsX $obsYMIN 13 $obsYMAX"
 # echo $obstacle_source >> /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
 #sed -i -e '$a>obstacle_source>' /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt
-./STE_PC_server/STE_PC_server
-
 # start the client
 # k4put STE_K4_client/STE_K4_client +$ID
 # ssh -t root@192.168.1.$ID 'cd rahbar; ./STE_K4_client'

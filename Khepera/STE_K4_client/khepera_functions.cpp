@@ -116,7 +116,7 @@ void init(){
 	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9. processingMode; 10. sensorCalibration; 11. sampling_period;
     // 12. wheel_speed 13. sampling_dist_thresh
     //                                                       1    2    3   4  5  6  7        8                9           10  11  12
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON, 8, 400, 0.1};
+    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, OFF, 8, 400, 0.1};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -298,8 +298,8 @@ void establish_baseline(){
         	//if obstacle, avoid
         	// if(obstacle_or_not() == 1)
         	// 	obstacle_avoidance(speed);
-        	// set_wheels_speed(speed[0],speed[1]);
-            braitenberg_run(&braitenberg);
+        	set_wheels_speed(speed[0],speed[1]);
+            // braitenberg_run(&braitenberg);
         	usleep(SLEEP_PERIOD * 100);
     	}
     	//stop once reached

@@ -130,7 +130,7 @@ typedef struct {
   } position;
 } sMsg;
 
-typedef struct {
+struct sBraitenberg {
     struct {
         int left;
         int right;
@@ -140,7 +140,7 @@ typedef struct {
     int weight_left[12];
     int weight_right[12];
     int bias[12];
-} sBraitenberg;
+};
 
 
 

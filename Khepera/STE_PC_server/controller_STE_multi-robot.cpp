@@ -1674,7 +1674,7 @@ int main(int argc, char **argv){
 	while (FSM.state != STATE_FINISHED){
 		start_timestamp = get_exp_time();
 	   	//change state
-		printf("state %d\n", FSM.state);
+		//printf("state %d\n", FSM.state);
 		FSM.hook();
 		//next
 		next_iteration_time();

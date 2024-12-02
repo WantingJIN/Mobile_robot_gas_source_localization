@@ -510,20 +510,17 @@ void state_moving(){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > simulation_parameters.sampling_period){
-			if (!position_outside_arena(current_position))
+			// Sampling distance threshold
+			float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+			if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
 			{
-				// Sampling distance threshold
-				float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-				if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-				{
-					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-					sample_in_motion.measurement_avg.push_back(instant_concentration);
-					sample_in_motion.size++;
+				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+				sample_in_motion.measurement_avg.push_back(instant_concentration);
+				sample_in_motion.size++;
 
-					last_measurement_pos.x = current_position.x;
-					last_measurement_pos.y = current_position.y;
-					
-				}
+				last_measurement_pos.x = current_position.x;
+				last_measurement_pos.y = current_position.y;
+				
 			}
 			sample_counter = 0;
 		}
@@ -562,7 +559,7 @@ void state_moving(){
 }
 
 void state_obstacle_avoidance(){
-	//if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
+	if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
 	
 	//if no obstacle,
 	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){

@@ -7,14 +7,11 @@ ID=106
 # set the map number
 map=10
 echo "+++ Map number $map +++"
-# echo $map > "/home/rahbar/Projects/DDPM_K4/Data/params/map_nbr.txt"
 # environment map
-# cp /home/rahbar/Projects/DDPM_K4/Data/Env_map/test_map"$map".environment /home/rahbar/Projects/DDPM_K4/Data/test_map.environment
-k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/test_map.environment +$ID
+k4put $STE_DDPM_ROOT/Khepera/Data/test_map.environment +$ID
 # obstacle list
-# cp /home/rahbar/Projects/DDPM_K4/Data/Obstacle_lists/"$map"_obstacles.txt /home/rahbar/Projects/DDPM_K4/Data/obstacle_list.txt
-k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/obstacle_list.txt +$ID
-k4put /home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/source_position.txt +$ID
+k4put $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt +$ID
+k4put $STE_DDPM_ROOT/Khepera/Data/source_position.txt +$ID
 
 # start the server
 # export PYTHONPATH=/home/rahbar/Projects/DDPM_K4/STE_PC_server
