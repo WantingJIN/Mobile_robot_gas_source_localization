@@ -102,6 +102,12 @@ typedef enum workingMode{
 	VIDEO = 2,
 }eWorkingMode;
 
+typedef enum releaseRate{
+	LOW = 0,
+	MIDDLE = 1,
+	HIGH = 2,
+}eReleaseRate;
+
 // simulation paramters
 class SimulationParameters{
       public:
@@ -131,6 +137,8 @@ class SimulationParameters{
 		eWorkingMode workingMode;
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod; 
+
+		eReleaseRate releaseRate;
 
 		SimulationParameters();
 		~SimulationParameters();

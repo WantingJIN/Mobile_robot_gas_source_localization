@@ -19,3 +19,4 @@ workMode = OFFLINE
 sigma = 0.45
 measurement_error = 0
 sampling_dist_thresh = 0.1
+releaseRate = LOW

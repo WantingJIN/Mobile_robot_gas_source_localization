@@ -5,12 +5,16 @@
 
 # set the map number
 map=2
+# save experiment configuration
+releaseRate=LOW
 read -r source_x source_y <<<"12.7 1"
+
 config_file="Data/config.txt"
 workMode=EXPERIMENT
 
 echo $map > $STE_DDPM_ROOT/Khepera/Data/params/map_nbr.txt
 sed -i "s/^workMode *= *.*/workMode = $workMode/" "$config_file"
+sed -i "s/^releaseRate *= *.*/releaseRate = $releaseRate/" "$config_file"
 echo $source_x $source_y > $STE_DDPM_ROOT/Khepera/Data/source_position.txt
 # environment map
 cp $STE_DDPM_ROOT/Khepera/Data/Env_map/test_map"$map".environment $STE_DDPM_ROOT/Khepera/Data/test_map.environment

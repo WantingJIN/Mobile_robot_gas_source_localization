@@ -91,6 +91,14 @@ eGasHitMethod parse_gas_hit_method(const char* str) {
 	exit(1);
 }
 
+eReleaseRate parse_release_rate(const char* str) {
+	if (strcmp(str, "LOW") == 0) return LOW;
+	if (strcmp(str, "MIDDLE") == 0) return MIDDLE;
+	if (strcmp(str, "HIGH") == 0) return HIGH;
+	fprintf(stderr, "Unknown release rate: %s\n", str);
+	exit(1);
+}
+
 SimulationParameters::SimulationParameters(){
 	// default values
 	// simulation parameters
@@ -118,6 +126,7 @@ SimulationParameters::SimulationParameters(){
 	workingMode = EXPERIMENT;
 	measurement_error = 0;
 	sigma = 0.45;
+	releaseRate = LOW;
 	//simuMode = ONLINE; 
 	//R0 = 100;
 	//gas_sensor_noise_var = 40000;
@@ -176,6 +185,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			sigma = atof(value);	
 		} else if (strcmp(key, "sampling_dist_thresh") == 0) {
 			sampling_dist_thresh = atof(value);	
+		} else if (strcmp(key, "releaseRate") == 0) {
+			releaseRate = parse_release_rate(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -234,6 +245,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "measurement_error %d\n", measurement_error);
 	fprintf(sim_param_file, "sigma %f\n", sigma);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
+	fprintf(sim_param_file, "release_rate %d\n", releaseRate);
 	fclose(sim_param_file);
 }
 
