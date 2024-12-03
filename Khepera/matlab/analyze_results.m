@@ -4,7 +4,14 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Khepera/Results_0818/stop_sense_kld';
+work_station = "Desktop";
+% work_station = "Laptop"
+if work_station == "Desktop"
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
+else
+    root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
+end
+general_folder=[root_path, '/Results/Results_2024-12-03/middle_rr'];
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103', 'pc', 'k4'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
