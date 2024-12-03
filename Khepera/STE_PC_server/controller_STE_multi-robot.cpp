@@ -1434,7 +1434,7 @@ void state_updategoal(){
 		random_planning();
 	}
 
-	//goal_outside_obstacles(&goal_position);
+	goal_outside_obstacles(&goal_position);
 
 	if (simulation_parameters.workingMode == VIDEO){
 		state_read_goal();

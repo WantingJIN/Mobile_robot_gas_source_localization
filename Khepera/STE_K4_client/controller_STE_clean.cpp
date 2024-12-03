@@ -147,11 +147,18 @@ long long current_timestamp(){
 	return milliseconds;
 }
 
-void do_odometry() {
+void do_odometry(Position *position) {
     odometry_track_step(&ot);  
-    current_position.x = ot.result.x;// + init_pos_x;
-    current_position.y = -ot.result.y;// + init_pos_y;
-    current_position.heading = -ot.result.theta;// + init_pos_theta;
+    position->x = ot.result.x;// + init_pos_x;
+    position->y = -ot.result.y;// + init_pos_y;
+    position->heading = -ot.result.theta;// + init_pos_theta;
+}
+
+void odometry_set_absolute_position_from_external(const float ex_x, const float ex_y, const float ex_heading){
+	ot.result.x = ex_x;
+	ot.result.y = -ex_y;
+	ot.result.theta = -ex_heading;
+
 }
 
 double dist_to_goal(Position goal_position){
@@ -333,8 +340,8 @@ void state_measuring(){
 		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
-				printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				//printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement_avg.push_back(sample_from_map[i]);
 				//FIXME: temporary solution
@@ -343,7 +350,7 @@ void state_measuring(){
 			}
 		} else {
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement_avg.push_back(sample_in_motion.measurement_avg[i]);
 				history.measurement_std.push_back(0.0);

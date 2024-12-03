@@ -221,7 +221,8 @@ void ack_msg(Message msg);
 double target_evaluation(double position[][3]);
 void get_gps_position(double external_gps_position[3]);
 int obstacle_or_not();
-void do_odometry();
+void do_odometry(Position *position);
+void odometry_set_absolute_position_from_external(const float ex_x, const float ex_y, const float ex_heading);
 double dist_to_goal(Position goal);
 
 

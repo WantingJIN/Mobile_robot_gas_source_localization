@@ -18,6 +18,9 @@ void init(){
 	
 	//robot
 	khepera4_init();
+
+    // intialize the odometry
+    odometry_track_init();
 	
 	//get ID from file
 	if(access("ID.txt", F_OK) != -1 ){
@@ -404,13 +407,15 @@ void updateCortexPos(Position * position){
             new_y = FrameOfData->BodyData[i].Segments[0][1]/1000;
             // Check if the MCS is available; otherwise, use odometry instead
             if (new_x > 15.0 || new_x < 0.0 || new_y > 5.0 || new_y < 0.0){
-            //    if (!set_odometry_pos_from_MCS){
-            //        odometry_set_absolute_position_from_external(&ot, position->x, position->y, position->heading);
-            //        set_odometry_pos_from_MCS = true;
-            //    }
-            //    do_odometry();
-               printf("Error! my current position is (%f %f %f)\n", new_x, new_y);
-               continue;
+                if (!set_odometry_pos_from_MCS){
+                    set_odometry_pos_from_MCS = true;
+                    odometry_track_start(&ot);
+                    odometry_set_absolute_position_from_external(position->x, position->y, position->heading);
+                    printf("Error with MCS!! Use odo instead.");
+                }
+                do_odometry(position);
+                printf("my current position is (%f %f)\n", position->x, position->y);
+                continue;
             }
             set_odometry_pos_from_MCS = false;
             position->x=FrameOfData->BodyData[i].Segments[0][0]/1000;
@@ -439,7 +444,7 @@ int obstacle_or_not(){
 	for (int i = 1; i < SENSOR_NUMBER-2; i++){
 		sensors_value[i] = khepera4.infrared_proximity.sensor[i];
 		//if one of the sensors detect something, then obstacle
-		if(sensors_value[i] > 30){
+		if(sensors_value[i] > 100){
 			//printf("obstacle detected..!!!!!\n");
 			return 1;
 		}
@@ -722,13 +727,6 @@ void braitenberg_run(struct sBraitenberg *braitenberg) {
     // Add the bias speed
     speed_left += braitenberg->speed.left;
     speed_right += braitenberg->speed.right;
-
-    // Set that speed
-    khepera4_drive_set_speed(speed_left, speed_right);
-    //printf("speed_left is %d, speed right is %d\n", speed_left, speed_right);
-
-    // Sleep
-    usleep(braitenberg->wait_us);
     
 }
 
