@@ -407,6 +407,7 @@ void updateCortexPos(Position * position){
             new_y = FrameOfData->BodyData[i].Segments[0][1]/1000;
             // Check if the MCS is available; otherwise, use odometry instead
             if (new_x > 15.0 || new_x < 0.0 || new_y > 5.0 || new_y < 0.0){
+                MCS_data_available = false;
                 if (!set_odometry_pos_from_MCS){
                     set_odometry_pos_from_MCS = true;
                     odometry_track_start(&ot);
@@ -418,6 +419,7 @@ void updateCortexPos(Position * position){
                 continue;
             }
             set_odometry_pos_from_MCS = false;
+            MCS_data_available = true;
             position->x=FrameOfData->BodyData[i].Segments[0][0]/1000;
             position->y=FrameOfData->BodyData[i].Segments[0][1]/1000;
             position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
