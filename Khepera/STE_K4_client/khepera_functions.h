@@ -117,6 +117,7 @@ extern double epsilon;
 extern VisiLibity::Visibility_Graph vg;
 // set the odometry initial pos from last frame MCS result
 extern bool set_odometry_pos_from_MCS;
+extern bool MCS_data_available;
 
 
 typedef struct {
