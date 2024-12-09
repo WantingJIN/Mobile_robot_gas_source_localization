@@ -4,11 +4,12 @@
 # ID=103
 
 # set the map number
-map=2
+map=9
 # save experiment configuration
 releaseRate=LOW
 read -r source_x source_y <<<"12.7 1"
 
+#config file
 config_file="Data/config.txt"
 workMode=EXPERIMENT
 
