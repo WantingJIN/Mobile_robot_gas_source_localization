@@ -1861,12 +1861,12 @@ void state_measuring()
 		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 
-		printf("wind intensity reading: %f\n", sampleBuffer.instant_wind_intensity);
-		printf("wind orientation: %f\n", sampleBuffer.instant_wind_angle);
-		printf("Speed 0: %f\n", speed[0]);
-		printf("Speed 1: %f\n", speed[1]);
-		printf("Robot lin vel: %f\n", ((speed[0] + speed[1]) * WHEEL_RADIUS / 2));
-		printf("Robot orientation: %f\n", current_position.heading);
+		// printf("wind intensity reading: %f\n", sampleBuffer.instant_wind_intensity);
+		// printf("wind orientation: %f\n", sampleBuffer.instant_wind_angle);
+		// printf("Speed 0: %f\n", speed[0]);
+		// printf("Speed 1: %f\n", speed[1]);
+		// printf("Robot lin vel: %f\n", ((speed[0] + speed[1]) * WHEEL_RADIUS / 2));
+		// printf("Robot orientation: %f\n", current_position.heading);
 
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
