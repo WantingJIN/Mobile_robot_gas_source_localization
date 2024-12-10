@@ -6,6 +6,7 @@
 #include "Position.h"
 
 extern char posterior_pdf_3D_name[256];
+extern char relative_measurements_logfile_name[512];
 class Posterior{ 
     public: 
     
@@ -69,7 +70,8 @@ class Posterior{
     //record the cell that is visited, by giving its location
     void mark_cell_as_visited(Position current_pos);
     //check if this cell is visited before, by giving its location
-    bool check_if_cell_visited(Position cell_pos); 
+    bool check_if_cell_visited(Position cell_pos);
+    void log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas); 
 }; 
 
 #endif

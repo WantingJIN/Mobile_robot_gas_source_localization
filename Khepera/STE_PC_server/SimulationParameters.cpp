@@ -122,7 +122,7 @@ SimulationParameters::SimulationParameters(){
 	sampling_dist_thresh = 0.1; 
 	relativeMethod = EMPIRICAL_CDF; 
 	gasHitMethod = SLIDING_WINDOW_THRES; 
-      calibrationMode = OFF;
+    calibrationMode = OFF;
 	workingMode = EXPERIMENT;
 	measurement_error = 0;
 	sigma = 0.45;

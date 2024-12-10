@@ -399,20 +399,45 @@ void Posterior::MCMC_evaluation(struct history history){
 
 //exhaustive evaluation of all the values of the posterior pdf
 void Posterior::exhaustive_evaluation(struct history history){
-	int i=0;
+	int i = 0;
 	double sample[nbr_dimension];
+	vector<double> relative_history_meas;
+	vector<double> pdf_history_meas;
+	double mean, stddev;
 
-	//for each element of the pdf
-	for(i = 0; i < nbr_element; i++){
-		//convert index 'i' to set of parameter values 'sample'
-		index_to_param_values(i, sample);
-		//calculate the posterior of 'sample'
-		pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model,0);
-		//printf("%f, ", pdf[i]);
-		//add the new value to the sum
+	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
+	{
+		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
+		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
+		{
+			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement_avg);
+		}
+		log_relative_history_meas(relative_measurements_logfile_name, 'a', relative_history_meas);
+	}
+	// for each element of the pdf
+	for (i = 0; i < nbr_element; i++)
+	{
+		// convert index 'i' to set of parameter values 'sample'
+		index_to_param_values(i, sample); // returns source nb i sx and sy coordinates in the map
+
+		// calculate the posterior distribution of source term param 'sample'
+		// check the gas feature selected
+		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
+		{
+			// pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); // with precomputed maps
+		}
+		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
+		{
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
+		}
+		if (simulation_parameters.gasFeature == GASHIT)
+		{
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev);
+		}
+		// add the new value to the sum
 		sum += pdf[i];
 	}
-	//printf("\n");
 }
 
 //relative entropy calculation between one posterior pdf and another P
@@ -526,4 +551,17 @@ bool Posterior::check_if_cell_visited(Position goal_position){
 							(int)( (goal_position.y-model->param_list[1].lower_limit) / ((float)model->param_list[1].resolution) )};
     bool visit = cell_visit_list[indices_to_index(goal_cell, model->get_source_position_params_nbr(), nbr_element_marginal)];
 	return visit;
+}
+
+void Posterior::log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas)
+{
+	FILE *log_relative_history_meas_file = fopen(file_name, &writing_mode);
+
+	for (int i = 0; i < rel_history_meas.size() - 1; i++)
+	{
+		fprintf(log_relative_history_meas_file, "%.9f, ", rel_history_meas[i]);
+	}
+	fprintf(log_relative_history_meas_file, "%.9f\n", rel_history_meas[rel_history_meas.size() - 1]);
+
+	fclose(log_relative_history_meas_file);
 }
