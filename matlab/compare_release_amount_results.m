@@ -6,8 +6,8 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/sensor_model_noise/MOX_var_40000/source_middle/empirical_cdf_diff_release/1';
-dispatched_folder = [general_folder,''];
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
+dispatched_folder = [general_folder,'release_rate_robutness/PID/source_boundary/absolute_meas_likelihood775'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'

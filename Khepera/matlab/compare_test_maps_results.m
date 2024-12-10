@@ -2,7 +2,7 @@ clear all; clc; close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results_0818/stop_sense_kld';
+general_folder = '/home/wjin/Workspace/plume_model_learning_wind_speed_0.75/Khepera/Results/Results_2024-12-03/low_rr';
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','bad','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);

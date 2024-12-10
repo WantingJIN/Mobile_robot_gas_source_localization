@@ -8,7 +8,7 @@ clear all; clc; %close all;
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'sensor_model_robutness/MOX/empirical_cdf_map9'];
+dispatched_folder = [general_folder,'sensor_model_robutness/MOX/source_middle/gas_hit_sliding_window'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'

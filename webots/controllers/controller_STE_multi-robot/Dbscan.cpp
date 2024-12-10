@@ -64,7 +64,7 @@ void DBSCAN::expandCluster(CellPoint &cell, vector<int> &neighbors, int clusterI
 			}
 		}
 	}
-	printf("Exit expandCluster \n");
+	//printf("Exit expandCluster \n");
 	// std::stack<CellMeasurements> stack;
 	// stack.push(cell);
 	// cell.cluster_id = clusterId;
