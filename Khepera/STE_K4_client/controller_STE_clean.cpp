@@ -519,9 +519,9 @@ void state_moving(){
 		}
 		if (sample_counter > simulation_parameters.sampling_period){
 			// Sampling distance threshold
-			float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-			if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-			{
+			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+			// {
 				// only record the measurement if the localization result is from MCS
 				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
 				if (MCS_data_available){
@@ -533,7 +533,7 @@ void state_moving(){
 				      last_measurement_pos.y = current_position.y;
 				}
 				
-			}
+			//}
 			sample_counter = 0;
 		}
 	}

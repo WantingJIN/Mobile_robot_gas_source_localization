@@ -691,11 +691,13 @@ double calibrate_sensor_reading (double raw_reading){
     if (simulation_parameters.sensorCalibration == ON){
         // a = 2.9;
         // b = 297.6;
-        a = 2.0;
-        b = 0;
+        // a = 2.0;
+        // b = 0;
+        a = 1.0;
+        b = 0.0;
     } else {
-        a = 1;
-        b = 0;
+        a = 1.0;
+        b = 0.0;
     }
     double calibrated_reading = (raw_reading - b) * a;
     
