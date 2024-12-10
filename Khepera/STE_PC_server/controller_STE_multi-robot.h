@@ -105,8 +105,15 @@ void state_read_goal();
 void state_read_goal_measurement();
 void random_planning();
 
-double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
+//likelihood functions
 double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose);
+// new likelihood with precomputed gas maps
+double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
+// new likelihood for relative concentrations
+double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
+
+double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();

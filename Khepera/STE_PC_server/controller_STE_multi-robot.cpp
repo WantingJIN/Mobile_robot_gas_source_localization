@@ -65,6 +65,7 @@ char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
+char relative_measurements_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -493,8 +494,8 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
 	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
+	// if (sampleBuffer.average_wind_intensity == 0)
+	// 	printf("NO WIND, BYE BYE!\n");
 
 	vector<double> model_c_avg(history.size);
 
@@ -528,8 +529,8 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	//float sigma = 0.22;// works well for Gaussian CDF
 	float sigma = 0.35;// works well for Empirical CDF
 	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
+	// if (sampleBuffer.average_wind_intensity == 0)
+	// 	printf("NO WIND, BYE BYE!\n");
 
 	vector<double> model_c_avg(history.size);
 
@@ -621,8 +622,8 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , 
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev)
 {
 	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
+	// if (sampleBuffer.average_wind_intensity == 0)
+	// 	printf("NO WIND, BYE BYE!\n");
 
 	vector<double> model_c_avg(history.size);
 
@@ -930,8 +931,8 @@ void maximal_belief_planning()
 	}
 	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
 
-      double epsilon = 1e-9; 
-      if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
+    double epsilon = 1e-9; 
+    if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
 	{
 		printf("all the probable points have been visited \n");
 		fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
@@ -1427,12 +1428,12 @@ void state_updategoal(){
 		break;
 	}
       // The goal position is very close to current postion, swith to random planning
-	if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-	{
-		printf("The goal position is very close to current postion, switch to random planning \n");
-		fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		random_planning();
-	}
+	// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+	// {
+	// 	printf("The goal position is very close to current postion, switch to random planning \n");
+	// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+	// 	random_planning();
+	// }
 
 	goal_outside_obstacles(&goal_position);
 
