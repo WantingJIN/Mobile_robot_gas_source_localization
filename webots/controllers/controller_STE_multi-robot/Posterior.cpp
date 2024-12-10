@@ -160,7 +160,6 @@ Posterior::~Posterior()
 void Posterior::pdf_reset()
 {
 	int i = 0;
-	// FIXME - Check here if sum needs to be calulated differently
 	sum = 0;
 	max = 0;
 	entropy = 0;
@@ -263,6 +262,7 @@ void Posterior::update(double value, double *sample)
 		if (std::isnan(sample[i]))
 		{
 			printf("ERROR in update: sample is NaN  \n");
+			fprintf(console_logfile, "ERROR in update: sample %f is NaN  \n", sample[i]);
 			value = 0;
 		}
 		// indices[i] = (int)((sample[i]-model->param_list[i].lower_limit) / ((float)(model->param_list[i].upper_limit-model->param_list[i].lower_limit)/(float)(model->param_list[i].nbins)));
@@ -297,6 +297,7 @@ void Posterior::process()
 		if (sum == 0)
 		{
 			printf("!!!!!!!!!!!!!sum is equal to zero!\n");
+			fprintf(console_logfile, "!!!!!!!!!!!!!sum is equal to zero!\n");
 		}
 		pdf[i] /= sum;
 
@@ -460,23 +461,41 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	double sample[nbr_dimension];
 	vector<double> relative_history_meas;
-	printf("nbr_dimension %d\n ", nbr_dimension);
-	printf("nbr_element %d\n ", nbr_element);
+	vector<double> pdf_history_meas;
 	double mean, stddev;
-	if (simulation_parameters.gasFeature == GASHIT || simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
+
+	if (simulation_parameters.gasFeature == GASHIT)
+	{
+		printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
+		calculate_data_distribution(history.measurement, mean, stddev);
+	}
+	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
-		if (simulation_parameters.relativeMethod == CDF)
+		if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
 		{
 			calculate_data_distribution(history.measurement, mean, stddev);
 			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, stddev);
 			
 		}
-		else if (simulation_parameters.relativeMethod == NORMALIZATION)
+		if (simulation_parameters.relativeMethod == M_DISTANCE){
+			calculate_data_distribution(history.measurement, mean, stddev);
+			printf("mean %f, stddev %f\n", mean, stddev);
+			calculate_measurements_list_M_distance(relative_history_meas, history.measurement, mean, stddev);
+		}
+		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
 		}
+		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
+		{
+			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement);
+		}
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
+	}
+	if (simulation_parameters.gasFeature == PDF)
+	{
+		calculate_measurement_list_probablistic_distribution(pdf_history_meas, history.measurement);
 	}
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -486,15 +505,18 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 		// calculate the posterior distribution of source term param 'sample'
 		// check the gas feature selected
-		if (simulation_parameters.gasFeature == CONCENTRATION)
+		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
 			// pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); // with precomputed maps
 		}
-		if (simulation_parameters.gasFeature == RELATIVE_CONCENTRATION)
+		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
+		}
+		if (simulation_parameters.gasFeature == PDF)
+		{
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_pdf(history, pdf_history_meas, sample, i, model);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
@@ -508,19 +530,19 @@ void Posterior::exhaustive_evaluation(struct history &history)
 // relative entropy calculation between one posterior pdf and another P
 double Posterior::Kullback_Leibler_divergence(Posterior P)
 {
-	double DKL = 0;
+	double KLD = 0;
 	int i = 0;
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
 	{
 		if (pdf[i] > 0 && P.pdf[i] > 0)
 		{
-			// DKL += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
-			DKL += (P.pdf[i] / P.sum) * log((P.pdf[i] / P.sum) / pdf[i]);
+			// KLD += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
+			KLD += (P.pdf[i] / P.sum) * log((P.pdf[i] / P.sum) / pdf[i]);
 			// P is not normalized, but its sum was calculated and updated
 		}
 	}
-	return DKL;
+	return KLD;
 }
 
 // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf

@@ -1,9 +1,6 @@
 #include "khepera_functions.h"
 #include "Constant.h"
 
-// struct sKhepera4 khepera4;
-// struct sOdorboard odorboard;
-// struct sWindSensorBoard windsensorboard;
 double odor_baseline_value = 0;
 // sMsg STmsg;
 sUdpMsg udp_msgR;
@@ -17,154 +14,23 @@ void init(){
 	
 	FSM.n_cycles = 0;
 
-	//log files names
-   	sprintf(folder_name, "./log_STE_multi"); //create a new folder for log files
-	mkdir(folder_name, 0755);
-	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
-	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
-	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
-	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
-	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
-	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
-	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
-	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
-	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
-	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
-	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-    sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
-	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
-	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+	// set the log file names
+	set_logfile_names();
 
-    // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
-	// log name of the experiment and scan
-    sprintf(logfile_folder_name, "%s/Khepera/Results_0818/continuous_clustering_ratio10/10/2023-08-18_16-54", workspacePath);
-	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
-	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
-	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
-
-    sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
-	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
-	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
-
-	//create / reinitialize log files (might be unnecessary)
-	measurements_logfile = fopen(measurements_logfile_name, "w");
-    fclose(measurements_logfile);
-    goalposition_logfile = fopen(goalposition_logfile_name, "w");
-    fclose(goalposition_logfile);
-    expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "w");
-    fclose(expected_a_posteriori_logfile);
-    max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "w");
-    fclose(max_a_posteriori_logfile);
-    gas_information_map_logfile = fopen(gas_information_map_logfile_name, "w");
-	fclose(gas_information_map_logfile);
-	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "w");
-	fclose(gas_hit_variance_map_logfile);
-	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
-	fclose(experiment_time_logfile);
-
-	// experiment results folder
-    experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
-    experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
-	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
-    // scan results folder
-	scan_measurements_logfile = fopen(scan_measurements_logfile_name, "r");
-	scan_position_logfile = fopen(scan_position_logfile_name,"r");
-
-    // get the configuration
-    //default values for the simulation parameters
-	// 0. workingMode(OFFLINE or EXPERIMENT or video)
-	// 1. likelihood_error; 2.gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval; //1 for MCMC, 0 for exhaustive evaluation
-	// 5. number_of_robots; 6.scenario; 7.map_nbr; 8. Planning Strategy; 9. Gas Feature; 10. Visited List; 11. information feature 12. cluster_entropy_ratio
-	// 13. measurement_error
-	//                                                      0.       1.   2.   3.   4. 5. 6. 7. 8.                      9.             10.             11.      12.   13.
-    simulation_parameters = (struct simulation_parameters) {OFFLINE, 775, 0.5, 100, 1, 1, 0, 0, INFORMATIVE_CLUSTERING, CONCENTRATION, visitedList_OFF, BELIEF, 10.0, 125};
-
-	//read simulation parameters
-	FILE* sim_param_file;
-	int ok = 0;
-	string sim_param_file_path;
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/likelihood_error.txt";
-	if(access(sim_param_file_path.c_str() , F_OK) != -1 ){
-		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.likelihood_error);
-		if(ok) printf("likelihood_error : %f\n", simulation_parameters.likelihood_error);
-		fclose(sim_param_file);
-	}
-    sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/gloabl_local_search_ratio.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.gloabl_local_search_ratio);
-		if(ok) printf("gloabl_local_search_ratio : %f\n", simulation_parameters.gloabl_local_search_ratio);
-		fclose(sim_param_file);
-	}
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/MCMC_iteration_num.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_iteration_num);
-		if(ok) printf("MCMC_iteration_num : %d\n", simulation_parameters.MCMC_iteration_num);
-		fclose(sim_param_file);
-	}
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/MCMC_or_exhaustive_eval.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_or_exhaustive_eval);
-		if(ok) printf("MCMC_or_exhaustive_eval : %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-		fclose(sim_param_file);
-	}
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/number_of_robots.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.number_of_robots);
-		if(ok) printf("number_of_robots : %d\n", simulation_parameters.number_of_robots);
-		fclose(sim_param_file);
-	}
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/scenario.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-		sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.scenario);
-		if(ok) printf("scenario : %d\n", simulation_parameters.scenario);
-		fclose(sim_param_file);
-	}
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/map_nbr.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-	   sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-       ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
-       if(ok) printf("map number : %d\n", simulation_parameters.map_nbr);
-       fclose(sim_param_file);
-    }
-	sim_param_file_path = string(workspacePath) + "/Khepera/Data/params/working_mode.txt";
-	if(access(sim_param_file_path.c_str(), F_OK) != -1 ){
-	   sim_param_file = fopen(sim_param_file_path.c_str(), "r");
-       int workingMode = 0;
-	   ok = fscanf(sim_param_file, "%d", &workingMode);
-	   simulation_parameters.workingMode = static_cast<eworkingMode>(workingMode);
-       if(ok) printf("working mode : %d\n", simulation_parameters.workingMode);
-       fclose(sim_param_file);
-    }
-
-	printf("Number of robots : %d - scenario : %d \n", simulation_parameters.number_of_robots, simulation_parameters.scenario);
-
-	//write the simulation parameters
+      // load the simulation parameters
+	string config_file = string(workspacePath) + "/Khepera/Data/config.txt";
+      simulation_parameters.load_simulation_parameters_from_config(config_file.c_str());
+      simulation_parameters.rewrite_parameters_from_file();
+      // write the simulation parameters
+	FILE *sim_param_file;
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
-	fprintf(sim_param_file, "likelihood_error %f\n", simulation_parameters.likelihood_error);
-	fprintf(sim_param_file, "gloabl_local_search_ratio %f\n", simulation_parameters.gloabl_local_search_ratio);
-	fprintf(sim_param_file, "MCMC_iteration_num %d\n", simulation_parameters.MCMC_iteration_num);
-	fprintf(sim_param_file, "MCMC_or_exhaustive_eval %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-	fprintf(sim_param_file, "number_of_robots %d\n", simulation_parameters.number_of_robots);
-	fprintf(sim_param_file, "scenario %d\n", simulation_parameters.scenario);
-    fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	fprintf(sim_param_file, "max_iter_number %d\n", MAX_SAMPLE_NUMBER);
-	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
-	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
-	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
-	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
-	fprintf(sim_param_file, "cluster_entropy_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
-	fprintf(sim_param_file, "measurement_error %f\n", simulation_parameters.measurement_error);
+	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fclose(sim_param_file);
 
+	simulation_parameters.log_simulation_parameters(config_logfile_name);
 
 	switch (simulation_parameters.workingMode){
 		case EXPERIMENT:
@@ -172,13 +38,13 @@ void init(){
 			FSM.state = STATE_LISTEN;
 			FSM.hook  = state_listen;
 			break;
-        case VIDEO:
+        	case VIDEO:
 			//set the state to wait for stationary plume
 			FSM.state = STATE_LISTEN;
 			FSM.hook  = state_listen;
 			break;
 
-		case OFFLINE:
+	  	case OFFLINE:
 			//read position and measurement from log files
 			FSM.state = STATE_READ_ALL;
 			FSM.hook  = state_read_goal_measurement;
@@ -234,4 +100,46 @@ void cleaning_up(){
 
 void next_iteration_time(){
 	usleep(SLEEP_PERIOD * 2000);
+}
+
+void set_logfile_names(){
+	//log files names
+	sprintf(folder_name, "./log_STE_multi"); //create a new folder for log files
+	mkdir(folder_name, 0755);
+	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
+	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
+	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
+	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
+	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
+	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
+	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
+	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
+	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
+	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
+      sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
+	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+
+      // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
+	// log name of the experiment and scan
+      sprintf(logfile_folder_name, "%s/Khepera/ICRA_2024_Results/continuous_clustering_ratio10/10/2023-08-18_16-54", workspacePath);
+	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
+	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
+	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
+      sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+
+      sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
+	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
+	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
+
+	// experiment results folder
+	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
+	experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
+	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
+   	// scan results folder
+	scan_measurements_logfile = fopen(scan_measurements_logfile_name, "r");
+	scan_position_logfile = fopen(scan_position_logfile_name,"r");
+
 }

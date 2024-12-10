@@ -10,7 +10,7 @@
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
 //#define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
-#define MAX_SAMPLE_NUMBER 	30 
+#define MAX_ITER 	30 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
@@ -57,11 +57,6 @@
 #define b_y_resol  (static_cast<double>(b_y_max-b_y_min)/b_y_nbins)
 
 #define VERBOSE 		1
-
-#define NO_COM_NO_COOR	0
-#define COM_NO_COOR		1
-#define COM_COOR 		2
-#define SCENARIO 		NO_COM_NO_COOR
 
 #define TIMEOUT         1000*1000 // miliseconds
 

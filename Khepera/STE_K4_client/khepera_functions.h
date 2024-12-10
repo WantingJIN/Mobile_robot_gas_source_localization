@@ -38,6 +38,7 @@ extern "C" {
 extern struct sKhepera4 khepera4;
 extern struct sOdorboard odorboard;
 extern struct sWindSensorBoard windsensorboard;
+extern struct sBraitenberg braitenberg;
 
 extern struct sOdometryTrack ot;
 
@@ -116,6 +117,7 @@ extern double epsilon;
 extern VisiLibity::Visibility_Graph vg;
 // set the odometry initial pos from last frame MCS result
 extern bool set_odometry_pos_from_MCS;
+extern bool MCS_data_available;
 
 
 typedef struct {
@@ -128,6 +130,19 @@ typedef struct {
     float angle;
   } position;
 } sMsg;
+
+struct sBraitenberg {
+    struct {
+        int left;
+        int right;
+    } speed;
+    int repeat;
+    int wait_us;
+    int weight_left[12];
+    int weight_right[12];
+    int bias[12];
+};
+
 
 
 void init();
@@ -153,5 +168,9 @@ void next_iteration_time();
 void log_baseline(double min_c, double max_c, double baseline_c);
 double calibrate_sensor_reading (double raw_reading);
 
+
+void braitenberg_run(sBraitenberg *braitenberg);
+void braitenberg_set_obstacle_avoidance(sBraitenberg *braitenberg, int aggressivity);
+void braitenberg_init(sBraitenberg *braitenberg);
 
 #endif

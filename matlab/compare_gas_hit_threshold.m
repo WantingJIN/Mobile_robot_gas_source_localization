@@ -1,4 +1,5 @@
-% Compares the GSL performance for difference gas release amounts
+% Compares the GSL performance for difference threshold for gas hit
+% detection
 % Plots distance to true source location along y and x and the number of
 % iterations for convergence
 
@@ -6,7 +7,8 @@ clear all; clc; %close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/durancea/plume_model_learning/Results/bin_likelihood_tuning/rel_con/release_amount_robustness';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
+dispatched_folder = [general_folder,'gas_hit/MOX_var_40000/source_middle/fix_thres_different_thres'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -39,7 +41,7 @@ for i=1:exp_number
 %     if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
-    new_path = [general_folder '/' num2str(params.release_amount)];
+    new_path = [dispatched_folder '/' num2str(params.gas_hit_threshold)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))
@@ -50,16 +52,15 @@ end
 %
 
 % choose the folders
-folder_list = dir([general_folder '/**']);
-%sensor_type = dir([general_folder '/**']);
+folder_list = dir([dispatched_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
-folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
+folder_list = folder_list(~ismember({folder_list.folder}, dispatched_folder));
 folder_list = folder_list([folder_list.isdir]);
-number = length(folder_list);
+numExperiments = length(folder_list);
 
 
 %% get data
-for i=1:number
+for i=1:numExperiments
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     % multiple robots
     robot_list = dir(folder_name);
@@ -74,7 +75,7 @@ for i=1:number
     % ground truth and other params
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
     
-    release_list(i,1) = params.release_amount;
+    gas_hit_threshold_list(i,1) = params.gas_hit_threshold;
 %     tmp = folder_list(i).folder;
 %     parts = strsplit(tmp, '/');
 %     disp(parts{end})
@@ -87,10 +88,10 @@ for i=1:number
     
     % Time test
     exp_time_file = readtable([folder_name, '/', num2str(ID(1)), '/experiment_time.csv']);
-    nav_time = exp_time_file(2,2);
-    comp_time = exp_time_file(3,2);
-    exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
-    
+    % nav_time = exp_time_file(2,2);
+    % comp_time = exp_time_file(3,2);
+    % exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
+    exp_time_list(i) = exp_time_file(1,5).Var5; 
     
     % error on X and Y (col 5 and 6)
     max_a_post = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
@@ -110,54 +111,54 @@ end
 f = figure('Position',[-1561         656         715         615]);
 custom_color = [44,136,217]./255;
 subplot(1,3,1)
-plot([0 length(unique(release_list))], [0 0], 'g');
+plot([0 length(unique(gas_hit_threshold_list))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,1), release_list,'Colors',custom_color);
+boxplot(error_list(:,1), gas_hit_threshold_list,'Colors',custom_color);
 error_x = error_list(:,1);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([-1,10])
-xlabel('Release Amount');
+xlabel('gasHitThreshold');
 ylabel('Error (m)');
 title('Error on x');
 subplot(1,3,2);
 % sensor_type_char = cellfun(@num2str, sensor_type, 'UniformOutput', false);
-plot([0 length(unique(release_list(i,1)))], [0 0], 'g');
+plot([0 length(unique(gas_hit_threshold_list(i,1)))], [0 0], 'g');
 hold on;
-boxplot(error_list(:,2), release_list,'Colors',custom_color);
+boxplot(error_list(:,2), gas_hit_threshold_list,'Colors',custom_color);
 error_y = error_list(:,2);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([-3,4])
-xlabel('Release Amount');
+xlabel('gasHitThreshold');
 title('Error on y');
 ylabel('Error (m)');
 
 if(use_iteration)
     subplot(1,3,3);
-    boxplot(exp_time_list, release_list,'Colors',custom_color);
+    boxplot(exp_time_list, gas_hit_threshold_list,'Colors',custom_color);
     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
     set(lines, 'Color', 'r');
     set(findobj(gca,'type','line'),'linew',1.2)
     grid on;
     ylim([0,max(exp_time_list)+1])
-    xlabel('Release Amount');
+    xlabel('gasHitThreshold');
     ylabel('Time (s)');
     title('Total experiment time');
 else
     subplot(1,3,3);
-    boxplot(iteration_nbr_list, release_list,'Colors',custom_color);
+    boxplot(iteration_nbr_list, gas_hit_threshold_list,'Colors',custom_color);
     lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
     set(lines, 'Color', 'r');
     set(findobj(gca,'type','line'),'linew',1.2)
     grid on;
 %     ylim([0,max(iteration_nbr_list)+1])
     ylim([0,60])
-    xlabel('Release Amount');
+    xlabel('gasHitThreshold');
     ylabel('nbr iterations');
     title('Total nbr iterations'); 
 end
@@ -182,7 +183,7 @@ annotation(f,'textbox',...
     'FontSize',12,...
     'FitBoxToText','off');
 
-saveas(f,[general_folder '/test_maps_results_comparison.png']);
+saveas(f,[dispatched_folder '/gas_hit_threshold_results_comparison.png']);
 %% save the statistical result for t-test
-save([general_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
+save([dispatched_folder '/error_statistics.mat'], 'error_x', 'error_y', 'iteration_nbr_list', 'success_rate');
 

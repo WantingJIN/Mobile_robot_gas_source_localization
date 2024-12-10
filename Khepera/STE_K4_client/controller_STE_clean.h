@@ -126,11 +126,12 @@ struct simulation_parameters{
 	int number_of_robots;
 	int scenario;
 	int map_nbr;
-	eSamplingMode samplingMode;
+	eSamplingMode samplingMode; 
 	eProcessingMode processingMode; 
 	eSensorCalibration sensorCalibration;
 	int sampling_period;
 	int wheel_speed;
+	float sampling_dist_thresh;
 };
 extern struct simulation_parameters simulation_parameters;
 
@@ -220,7 +221,8 @@ void ack_msg(Message msg);
 double target_evaluation(double position[][3]);
 void get_gps_position(double external_gps_position[3]);
 int obstacle_or_not();
-void do_odometry();
+void do_odometry(Position *position);
+void odometry_set_absolute_position_from_external(const float ex_x, const float ex_y, const float ex_heading);
 double dist_to_goal(Position goal);
 
 

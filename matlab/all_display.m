@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('../Results/0913_KLD_continous_sense_new_MOX/2');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/sensor_model_noise/MOX_var_40000/source_middle/empirical_cdf_diff_release/1/10');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -20,9 +20,10 @@ for i=1:exp_number
     ID = arrayfun(@(struct) str2num(struct.name),robot_list);
     params = my_text2struct([[folder_name, '/', num2str(ID(1))], '/param_log.csv']);
     gas_feature = params.gas_feature;
-    
-    f1all = figure('Position',[-686   629   570   418]);
-    f2all = figure('Name','measurements','Position',[-1561 656 794 415]); 
+
+    f1all = figure('Position',[-1561   656   570   418]);
+    f2all = figure('Name','measurements','Position',[686 656 794 418]); 
+    f0 = figure('Name','Expected a posteriori evolution','Position', [-1599, 1, 300, 486]);
     
     for j=1:params.number_of_robots
         % data :
@@ -70,74 +71,38 @@ for i=1:exp_number
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Mesurement points %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % plot the measured concentration
-        f0 = figure('Name','measurements','Position',[-1561         656         794         415]);
-        axes1 = axes('Parent',f0,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
-        scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
-        plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
-        plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',10,'LineWidth',2,'DisplayName','Source real position'); %real source position
-        plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',10,'LineWidth',2,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
-        plot3(positions(1,2),positions(1,3), positions(1,4),'DisplayName','Start point','MarkerSize',8,'Marker','o','LineWidth',2,'LineStyle','none');
-        %     plot3(position_history(:,2),position_history(:,3),position_history(:,4),'k');
-        patch(obstacles_x,obstacles_y ,[0.6 0.8 1], 'DisplayName','Obstacle','LineStyle', 'none');
-        set(gca,'Ytick',0:1:4)
-        grid on; axis equal; axis([2.25 13.25 0 4 0 2]);
-        c = colorbar('southoutside'); c.set('Position',[0.13 0.11 0.28 0.05]); load MyColormap.mat; colormap(mymap); %colormap jet;
-        xlabel('X (m)');ylabel('Y (m)');
-        view(180,90);
-        legend1 = legend(axes1,'show');
-        set(legend1,'Position',[0.469773299748109 0.0272789076115389 0.413937271835497 0.221351976214818]);
-        annotation(f0,'textbox',[0.234287457153379 0.185796129034299 0.104365076491284 0.0473684201637904],'String',{'Concentration'},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold');
-        title('Trajectory and measurements');
-        a = get(gca,'XTickLabel'); set(gca,'XTickLabel',a,'FontName','Times','fontweight','bold','fontsize',9);
         
-        % measurements vs. entropy
-        f1 = figure('Position',[-686   629   570   418]);
-        subplot(2,1,1);
-        plot(measurements(:,3));
-        ylabel('Concentration');xlabel('Iteration');
-        title('concentration measurement over time');
-        subplot(2,1,2);
-        plot(entropy(:,1));
-        xticks(1:size(entropy(:,1)));
-        ylabel('Entropy');xlabel('Iteration');
-        title('entropy');
-        
-        % save
-        saveas(f0,[folder_name_ID '/measurements.png']);
-        saveas(f1,[folder_name_ID '/entropy.png']);
-        close(f0); close(f1);
         
         % overlaped for all robots
         figure(f1all);
         subplot(2,1,1);
         hold on;
-        plot(measurements(:,4),measurements(:,3));
+        plot(measurement_history(:,2));
         title('concentration measurement over time');
         hold off;
         subplot(2,1,2);
         hold on;
-        plot(entropy(:,2),entropy(:,1),'DisplayName',['ID ', num2str(ID(j))]);
-        title('entropy');
+        histogram(measurement_history(:,2));
+        title('measurement histogram');
         hold off;
+
         
         figure(f2all);
         axes0 = axes('Parent',f2all,'Position',[0.113627204030227 0.245631966946655 0.775 0.815]);
         hold on;
-        if gas_feature == 0
-             scatter3(position_history(:,2),position_history(:,3),position_history(:,4),10,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
-             scatter3(positions(:,2),positions(:,3),positions(:,4),10,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);
-             c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]); colormap(mymap); %colormap jet;
+        if gas_feature == 0 || gas_feature == 2
+             scatter3(position_history(:,2),position_history(:,3),position_history(:,4),25,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
+             scatter3(positions(:,2),positions(:,3),positions(:,4),25,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on;
+             c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]);  load MyColormap.mat; colormap(mymap); %colormap jet;
         end
         if gas_feature == 1
             scatter3(position_history(:,2),position_history(:,3),position_history(:,4),10,measurement_history(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
         end
-     
+
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
-        plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',10,'LineWidth',2,'DisplayName','Source real position'); %real source position
-        plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',10,'LineWidth',2,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
+        plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',20,'LineWidth',3,'DisplayName','Source real position'); %real source position
+        plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',20,'LineWidth',3,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
         plot3(positions(1,2),positions(1,3), positions(1,4),'DisplayName','Start point','MarkerSize',8,'Marker','o','LineWidth',2,'LineStyle','none');
-        %     plot3(position_history(:,2),position_history(:,3),position_history(:,4),'k');
         patch(obstacles_x,obstacles_y ,[0.6 0.8 1],'DisplayName','Obstacle', 'LineStyle', 'none');
         hold off;
         set(axes0,'Ytick',0:1:4)
@@ -148,17 +113,16 @@ for i=1:exp_number
         set(legend1,'Position',[0.469773299748109 0.0272789076115389 0.413937271835497 0.221351976214818]);
         annotation(f2all,'textbox',[0.234287457153379 0.185796129034299 0.104365076491284 0.0473684201637904],'String',{'Concentration'},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold');
         title('Trajectory and measurements');
-        a = get(gca,'XTickLabel'); set(gca,'XTickLabel',a,'FontName','Times','fontweight','bold','fontsize',9);
+        a = get(gca,'XTickLabel'); set(gca,'XTickLabel',a,'FontName','Times','fontweight','bold','fontsize',14);
         hold off;
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Expected a posteriori %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        f0 = figure('Name','Expected a posteriori evolution','Position', [-1599, 1, 800, 1086]);
-        
+        figure(f0);
         
         % Subplot 1: X-coordinate estimation
-        subplot(3,2,1);
+        subplot(3,1,1);
         plot(expected_a_posteriori(:,2), '*-', 'DisplayName', 'Expected');  % Expected value for X-coordinate
         hold on;
         axis([-inf inf source_position_min(1) source_position_max(1)]);
@@ -168,8 +132,8 @@ for i=1:exp_number
         title('X');
         %legend('show');  % Display the legend
 
-        % Subplot 3: Y-coordinate estimation
-        subplot(3,2,3);
+        % Subplot 2: Y-coordinate estimation
+        subplot(3,1,2);
         plot(expected_a_posteriori(:,3), '*-', 'DisplayName', 'Expected');  % Expected value for Y-coordinate
         hold on;
         plot(max_a_posteriori(:,3), 'd-b', 'DisplayName', 'Max a posteriori');  % Maximum a posteriori estimate for Y-coordinate
@@ -179,27 +143,32 @@ for i=1:exp_number
         title('Y');
         legend('show');  % Display the legend
         
-        subplot(3,2,2);
-        plot(expected_a_posteriori(:,4),'*-');
+        % Subplot 3: X-coordinate estimation
+        subplot(3,1,3);
         hold on;
-        plot(max_a_posteriori(:,4),'d-b')
-        grid on; axis([-inf inf Q_min Q_max]);
-        title('Q');
+        plot(entropy(:,1),'DisplayName',['ID ', num2str(ID(j))]);
+        title('entropy');
         
-        subplot(3,2,4);
-        plot(expected_a_posteriori(:,5),'*-');
-        hold on;
-        plot(max_a_posteriori(:,5),'d-b')
-        grid on; axis([-inf inf a_y_min a_y_max]);
-        title('sigma_a');
-        
-        subplot(3,2,6);
-        plot(expected_a_posteriori(:,6),'*-');
-        hold on;
-        plot(max_a_posteriori(:,6),'d-b')
-        grid on; axis([-inf inf b_y_min b_y_max]);
-        title('sigma_b');
-        
+        % subplot(3,2,2);
+        % plot(expected_a_posteriori(:,4),'*-');
+        % hold on;
+        % plot(max_a_posteriori(:,4),'d-b')
+        % grid on; axis([-inf inf Q_min Q_max]);
+        % title('Q');
+        % 
+        % subplot(3,2,4);
+        % plot(expected_a_posteriori(:,5),'*-');
+        % hold on;
+        % plot(max_a_posteriori(:,5),'d-b')
+        % grid on; axis([-inf inf a_y_min a_y_max]);
+        % title('sigma_a');
+        % 
+        % subplot(3,2,6);
+        % plot(expected_a_posteriori(:,6),'*-');
+        % hold on;
+        % plot(max_a_posteriori(:,6),'d-b')
+        % grid on; axis([-inf inf b_y_min b_y_max]);
+        % title('sigma_b');
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Marginals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -258,9 +227,7 @@ for i=1:exp_number
 % %         title('sigma_b');
 %         
 %         % save
-        saveas(f0,[folder_name_ID '/estimation_evolution.png']);
 %         saveas(f1,[folder_name_ID '/posterior_marginal.png']);
-        close(f0);
 %         close(f1);
 %         
 %         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -306,6 +273,9 @@ for i=1:exp_number
     % save
     saveas(f1all,[folder_name '/measurements_entropy.png']);
     saveas(f2all,[folder_name '/trajectory.png']);
+    saveas(f0,[folder_name '/estimation_evolution.png']);    
     
-    close(f1all); close(f2all);
+    close(f1all); 
+    close(f2all);
+    close(f0);
 end

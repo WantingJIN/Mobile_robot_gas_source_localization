@@ -20,7 +20,6 @@ void init()
 {
 	if (VERBOSE)
 		printf("initialization\n");
-	char *pPath;
 
 	start_time = current_timestamp();
 
@@ -93,163 +92,17 @@ void init()
 	get_gps_position(&current_position);
 	goal_position.copy_position(current_position);
 	printf("initial goal position %f %f %f\n", goal_position.x, goal_position.y, goal_position.heading);
+      
+	// set the log file names
+	set_logfile_names();
 
-	// log files names
-	pPath = getenv("WB_WORKING_DIR");
-	if (pPath != NULL)
-	{
-		if (VERBOSE)
-			printf("The current path is: %s\n", pPath);
-		sprintf(folder_name, "%s/%lld", pPath, current_timestamp());
-		mkdir(folder_name, 0755);
-	}
-	else
-	{
-		sprintf(folder_name, "../../../Results/current"); // create a new folder for log files
-		mkdir(folder_name, 0755);
-		sprintf(folder_name, "../../../Results/current/%d", ID); // create a new folder for log files
-		mkdir(folder_name, 0755);
-	}
-	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
-	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
-	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
-	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
-	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
-	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
-	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
-	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
-	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
-	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
-	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
-	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
-	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
-	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
-	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
-	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
-	// // to save some debugging console input
-	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+      // load the simulation parameters
+      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
+      simulation_parameters.rewrite_parameters_from_file();
 
-      // Running STE offline : run STE from loaded data of previous simulation
-	// log name of the experiment and scan
-      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_cdf/rel_con_MOX_source_boundary_cdf/10/1712062974290/101", workspacePath);
-	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
-	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
-	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
-
-	// get the configuration
-	// default values for the simulation parameters
-	// 1. likelihood_error; 2. gloabl_local_search_ratio; 3.MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
-	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9.processingMode; 10. gasSensor;
-	// 11. planningStrategy; 12.gasFeature; 13.visitedList;  14.infoFeature 15. sampling_period 16.cluster_entropy_ratio
-	// 17. vel_factor; 18. wind_factor; 19. sampling_dist_thresh; 20.relativeMethod; 21.simuMode
-	// index of parameter:                                  1.  2.   3.   4. 5. 6. 7.      8.                   9.       10.       11.                       12.                  13.           14.   15. 16. 17. 18.  19.  20.            21.
-	simulation_parameters = (struct simulation_parameters){30, 0.5, 1000, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, MOX, BELIEF_CLUSTERING, RELATIVE_CONCENTRATION, visitedList_ON, VARIANCE, 10, 10, 1, 0.75, 0.1, CDF, ONLINE};
-
-	// read simulation parameters
 	FILE *sim_param_file;
 	int ok = 0;
-	if (access("../../data/simulation_parameters/likelihood_error.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/likelihood_error.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.likelihood_error);
-		if (ok)
-			printf("likelihood_error : %f\n", simulation_parameters.likelihood_error);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/gloabl_local_search_ratio.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/gloabl_local_search_ratio.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.gloabl_local_search_ratio);
-		if (ok)
-			printf("gloabl_local_search_ratio : %f\n", simulation_parameters.gloabl_local_search_ratio);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/MCMC_iteration_num.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/MCMC_iteration_num.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_iteration_num);
-		if (ok)
-			printf("MCMC_iteration_num : %d\n", simulation_parameters.MCMC_iteration_num);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/MCMC_or_exhaustive_eval.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.MCMC_or_exhaustive_eval);
-		if (ok)
-			printf("MCMC_or_exhaustive_eval : %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.number_of_robots);
-		if (ok)
-			printf("number_of_robots : %d\n", simulation_parameters.number_of_robots);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/scenario.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/scenario.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.scenario);
-		if (ok)
-			printf("scenario : %d\n", simulation_parameters.scenario);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/cluster_entropy_ratio.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/cluster_entropy_ratio.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.cluster_entropy_ratio);
-		if (ok)
-			printf("cluster_entropy_ratio : %f\n", simulation_parameters.cluster_entropy_ratio);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/map_nbr.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/map_nbr.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.map_nbr);
-		if (ok)
-			printf("scenario : %d\n", simulation_parameters.map_nbr);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/vel_factor.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/vel_factor.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.vel_factor);
-		if (ok)
-			printf("vel param : %f\n", simulation_parameters.vel_factor);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/sampling_period.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_period.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &simulation_parameters.sampling_period);
-		if (ok)
-			printf("sampling_period : %d\n", simulation_parameters.sampling_period);
-		fclose(sim_param_file);
-		// Test adaptive sampling period
-		// simulation_parameters.sampling_period = int(100-167*simulation_parameters.vel_factor);
-		// printf("sampling period modified: %d\n", simulation_parameters.sampling_period);
-	}
-	if (access("../../data/simulation_parameters/wind_factor.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/wind_factor.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.wind_factor);
-		if (ok)
-			printf("wind param : %f\n", simulation_parameters.wind_factor);
-		fclose(sim_param_file);
-	}
-	if (access("../../data/simulation_parameters/sampling_dist_thresh.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/simulation_parameters/sampling_dist_thresh.txt", "r");
-		ok = fscanf(sim_param_file, "%f", &simulation_parameters.sampling_dist_thresh);
-		if (ok)
-			printf("wind param : %f\n", simulation_parameters.sampling_dist_thresh);
-		fclose(sim_param_file);
-	}
-
-	int release_amount;
+      int release_amount;
 	if (access("../../data/plugin_parameters/releaseAmount.txt", F_OK) != -1)
 	{
 		sim_param_file = fopen("../../data/plugin_parameters/releaseAmount.txt", "r");
@@ -258,7 +111,6 @@ void init()
 			printf("release rate param : %d\n", release_amount);
 		fclose(sim_param_file);
 	}
-	//FIXME - temporary solution to read the source position 0328
 
 	if (simulation_parameters.simuMode == ONLINE){
 		if (access("../../data/source_pos.txt", F_OK) != -1) {
@@ -290,32 +142,13 @@ void init()
 	// write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
-	fprintf(sim_param_file, "likelihood_error %f\n", simulation_parameters.likelihood_error);
-	fprintf(sim_param_file, "gloabl_local_search_ratio %f\n", simulation_parameters.gloabl_local_search_ratio);
-	fprintf(sim_param_file, "MCMC_iteration_num %d\n", simulation_parameters.MCMC_iteration_num);
-	fprintf(sim_param_file, "MCMC_or_exhaustive_eval %d\n", simulation_parameters.MCMC_or_exhaustive_eval);
-	fprintf(sim_param_file, "number_of_robots %d\n", simulation_parameters.number_of_robots);
-	fprintf(sim_param_file, "scenario %d\n", simulation_parameters.scenario);
-	fprintf(sim_param_file, "map_nbr %d\n", simulation_parameters.map_nbr);
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
-	fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
-	fprintf(sim_param_file, "data_processing_mode %d\n", simulation_parameters.processingMode);
-	fprintf(sim_param_file, "gas_sensor_type %d\n", simulation_parameters.gasSensor);
-	fprintf(sim_param_file, "planning_strategy %d\n", simulation_parameters.planningStrategy);
-	fprintf(sim_param_file, "gas_feature %d\n", simulation_parameters.gasFeature);
-	fprintf(sim_param_file, "visited_list %d\n", simulation_parameters.visitedList);
-	fprintf(sim_param_file, "info_feature %d\n", simulation_parameters.infoFeature);
-	fprintf(sim_param_file, "sampling_period %d\n", simulation_parameters.sampling_period);
-	fprintf(sim_param_file, "cluster_ratio_ratio %f\n", simulation_parameters.cluster_entropy_ratio);
-	fprintf(sim_param_file, "vel_factor %f\n", simulation_parameters.vel_factor);
-	fprintf(sim_param_file, "wind_factor %f\n", simulation_parameters.wind_factor);
-	fprintf(sim_param_file, "sampling_dist_thresh %f\n", simulation_parameters.sampling_dist_thresh);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
-	fprintf(sim_param_file, "relative_method %d\n", simulation_parameters.relativeMethod);
-	fprintf(sim_param_file, "simu_mode %d\n", simulation_parameters.simuMode);
 	fclose(sim_param_file);
+
+	simulation_parameters.log_simulation_parameters(config_logfile_name);
 
 	if ((ID - 100) > simulation_parameters.number_of_robots)
 	{
@@ -356,17 +189,29 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 		if (simulation_parameters.gasSensor == PID)
 		{
 			*sensor_reading = odor_concentration;
+			return;
 		}
 		// For the MOX sensor, the sensor properties are modeled as a first-order system
-		if (simulation_parameters.gasSensor == MOX)
+		if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == SLOW_MOX 
+		|| simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_MOX
+		|| simulation_parameters.gasSensor == NOISY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
 		{
 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			// double tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
-			// ouble tau_d = 19.74; // time constant for the decay
-			// double tau_r = 2.06; // time constant for the rise (slow sensor)
-			// double tau_d = 4.53; // time constant for the decay
-			double tau_r = 0.72; // time constant for the rise (our default sensor)
-			double tau_d = 0.92; // time constant for the decay
+			double tau_r = 0 ,tau_d = 0;
+			if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX){
+				tau_r = 0.72; // time constant for the rise (our default sensor)
+				tau_d = 0.92; // time constant for the decay
+			}
+			if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX){
+				tau_r = 2.06; // time constant for the rise (slow sensor)
+				tau_d = 4.53; // time constant for the decay
+			}
+			if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX){
+				tau_r = 5.19; // time constant for the rise (very slow MOX TGS2600)
+			      tau_d = 19.74; // time constant for the decay
+
+			}
+
 			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n]
 			// where wc is the cut-off frequency and Ts is the sampling period
 			double alpha;
@@ -377,37 +222,59 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
 			previous_sensor_value = *sensor_reading;
 		}
-		if (simulation_parameters.gasSensor == NOISY_MOX)
+		if (simulation_parameters.gasSensor == NOISY_MOX ||
+		simulation_parameters.gasSensor == NOISY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
 		{
-			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			double tau_r = 0.72;		  // time constant for the rise
-			double tau_d = 0.92;		  // time constant for the decay
-			// sensor model: Y[n] = 1/(1 + Tswc) * Y[n-1] + Tswc/(1 + Tswc) * X[n]
-			// where wc is the cut-off frequency and Ts is the sampling period
-			double alpha;
-			if (odor_concentration > previous_sensor_value) // rising phase
-				alpha = Ts / (tau_r + Ts);
-			else // decaying phase
-				alpha = Ts / (tau_d + Ts);
-			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
-			previous_sensor_value = *sensor_reading;
-
 			// add some random noise to the sensor reading
-			// define the sensor noise as a Gaussian distribution with mean 0 and variance 100
+			// define the sensor noise as a Gaussian distribution with mean = 0 
 			double mean = 0.0;
-			double variance = 10000;
-			double sensor_noise = generateGaussianNoise(mean, variance);
+			double sensor_noise = generateGaussianNoise(mean, simulation_parameters.gas_sensor_noise_var);
 			// gaussian noise
-			//*sensor_reading += sensor_noise;
+			*sensor_reading += sensor_noise;
 			// constant error
 			//*sensor_reading += 200.0;
 			// scaling error
-			*sensor_reading *= 2.0;
+			//*sensor_reading *= 2.0;
 
-			if (*sensor_reading < 0)
-				*sensor_reading = 0;
+		}
+		if (simulation_parameters.calibrationMode == LINEAR)
+		{
+			double raw_reading_before_calibration;
+			linear_reverse_con_to_raw_reading(sensor_reading, raw_reading_before_calibration);
+			*sensor_reading = raw_reading_before_calibration;
+		}
+		if (simulation_parameters.calibrationMode == NOLINEAR)
+		{
+			double raw_reading_before_calibration;
+			nolinear_reverse_con_to_raw_reading(sensor_reading, raw_reading_before_calibration);
+			*sensor_reading = raw_reading_before_calibration;
+		}
+		if (*sensor_reading < 0)
+		{
+			*sensor_reading = 0;
 		}
 	}
+}
+
+void linear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
+{
+	double a = 3.0;
+	double b = 99.0;
+	MOX_sensor_reading = (*odor_concentration - b)/a;
+	if (MOX_sensor_reading < 0)
+		MOX_sensor_reading = 0;
+}
+void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
+{
+	// the odor concentration is actually simulating the sensor reading instead of the concentration on [ppm]
+	// in the datesheet, the detectable gases concentration range is from 10 to 500
+	// divide thhe simulated measurement by 100 to approximate the concentration in ppm
+	double Rs = pow(*odor_concentration/(100*1.488),-0.632) * simulation_parameters.R0;
+	double RL = 51.0; //kOhm
+	double Vc = 3300; //mV
+	MOX_sensor_reading = Vc * RL / (RL + Rs);  // the gas sensor output is the voltage of the loading resistor
+	if (MOX_sensor_reading < 0)
+		MOX_sensor_reading = 0;
 }
 
 void wind_read(double *intensity, double *angle)
@@ -640,4 +507,52 @@ double generateGaussianNoise(double mean, double variance)
 	static std::mt19937 gen(rd());
 	std::normal_distribution<double> dist(mean, std::sqrt(variance));
 	return dist(gen);
+}
+
+void set_logfile_names()
+{
+	// log files names
+	char *pPath;
+	pPath = getenv("WB_WORKING_DIR");
+	if (pPath != NULL)
+	{
+		if (VERBOSE)
+			printf("The current path is: %s\n", pPath);
+		sprintf(folder_name, "%s/%lld", pPath, current_timestamp());
+		mkdir(folder_name, 0755);
+	}
+	else
+	{
+		sprintf(folder_name, "../../../Results/current"); // create a new folder for log files
+		mkdir(folder_name, 0755);
+		sprintf(folder_name, "../../../Results/current/%d", ID); // create a new folder for log files
+		mkdir(folder_name, 0755);
+	}
+	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
+	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
+	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
+	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
+	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
+	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
+	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
+	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
+	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
+	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
+	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
+	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
+	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
+	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+	// // to save some debugging console input
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+
+      // Running STE offline : run STE from loaded data of previous simulation
+	// log name of the experiment and scan
+      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_cdf/rel_con_MOX_source_boundary_cdf/10/1712062974290/101", workspacePath);
+	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
+	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
+	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
+
 }

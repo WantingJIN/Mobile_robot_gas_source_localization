@@ -23,114 +23,13 @@
 #include "gasMap2D.h"
 #include "Constant.h"
 #include "Dbscan.h"
+#include "SimulationParameters.h"
 
 extern int nbr_obs;
 extern float margin;
 extern float **obstacles;
+extern SimulationParameters simulation_parameters;
 // extern float obstacles[][4];
-
-// Mode of sampling
-typedef enum samplingMode
-{
-	CONTINOUS_SAMPLING = 0,
-	STOP_AND_GO_SAMPLING = 1,
-	SENSE_WITHOUT_STOP = 2,
-} eSamplingMode;
-
-// Mode of Processing;
-// in order to composente the slow reaction/recovery time of sensing
-typedef enum processingMode
-{
-	NO_PROCESSING = 0,
-	KERNEL_MAPPING = 1,
-	REVERSE_SENSOR_MODEL = 2,
-	MAPPING_AND_REVERSE_SENSOR_MODEL = 3,
-} eProcessingMode;
-
-typedef enum gasSensor
-{
-	PID = 0,
-	MOX = 1,
-	NOISY_MOX = 2,
-} eGasSensor;
-
-typedef enum planningStrategy
-{
-	GREEDY = 0,
-	BALANCE_MAXIMAL_EXPECTED = 2,
-	RANDOM = 3,
-	LAWNMOWER = 4,
-	BELIEF_CLUSTERING = 5,
-	INFORMATIVE_KLD = 6,
-} ePlanningStrategy;
-
-typedef enum gasFeature
-{
-	CONCENTRATION = 0,
-	GASHIT = 1,
-	RELATIVE_CONCENTRATION = 2,
-} eGasFeature;
-
-typedef enum visitedList
-{
-	visitedList_ON = 0,
-	visitedList_OFF = 1,
-} eVisitedList;
-
-typedef enum infoFeature
-{
-	VARIANCE = 0,
-	MEAN = 1,
-} eInfoFeature;
-
-typedef enum relativeMethod
-{
-	NORMALIZATION = 0,
-	CDF = 1,
-} eRelativeMethod;
-
-typedef enum SimuMode{
-	ONLINE = 0,
-	OFFLINE = 1,
-}eSimuMode;
-
-// parameters to estimate
-struct parameters_set
-{
-	double Q;
-	double source_position[2];
-	double a_y;
-	double b_y;
-	// double a_z;
-	// double b_z;
-};
-
-// simulation paramters
-struct simulation_parameters
-{
-	float likelihood_error;  //1
-	float gloabl_local_search_ratio; //2
-	int MCMC_iteration_num; //3
-	int MCMC_or_exhaustive_eval; // 4: 1 for MCMC, 0 for exhaustive evaluation
-	int number_of_robots; //5
-	int scenario; //6
-	int map_nbr; //7
-	eSamplingMode samplingMode; //8
-	eProcessingMode processingMode; //9
-	eGasSensor gasSensor; //10
-	ePlanningStrategy planningStrategy; //11
-	eGasFeature gasFeature; //12
-	eVisitedList visitedList; //13
-	eInfoFeature infoFeature; //14
-	int sampling_period; //15
-	float cluster_entropy_ratio; //16
-	float vel_factor; //17
-	float wind_factor; //18
-	float sampling_dist_thresh; //19
-	eRelativeMethod relativeMethod; //20
-	eSimuMode simuMode; //21
-};
-extern struct simulation_parameters simulation_parameters;
 
 // states of the finite state machine
 typedef enum state
@@ -202,6 +101,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 // new likelihood for relative concentrations
 double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
+double likelihood_pdf(struct history &history, vector<double> pdf_history_list, double *parameters, int soure_pos_idx, PlumeModel *model);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();
@@ -216,7 +116,12 @@ void do_odometry();
 
 // calculate the Gaussian distribution of the history and the CDF of the data
 double calculate_measurement_gaussian_CDF(double data, double mean, double stddev);
+double calculate_measurement_M_distance(double data, double mean, double stddev);
 void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev);
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list);
+void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev);
 void calculate_data_distribution(vector<double> data, double &mean, double &stddev);
-void calculate_normalized_relative_measurements(vector<double> &relative_history_meas, vector<double> data_list);
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list);
+void calculate_measurement_list_probablistic_distribution(vector<double> &pdf_meas_list, vector<double> data_list);
+void information_clustering_planning();
 #endif

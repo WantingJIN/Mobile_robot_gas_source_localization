@@ -1,17 +1,58 @@
-% Create an empty table to store experimental data
 clear all; clc; close all;
 dataTable = table();
-
-%% load the data
+%% dispatch the result to target folder
 % the general folder
-general_folder = '../Results/ICRA2024/Final_campaign/PID/KLD_visit_sense_PID';
+general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
+dispatched_folder = [general_folder,'relative_meas/MOX_empirical_cdf/sigma_0.5'];
+folder_list = dir(general_folder);
+disp(folder_list)
+folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
+folder_list = folder_list([folder_list.isdir]);
+exp_number = length(folder_list);
+
+% dispatch
+for i=1:exp_number
+
+    % the name of the folder
+    folder_name = [folder_list(i).folder, '/', folder_list(i).name];
+    % the content of the folder
+    robot_list = dir(folder_name);
+    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}));
+    robot_list = robot_list([robot_list.isdir]);
+    % the IDs of the robots
+    ID = arrayfun(@(struct) str2double(struct.name),robot_list);
+
+    % skip if it's not a job folder
+    if(~exist([folder_name, '/', num2str(ID(1)), '/param_log.csv'],'file')), continue; end
+
+    % get simulation's parameter values
+    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
+
+    % remove folders with unfinished jobs
+    file_list = dir([folder_name '/**']);
+    if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
+    entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
+    %if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
+
+    % the right path of the folder
+    new_path = [dispatched_folder,'/',num2str(params.map_nbr)];
+
+    % move the folder with its friends in the right path
+    if(~exist(new_path,'dir'))
+        mkdir(new_path);
+    end
+    movefile(folder_name, new_path);
+end
+%
+
 % choose the folders
-folder_list = dir([general_folder '/**']);
+folder_list = dir([dispatched_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103'}));
-folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
+folder_list = folder_list(~ismember({folder_list.folder}, dispatched_folder));
 folder_list = folder_list([folder_list.isdir]);
 numExperiments = length(folder_list);
 
+%% get data
 for i = 1:numExperiments
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     % multiple robots
@@ -30,15 +71,13 @@ for i = 1:numExperiments
     expected_a_posteriori_file = dlmread([folder_name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
     iteration_nbr = size(expected_a_posteriori_file,1);
     expected_a_posteriori(1:2) = expected_a_posteriori_file(end,2:3);
-    % error on X and Y (col 5 and 6)
-    max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
     if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
     if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
     error(1) = params.source_position(1) - expected_a_posteriori(1);
     error(2) = params.source_position(2) - expected_a_posteriori(2);
     entropy_file = dlmread([folder_name, '/' num2str(ID(1)), '/entropy.csv']);
     entropy(1) = entropy_file(end,1);
-    
+    max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
     max_a_post(1:2) = max_a_post_file(end,2:3);
     convergence_list(1) = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
     % time taken for each run 
@@ -94,7 +133,7 @@ for i = 1:numExperiments
 end
 
 % Save the table to a file (e.g., CSV or MAT)
-writetable(dataTable, [general_folder '/experiment_data.csv']); % Save as CSV
+writetable(dataTable, [dispatched_folder '/experiment_data.csv']); % Save as CSV
 % save([general_folder '/experiment_data.mat'], 'dataTable');     % Save as MAT
 
 disp('Experiment data saved.');
@@ -181,4 +220,4 @@ annotation(f,'textbox',...
     'FontSize',12,...
     'FitBoxToText','off');
 
-saveas(f,[general_folder '/test_maps_results_comparison.png']);
+saveas(f,[dispatched_folder '/test_maps_results_comparison.png']);
