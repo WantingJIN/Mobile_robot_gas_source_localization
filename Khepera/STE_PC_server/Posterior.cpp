@@ -262,6 +262,11 @@ void Posterior::process(){
 	double bin_values[nbr_dimension];
 	max = 0;
 	entropy = 0; 
+	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_max = 0;
+	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_max = 0;
+
 	for(j = 0; j < nbr_dimension; j++)
 		model->expected_value[j] = 0;
 	
@@ -289,6 +294,20 @@ void Posterior::process(){
 			model->expected_value[j] += bin_values[j] * pdf[i];
 		//marginal
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
+		// spatial spread
+		if (pdf[i] > 1e-3){
+			if (indices[0] > possible_source_x_index_max)
+				possible_source_x_index_max = indices[0];
+			if (indices[1] > possible_source_y_index_max)
+				possible_source_y_index_max = indices[1];
+			if (indices[0] < possible_source_x_index_min)
+				possible_source_x_index_min = indices[0];
+			if (indices[1] < possible_source_y_index_min)
+				possible_source_y_index_min = indices[1];	
+		}
+            x_spatial_spread = possible_source_x_index_max - possible_source_x_index_min;
+	      y_spatial_spread = possible_source_y_index_max - possible_source_y_index_min;
+
 	}
 	entropy = -1 * entropy;
 	//printf("\n");
