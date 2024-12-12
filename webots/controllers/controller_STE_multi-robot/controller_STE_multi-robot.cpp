@@ -17,6 +17,7 @@
 // #include "aStar.h"
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
+#include "MutualInformation.hpp"
 
 using namespace std;
 
@@ -465,6 +466,41 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 	return (exp(-0.5 * sum_tmp));
 }
 
+double likelihood_MI(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model) {
+	
+	vector<double> model_c_avg(history.size);
+
+	int nbr = history.size;
+	float px[nbr], py[nbr];
+	int idx[nbr], idy[nbr];
+
+	// get indices in the map
+	for (int i = 0; i < nbr; i++)
+	{
+		px[i] = history.position[i].x;
+		py[i] = history.position[i].y;
+		idx[i] = floor((px[i] - source_x_min) / x_resol);
+		idy[i] = floor((py[i] - source_y_min) / y_resol);
+	}
+
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+
+	int numBins = 10; // Number of bins for discretization
+      double mutualInformation = 0.0;
+	
+	try {
+		std::vector<int> discreteTheoretical = discretizeData(model_c_avg, numBins);
+		std::vector<int> discreteReal = discretizeData(history.measurement, numBins);
+
+		mutualInformation = calculateMutualInformation(discreteTheoretical, discreteReal);
+		std::cout << "Mutual Information: " << mutualInformation << std::endl;
+	} catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+
+	return mutualInformation;
+}
+
 // Likelihood for relative concentration with precomputed gas maps
 double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
 {
@@ -497,40 +533,66 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 
 	vector<double> rel_model_list;
 	vector<double> pdf_model_list;
+	vector<double> slope_model_list;
 	double model_mean;
 	double model_stddev;
+	double rel_model_val, rel_hist_val; // mean, stddev,
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
 		sigma = 0.49; //works well for Normalization
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		}
 	}
 	if (simulation_parameters.relativeMethod == M_DISTANCE)
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_M_distance(rel_model_list, model_c_avg, model_mean, model_stddev);
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		}
 	}
 	if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
 		sigma = 0.31;// works well for Gaussian CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
-		sigma = 0.45;// works well for Empirical CDF
+		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg); 
+		//sigma = 0.45;// works well for Empirical CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+		}
 	}
-	double rel_model_val, rel_hist_val; // mean, stddev,
-	for (int i = 0; i < history.size; i++)
+	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE)
 	{
-		rel_hist_val = rel_history_list[i];
-		rel_model_val = rel_model_list[i];
-		// if (real_source_idx == soure_pos_idx)
-		// 	printf("hist_val:%f, rel_hist_val: %f, model_val: %f, rel_model_val: %f @ pos (%f, %f)\n", history.measurement[i],rel_hist_val, model_c_avg[i], rel_model_val, history.position[i].x, history.position[i].y);
-		// sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
-		sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg); 
+		//sigma = 0.45;// works well for Empirical CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+		}
 	}
-	// sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
 
 	return (exp(-0.5 * sum_tmp));
 }
@@ -656,24 +718,34 @@ void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vecto
 
 
 }
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list)
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list)
 {
 	if (data_list.size() == 1) {
 		rel_meas_list.push_back(0);
+		slope_list.push_back(0);
 		return;
 	}
 	vector<double> sortedData = data_list;
 	sort(sortedData.begin(), sortedData.end());
 
 	// Calculate ECDF
-	vector<double> ecdf(data_list.size());
+    	rel_meas_list.resize(data_list.size());
+   	slope_list.resize(data_list.size());
 	for (size_t i = 0; i < data_list.size(); ++i) {
 		// Count the number of observations less than or equal to the current value
 		size_t count = count_if(sortedData.begin(), sortedData.end(),
-							[&](double x) { return x < data_list[i]; });
+							[&](double x) { return data_list[i]-x > 0.1; });
 		// Calculate proportion
-		rel_meas_list.push_back(static_cast<double>(count) / data_list.size());
+		rel_meas_list[i] = static_cast<double>(count) / data_list.size();
 	}
+	// Calculate Normalized Slope of ECDF
+	double data_range = sortedData.back() - sortedData.front();
+    	for (size_t i = 1; i < sortedData.size(); ++i) {
+        double delta_x = (sortedData[i] - sortedData[i-1]) / data_range;
+        slope_list[i] = (delta_x > 0) ? (delta_x / data_list.size()) : 0.0;
+    	}
+	// Handle the first slope value
+      slope_list[0] = slope_list[1];
 }
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
@@ -2048,8 +2120,11 @@ void state_estimating()
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
 	// check if time is up
-	// if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1)
+	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
+	//if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
 	{
 		// the end
 		FSM.state = STATE_FINISHED;
@@ -2100,12 +2175,12 @@ void state_updategoal()
 	if (FSM.state != STATE_FINISHED)
 	{
 		// The goal position is very close to current postion, swith to random planning
-		if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-		{
-			printf("The goal position is very close to current postion, switch to random planning \n");
-			fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-			random_planning();
-		}
+		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		// {
+		// 	printf("The goal position is very close to current postion, switch to random planning \n");
+		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		// 	random_planning();
+		// }
 
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		goal_outside_obstacles(&goal_position);
@@ -2189,9 +2264,9 @@ void state_moving()
 			if (!position_outside_arena(current_position))
 			{
 				// Sampling distance threshold
-				float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-				if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-				{
+				//float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				//if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				//{
 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 					sample_in_motion.measurement.push_back(instant_concentration);
 					sample_in_motion.size++;
@@ -2202,7 +2277,7 @@ void state_moving()
 					// history.position.push_back({current_position.x, current_position.y, 0});
 					// history.measurement.push_back(instant_concentration);
 					// history.size++;
-				}
+				//}
 			}
 			sample_counter = 0;
 		}

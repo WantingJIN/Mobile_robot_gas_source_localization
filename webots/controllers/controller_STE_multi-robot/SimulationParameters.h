@@ -59,6 +59,7 @@ typedef enum gasFeature
 	GASHIT = 1,
 	RELATIVE_VALUE = 2,
 	PDF = 3,
+	MI = 4,
 } eGasFeature;
 
 typedef enum visitedList
@@ -79,6 +80,7 @@ typedef enum relativeMethod
 	GAUSSIAN_CDF = 1,
 	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
+	EMPIRICAL_CDF_AND_SLOPE = 4,
 } eRelativeMethod;
 
 typedef enum simuMode{

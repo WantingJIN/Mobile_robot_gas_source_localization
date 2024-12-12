@@ -1411,7 +1411,7 @@ void state_estimating(){
 	
 	//check if time is up
 	//if(FSM.n_cycles == MAX_SAMPLE_NUMBER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1){
+	if(FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
 		//the end
 		FSM.state = STATE_FINISHED;
 		end_timestamp = get_exp_time();

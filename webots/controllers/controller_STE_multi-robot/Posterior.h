@@ -14,6 +14,8 @@ public:
     double sum;
     double max;
     double entropy;
+    int x_spatial_spread;
+    int y_spatial_spread;
     int dirac_flag;
     int nbr_dimension;
     int nbr_element;
