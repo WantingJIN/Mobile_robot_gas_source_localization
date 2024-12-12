@@ -4,8 +4,8 @@
 # ID=103
 
 # set the map number
-map=2
-read -r source_x source_y <<<"12.7 2"
+map=9
+read -r source_x source_y <<<"12.7 1"
 config_file="Data/config.txt"
 workMode=OFFLINE
 
@@ -24,4 +24,4 @@ if [ -d "$result_folder_name" ]; then
 else
     echo "Folder does not exist."
 fi
-./STE_PC_server/STE_PC_server | tee output.txt
+./STE_PC_server/STE_PC_server

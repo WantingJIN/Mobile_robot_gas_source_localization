@@ -524,7 +524,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 }
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	//float sigma = 0.22;// works well for Gaussian CDF
 	float sigma = 0.35;// works well for Empirical CDF
@@ -547,8 +547,11 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		idy[i] = floor((py[i] - source_y_min) / y_resol);
 	}
 
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
-
+	// model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
+    // // print the source position
+	// double candidate_source_pos[2] = {0};
+	// posterior.index_to_param_values(source_pos_idx, candidate_source_pos);
+	// printf("source position: %f, %f\n", candidate_source_pos[0], candidate_source_pos[1]);
 	vector<double> rel_model_list;
 	vector<double> pdf_model_list;
 	double model_mean;
@@ -561,6 +564,19 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
+		// // print the relative measurements
+		// printf("model_c_avg:");
+		// for (int i = 0; i < model_c_avg.size(); i++)
+		// {	
+		// 	printf("%f, ",model_c_avg[i]);
+		// }
+		// printf("\n");
+		// printf("rel_model_list:");
+		// for (int i = 0; i < rel_model_list.size(); i++)
+		// {	
+		// 	printf("%f, ",rel_model_list[i]);
+		// }
+		// printf("\n");
 		sigma = 0.45;// works well for Empirical CDF
 	}
 	double rel_model_val, rel_hist_val; // mean, stddev,
@@ -593,7 +609,7 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
 	for (size_t i = 0; i < data_list.size(); ++i) {
 		// Count the number of observations less than or equal to the current value
 		size_t count = count_if(sortedData.begin(), sortedData.end(),
-							[&](double x) { return x < data_list[i]; });
+							[&](double x) { return data_list[i] - x > 0.1; });
 		// Calculate proportion
 		rel_meas_list.push_back(static_cast<double>(count) / data_list.size());
 	}
@@ -1570,7 +1586,7 @@ void state_read_goal_measurement(){
 		while (dist_to_goal(goal_position) > 0.05){
 			fscanf(experiment_measurements_logfile, "%d, %f, %f", &d, &f4, &f5);
 			history.size ++;
-			history.measurement_avg.push_back(0.5*f4);
+			history.measurement_avg.push_back(f4);
 			history.measurement_std.push_back(f5);
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
 			history.position.push_back({f6, f7, f8});
