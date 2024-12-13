@@ -14,14 +14,15 @@ void init(){
 	
 	FSM.n_cycles = 0;
 
+    // load the simulation parameters
+	string config_file = string(workspacePath) + "/Khepera/Data/config.txt";
+    simulation_parameters.load_simulation_parameters_from_config(config_file.c_str());
+    simulation_parameters.rewrite_parameters_from_file();
+
 	// set the log file names
 	set_logfile_names();
 
-      // load the simulation parameters
-	string config_file = string(workspacePath) + "/Khepera/Data/config.txt";
-      simulation_parameters.load_simulation_parameters_from_config(config_file.c_str());
-      simulation_parameters.rewrite_parameters_from_file();
-      // write the simulation parameters
+    // write the simulation parameters
 	FILE *sim_param_file;
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
@@ -122,9 +123,9 @@ void set_logfile_names(){
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(relative_measurements_logfile_name, "%s/relative_measurements.csv", folder_name);
 
-      // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
+    // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
 	// log name of the experiment and scan
-    sprintf(logfile_folder_name, "%s/Khepera/Results_2024-12-08/11-41", workspacePath);
+    strcpy(logfile_folder_name, simulation_parameters.experimental_logname);
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);

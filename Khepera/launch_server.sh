@@ -6,8 +6,8 @@
 # set the map number
 map=9
 # save experiment configuration
-releaseRate=LOW
-read -r source_x source_y <<<"12.7 1"
+releaseRate=MIDDLE
+read -r source_x source_y <<<"12.7 3"
 
 #config file
 config_file="Data/config.txt"

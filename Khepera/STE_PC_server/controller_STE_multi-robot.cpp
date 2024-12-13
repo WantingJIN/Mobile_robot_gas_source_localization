@@ -547,7 +547,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		idy[i] = floor((py[i] - source_y_min) / y_resol);
 	}
 
-	// model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
     // // print the source position
 	// double candidate_source_pos[2] = {0};
 	// posterior.index_to_param_values(source_pos_idx, candidate_source_pos);

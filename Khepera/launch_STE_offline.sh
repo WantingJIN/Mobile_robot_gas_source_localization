@@ -5,11 +5,13 @@
 
 # set the map number
 map=9
-read -r source_x source_y <<<"12.7 1"
+read -r source_x source_y <<<"12.7 3"
 config_file="Data/config.txt"
+experimental_log=Results_2024-12-13/07-44
 workMode=OFFLINE
 
 sed -i "s/^workMode *= *.*/workMode = $workMode/" "$config_file"
+sed -i "s|^experimental_logname *= *.*|experimental_logname = $experimental_log|" "$config_file"
 echo $map > $STE_DDPM_ROOT/Khepera/Data/params/map_nbr.txt
 echo $source_x $source_y > $STE_DDPM_ROOT/Khepera/Data/source_position.txt
 # environment map
@@ -25,3 +27,12 @@ else
     echo "Folder does not exist."
 fi
 ./STE_PC_server/STE_PC_server
+
+
+# gather log files
+current_date=$(date +"%Y-%m-%d")
+current_time=$(date +"%H-%M")
+mkdir -p Results_offline_$current_date/$current_time
+cp $STE_DDPM_ROOT/Khepera/Data/source_position.txt log_STE_multi/
+mv $STE_DDPM_ROOT/Khepera/log_STE_multi Results_offline_$current_date/$current_time/pc
+cp -r $experimental_log/k4 Results_offline_$current_date/$current_time/k4

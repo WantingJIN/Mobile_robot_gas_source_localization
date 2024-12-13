@@ -10,7 +10,7 @@
 #define AXLE_LENGTH             0.1054 	//K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 	150 //~10sec //number of measurements before averaging
 //#define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
-#define MAX_ITER 	40 
+#define MAX_ITER 	30 
 #define N_CONCENTRATION_LEVEL 4
 #define MAX_SPEED 			47.61 //K3: 35748.4
 #define SENSOR_NUMBER  		8
