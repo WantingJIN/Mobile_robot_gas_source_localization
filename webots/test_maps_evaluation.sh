@@ -44,23 +44,23 @@ R=100 # gas sensor resistance
 sigma=0.4 #noise level for the STE likelihood
 
 # release amount
-for r in  53 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
+for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
 	for m in 9 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
 		# for likelihood in 2000 3000
-		# for sigma in 0.43 0.45 0.47 
+		for sigma in 0.43 0.45 0.48
 	      # for R in 800 1500
 		# for thres in 100 300
-		for lambda in 1
+		#for lambda in 1
 		do
 			# sed -i "s/^R0 *= *.*/R0 = $R/" "$config_file"
-			# sed -i "s/^sigma *= *.*/sigma = $sigma/" "$config_file"
+			sed -i "s/^sigma *= *.*/sigma = $sigma/" "$config_file"
 			# sed -i "s/^likelihood_error *= *.*/likelihood_error = $likelihood/" "$config_file"
 			# sed -i "s/^gasHitThres *= *.*/gasHitThres = $thres/" "$config_file"
-			sed -i "s/^lambda *= *.*/lambda = $lambda/" "$config_file"
+			# sed -i "s/^lambda *= *.*/lambda = $lambda/" "$config_file"
 			# wind map and obstacle list
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
@@ -72,7 +72,7 @@ do
 				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
 				# source_pos_x=$(awk "BEGIN { print $source_pos_x_min + $k * $source_pos_x_step }")
 				echo $source_pos_x $source_pos_y > $source_pos_filename
-				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' '--no-rendering' # &> wb_output.txt # >wb_output.txt
+				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' '--no-rendering' &> wb_output.txt # >wb_output.txt
 				now=$(date +"%T")
 				echo "map $m  k $k  release amount $r R $R end time $now"
 			done

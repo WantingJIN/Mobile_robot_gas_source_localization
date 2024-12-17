@@ -49,7 +49,7 @@ target_link_libraries(${PROJECT} -g -lk4_webots -lgsl -lgslcblas)
 target_link_libraries(${PROJECT} "${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT} ${MATIO_LIBRARIES})
 
-set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
 
 # Copy the controller to the project directory
 add_custom_command(TARGET ${PROJECT} POST_BUILD COMMAND ${CMAKE_COMMAND} -E
