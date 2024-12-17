@@ -635,26 +635,22 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 			// Compare all pairs (i,j) with i<j
 			for (size_t i = 0; i < history.size; ++i) {
 				for (size_t j = i + 1; j < history.size; ++j) {
-					double diff_x = history.measurement[j] - history.measurement[i];
-					double diff_y = model_c_avg[j] - model_c_avg[i];
+					int diff_x = int(history.measurement[j] - history.measurement[i]);
+					int diff_y = int(model_c_avg[j] - model_c_avg[i]);
 
-					if (diff_x > 0.0 && diff_y > 0.0) {
+					if (diff_x > 0 && diff_y > 0) {
 						C += 1.0; // concordant
-					} else if (diff_x < 0.0 && diff_y < 0.0) {
+					} else if (diff_x < 0 && diff_y < 0) {
 						C += 1.0; // concordant
-					} else if (diff_x > 0.0 && diff_y < 0.0) {
+					} else if (diff_x > 0 && diff_y < 0) {
 						D += 1.0; // discordant
-					} else if (diff_x < 0.0 && diff_y > 0.0) {
+					} else if (diff_x < 0 && diff_y > 0) {
 						D += 1.0; // discordant
 					} else {
 						// Ties occur if diff_x == 0 or diff_y == 0.
-						if (diff_x == 0.0 && diff_y == 0.0) {
-							// Both tied
+						if (diff_x == 0) {
 							T_x += 1.0;
-							T_y += 1.0;
-						} else if (diff_x == 0.0) {
-							T_x += 1.0;
-						} else if (diff_y == 0.0) {
+						}if (diff_y == 0) {
 							T_y += 1.0;
 						}
 					}
