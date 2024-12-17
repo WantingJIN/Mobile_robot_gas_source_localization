@@ -105,6 +105,7 @@ eReleaseRate parse_release_rate(const char* str) {
 SimulationParameters::SimulationParameters(){
 	// default values
 	// simulation parameters
+	max_iter = 40;
 	likelihood_error = 30;
 	global_local_search_ratio = 0.5; 
 	MCMC_iteration_num = 1000; 
@@ -147,7 +148,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 
 	char key[256], value[256];
 	while (fscanf(file, "%255s = %255s", key, value) == 2) {
-		if (strcmp(key, "likelihood_error") == 0) {
+		if (strcmp(key, "max_iter") == 0) {
+			max_iter = atoi(value);
+		} else if (strcmp(key, "likelihood_error") == 0) {
 			likelihood_error = atof(value);
 		} else if (strcmp(key, "global_local_search_ratio") == 0) {
 			global_local_search_ratio = atof(value);
@@ -232,6 +235,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	// write simulation parameters to file
 	FILE *sim_param_file;
 	sim_param_file = fopen(config_logfile_name, "a");
+	fprintf(sim_param_file, "max_iter %d\n", max_iter);
 	fprintf(sim_param_file, "likelihood_error %f\n", likelihood_error);
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);

@@ -114,6 +114,7 @@ typedef enum releaseRate{
 // simulation paramters
 class SimulationParameters{
       public:
+	      int max_iter;
 		int MCMC_iteration_num; 
 		int number_of_robots; 
 		int map_nbr; 

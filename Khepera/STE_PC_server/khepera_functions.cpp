@@ -28,7 +28,6 @@ void init(){
 	sim_param_file = fopen(config_logfile_name, "w");
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fclose(sim_param_file);
 
 	simulation_parameters.log_simulation_parameters(config_logfile_name);

@@ -629,33 +629,28 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 			// Compare all pairs (i,j) with i<j
 			for (size_t i = 0; i < history.size; ++i) {
 				for (size_t j = i + 1; j < history.size; ++j) {
-					double diff_x = history.measurement_avg[j] - history.measurement_avg[i];
-					double diff_y = model_c_avg[j] - model_c_avg[i];
+					int diff_x = int(history.measurement_avg[j] - history.measurement_avg[i]);
+					int diff_y = int(model_c_avg[j] - model_c_avg[i]);
 
-					if (diff_x > 0.0 && diff_y > 0.0) {
+					if (diff_x > 0 && diff_y > 0) {
 						C += 1.0; // concordant
-					} else if (diff_x < 0.0 && diff_y < 0.0) {
+					} else if (diff_x < 0 && diff_y < 0) {
 						C += 1.0; // concordant
-					} else if (diff_x > 0.0 && diff_y < 0.0) {
+					} else if (diff_x > 0 && diff_y < 0) {
 						D += 1.0; // discordant
-					} else if (diff_x < 0.0 && diff_y > 0.0) {
+					} else if (diff_x < 0 && diff_y > 0) {
 						D += 1.0; // discordant
 					} else {
-						// Ties occur if diff_x == 0 or diff_y == 0.
-						if (diff_x == 0.0 && diff_y == 0.0) {
-							// Both tied
+					      if (diff_x == 0) {
 							T_x += 1.0;
-							T_y += 1.0;
-						} else if (diff_x == 0.0) {
-							T_x += 1.0;
-						} else if (diff_y == 0.0) {
+						} if (diff_y == 0) {
 							T_y += 1.0;
 						}
 					}
 				}
 			}
-
-			double denominator = std::sqrt((C + D + T_x) * (C + D + T_y));
+                  double n_0 = history.size * (history.size - 1) / 2;
+			double denominator = std::sqrt((n_0 - T_x) * (n_0 - T_y));
 			if (denominator == 0.0) {
 				sum_tmp =  0.0;
 			}else {
@@ -664,9 +659,8 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		}
 		sum_tmp = 1 - sum_tmp;
 		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
-
 	}
-
+     
 	return (exp(-0.5 * sum_tmp));
 }
 
@@ -1507,8 +1501,8 @@ void state_estimating(){
 	if(VERBOSE) printf("[%d] entropy : %f\n", ID, posterior.entropy);
 	
 	//check if time is up
-	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1){
-	if(FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+	//if(FSM.n_cycles == simulation_parameters.max_iter || posterior.entropy < 0.1){
+	if(FSM.n_cycles == simulation_parameters.max_iter || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
 		//the end
 		FSM.state = STATE_FINISHED;
 		end_timestamp = get_exp_time();
