@@ -79,6 +79,8 @@ typedef enum relativeMethod
 	GAUSSIAN_CDF = 1,
 	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
+	SPEARMAN = 4,
+	KENDALL = 5,
 } eRelativeMethod;
 
 typedef enum calibrationMode
@@ -122,7 +124,8 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		int measurement_error;
-	    float sigma;
+	      float sigma;
+		float lambda;
 
 		char experimental_logname[256];
 

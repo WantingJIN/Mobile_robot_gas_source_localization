@@ -593,6 +593,83 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
 		}
 	}
+	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM){
+		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg); 
+		//sigma = 0.48;// works well for Empirical CDF NUM
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			// NOTE: take into account the measurement number information, to avoid the algorithm converge to fast to local minima 
+			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2)/(history.size + 1);
+		}
+		sum_tmp /= simulation_parameters.sigma * simulation_parameters.sigma;
+	}
+	if (simulation_parameters.relativeMethod == SPEARMAN)
+	{
+		calculate_measurements_list_rank(rel_model_list, model_c_avg); 
+		//sigma 
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2);
+		}
+		// NOTE: the algorithm converge fast in the beginning and slow at the end -> not what we want
+		sum_tmp = 6*sum_tmp/(history.size*(history.size*history.size - 1));
+		printf("sum_tmp: %f\n", sum_tmp);
+		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
+	}
+	if (simulation_parameters.relativeMethod == KENDALL)
+	{
+		if (history.size < 2) {
+		// For n < 2, tau is undefined; return 0 or handle as a special case.
+			sum_tmp = 0.0;
+		}else{
+			// Counts
+			double C = 0.0;    // Concordant pairs
+			double D = 0.0;    // Discordant pairs
+			double T_x = 0.0;  // Ties in x
+			double T_y = 0.0;  // Ties in y
+
+			// Compare all pairs (i,j) with i<j
+			for (size_t i = 0; i < history.size; ++i) {
+				for (size_t j = i + 1; j < history.size; ++j) {
+					double diff_x = history.measurement[j] - history.measurement[i];
+					double diff_y = model_c_avg[j] - model_c_avg[i];
+
+					if (diff_x > 0.0 && diff_y > 0.0) {
+						C += 1.0; // concordant
+					} else if (diff_x < 0.0 && diff_y < 0.0) {
+						C += 1.0; // concordant
+					} else if (diff_x > 0.0 && diff_y < 0.0) {
+						D += 1.0; // discordant
+					} else if (diff_x < 0.0 && diff_y > 0.0) {
+						D += 1.0; // discordant
+					} else {
+						// Ties occur if diff_x == 0 or diff_y == 0.
+						if (diff_x == 0.0 && diff_y == 0.0) {
+							// Both tied
+							T_x += 1.0;
+							T_y += 1.0;
+						} else if (diff_x == 0.0) {
+							T_x += 1.0;
+						} else if (diff_y == 0.0) {
+							T_y += 1.0;
+						}
+					}
+				}
+			}
+
+			double denominator = std::sqrt((C + D + T_x) * (C + D + T_y));
+			if (denominator == 0.0) {
+				return 0.0;
+			}
+			sum_tmp = (C - D) / denominator;
+		}
+		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
+
+	}
 
 	return (exp(-0.5 * sum_tmp));
 }
@@ -720,17 +797,17 @@ void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vecto
 }
 void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list)
 {
+	rel_meas_list.resize(data_list.size());
+   	slope_list.resize(data_list.size());
 	if (data_list.size() == 1) {
-		rel_meas_list.push_back(0);
-		slope_list.push_back(0);
+		rel_meas_list[0] = 0.0;
+		slope_list[0] = 0.0;
 		return;
 	}
 	vector<double> sortedData = data_list;
 	sort(sortedData.begin(), sortedData.end());
 
 	// Calculate ECDF
-    	rel_meas_list.resize(data_list.size());
-   	slope_list.resize(data_list.size());
 	for (size_t i = 0; i < data_list.size(); ++i) {
 		// Count the number of observations less than or equal to the current value
 		size_t count = count_if(sortedData.begin(), sortedData.end(),
@@ -746,6 +823,25 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
     	}
 	// Handle the first slope value
       slope_list[0] = slope_list[1];
+}
+
+void calculate_measurements_list_rank(vector<double> &rel_meas_list, vector<double> data_list)
+{
+	rel_meas_list.resize(data_list.size());
+	if (data_list.size() == 1) {
+		rel_meas_list[0] = 0.0;
+		return;
+	}
+	vector<double> sortedData = data_list;
+	sort(sortedData.begin(), sortedData.end());
+	// Calculate Rank
+	for (size_t i = 0; i < data_list.size(); ++i) {
+		// Count the number of observations less than or equal to the current value
+		size_t count = count_if(sortedData.begin(), sortedData.end(),
+							[&](double x) { return data_list[i]-x > 0.1; });
+		// Calculate proportion
+		rel_meas_list[i] = static_cast<double>(count);
+	}
 }
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
@@ -2123,8 +2219,8 @@ void state_estimating()
 	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
 	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
-	//if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
+	//if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
+	if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
 	{
 		// the end
 		FSM.state = STATE_FINISHED;

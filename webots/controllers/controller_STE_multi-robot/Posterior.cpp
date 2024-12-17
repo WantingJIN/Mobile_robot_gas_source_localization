@@ -479,7 +479,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 {
 	int i = 0;
 	double sample[nbr_dimension];
-	vector<double> relative_history_meas;
+	vector<double> relative_history_meas = history.measurement;
 	vector<double> slope_history_meas;
 	vector<double> pdf_history_meas;
 	double mean, stddev;
@@ -507,10 +507,17 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		{
 			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
 		}
-		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
+		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || 
+		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
+		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 
 		{
 			calculate_measurements_list_empirical_CDF(relative_history_meas, slope_history_meas, history.measurement);
 		}
+		if (simulation_parameters.relativeMethod == SPEARMAN)
+		{
+			calculate_measurements_list_rank(relative_history_meas, history.measurement);
+		}
+
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}
 	if (simulation_parameters.gasFeature == PDF)

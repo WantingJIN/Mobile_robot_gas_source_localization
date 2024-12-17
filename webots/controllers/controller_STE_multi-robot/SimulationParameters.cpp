@@ -83,6 +83,10 @@ eRelativeMethod parse_relative_method(const char* str) {
 	if (strcmp(str, "GAUSSIAN_CDF") == 0) return GAUSSIAN_CDF;
 	if (strcmp(str, "M_DISTANCE") == 0) return M_DISTANCE;
 	if (strcmp(str, "EMPIRICAL_CDF") == 0) return EMPIRICAL_CDF;
+	if (strcmp(str, "EMPIRICAL_CDF_AND_SLOPE") == 0) return EMPIRICAL_CDF_AND_SLOPE;
+	if (strcmp(str, "SPEARMAN") == 0) return SPEARMAN;
+	if (strcmp(str, "KENDALL") == 0) return KENDALL;
+	if (strcmp(str, "EMPIRICAL_CDF_NUM") == 0) return EMPIRICAL_CDF_NUM;
 	fprintf(stderr, "Unknown relative method: %s\n", str);
 	exit(1);
 }

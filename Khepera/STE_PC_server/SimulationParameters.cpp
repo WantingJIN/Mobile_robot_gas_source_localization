@@ -65,6 +65,8 @@ eRelativeMethod parse_relative_method(const char* str) {
 	if (strcmp(str, "GAUSSIAN_CDF") == 0) return GAUSSIAN_CDF;
 	if (strcmp(str, "M_DISTANCE") == 0) return M_DISTANCE;
 	if (strcmp(str, "EMPIRICAL_CDF") == 0) return EMPIRICAL_CDF;
+	if (strcmp(str, "SPEARMAN") == 0) return SPEARMAN;
+	if (strcmp(str, "KENDALL") == 0) return KENDALL;
 	fprintf(stderr, "Unknown relative method: %s\n", str);
 	exit(1);
 }
@@ -122,11 +124,12 @@ SimulationParameters::SimulationParameters(){
 	sampling_dist_thresh = 0.1; 
 	relativeMethod = EMPIRICAL_CDF; 
 	gasHitMethod = SLIDING_WINDOW_THRES; 
-    calibrationMode = OFF;
+      calibrationMode = OFF;
 	workingMode = EXPERIMENT;
 	measurement_error = 0;
 	sigma = 0.45;
 	releaseRate = LOW;
+	lambda = 0.8;
 	//simuMode = ONLINE; 
 	//R0 = 100;
 	//gas_sensor_noise_var = 40000;
@@ -182,7 +185,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		} else if (strcmp(key, "measurement_error") == 0) {
 			measurement_error = atoi(value);
 		} else if (strcmp(key, "sigma") == 0) {
-			sigma = atof(value);	
+			sigma = atof(value);
+		} else if (strcmp(key, "lambda") == 0) {
+			lambda = atof(value);	
 		} else if (strcmp(key, "sampling_dist_thresh") == 0) {
 			sampling_dist_thresh = atof(value);	
 		} else if (strcmp(key, "releaseRate") == 0) {
@@ -248,6 +253,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "sigma %f\n", sigma);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fprintf(sim_param_file, "release_rate %d\n", releaseRate);
+	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fclose(sim_param_file);
 }
 

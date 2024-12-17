@@ -420,9 +420,7 @@ void Posterior::MCMC_evaluation(struct history history){
 void Posterior::exhaustive_evaluation(struct history history){
 	int i = 0;
 	double sample[nbr_dimension];
-	vector<double> relative_history_meas;
-	vector<double> pdf_history_meas;
-	double mean, stddev;
+	vector<double> relative_history_meas = history.measurement_avg;
 
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
@@ -430,6 +428,10 @@ void Posterior::exhaustive_evaluation(struct history history){
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 		{
 			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement_avg);
+		}
+		if (simulation_parameters.relativeMethod == SPEARMAN)
+		{
+			calculate_measurements_list_rank(relative_history_meas, history.measurement_avg);
 		}
 		log_relative_history_meas(relative_measurements_logfile_name, 'a', relative_history_meas);
 	}
@@ -452,7 +454,7 @@ void Posterior::exhaustive_evaluation(struct history history){
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model);
 		}
 		// add the new value to the sum
 		sum += pdf[i];

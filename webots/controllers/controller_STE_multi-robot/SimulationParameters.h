@@ -81,6 +81,9 @@ typedef enum relativeMethod
 	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
 	EMPIRICAL_CDF_AND_SLOPE = 4,
+	SPEARMAN = 5,
+	KENDALL = 6,
+	EMPIRICAL_CDF_NUM = 7,
 } eRelativeMethod;
 
 typedef enum simuMode{

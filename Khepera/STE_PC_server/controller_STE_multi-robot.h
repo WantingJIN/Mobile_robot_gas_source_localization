@@ -111,7 +111,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
 // new likelihood for relative concentrations
 double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model);
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
@@ -128,5 +128,6 @@ void do_odometry();
 
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list);
 void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list);
+void calculate_measurements_list_rank(vector<double> &rel_meas_list, vector<double> data_list);
 
 #endif

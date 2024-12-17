@@ -527,7 +527,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	//float sigma = 0.22;// works well for Gaussian CDF
-	float sigma = 0.35;// works well for Empirical CDF
+	//float sigma = 0.35;// works well for Empirical CDF
 	double sum_tmp = 0;
 	// if (sampleBuffer.average_wind_intensity == 0)
 	// 	printf("NO WIND, BYE BYE!\n");
@@ -548,18 +548,17 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	}
 
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
-    // // print the source position
+      // // print the source position
 	// double candidate_source_pos[2] = {0};
 	// posterior.index_to_param_values(source_pos_idx, candidate_source_pos);
 	// printf("source position: %f, %f\n", candidate_source_pos[0], candidate_source_pos[1]);
 	vector<double> rel_model_list;
 	vector<double> pdf_model_list;
-	double model_mean;
-	double model_stddev;
+	double rel_model_val, rel_hist_val; // mean, stddev,
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-		sigma = 0.49; //works well for Normalization
+		//sigma = 0.49; //works well for Normalization
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
@@ -577,19 +576,81 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		// 	printf("%f, ",rel_model_list[i]);
 		// }
 		// printf("\n");
-		sigma = 0.45;// works well for Empirical CDF
+		//sigma = 0.45;// works well for Empirical CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			// if (real_source_idx == soure_pos_idx)
+			// 	printf("hist_val:%f, rel_hist_val: %f, model_val: %f, rel_model_val: %f @ pos (%f, %f)\n", history.measurement[i],rel_hist_val, model_c_avg[i], rel_model_val, history.position[i].x, history.position[i].y);
+			// sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2);
+		}
+		sum_tmp = history.size * sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
 	}
-	double rel_model_val, rel_hist_val; // mean, stddev,
-	for (int i = 0; i < history.size; i++)
+	if (simulation_parameters.relativeMethod == KENDALL)
 	{
-		rel_hist_val = rel_history_list[i];
-		rel_model_val = rel_model_list[i];
-		// if (real_source_idx == soure_pos_idx)
-		// 	printf("hist_val:%f, rel_hist_val: %f, model_val: %f, rel_model_val: %f @ pos (%f, %f)\n", history.measurement[i],rel_hist_val, model_c_avg[i], rel_model_val, history.position[i].x, history.position[i].y);
-		// sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
-		sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+		calculate_measurements_list_rank(rel_model_list, model_c_avg); 
+		//sigma 
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2);
+		}
+		sum_tmp = 6*sum_tmp/(history.size*(history.size*history.size - 1));
+		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
 	}
-	// sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
+	if (simulation_parameters.relativeMethod == KENDALL)
+	{
+		if (history.size < 2) {
+		// For n < 2, tau is undefined; return 0 or handle as a special case.
+			sum_tmp = 0.0;
+		}else{
+			// Counts
+			double C = 0.0;    // Concordant pairs
+			double D = 0.0;    // Discordant pairs
+			double T_x = 0.0;  // Ties in x
+			double T_y = 0.0;  // Ties in y
+
+			// Compare all pairs (i,j) with i<j
+			for (size_t i = 0; i < history.size; ++i) {
+				for (size_t j = i + 1; j < history.size; ++j) {
+					double diff_x = history.measurement_avg[j] - history.measurement_avg[i];
+					double diff_y = model_c_avg[j] - model_c_avg[i];
+
+					if (diff_x > 0.0 && diff_y > 0.0) {
+						C += 1.0; // concordant
+					} else if (diff_x < 0.0 && diff_y < 0.0) {
+						C += 1.0; // concordant
+					} else if (diff_x > 0.0 && diff_y < 0.0) {
+						D += 1.0; // discordant
+					} else if (diff_x < 0.0 && diff_y > 0.0) {
+						D += 1.0; // discordant
+					} else {
+						// Ties occur if diff_x == 0 or diff_y == 0.
+						if (diff_x == 0.0 && diff_y == 0.0) {
+							// Both tied
+							T_x += 1.0;
+							T_y += 1.0;
+						} else if (diff_x == 0.0) {
+							T_x += 1.0;
+						} else if (diff_y == 0.0) {
+							T_y += 1.0;
+						}
+					}
+				}
+			}
+
+			double denominator = std::sqrt((C + D + T_x) * (C + D + T_y));
+			if (denominator == 0.0) {
+				return 0.0;
+			}
+			sum_tmp = (C - D) / denominator;
+		}
+		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
+
+	}
 
 	return (exp(-0.5 * sum_tmp));
 }
@@ -614,6 +675,25 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
 		rel_meas_list.push_back(static_cast<double>(count) / data_list.size());
 	}
 }
+
+void calculate_measurements_list_rank(vector<double> &rel_meas_list, vector<double> data_list)
+{
+	if (data_list.size() == 1) {
+		rel_meas_list.push_back(0);
+		return;
+	}
+	vector<double> sortedData = data_list;
+	sort(sortedData.begin(), sortedData.end());
+	// Calculate Rank
+    	rel_meas_list.resize(data_list.size());
+	for (size_t i = 0; i < data_list.size(); ++i) {
+		// Count the number of observations less than or equal to the current value
+		size_t count = count_if(sortedData.begin(), sortedData.end(),
+							[&](double x) { return data_list[i]-x > 0.1; });
+		// Calculate proportion
+		rel_meas_list[i] = static_cast<double>(count);
+	}
+}
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
 	// normalize the measurements with max and min values
@@ -635,7 +715,7 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , 
 	}
 }
 
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev)
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model)
 {
 	double sum_tmp = 0;
 	// if (sampleBuffer.average_wind_intensity == 0)
@@ -688,11 +768,12 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES)
 	{
 		//double lamda = 0.8; //0.5;
+            printf("Enter likelihood_gas_hit with sliding window\n");
 		double his_thrs = 0;
 		double mod_thrs = 0;
 		double prev_mod_thrs = 0.0;
 		double prev_his_thrs = 0.0;
-		double lambda = 0.8;
+		// double lambda = 0.8;
 
 		//Dynamic thresholds computation
 		for (int i = 0; i < history.size; i++){
@@ -702,8 +783,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				prev_mod_thrs = model_c_avg[i];
 				mod_thrs = model_c_avg[i];
 			}
-			his_thrs = lambda * prev_his_thrs + (1 - lambda) * history.measurement_avg[i];
-			mod_thrs = lambda * prev_mod_thrs + (1 - lambda) * model_c_avg[i];
+			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement_avg[i];
+			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
 			//store history threshold for next iteration
 			prev_his_thrs = his_thrs;
 			prev_mod_thrs = mod_thrs;
