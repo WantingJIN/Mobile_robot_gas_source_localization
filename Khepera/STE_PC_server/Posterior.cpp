@@ -425,7 +425,7 @@ void Posterior::exhaustive_evaluation(struct history history){
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
-		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
+		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM)
 		{
 			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement_avg);
 		}

@@ -8,7 +8,7 @@ DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
 	x_epsilon = x_eps;
 	y_epsilon = y_eps;
 	minPoints = minPts;
-	ratio = rat;
+	ratio = rat > 0 ? rat : 0;
 }
 
 vector<int> DBSCAN::findNeighbors(const CellPoint cell)

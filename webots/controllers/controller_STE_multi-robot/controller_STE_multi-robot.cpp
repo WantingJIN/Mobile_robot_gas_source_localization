@@ -663,11 +663,13 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 
 			double denominator = std::sqrt((C + D + T_x) * (C + D + T_y));
 			if (denominator == 0.0) {
-				return 0.0;
+				sum_tmp =  0.0;
+			}else{
+				sum_tmp = (C - D) / denominator;
 			}
-			sum_tmp = (C - D) / denominator;
 		}
-		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
+		// NOTE: the sum_tmp is between -1 and 1, and if it is close to 1, it means thry have a positive monitonic relationship
+		sum_tmp = (1 - sum_tmp)/(simulation_parameters.sigma * simulation_parameters.sigma);
 
 	}
 

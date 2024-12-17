@@ -334,7 +334,7 @@ void establish_baseline(){
     printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
     log_baseline(min, max, odor_baseline_value);
     //starting point of the actuall algorithm random on Y
-    goal_position.x = 3 + (ID-101)/5;
+    goal_position.x = current_position.x;
     //NOTE - Khepera start position
     goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
     //goal_position.y = 2;

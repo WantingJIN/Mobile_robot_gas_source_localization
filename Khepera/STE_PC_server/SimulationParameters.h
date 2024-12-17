@@ -81,6 +81,7 @@ typedef enum relativeMethod
 	EMPIRICAL_CDF = 3,
 	SPEARMAN = 4,
 	KENDALL = 5,
+	EMPIRICAL_CDF_NUM = 6,
 } eRelativeMethod;
 
 typedef enum calibrationMode
