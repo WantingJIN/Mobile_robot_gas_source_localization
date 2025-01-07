@@ -336,7 +336,7 @@ void establish_baseline(){
     //starting point of the actuall algorithm random on Y
     goal_position.x = current_position.x;
     //NOTE - Khepera start position
-    goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
+    goal_position.y = (randu() * (4 - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
     //goal_position.y = 2;
 
     printf("find the path using visibility graph \n");
