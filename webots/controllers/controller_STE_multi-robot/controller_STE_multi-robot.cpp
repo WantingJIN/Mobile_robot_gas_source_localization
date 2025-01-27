@@ -2512,7 +2512,7 @@ int main(int argc, char **argv)
 
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
 	plume_model.initialize_information_matrix();
-	plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
+	//plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");
