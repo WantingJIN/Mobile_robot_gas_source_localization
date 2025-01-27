@@ -17,7 +17,6 @@
 // #include "aStar.h"
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
-#include "MutualInformation.hpp"
 
 using namespace std;
 
@@ -466,41 +465,6 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 	return (exp(-0.5 * sum_tmp));
 }
 
-double likelihood_MI(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model) {
-	
-	vector<double> model_c_avg(history.size);
-
-	int nbr = history.size;
-	float px[nbr], py[nbr];
-	int idx[nbr], idy[nbr];
-
-	// get indices in the map
-	for (int i = 0; i < nbr; i++)
-	{
-		px[i] = history.position[i].x;
-		py[i] = history.position[i].y;
-		idx[i] = floor((px[i] - source_x_min) / x_resol);
-		idy[i] = floor((py[i] - source_y_min) / y_resol);
-	}
-
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
-
-	int numBins = 10; // Number of bins for discretization
-      double mutualInformation = 0.0;
-	
-	try {
-		std::vector<int> discreteTheoretical = discretizeData(model_c_avg, numBins);
-		std::vector<int> discreteReal = discretizeData(history.measurement, numBins);
-
-		mutualInformation = calculateMutualInformation(discreteTheoretical, discreteReal);
-		std::cout << "Mutual Information: " << mutualInformation << std::endl;
-	} catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-	}
-
-	return mutualInformation;
-}
-
 // Likelihood for relative concentration with precomputed gas maps
 double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
 {
@@ -548,29 +512,6 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
 		}
 	}
-	if (simulation_parameters.relativeMethod == M_DISTANCE)
-	{
-		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
-		calculate_measurements_list_M_distance(rel_model_list, model_c_avg, model_mean, model_stddev);
-		for (int i = 0; i < history.size; i++)
-		{
-			rel_hist_val = rel_history_list[i];
-			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
-		}
-	}
-	if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
-	{
-		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
-		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
-		sigma = 0.31;// works well for Gaussian CDF
-		for (int i = 0; i < history.size; i++)
-		{
-			rel_hist_val = rel_history_list[i];
-			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
-		}
-	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg); 
@@ -605,117 +546,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		}
 		sum_tmp /= simulation_parameters.sigma * simulation_parameters.sigma;
 	}
-	if (simulation_parameters.relativeMethod == SPEARMAN)
-	{
-		calculate_measurements_list_rank(rel_model_list, model_c_avg); 
-		//sigma 
-		for (int i = 0; i < history.size; i++)
-		{
-			rel_hist_val = rel_history_list[i];
-			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2);
-		}
-		// NOTE: the algorithm converge fast in the beginning and slow at the end -> not what we want
-		sum_tmp = 6*sum_tmp/(history.size*(history.size*history.size - 1));
-		printf("sum_tmp: %f\n", sum_tmp);
-		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
-	}
-	if (simulation_parameters.relativeMethod == KENDALL)
-	{
-		if (history.size < 2) {
-		// For n < 2, tau is undefined; return 0 or handle as a special case.
-			sum_tmp = 0.0;
-		}else{
-			// Counts
-			double C = 0.0;    // Concordant pairs
-			double D = 0.0;    // Discordant pairs
-			double T_x = 0.0;  // Ties in x
-			double T_y = 0.0;  // Ties in y
-
-			// Compare all pairs (i,j) with i<j
-			for (size_t i = 0; i < history.size; ++i) {
-				for (size_t j = i + 1; j < history.size; ++j) {
-					int diff_x = int(history.measurement[j] - history.measurement[i]);
-					int diff_y = int(model_c_avg[j] - model_c_avg[i]);
-
-					if (diff_x > 0 && diff_y > 0) {
-						C += 1.0; // concordant
-					} else if (diff_x < 0 && diff_y < 0) {
-						C += 1.0; // concordant
-					} else if (diff_x > 0 && diff_y < 0) {
-						D += 1.0; // discordant
-					} else if (diff_x < 0 && diff_y > 0) {
-						D += 1.0; // discordant
-					} else {
-						// Ties occur if diff_x == 0 or diff_y == 0.
-						if (diff_x == 0) {
-							T_x += 1.0;
-						}if (diff_y == 0) {
-							T_y += 1.0;
-						}
-					}
-				}
-			}
-
-			double denominator = std::sqrt((C + D + T_x) * (C + D + T_y));
-			if (denominator == 0.0) {
-				sum_tmp =  0.0;
-			}else{
-				sum_tmp = (C - D) / denominator;
-			}
-		}
-		// NOTE: the sum_tmp is between -1 and 1, and if it is close to 1, it means thry have a positive monitonic relationship
-		sum_tmp = (1 - sum_tmp)/(simulation_parameters.sigma * simulation_parameters.sigma);
-
-	}
-
 	return (exp(-0.5 * sum_tmp));
-}
-
-double likelihood_pdf(struct history &history, vector<double> pdf_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
-{
-	int pos_coord[2];
-	pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
-      pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
-	int real_source_idx = posterior.indices_to_index(pos_coord);
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
-
-	vector<double> model_c_avg(history.size);
-      float sigma = 0.35;
-	int nbr = history.size;
-	float px[nbr], py[nbr];
-	int idx[nbr], idy[nbr];
-
-	// get indices in the map
-	for (int i = 0; i < nbr; i++)
-	{
-		px[i] = history.position[i].x;
-		py[i] = history.position[i].y;
-		idx[i] = floor((px[i] - source_x_min) / x_resol);
-		idy[i] = floor((py[i] - source_y_min) / y_resol);
-	}
-
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
-
-	vector<double> rel_model_list;
-	vector<double> pdf_model_list;
-      //printf("enter calculating model concentration pdf!\n");
-	calculate_measurement_list_probablistic_distribution(pdf_model_list, model_c_avg);
-	// compare between the two pdfs
-	// calculate the KL divergence
-	//printf("enter calculating kld!\n");
-	double kl_divergence = 0;
-	for (int i = 0; i < pdf_model_list.size(); i++)
-	{	
-		if (pdf_model_list[i] > 0.0 && pdf_history_list[i] > 0.0)
-		{
-			kl_divergence += pdf_model_list[i] * log(pdf_model_list[i] /pdf_history_list[i]);
-			
-		}
-	}
-	//printf("kl_divergence: %f\n", kl_divergence);
-	return (exp(-pow(kl_divergence,2)/(sigma*sigma)));
 }
 
 // ASSUMPTION : Using the history of measurements, but only one robot is operating
@@ -741,58 +572,6 @@ double likelihood(struct history history, double *parameters, PlumeModel *model)
 	return (exp(-0.5 * sum_tmp));
 }
 
-void calculate_data_distribution(vector<double> data_list, double &mean, double &stddev)
-{
-	double sum = 0;
-	double sum2 = 0;
-	for (int i = 0; i < data_list.size(); i++)
-	{
-		sum += data_list[i];
-	}
-	mean = sum / data_list.size();
-	for (int i = 0; i < data_list.size(); i++)
-	{
-		sum2 += pow(data_list[i] - mean, 2);
-	}
-	stddev = sqrt(sum2 / data_list.size());
-	// printf("mean: %f, variance: %f\n", mean, variance);
-}
-
-double calculate_measurement_gaussian_CDF(double data, double mean, double stddev)
-{
-	double cdf = 0.5 * (1 + std::erf((data - mean) / (stddev * std::sqrt(2))));
-	// printf("data: %f, mean: %f, stddev: %f, cdf: %f\n", data, mean, stddev, cdf);
-	return cdf;
-}
-
-double calculate_measurement_M_distance(double data, double mean, double stddev)
-{
-	double m_distance = (data - mean)/ stddev;
-	//printf("data: %f, m_distance: %f\n", data, m_distance);
-	return m_distance;
-}
-
-void calculate_measurements_list_gaussian_CDF(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev)
-{
-	if (stddev == 0)
-		stddev = 0.01;
-	for (int i = 0; i < data_list.size(); i++)
-	{
-		rel_meas_list.push_back(calculate_measurement_gaussian_CDF(data_list[i], mean, stddev));
-	}
-}
-void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vector<double> data_list, double mean, double stddev)
-{
-	if (stddev == 0)
-		stddev = 0.01;
-	//printf("mean: %f, stddev: %f\n", mean, stddev);
-	for (int i = 0; i < data_list.size(); i++)
-	{
-		rel_meas_list.push_back(calculate_measurement_M_distance(data_list[i], mean, stddev));
-	}
-
-
-}
 void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list)
 {
 	rel_meas_list.resize(data_list.size());
@@ -823,24 +602,6 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
       slope_list[0] = slope_list[1];
 }
 
-void calculate_measurements_list_rank(vector<double> &rel_meas_list, vector<double> data_list)
-{
-	rel_meas_list.resize(data_list.size());
-	if (data_list.size() == 1) {
-		rel_meas_list[0] = 0.0;
-		return;
-	}
-	vector<double> sortedData = data_list;
-	sort(sortedData.begin(), sortedData.end());
-	// Calculate Rank
-	for (size_t i = 0; i < data_list.size(); ++i) {
-		// Count the number of observations less than or equal to the current value
-		size_t count = count_if(sortedData.begin(), sortedData.end(),
-							[&](double x) { return data_list[i]-x > 0.1; });
-		// Calculate proportion
-		rel_meas_list[i] = static_cast<double>(count);
-	}
-}
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
 	// normalize the measurements with max and min values
@@ -860,47 +621,6 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , 
 		}
 		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
 	}
-}
-
-void calculate_measurement_list_probablistic_distribution(vector<double> &pdf_meas_list, vector<double> data_list)
-{
-	// find the max and min values
-	double max_val = *max_element(data_list.begin(), data_list.end());
-	double min_val = *min_element(data_list.begin(), data_list.end());
-	int data_size = data_list.size();
-	int n_bins = 10;
-	if (abs(max_val - min_val) < 1e-2 )
-	{
-		printf("max and min are the same! set uniform distribution\n");
-		// uniform distribution
-		for (int i = 0; i < n_bins; i++){
-			pdf_meas_list.push_back(double(1.0)/double(n_bins));
-		}
-		return;
-	}
-	// classify the data into bins
-	double bin_width = (max_val - min_val)/ double(n_bins);
-	vector<int> bin_count(n_bins, 0);
-	for (int i = 0; i < data_size; i++)
-	{
-		if (data_list[i] < 0)
-			data_list[i] = 0;
-		int bin_idx = floor(data_list[i]- min_val / bin_width);
-		if (bin_idx > n_bins-1)
-			bin_idx = n_bins-1;
-		if (bin_idx < 0)
-			bin_idx = 0;
-		bin_count[bin_idx]++;
-	}
-	// calculate the probability of each bin
-	//printf("pdf is: ");
-	for (int i = 0; i < n_bins; i++)
-	{
-
-		pdf_meas_list.push_back(double(bin_count[i]) / double(data_size));
-		//printf("%f, ", double(bin_count[i]) / double(data_size));
-	}
-	//printf("\n");
 }
 
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev)
@@ -967,36 +687,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 		sum_tmp *= 0.8 * double(history.size)/(double(history.size) + 1);//best result with exp 0.5
 		likelihood = (exp(-sum_tmp));
 	}
-
-	//-----model fixed threshold, penalty on relative concentration history -------
-	
-	if (simulation_parameters.gasHitMethod == FIXED_THRES_AND_GAUSSIAN_CDF){
-		double rel_hist_val = 0.0;
-		for (int i = 0; i < history.size; i++)
-		{
-			if (stddev == 0)
-				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, 0.01);
-			else
-				rel_hist_val = calculate_measurement_gaussian_CDF(history.measurement[i], mean, stddev);
-			if (model_c_avg[i] < simulation_parameters.gas_hit_threshold)
-			{
-				model_hit = 0;		 // for plotting
-				sum_tmp += rel_hist_val; // larger penalty if value detected is large and model has a miss
-			}
-			else
-			{
-				model_hit = 1;
-				sum_tmp += 1 - rel_hist_val; // small penalty if model hit and high concentration measurement
-			}
-			history.gas_hit_event[i] = model_hit; // will have to be re-run at the end of the algo with the expected source location as input for plotting
-		}
-
-		sum_tmp *= 0.8;
-		likelihood = (exp(-sum_tmp));
-	}
-
-	//-----------------dynamic thresholds and constant penalty--------------------------
-
 	//-------------------------min max avg threshold-------------------------------
 	
 	if (simulation_parameters.gasHitMethod == MIN_MAX_THRES){

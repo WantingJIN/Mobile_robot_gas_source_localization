@@ -62,7 +62,6 @@ eGasFeature parse_gas_feature(const char* str) {
 	if (strcmp(str, "ABSOLUTE_VALUE") == 0) return ABSOLUTE_VALUE;
 	if (strcmp(str, "GASHIT") == 0) return GASHIT;
 	if (strcmp(str, "RELATIVE_VALUE") == 0) return RELATIVE_VALUE;
-	if (strcmp(str, "PDF") == 0) return PDF;
 	fprintf(stderr, "Unknown gas feature: %s\n", str);
 	exit(1);
 }
@@ -80,12 +79,8 @@ eInfoFeature parse_info_feature(const char* str) {
 }
 eRelativeMethod parse_relative_method(const char* str) {
 	if (strcmp(str, "NORMALIZATION") == 0) return NORMALIZATION;
-	if (strcmp(str, "GAUSSIAN_CDF") == 0) return GAUSSIAN_CDF;
-	if (strcmp(str, "M_DISTANCE") == 0) return M_DISTANCE;
 	if (strcmp(str, "EMPIRICAL_CDF") == 0) return EMPIRICAL_CDF;
 	if (strcmp(str, "EMPIRICAL_CDF_AND_SLOPE") == 0) return EMPIRICAL_CDF_AND_SLOPE;
-	if (strcmp(str, "SPEARMAN") == 0) return SPEARMAN;
-	if (strcmp(str, "KENDALL") == 0) return KENDALL;
 	if (strcmp(str, "EMPIRICAL_CDF_NUM") == 0) return EMPIRICAL_CDF_NUM;
 	fprintf(stderr, "Unknown relative method: %s\n", str);
 	exit(1);
@@ -109,7 +104,6 @@ eGasHitMethod parse_gas_hit_method(const char* str) {
 	if (strcmp(str, "MIN_MAX_THRES") == 0) return MIN_MAX_THRES;
 	if (strcmp(str, "SLIDING_WINDOW_THRES") == 0) return SLIDING_WINDOW_THRES;
 	if (strcmp(str, "SLIDING_WINDOW_THRES_NUM") == 0) return SLIDING_WINDOW_THRES_NUM;
-	if (strcmp(str, "FIXED_THRES_AND_GAUSSIAN_CDF") == 0) return FIXED_THRES_AND_GAUSSIAN_CDF;
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
@@ -140,7 +134,6 @@ SimulationParameters::SimulationParameters(){
       calibrationMode = OFF;
 	simuMode = ONLINE; 
 	R0 = 100;
-	gas_sensor_noise_var = 40000;
 }
 
 
@@ -202,8 +195,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			R0 = atof(value);
 		} else if (strcmp(key, "simuMode") == 0) {
 			simuMode = parse_simu_mode(value);
-		} else if (strcmp(key, "gas_sensor_noise_var") == 0) {
-			gas_sensor_noise_var = atoi(value);
 		} else if (strcmp(key, "sigma") == 0) {
 			sigma = atof(value);
 		} else if (strcmp(key, "lambda") == 0) {
@@ -259,7 +250,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
 	fprintf(sim_param_file, "R0 %f\n", R0);
-	fprintf(sim_param_file, "gas_sensor_noise_var %d\n", gas_sensor_noise_var);
 	fprintf(sim_param_file, "sigma %f\n", sigma);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fclose(sim_param_file);

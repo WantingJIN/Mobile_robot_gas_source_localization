@@ -244,13 +244,15 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			// // add some random noise to the sensor reading
 			// // define the sensor noise as a Gaussian distribution with mean = 0 
 			// double mean = 0.0;
-			// double sensor_noise = generateGaussianNoise(mean, simulation_parameters.gas_sensor_noise_var);
+			// double gas_sensor_noise_var = 40000;
+			// double sensor_noise = generateGaussianNoise(mean, gas_sensor_noise_var);
 			// // gaussian noise
 			// *sensor_reading += sensor_noise;
 			// // constant error
 			// //*sensor_reading += 200.0;
 			// // scaling error
 			// //*sensor_reading *= 2.0;
+			// Heteroscedastic Noise = background noise + noise propotional to the signal (intermittency of the plume)
 			addNoise(sensor_reading, 69.33, 10.8);
 		}
 		if (*sensor_reading < 0)

@@ -22,6 +22,5 @@ gasHitThres = 1000
 calibrationMode = OFF
 simuMode = ONLINE
 R0 = 1500
-gas_sensor_noise_var = 10000
 sigma = 0.48
 lambda = 0.7

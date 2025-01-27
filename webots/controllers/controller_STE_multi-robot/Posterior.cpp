@@ -487,22 +487,10 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	if (simulation_parameters.gasFeature == GASHIT)
 	{
 		printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
-		calculate_data_distribution(history.measurement, mean, stddev);
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
-		if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
-		{
-			calculate_data_distribution(history.measurement, mean, stddev);
-			calculate_measurements_list_gaussian_CDF(relative_history_meas, history.measurement, mean, stddev);
-			
-		}
-		if (simulation_parameters.relativeMethod == M_DISTANCE){
-			calculate_data_distribution(history.measurement, mean, stddev);
-			printf("mean %f, stddev %f\n", mean, stddev);
-			calculate_measurements_list_M_distance(relative_history_meas, history.measurement, mean, stddev);
-		}
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
@@ -513,16 +501,8 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		{
 			calculate_measurements_list_empirical_CDF(relative_history_meas, slope_history_meas, history.measurement);
 		}
-		if (simulation_parameters.relativeMethod == SPEARMAN)
-		{
-			calculate_measurements_list_rank(relative_history_meas, history.measurement);
-		}
 
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
-	}
-	if (simulation_parameters.gasFeature == PDF)
-	{
-		calculate_measurement_list_probablistic_distribution(pdf_history_meas, history.measurement);
 	}
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -540,14 +520,6 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
-		}
-		if (simulation_parameters.gasFeature == MI)
-		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_MI(history, sample, i, model);
-		}
-		if (simulation_parameters.gasFeature == PDF)
-		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_pdf(history, pdf_history_meas, sample, i, model);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
