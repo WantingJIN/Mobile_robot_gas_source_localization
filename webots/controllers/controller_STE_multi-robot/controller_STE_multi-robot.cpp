@@ -950,6 +950,23 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 		sum_tmp *= 0.8; //best result with exp 0.5
 		likelihood = (exp(-sum_tmp));
 	}
+	if (simulation_parameters.gasHitMethod == FIXED_THRES_NUM){
+		for (int i = 0; i < history.size; i++){
+			if (history.measurement[i] < simulation_parameters.gas_hit_threshold)
+				history_hit = 0;
+			else
+				history_hit = 1;
+			history.gas_hit_event[i] = history_hit;
+			if (model_c_avg[i] < simulation_parameters.gas_hit_threshold)
+				model_hit = 0;
+			else
+				model_hit = 1;
+		if (history_hit != model_hit)
+			sum_tmp += 1;
+		}
+		sum_tmp *= 0.8 * double(history.size)/(double(history.size) + 1);//best result with exp 0.5
+		likelihood = (exp(-sum_tmp));
+	}
 
 	//-----model fixed threshold, penalty on relative concentration history -------
 	
@@ -1056,6 +1073,40 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 			}
 		}
 		sum_tmp *= 0.8;
+		likelihood = (exp(-sum_tmp));
+	}
+	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES_NUM)
+	{
+		//double lamda = 0.8; //0.5;
+		double his_thrs = 0;
+		double mod_thrs = 0;
+		double prev_mod_thrs = 0.0;
+		double prev_his_thrs = 0.0;
+
+		//Dynamic thresholds computation
+		for (int i = 0; i < history.size; i++){
+			if (i == 0){
+				prev_his_thrs = history.measurement[i];
+				his_thrs = history.measurement[i];
+				prev_mod_thrs = model_c_avg[i];
+				mod_thrs = model_c_avg[i];
+			}
+			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement[i];
+			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
+			//store history threshold for next iteration
+			prev_his_thrs = his_thrs;
+			prev_mod_thrs = mod_thrs;
+
+			// decide whether the gas hit event happens
+			history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+			history.gas_hit_event[i] = history_hit;
+			model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
+			// update the likelihood based on the similarity of the hit event
+			if (history_hit != model_hit){
+				sum_tmp +=1;
+			}
+		}
+		sum_tmp *= 0.8 * double(history.size)/(double(history.size) + 1);
 		likelihood = (exp(-sum_tmp));
 	}
 
@@ -2217,8 +2268,8 @@ void state_estimating()
 	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
 	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	//if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
-	if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
+	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
+	//if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
 	{
 		// the end
 		FSM.state = STATE_FINISHED;

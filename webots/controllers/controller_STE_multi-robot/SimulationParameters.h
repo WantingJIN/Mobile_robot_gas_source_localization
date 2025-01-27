@@ -83,7 +83,7 @@ typedef enum relativeMethod
 	EMPIRICAL_CDF_AND_SLOPE = 4,
 	SPEARMAN = 5,
 	KENDALL = 6,
-	EMPIRICAL_CDF_NUM = 7,
+	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
 } eRelativeMethod;
 
 typedef enum simuMode{
@@ -104,6 +104,8 @@ typedef enum gasHitMethod
 	MIN_MAX_THRES = 1,
 	SLIDING_WINDOW_THRES = 2,
 	FIXED_THRES_AND_GAUSSIAN_CDF = 3,
+	SLIDING_WINDOW_THRES_NUM = 4,   // The likehood function is defined diffrently
+	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
 // parameters to estimate

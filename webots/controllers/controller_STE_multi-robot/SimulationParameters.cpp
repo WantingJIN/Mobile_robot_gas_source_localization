@@ -105,8 +105,10 @@ eCalibrationMode parse_calibration_mode(const char* str) {
 }
 eGasHitMethod parse_gas_hit_method(const char* str) {
 	if (strcmp(str, "FIXED_THRES") == 0) return FIXED_THRES;
+	if (strcmp(str, "FIXED_THRES_NUM") == 0) return FIXED_THRES_NUM;
 	if (strcmp(str, "MIN_MAX_THRES") == 0) return MIN_MAX_THRES;
 	if (strcmp(str, "SLIDING_WINDOW_THRES") == 0) return SLIDING_WINDOW_THRES;
+	if (strcmp(str, "SLIDING_WINDOW_THRES_NUM") == 0) return SLIDING_WINDOW_THRES_NUM;
 	if (strcmp(str, "FIXED_THRES_AND_GAUSSIAN_CDF") == 0) return FIXED_THRES_AND_GAUSSIAN_CDF;
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
