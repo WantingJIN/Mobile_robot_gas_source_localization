@@ -8,11 +8,11 @@ else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end
    
-general_folder=[root_path, '/Results/Results_2024-12-03/middle_rr/9'];
+general_folder=[root_path, '/Results_offline_2024-12-17'];
 
-experiment_path = uigetdir(general_folder);
+experiment_path = uigetdir(general_folder); 
 folder_name_k4 = [experiment_path, '/k4'];
-folder_name_pc = [experiment_path, '/pc'];
+folder_name_pc = [experiment_path, '/pc'];  
 
 pdf = dlmread([folder_name_pc, '/posterior_pdf_3D.csv']);
 

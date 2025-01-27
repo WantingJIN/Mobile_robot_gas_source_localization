@@ -4,10 +4,10 @@ clear all; clc; close all;
 % the general folder
 close all; clc; clear all;
 % choose the last folder in log files
-% work_station = "Desktop";
-work_station = "Laptop"
+work_station = "Desktop";
+% work_station = "Laptop";
 if work_station == "Desktop"
-    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera/Results';
 else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end
@@ -82,13 +82,16 @@ for i=1:number
     error_list(i,2) = source_real_position(2) - expected_a_posteriori(i,2);
     entropy = dlmread([folder_name_pc, '/entropy.csv']);
     entropy_list(i,1) = entropy(end,1);
+    % trajectory_length
+    trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
     
     max_a_post_list(i,1:2) = max_a_post(end,2:3);
     convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
     % experimental time
     goal_positions = dlmread([folder_name_k4, '/goal_position.csv']);
     exp_time_list(i) = (goal_positions(end, 5) - goal_positions(1,5))/1000;
-    
+    measurement_his = dlmread([folder_name_k4, '/measurement_history.csv']);
+    max_measurement_list(i) = max(measurement_his(:,2));
     % trajectory_length
     trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
     traj_length_sum = 0;
@@ -190,5 +193,19 @@ grid on;
 xlabel('Release rate');
 title('Traveling distance');
 ylabel('Distance (m)');
+
+figure();
+plot([0 length(unique(release_rate_list))], [0 0], 'g');
+hold on;
+boxplot(max_measurement_list, release_rate_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%ylim([-3,4])
+xlabel('Release rate');
+title('Maximal measurement list');
+ylabel('mV');
+
 
 saveas(f,[general_folder '/test_maps_results_comparison_all.png']);

@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/sensor_model_noise/MOX_var_40000/source_middle/empirical_cdf_diff_release/1/10');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/relative_meas/new_EMPIRICAL_cdf_num/0.48');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 

@@ -8,7 +8,7 @@ clear all; clc; %close all;
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'relative_meas/MOX_var_40000/source_middle/empirical_cdf_different_thres'];
+dispatched_folder = [general_folder,'gas_hit/MOX_linear_noise/sliding_window_num'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
