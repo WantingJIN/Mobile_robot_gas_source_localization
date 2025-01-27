@@ -51,6 +51,7 @@ typedef enum planningStrategy
 	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
 	INFO_CLUSTERING = 7,
+	NEW_STRATEGY = 8,
 } ePlanningStrategy;
 
 typedef enum gasFeature
@@ -59,6 +60,7 @@ typedef enum gasFeature
 	GASHIT = 1,
 	RELATIVE_VALUE = 2,
 	PDF = 3,
+	MI = 4,
 } eGasFeature;
 
 typedef enum visitedList
@@ -79,6 +81,7 @@ typedef enum relativeMethod
 	GAUSSIAN_CDF = 1,
 	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
+	EMPIRICAL_CDF_AND_SLOPE = 4,
 } eRelativeMethod;
 
 typedef enum simuMode{
@@ -125,8 +128,13 @@ class SimulationParameters{
 		float vel_factor; 
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
+		float R0;
+		int gas_sensor_noise_var;
+	      float sigma;
+		float lambda;
+		float sigmascoringfunction;
 
-		eEvaluationMethod MCMC_or_exhaustive_eval; 
+		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 
 		eSamplingMode samplingMode; 
 		eProcessingMode processingMode; 

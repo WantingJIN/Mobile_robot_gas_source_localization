@@ -52,6 +52,7 @@ ePlanningStrategy parse_planning_strategy(const char* str) {
 	if (strcmp(str, "RANDOM") == 0) return RANDOM;
 	if (strcmp(str, "LAWNMOWER") == 0) return LAWNMOWER;
 	if (strcmp(str, "BELIEF_CLUSTERING") == 0) return BELIEF_CLUSTERING;
+	if (strcmp(str, "NEW_STRATEGY") == 0) return NEW_STRATEGY;
 	if (strcmp(str, "INFORMATIVE_KLD") == 0) return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0) return INFO_CLUSTERING;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
@@ -133,6 +134,8 @@ SimulationParameters::SimulationParameters(){
 	gasHitMethod = SLIDING_WINDOW_THRES; 
       calibrationMode = OFF;
 	simuMode = ONLINE; 
+	R0 = 100;
+	gas_sensor_noise_var = 40000;
 }
 
 
@@ -190,8 +193,18 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			gas_hit_threshold = atoi(value);
 		} else if (strcmp(key, "calibrationMode") == 0) {
 			calibrationMode = parse_calibration_mode(value);
+		} else if (strcmp(key, "R0") == 0) {
+			R0 = atof(value);
 		} else if (strcmp(key, "simuMode") == 0) {
 			simuMode = parse_simu_mode(value);
+		} else if (strcmp(key, "gas_sensor_noise_var") == 0) {
+			gas_sensor_noise_var = atoi(value);
+		} else if (strcmp(key, "sigma") == 0) {
+			sigma = atof(value);
+		} else if (strcmp(key, "lambda") == 0) {
+			lambda = atof(value);	
+		} else if (strcmp(key, "sigmascoringfunction") == 0) {
+			sigmascoringfunction = atof(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -242,6 +255,10 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "calibration_mode %d\n", calibrationMode);
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
+	fprintf(sim_param_file, "R0 %f\n", R0);
+	fprintf(sim_param_file, "gas_sensor_noise_var %d\n", gas_sensor_noise_var);
+	fprintf(sim_param_file, "sigma %f\n", sigma);
+	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fclose(sim_param_file);
 
 }

@@ -61,6 +61,7 @@ extern FILE *gas_information_map_logfile;
 extern FILE *gas_hit_variance_map_logfile;
 extern FILE *experiment_time_logfile;
 extern FILE *visited_list_logfile;
+extern FILE* scores_map_logfile;
 extern char goalposition_logfile_name[512];
 extern char measurements_logfile_name[512];
 extern char posterior_logfile_name[512];
@@ -79,6 +80,7 @@ extern char gas_information_map_logfile_name[512];
 extern char gas_hit_variance_map_logfile_name[512];
 extern char experiment_time_logfile_name[512];
 extern char visited_list_logfile_name[512];
+extern char scores_map_logfile_name[512];
 
 // read logfile from the experiment
 extern char logfile_folder_name[256];

@@ -81,6 +81,7 @@ Posterior::Posterior(PlumeModel *input_model)
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 1 / (float)nbr_element_marginal;
 
+
 	// printf("expected_value: %f %f %f %f %f\n",
 	//	model->expected_value[0], model->expected_value[1], model->expected_value[2], model->expected_value[3], model->expected_value[4]);
 }
@@ -286,6 +287,10 @@ void Posterior::process()
 	double bin_values[nbr_dimension];
 	max = 0;
 	entropy = 0;
+	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_max = 0;
+	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_max = 0;
 	for (j = 0; j < nbr_dimension; j++)
 		model->expected_value[j] = 0;
 
@@ -318,6 +323,17 @@ void Posterior::process()
 			model->expected_value[j] += bin_values[j] * pdf[i];
 		// marginal
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
+		// spatial spread
+		if (pdf[i] > 1e-3){
+			if (indices[0] > possible_source_x_index_max)
+				possible_source_x_index_max = indices[0];
+			if (indices[1] > possible_source_y_index_max)
+				possible_source_y_index_max = indices[1];
+			if (indices[0] < possible_source_x_index_min)
+				possible_source_x_index_min = indices[0];
+			if (indices[1] < possible_source_y_index_min)
+				possible_source_y_index_min = indices[1];	
+		}
 	}
 	entropy = -1 * entropy;
 	// print on screen
@@ -325,6 +341,9 @@ void Posterior::process()
 		model->print_expected_val();
 	if (VERBOSE)
 		model->print_max_a_post_val();
+	
+	x_spatial_spread = possible_source_x_index_max - possible_source_x_index_min;
+	y_spatial_spread = possible_source_y_index_max - possible_source_y_index_min;
 }
 
 // efficient sampling through MCMC
@@ -461,6 +480,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	double sample[nbr_dimension];
 	vector<double> relative_history_meas;
+	vector<double> slope_history_meas;
 	vector<double> pdf_history_meas;
 	double mean, stddev;
 
@@ -489,7 +509,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 		{
-			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement);
+			calculate_measurements_list_empirical_CDF(relative_history_meas, slope_history_meas, history.measurement);
 		}
 		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}
@@ -514,6 +534,10 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		{
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
 		}
+		if (simulation_parameters.gasFeature == MI)
+		{
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_MI(history, sample, i, model);
+		}
 		if (simulation_parameters.gasFeature == PDF)
 		{
 			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_pdf(history, pdf_history_meas, sample, i, model);
@@ -537,7 +561,7 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 	{
 		if (pdf[i] > 0 && P.pdf[i] > 0)
 		{
-			// DKL += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
+			// KLD += ((P.pdf[i]+0.00000000000001)/P.sum) * log(((P.pdf[i]+0.00000000000001)/P.sum) / (pdf[i]+0.00000000000001));
 			KLD += (P.pdf[i] / P.sum) * log((P.pdf[i] / P.sum) / pdf[i]);
 			// P is not normalized, but its sum was calculated and updated
 		}

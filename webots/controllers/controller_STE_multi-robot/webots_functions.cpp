@@ -146,6 +146,7 @@ void init()
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
+	fprintf(sim_param_file, "sigmascoringfunction %f\n", simulation_parameters.sigmascoringfunction);
 	fclose(sim_param_file);
 
 	simulation_parameters.log_simulation_parameters(config_logfile_name);
@@ -186,10 +187,10 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 	{
 		// printf("odor measurement : %f \n",odor_measurement);
 		//  For PID sensor, the sensor reading is equal to the odor concentration
-		
 		if (simulation_parameters.gasSensor == PID)
 		{
 			*sensor_reading = odor_concentration;
+			return;
 		}
 		// For the MOX sensor, the sensor properties are modeled as a first-order system
 		if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == SLOW_MOX 
@@ -226,10 +227,9 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 		simulation_parameters.gasSensor == NOISY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
 		{
 			// add some random noise to the sensor reading
-			// define the sensor noise as a Gaussian distribution with mean 0 and variance 100
+			// define the sensor noise as a Gaussian distribution with mean = 0 
 			double mean = 0.0;
-			double variance = 10000;
-			double sensor_noise = generateGaussianNoise(mean, variance);
+			double sensor_noise = generateGaussianNoise(mean, simulation_parameters.gas_sensor_noise_var);
 			// gaussian noise
 			*sensor_reading += sensor_noise;
 			// constant error
@@ -238,7 +238,6 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			//*sensor_reading *= 2.0;
 
 		}
-		
 		if (simulation_parameters.calibrationMode == LINEAR)
 		{
 			double raw_reading_before_calibration;
@@ -250,6 +249,10 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			double raw_reading_before_calibration;
 			nolinear_reverse_con_to_raw_reading(sensor_reading, raw_reading_before_calibration);
 			*sensor_reading = raw_reading_before_calibration;
+		}
+		if (*sensor_reading < 0)
+		{
+			*sensor_reading = 0;
 		}
 	}
 }
@@ -264,7 +267,13 @@ void linear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_s
 }
 void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
 {
-	MOX_sensor_reading = pow(*odor_concentration/10,3);
+	// the odor concentration is actually simulating the sensor reading instead of the concentration on [ppm]
+	// in the datesheet, the detectable gases concentration range is from 10 to 500
+	// divide thhe simulated measurement by 100 to approximate the concentration in ppm
+	double Rs = pow(*odor_concentration/(100*1.488),-0.632) * simulation_parameters.R0;
+	double RL = 51.0; //kOhm
+	double Vc = 3300; //mV
+	MOX_sensor_reading = Vc * RL / (RL + Rs);  // the gas sensor output is the voltage of the loading resistor
 	if (MOX_sensor_reading < 0)
 		MOX_sensor_reading = 0;
 }

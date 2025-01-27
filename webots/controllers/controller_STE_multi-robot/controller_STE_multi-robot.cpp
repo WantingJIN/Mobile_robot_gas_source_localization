@@ -17,6 +17,7 @@
 // #include "aStar.h"
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
+#include "MutualInformation.hpp"
 
 using namespace std;
 
@@ -43,6 +44,7 @@ FILE *gas_information_map_logfile;
 FILE *gas_hit_variance_map_logfile;
 FILE *experiment_time_logfile;
 FILE *visited_list_logfile;
+FILE* scores_map_logfile;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
@@ -65,6 +67,7 @@ char gas_information_map_logfile_name[512];
 char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
+char scores_map_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -103,6 +106,7 @@ DeepCFDPlumeModel2D plume_model;
 // gas information map
 double gas_information_map[x_nbins * y_nbins] = {0};
 double gas_hit_variance_map[x_nbins * y_nbins] = {0};
+double scores_map[x_nbins*y_nbins] = {0};
 int cell_visited_list[x_nbins * y_nbins] = {0};
 
 // current posterior distribution
@@ -350,16 +354,24 @@ void log_entropy()
 	fclose(entropy_logfile);
 }
 
-void log_gas_information_map()
-{
-	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "a");
+void log_gas_information_map() {
+    // Vérifiez la taille pour éviter les erreurs
+    int expected_size = x_nbins * y_nbins;
+    if (expected_size != 400) {
+        fprintf(stderr, "Error: Expected 400 values, but got %d.\n", expected_size);
+        return;
+    }
 
-	for (int i = 0; i < x_nbins * y_nbins; i++)
-		fprintf(gas_information_map_logfile, "%.9f, ", gas_information_map[i]);
+    gas_information_map_logfile = fopen(gas_information_map_logfile_name, "a");
 
-	fprintf(gas_information_map_logfile, "\n");
+    // Parcourez jusqu'à l'avant-dernière valeur
+    for (int i = 0; i < (expected_size - 1); i++)
+        fprintf(gas_information_map_logfile, "%.9f, ", gas_information_map[i]);
 
-	fclose(gas_information_map_logfile);
+    // Ajoutez la dernière valeur sans virgule
+    fprintf(gas_information_map_logfile, "%.9f\n", gas_information_map[expected_size - 1]);
+
+    fclose(gas_information_map_logfile);
 }
 
 void log_gas_hit_variance_map()
@@ -428,6 +440,19 @@ void log_experiment_time()
 	fclose(experiment_time_logfile);
 }
 
+void log_scores_map() {
+    sprintf(scores_map_logfile_name, "%s/Results/current/101/scores_map.csv", workspacePath);
+    scores_map_logfile = fopen(scores_map_logfile_name, "a");
+
+    for (int i = 0; i < (x_nbins * y_nbins) - 1; i++)  // Jusqu'à l'avant-dernière valeur
+        fprintf(scores_map_logfile, "%.9f, ", scores_map[i]);
+
+    // Ajoutez la dernière valeur sans virgule
+    fprintf(scores_map_logfile, "%.9f\n", scores_map[(x_nbins * y_nbins) - 1]);
+
+    fclose(scores_map_logfile);
+}
+
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps
@@ -465,6 +490,41 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 	return (exp(-0.5 * sum_tmp));
 }
 
+double likelihood_MI(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model) {
+	
+	vector<double> model_c_avg(history.size);
+
+	int nbr = history.size;
+	float px[nbr], py[nbr];
+	int idx[nbr], idy[nbr];
+
+	// get indices in the map
+	for (int i = 0; i < nbr; i++)
+	{
+		px[i] = history.position[i].x;
+		py[i] = history.position[i].y;
+		idx[i] = floor((px[i] - source_x_min) / x_resol);
+		idy[i] = floor((py[i] - source_y_min) / y_resol);
+	}
+
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+
+	int numBins = 10; // Number of bins for discretization
+      double mutualInformation = 0.0;
+	
+	try {
+		std::vector<int> discreteTheoretical = discretizeData(model_c_avg, numBins);
+		std::vector<int> discreteReal = discretizeData(history.measurement, numBins);
+
+		mutualInformation = calculateMutualInformation(discreteTheoretical, discreteReal);
+		std::cout << "Mutual Information: " << mutualInformation << std::endl;
+	} catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+
+	return mutualInformation;
+}
+
 // Likelihood for relative concentration with precomputed gas maps
 double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
 {
@@ -497,39 +557,66 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 
 	vector<double> rel_model_list;
 	vector<double> pdf_model_list;
+	vector<double> slope_model_list;
 	double model_mean;
 	double model_stddev;
+	double rel_model_val, rel_hist_val; // mean, stddev,
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-		sigma = 0.35; //works well for Normalization
+		sigma = 0.49; //works well for Normalization
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		}
 	}
 	if (simulation_parameters.relativeMethod == M_DISTANCE)
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_M_distance(rel_model_list, model_c_avg, model_mean, model_stddev);
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		}
 	}
 	if (simulation_parameters.relativeMethod == GAUSSIAN_CDF)
 	{
 		calculate_data_distribution(model_c_avg, model_mean, model_stddev);
 		calculate_measurements_list_gaussian_CDF(rel_model_list, model_c_avg, model_mean, model_stddev);
-		sigma = 0.22;// works well for Gaussian CDF
+		sigma = 0.31;// works well for Gaussian CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(sigma * sigma);
+		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, model_c_avg); 
-		sigma = 0.4;// works well for Empirical CDF
+		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg); 
+		//sigma = 0.45;// works well for Empirical CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+		}
 	}
-	double rel_model_val, rel_hist_val; // mean, stddev,
-	for (int i = 0; i < history.size; i++)
+	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE)
 	{
-		rel_hist_val = rel_history_list[i];
-		rel_model_val = rel_model_list[i];
-		// if (real_source_idx == soure_pos_idx)
-		// 	printf("hist_val:%f, rel_hist_val: %f, model_val: %f, rel_model_val: %f @ pos (%f, %f)\n", history.measurement[i],rel_hist_val, model_c_avg[i], rel_model_val, history.position[i].x, history.position[i].y);
-		sum_tmp += pow(rel_model_val - rel_hist_val, 2);
+		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg); 
+		//sigma = 0.45;// works well for Empirical CDF
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = rel_history_list[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+		}
 	}
-	sum_tmp /= (2 * sigma * sigma); // best (2*0.15*0.15);
 
 	return (exp(-0.5 * sum_tmp));
 }
@@ -655,24 +742,34 @@ void calculate_measurements_list_M_distance(vector<double> &rel_meas_list, vecto
 
 
 }
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list)
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list)
 {
 	if (data_list.size() == 1) {
 		rel_meas_list.push_back(0);
+		slope_list.push_back(0);
 		return;
 	}
 	vector<double> sortedData = data_list;
 	sort(sortedData.begin(), sortedData.end());
 
 	// Calculate ECDF
-	vector<double> ecdf(data_list.size());
+    	rel_meas_list.resize(data_list.size());
+   	slope_list.resize(data_list.size());
 	for (size_t i = 0; i < data_list.size(); ++i) {
 		// Count the number of observations less than or equal to the current value
 		size_t count = count_if(sortedData.begin(), sortedData.end(),
-							[&](double x) { return x < data_list[i]; });
+							[&](double x) { return data_list[i]-x > 0.1; });
 		// Calculate proportion
-		rel_meas_list.push_back(static_cast<double>(count) / data_list.size());
+		rel_meas_list[i] = static_cast<double>(count) / data_list.size();
 	}
+	// Calculate Normalized Slope of ECDF
+	double data_range = sortedData.back() - sortedData.front();
+    	for (size_t i = 1; i < sortedData.size(); ++i) {
+        double delta_x = (sortedData[i] - sortedData[i-1]) / data_range;
+        slope_list[i] = (delta_x > 0) ? (delta_x / data_list.size()) : 0.0;
+    	}
+	// Handle the first slope value
+      slope_list[0] = slope_list[1];
 }
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
@@ -859,7 +956,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//-------------adaptive threshold- based on recent measurements------------------------------
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES)
 	{
-		double lamda = 0.8; //0.5;
+		//double lamda = 0.8; //0.5;
 		double his_thrs = 0;
 		double mod_thrs = 0;
 		double prev_mod_thrs = 0.0;
@@ -873,8 +970,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				prev_mod_thrs = model_c_avg[i];
 				mod_thrs = model_c_avg[i];
 			}
-			his_thrs = lamda * prev_his_thrs + (1 - lamda) * history.measurement[i];
-			mod_thrs = lamda * prev_mod_thrs + (1 - lamda) * model_c_avg[i];
+			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement[i];
+			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
 			//store history threshold for next iteration
 			prev_his_thrs = his_thrs;
 			prev_mod_thrs = mod_thrs;
@@ -888,7 +985,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp +=1;
 			}
 		}
-		sum_tmp *= 0.6;
+		sum_tmp *= 0.8;
 		likelihood = (exp(-sum_tmp));
 	}
 
@@ -986,7 +1083,7 @@ void information_gain_navigation_approx()
 		future_posterior.MCMC_evaluation(fake_history);
 		// calculate the expected information gain
 		KLD = posterior.Kullback_Leibler_divergence(future_posterior);
-		// printf("DKL: %f _______________________\n", DKL);
+		// printf("KLD: %f _______________________\n", KLD);
 		if (KLD > max_KLD)
 		{
 			max_KLD = KLD;
@@ -1187,7 +1284,8 @@ void belief_clustering_planning()
 	{
 		printf("no cluster found \n");
 		fprintf(console_logfile, "no cluster found \n");
-		maximal_information_planning();
+		maximal_belief_planning();
+		//maximal_information_planning();
 		return;
 	}
 	else
@@ -1250,7 +1348,8 @@ void belief_clustering_planning()
 		if (!find_goal)
 		{
 			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
-			maximal_information_planning();
+			//maximal_information_planning();
+			maximal_belief_planning();
 			return;
 		}
 		else
@@ -1352,6 +1451,563 @@ void informative_clustering_planning()
 		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+std::vector<Position> findOptimalPath(Position start, double target[2]) {
+    // Liste des positions à explorer (openSet), avec coût total (g + h)
+    std::vector<std::tuple<Position, double>> openSet;
+    openSet.push_back(std::make_tuple(start, 0.0));  // Coût initial à 0
+
+    // Liste des positions visitées (closedSet)
+    std::unordered_set<int> closedSet;
+
+    // Calcul des indices pour la liste de visites
+    auto index = [](Position pos) {
+		return pos.y * x_nbins + pos.x;           
+        //return pos.x * y_nbins + pos.y;
+    };
+
+    // Calcul de l'heuristique (distance de Manhattan)
+    auto heuristic = [](Position a, Position b) {
+        return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+    };
+
+    // Dictionnaire pour stocker les parents et les coûts associés
+    std::unordered_map<int, Position> cameFrom;
+    std::unordered_map<int, double> gScore;
+    gScore[index(start)] = 0.0;  // Coût de départ est 0
+
+    std::vector<Position> optimalPath;
+
+    while (!openSet.empty()) {
+        // Trier openSet en fonction du coût total (g + h)
+        std::sort(openSet.begin(), openSet.end(), [&heuristic, &target](const auto& a, const auto& b) {
+            Position posA = std::get<0>(a);
+            Position posB = std::get<0>(b);
+            double gA = std::get<1>(a);
+            double gB = std::get<1>(b);
+			double hA = heuristic(posA, Position{static_cast<float>(target[0]), static_cast<float>(target[1])});
+			double hB = heuristic(posB, Position{static_cast<float>(target[0]), static_cast<float>(target[1])});
+
+            return (gA + hA) < (gB + hB); // Comparaison du coût total (g + h)
+        });
+
+        // Prendre la position avec le coût total le plus faible
+        auto current = openSet.front();
+        openSet.erase(openSet.begin());
+        Position currentPos = std::get<0>(current);
+        double currentCost = std::get<1>(current);
+
+        // Ajouter la position actuelle au chemin optimal
+        optimalPath.push_back(currentPos);
+
+        // Si la position cible est atteinte, on termine
+        if (currentPos.x == target[0] && currentPos.y == target[1]) {
+            // Reconstituer le chemin en partant de la cible
+            std::vector<Position> path;
+            Position curr = currentPos;
+            while (cameFrom.find(index(curr)) != cameFrom.end()) {
+                path.push_back(curr);
+                curr = cameFrom[index(curr)];
+            }
+            std::reverse(path.begin(), path.end());
+            return path;  // Retourner le chemin optimal trouvé
+        }
+
+        // Explorer les voisins
+        std::vector<Position> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+        for (const auto& dir : directions) {
+            int nx = currentPos.x + dir.x;
+            int ny = currentPos.y + dir.y;
+
+            // Vérifier si la position voisine est dans les limites de la grille
+            if (nx < 0 || ny < 0 || nx >= x_nbins || ny >= y_nbins) continue;
+			if (nx == 0 || ny == 0 || nx == x_nbins - 1 || ny == y_nbins - 1) continue;
+
+			Position neighbor = Position{static_cast<float>(nx), static_cast<float>(ny)};
+
+            int neighborIndex = index(neighbor);
+
+            // Vérifier si le voisin est déjà dans closedSet (c'est-à-dire exploré)
+            if (closedSet.find(neighborIndex) != closedSet.end()) continue;
+
+            double tentativeGScore = currentCost + 1;  // Le coût du mouvement est toujours 1 (distance de Manhattan)
+            
+            // Si ce voisin n'est pas dans openSet ou si le nouveau coût est plus bas, on le met à jour
+            auto it = std::find_if(openSet.begin(), openSet.end(), [&neighbor](const auto& elem) {
+                return std::get<0>(elem).x == neighbor.x && std::get<0>(elem).y == neighbor.y;
+            });
+
+            if (it == openSet.end() || tentativeGScore < gScore[neighborIndex]) {
+                gScore[neighborIndex] = tentativeGScore;
+
+                // Ajouter ce voisin à openSet et mettre à jour son parent
+                openSet.push_back(std::make_tuple(neighbor, tentativeGScore));
+
+                // Enregistrer d'où vient le voisin pour reconstruire le chemin
+                cameFrom[neighborIndex] = currentPos;
+            }
+        }
+
+        // Ajouter la position actuelle dans closedSet
+        closedSet.insert(index(currentPos));
+    }
+
+    // Si aucun chemin trouvé, retourner un chemin vide
+    return {};
+}
+
+//INDIVIDUAL CELL-BASED STRATEGY IMPLEMENTATION
+void findMaxInfoCell(int maxPos[2], int& maxPos_index) {
+	double best_point[2]={0};
+    maxPos[0] = 0;
+	maxPos[1] = 0;
+    maxPos_index = -1;
+    int maxInfo = gas_information_map[0];
+
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (gas_information_map[i] > maxInfo) {
+            maxInfo = gas_information_map[i];
+			posterior.index_to_param_values(i, best_point);
+            maxPos[0] = best_point[0];  // Mettre à jour la position avec les coordonnées (x, y)
+            maxPos[1] = best_point[1];
+			maxPos_index = i; // Mettre à jour l'index
+        }
+    }
+}
+std::vector<Position> findOptimalPath2(Position start, int target[2]) {
+    // Calculer la valeur dans gas_information_map
+    double value = gas_information_map[int(start.x * y_nbins + start.y)];
+    // Liste des positions à explorer (avec informations et coûts)
+    std::vector<std::tuple<Position, int, double>> openSet;
+	openSet.push_back(std::make_tuple(start, value, 0.0));  // Coût initial à 0
+
+    // Calculer l'indice de départ
+    int startIndex = start.x * y_nbins + start.y;
+
+    // Liste des positions visitées (cell_visited_list déjà initialisé)
+    cell_visited_list[startIndex] = 1;  // Marquer la position de départ comme visitée
+
+    // Directions possibles (horizontales, verticales et diagonales)
+    std::vector<Position> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1},{-1, 1},{1, -1},{1, 1}};
+    std::vector<Position> optimalPath;
+
+    while (!openSet.empty()) {
+        // Trier openSet en fonction du score (information / coût) avant chaque exploration
+        std::sort(openSet.begin(), openSet.end(), [](const auto& a, const auto& b) {
+            return std::get<2>(a) > std::get<2>(b); // Comparaison du score (info / coût)
+        });
+
+        // Prendre le premier élément de la liste (celui avec le meilleur score)
+        auto current = openSet.front();
+        openSet.erase(openSet.begin());
+
+        Position currentPos = std::get<0>(current);
+        int currentInfo = std::get<1>(current);
+        double currentCost = std::get<2>(current);  // Coût calculé jusque-là
+
+        // Si la position cible est atteinte, on termine
+        if (currentPos.x == target[0] && currentPos.y == target[1]) {
+            optimalPath.push_back(currentPos);
+            return optimalPath;
+        }
+
+        // Ajouter la position actuelle au chemin optimal
+        optimalPath.push_back(currentPos);
+
+        // Explorer les voisins
+        for (const auto& dir : directions) {
+            int nx = currentPos.x + dir.x;
+            int ny = currentPos.y + dir.y;
+
+            // Calculer l'indice du voisin
+            int neighborIndex = nx * y_nbins + ny;
+
+            if ((nx < x_nbins) && (ny < y_nbins) && cell_visited_list[neighborIndex] == 0) {
+                int info = currentInfo + gas_information_map[int(nx * y_nbins + ny)];
+
+                // Calculer le coût comme la distance de Manhattan
+                double cost = currentCost + 1;  // Chaque mouvement a un coût de 1 unité
+
+                // Eviter la division par zéro
+                if (cost == 0) continue;
+
+                // Calculer le score comme information sur coût
+                double score = static_cast<double>(0.00000000000000000001*info) / (10000*cost);
+
+                // Ajouter le voisin à la liste openSet
+				openSet.push_back(std::make_tuple(Position{static_cast<float>(nx), static_cast<float>(ny)}, info, score));
+
+                //openSet.push_back(std::make_tuple(Position{nx, ny}, info, score));
+                cell_visited_list[neighborIndex] = 1;  // Marquer comme visité
+            }
+        }
+    }
+
+    return optimalPath;
+}
+
+
+void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, int* cell_visited_list) {
+    // Parcours des cellules dans le voisinage
+    for (int dx = -radius_neighbor; dx <= radius_neighbor; ++dx) {
+        for (int dy = -radius_neighbor; dy <= radius_neighbor; ++dy) {
+            int neighbor_x = x + dx;
+            int neighbor_y = y + dy;
+
+            // Vérifier si la cellule voisine est dans les limites de la grille
+            if (neighbor_x >= 0 && neighbor_x < x_nbins_ && neighbor_y >= 0 && neighbor_y < y_nbins_) {
+                // Calculer l'index dans le tableau
+                int index = neighbor_y * x_nbins_ + neighbor_x;
+                // Marquer la cellule voisine comme visitée
+                cell_visited_list[index] = 1;
+            }
+        }
+    }
+}
+
+std::vector<Position> path_;
+std::vector<Position> path_in_meters;
+std::vector<Position> previous_path;
+std::vector<Position> previous_path_in_meters;
+int compteur = 0;
+double radius = 10000.0;
+double mini_distance = 4.0;
+int previous_current_x_index = 0;
+int previous_current_y_index = 0;
+int maxStagnationIterations = 0;
+int stagnationCounter = 0;
+double max_info_ = -1;
+int best_cell_index = 0;
+int radius_neighbor = 2;
+double sigma = 1;
+
+void Algo() {
+
+	for (int i = 0; i< x_nbins*y_nbins; i++){
+				gas_information_map[i] = posterior.pdf[i];
+			}
+	log_gas_information_map();
+
+    double bestScore = -1000;  // Initialise le meilleur score à une valeur impossible
+    Position bestTarget;    // Position correspondante au meilleur score
+    std::vector<Position> bestPath;  // Chemin optimal correspondant
+	int current_x_index = static_cast<int>((current_position.x - source_x_min) / x_resol);      ///conversion current_pos de metres en index x et y
+    int current_y_index = static_cast<int>((current_position.y - source_y_min) / y_resol);
+    // Parcourir toutes les cellules de la carte
+    for (int y = 0; y < y_nbins; y++) {
+        for (int x = 0; x < y_nbins; x++) {
+			
+			int index_cell = y*x_nbins + x;
+			
+			scores_map[index_cell] = 0;
+			////////////////////////////////////////////////////////////
+			if (gas_information_map[index_cell] > max_info_) {
+            	max_info_ = gas_information_map[index_cell];  // Mettre à jour la valeur maximale
+            	best_cell_index = index_cell;  // Mettre à jour l'index de la meilleure cellule
+        	}
+			////////////////////////////////////////////////////////////
+			if (cell_visited_list[index_cell] == 1) continue;
+
+            Position target = {static_cast<float>(x), static_cast<float>(y)};
+			double distance_radius = std::sqrt(std::pow(current_x_index - target.x, 2) + std::pow(current_y_index - target.y, 2));
+
+			if (x == 0 || x == x_nbins - 1 || y == 0 || y == y_nbins - 1) continue;
+			if (distance_radius > radius || distance_radius < mini_distance) continue;
+            // Vérifier que la cellule est valable
+			
+            //if (gas_information_map[index_cell] <= 0) continue; // Ignorer les cellules sans information
+
+            // Trouver le chemin optimal vers la cellule
+			double targetArray[2] = {target.x, target.y};
+			Position Current_Position(current_x_index, current_y_index);
+			
+            std::vector<Position> candidatePath = findOptimalPath(Current_Position, targetArray);
+
+            // Si aucun chemin n'est trouvé, ignorer la cellule
+            if (candidatePath.empty()) continue;
+
+            // Calculer la longueur du chemin
+            double pathLength = static_cast<double>(candidatePath.size());
+
+			double totalInfo = 0.0;
+            for (const auto& position : candidatePath) {
+                int pathIndex = static_cast<int>(position.y) * x_nbins + static_cast<int>(position.x);
+                if (pathIndex >= 0 && pathIndex < y_nbins*x_nbins) {
+                    totalInfo += gas_information_map[pathIndex];
+                }
+            }
+			//std::cout << "TotalInfo " << totalInfo << std::endl;
+			//std::cout << "PathLength " << pathLength << std::endl;'
+			double score = (simulation_parameters.sigmascoringfunction*totalInfo) / pathLength;
+			//double score = (simulation_parameters.sigmascoringfunction*totalInfo) / std::log(pathLength+1);
+			//double score = 1/(1+ exp(-simulation_parameters.sigmascoringfunction*totalInfo)) - 1/(1+ exp(-0.1*pathLength));
+            //double score = 350*totalInfo - 1*pathLength;
+			scores_map[index_cell] = score;
+			
+            if (score > bestScore) {
+                bestScore = score;
+                bestTarget = target;
+                bestPath = candidatePath;
+            }
+        }
+    }
+	double BestScore_in_map = -1000;
+	int bestCell_in_map = -1000;
+	for (int i = 0; i < x_nbins * y_nbins; ++i) {
+    	if (scores_map[i] > BestScore_in_map) {
+        	BestScore_in_map = scores_map[i];
+        	bestCell_in_map = i;
+    	}
+	}
+	int best_x_ = (bestCell_in_map % y_nbins)+1;
+	int best_y_ = (bestCell_in_map / y_nbins)+1;
+
+	std::cout << "Max score in scores_map: " << BestScore_in_map
+          	<< " at coordinates (" << best_x_ << ", " << best_y_ << ")" << std::endl;
+	
+	log_scores_map();
+	
+	int best_x = (best_cell_index % y_nbins)+1;  // Calculer l'indice x à partir de l'index du tableau
+	int best_y = (best_cell_index / y_nbins)+1; 
+	//std::cout << "Cellule avec la plus grande info: (" << best_x << ", " << best_y << ") avec une information de: " << max_info_ << std::endl;
+
+    if (bestScore > 0){
+		std::cout << "Le meilleur score trouvé est sur la cellule: (" 
+          << bestTarget.x +1 << ", " << bestTarget.y+1 << ") avec un score de " 
+          << bestScore << std::endl;
+
+		//ON MARQUE LA CELL COMME ETANT VISITEE AINSI QUE SES VOISINS
+		cell_visited_list[int(bestTarget.y)*x_nbins + int(bestTarget.x)] = 1;
+		markNeighboringCellsAsVisited(int(bestTarget.x), int(bestTarget.y), x_nbins, y_nbins, radius_neighbor, cell_visited_list);
+		
+        path_ = bestPath;
+		path_in_meters = path_;
+        previous_path = bestPath;
+		previous_path_in_meters = previous_path;  // Sauvegarder comme chemin de secours
+
+		//RECONVERTIR EN METRE
+		for (size_t i = 0; i < path_.size(); ++i) {
+    		path_in_meters[i].x = path_[i].x * x_resol + source_x_min;
+    		path_in_meters[i].y = path_[i].y * y_resol + source_y_min;
+		}
+		for (size_t i = 0; i < path_.size(); ++i) {
+    		previous_path_in_meters[i].x = path_[i].x * x_resol + source_x_min;
+    		previous_path_in_meters[i].y = path_[i].y * y_resol + source_y_min;
+		}
+
+        if (path_.size() > 1) {
+			if (dist_to_goal(path_[0]) < 0.5) {
+				std::cout << "Le robot est trop proche du premier point du path." << std::endl;
+				goal_position = path_in_meters.back();
+				std::cout << "goal_POsition.x: " << goal_position.x << std::endl;
+				std::cout << "goal_POsition.y: " << goal_position.y << std::endl;
+				
+			}else {
+        		goal_position = path_in_meters.back();//path_[0];  // Sinon rester sur la première cellule
+				//std::cout << "goal_POsition: " << goal_position << std::endl;
+				
+    		}
+		}else if (!path_.empty()){
+    		// Si path_ contient une seule cellule, on choisit celle-ci
+    		goal_position = path_in_meters[0];
+			//std::cout << "goal_POsition: " << goal_position << std::endl;
+			
+		}else {
+        	std::cout << "Aucun chemin valide trouvé et aucun chemin précédent disponible." << std::endl;
+        	return;
+    	}
+	}
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////// Afficher le chemin sélectionné
+    std::cout << "Optimal Path:" << std::endl;
+    for (const auto& pos : path_) {
+        std::cout << "(" << pos.x << ", " << pos.y << ") ";
+    }
+    std::cout << std::endl;
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//CAS DE STAGNATION
+    if (previous_current_x_index == current_x_index && previous_current_y_index == current_y_index) {
+        stagnationCounter++;
+        if (stagnationCounter >= maxStagnationIterations) {
+            // Si le robot est bloqué, forcer un déplacement
+            goal_position.x = best_x;
+			goal_position.y = best_y;
+            stagnationCounter = 0;  // Réinitialiser le compteur
+        }
+    } else {
+        stagnationCounter = 0;  // Réinitialiser si le robot a bougé
+    }
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    previous_current_x_index = current_x_index;
+	previous_current_y_index = current_y_index;
+
+	std::cout << "goal_position.x: " << goal_position.x << std::endl;
+    std::cout << "goal_position.y: " << goal_position.y << std::endl;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void calculate_mean_value_within_cluster(
+    const pair<CellPoint, CellPoint>& cluster,
+    double& mean_value,
+    double& min_value,
+    double& max_value) {
+    
+    double total_value = 0.0;
+    int count = 0;
+    int bin_values[2];
+	int index_mean;
+	double value;
+
+    // Initialiser min et max avec des valeurs appropriées
+    min_value = std::numeric_limits<double>::max(); // Valeur initiale très élevée
+    max_value = std::numeric_limits<double>::lowest(); // Valeur initiale très basse
+
+    // Iterate on the cluster zone
+    for (int x = cluster.first.x; x <= cluster.second.x; ++x) {
+        for (int y = cluster.first.y; y <= cluster.second.y; ++y) {
+            // Récupérer l'index pour ces valeurs de paramètres
+			std::cout << "x : " << x << std::endl;
+			std::cout << "y : " << y << std::endl;
+            bin_values[0] = x; // coordonnée x
+            bin_values[1] = y; // coordonnée y
+
+			index_mean = y*x_nbins + x;
+            value = gas_information_map[index_mean];
+            total_value += value;
+            count++;
+
+            // Min and Max values
+            if (value < min_value) {
+                min_value = value;
+            }
+            if (value > max_value) {
+                max_value = value;
+            }
+        }
+    }
+    // Calculate the mean
+    mean_value = (count > 0) ? (total_value / count) : 0.0;
+}
+
+double mean_value;
+double mean_value_min;
+double mean_value_max;
+double TD_min = 0;
+double TD_max = sqrt((source_y_max - source_y_min) * (source_y_max - source_y_min) + (source_x_max - source_x_min) * (source_x_max - source_x_min));
+
+double evaluate_cluster(const pair<CellPoint, CellPoint>& cluster) {
+    // Assuming you have a way to calculate the mean value inside the cluster
+    calculate_mean_value_within_cluster(cluster, mean_value, mean_value_min, mean_value_max);
+    double mean_value_normed = (mean_value-mean_value_min)/(mean_value_max-mean_value_min);
+    // Calculate the centroid of the cluster for distance measurement
+    double centroid_x = (cluster.first.x + cluster.second.x) / 2.0;
+    double centroid_y = (cluster.first.y + cluster.second.y) / 2.0;
+
+    Position centroid(centroid_x, centroid_y, 0);
+
+	double centroid_x_in_m = centroid.x*x_resol + source_x_min;
+	double centroid_y_in_m = centroid.y*y_resol + source_y_min;
+
+	Position centroid_in_m(centroid_x_in_m, centroid_y_in_m, 0);
+
+    // Calculate the traveling distance to the centroid
+    double TD = dist_to_goal(centroid_in_m); //en m
+    
+	double TD_normed = 1 -(TD - TD_min)/(TD_max - TD_min); //en m
+    // Combine the mean value and traveling distance into a score
+    // weights to be adjusted
+    double score =  mean_value_normed / TD_normed;
+    
+    return score;
+}
+
+void move_to_cluster_centroid(const pair<CellPoint, CellPoint>& cluster, double gas_information_map[]) {
+    double total_x = 0.0;
+    double total_y = 0.0;
+    double total_value = 0.0; // To compute the weighted average based on gas values
+    int count = 0;
+	
+	int cluster_first_x_index = static_cast<int>((cluster.first.x - source_x_min) / x_resol);
+	int cluster_first_y_index =	static_cast<int>((cluster.first.y - source_y_min) / y_resol);			//conversion from meters to cell indexes
+	int cluster_second_x_index = static_cast<int>((cluster.second.x - source_x_min) / x_resol);
+	int cluster_second_y_index = static_cast<int>((cluster.second.y - source_y_min) / y_resol);
+
+    // Iterate over the area defined by the cluster             x and y are in cell indexes
+    for (int x = cluster_first_x_index; x <= cluster_second_x_index; ++x) {
+        for (int y = cluster_first_y_index; y <= cluster_second_y_index; ++y) {
+
+			int index = y*x_nbins + x;
+            double value = gas_information_map[index];
+
+            // Accumulate total coordinates weighted by value
+            total_x += x * value;
+            total_y += y * value;
+            total_value += value;
+            count++;
+        }
+    }
+    // Calculate the weighted centroid if total_value is not zero
+    if (total_value > 0) {
+        goal_position.x = total_x / total_value; // Weighted average x
+		goal_position.x = goal_position.x*x_resol + source_x_min;
+        goal_position.y = total_y / total_value; // Weighted average y
+		goal_position.y = goal_position.y*y_resol + source_y_min;
+    } else {
+        // Handle the case where there are no valid points
+        goal_position.x = (cluster.first.x + cluster.second.x) / 2.0; // Fallback to centroid of the bounding box
+		goal_position.x = goal_position.x*x_resol + source_x_min;
+        goal_position.y = (cluster.first.y + cluster.second.y) / 2.0;
+		goal_position.y = goal_position.y*y_resol + source_y_min;
+    }
+    goal_position.heading = 0; // Set heading as needed
+	printf("Cluster Center: (%f, %f)\n", (cluster.first.x + cluster.second.x) / 2.0, (cluster.first.y + cluster.second.y) / 2.0);
+    printf("Moving to centroid: (%f, %f)\n", goal_position.x, goal_position.y);
+}
+
+void Algo_clustering(){
+
+	for (int i = 0; i< x_nbins*y_nbins; i++){
+				gas_information_map[i] = posterior.pdf[i];
+			}
+	log_gas_information_map();
+
+	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
+	clusters_bounding_box = clustering_information_blocks(gas_information_map);
+	if (clusters_bounding_box.size() == 0){
+		printf("no cluster found \n");
+		maximal_information_planning();
+		//informative_point_planning();
+		return;
+	} else{
+
+		double max_score = -1; // Assuming scores are non-negative
+        int best_cluster_index = -1;
+        // Evaluate each cluster using the scoring function
+        for (int i = 0; i < clusters_bounding_box.size(); i++) {
+            double score = evaluate_cluster(clusters_bounding_box[i]); // Scoring function
+            if (score > max_score) {
+                max_score = score;
+                best_cluster_index = i;
+            }
+        }
+		pair<CellPoint, CellPoint> chosen_cluster = clusters_bounding_box[best_cluster_index];
+		std::cout << "Bords en x du cluster choisi :" << chosen_cluster.first.x << ", " << chosen_cluster.second.x << std::endl;
+		std::cout << "Bords en y du cluster choisi :" << chosen_cluster.first.y << ", " << chosen_cluster.second.y << std::endl;
+		move_to_cluster_centroid(chosen_cluster, gas_information_map);
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
 
 void balance_expected_maximal_pdf()
 {
@@ -1500,9 +2156,9 @@ void goal_outside_obstacles(Position *goal)
 	double min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
 	// is the goal position in an obstacle or out of arena or too close to current position?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
-	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) < min_dist_to_current)
+	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) > min_dist_to_current)
 	{
-		printf(">>> the goal is not in any obstacles or outside of the region\n");
+		printf(">>> the goal is not in any obstacles or outside of the region; and far from current position\n");
 		return;
 	}
 
@@ -1858,12 +2514,12 @@ void state_measuring()
 		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 
-		printf("wind intensity reading: %f\n", sampleBuffer.instant_wind_intensity);
-		printf("wind orientation: %f\n", sampleBuffer.instant_wind_angle);
-		printf("Speed 0: %f\n", speed[0]);
-		printf("Speed 1: %f\n", speed[1]);
-		printf("Robot lin vel: %f\n", ((speed[0] + speed[1]) * WHEEL_RADIUS / 2));
-		printf("Robot orientation: %f\n", current_position.heading);
+		// printf("wind intensity reading: %f\n", sampleBuffer.instant_wind_intensity);
+		// printf("wind orientation: %f\n", sampleBuffer.instant_wind_angle);
+		// printf("Speed 0: %f\n", speed[0]);
+		// printf("Speed 1: %f\n", speed[1]);
+		// printf("Robot lin vel: %f\n", ((speed[0] + speed[1]) * WHEEL_RADIUS / 2));
+		// printf("Robot orientation: %f\n", current_position.heading);
 
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
@@ -2045,8 +2701,11 @@ void state_estimating()
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
 	// check if time is up
-	// if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1)
+	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
+	//if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
 	{
 		// the end
 		FSM.state = STATE_FINISHED;
@@ -2084,6 +2743,11 @@ void state_updategoal()
 	case BELIEF_CLUSTERING:
 		belief_clustering_planning();
 		break;
+	case NEW_STRATEGY:
+		Algo();
+		//Algo_clustering();
+		
+		break;
 	case INFO_CLUSTERING:
 		informative_clustering_planning();
 		break;
@@ -2097,12 +2761,12 @@ void state_updategoal()
 	if (FSM.state != STATE_FINISHED)
 	{
 		// The goal position is very close to current postion, swith to random planning
-		if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-		{
-			printf("The goal position is very close to current postion, switch to random planning \n");
-			fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-			random_planning();
-		}
+		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		// {
+		// 	printf("The goal position is very close to current postion, switch to random planning \n");
+		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		// 	random_planning();
+		// }
 
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		goal_outside_obstacles(&goal_position);
@@ -2186,9 +2850,9 @@ void state_moving()
 			if (!position_outside_arena(current_position))
 			{
 				// Sampling distance threshold
-				float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-				if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-				{
+				//float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				//if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				//{
 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 					sample_in_motion.measurement.push_back(instant_concentration);
 					sample_in_motion.size++;
@@ -2199,7 +2863,7 @@ void state_moving()
 					// history.position.push_back({current_position.x, current_position.y, 0});
 					// history.measurement.push_back(instant_concentration);
 					// history.size++;
-				}
+				//}
 			}
 			sample_counter = 0;
 		}
