@@ -600,66 +600,6 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		}
 		sum_tmp /= simulation_parameters.sigma * simulation_parameters.sigma;
 	}
-	if (simulation_parameters.relativeMethod == SPEARMAN)
-	{
-		calculate_measurements_list_rank(rel_model_list, model_c_avg); 
-		//sigma 
-		for (int i = 0; i < history.size; i++)
-		{
-			rel_hist_val = rel_history_list[i];
-			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2);
-		}
-		sum_tmp = 6*sum_tmp/(history.size*(history.size*history.size - 1));
-		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
-	}
-	if (simulation_parameters.relativeMethod == KENDALL)
-	{
-		// sigma = 0.07; // works well for Kendall
-		if (history.size < 2) {
-		// For n < 2, tau is undefined; return 0 or handle as a special case.
-			sum_tmp = 0.0;
-		}else{
-			// Counts
-			double C = 0.0;    // Concordant pairs
-			double D = 0.0;    // Discordant pairs
-			double T_x = 0.0;  // Ties in x
-			double T_y = 0.0;  // Ties in y
-
-			// Compare all pairs (i,j) with i<j
-			for (size_t i = 0; i < history.size; ++i) {
-				for (size_t j = i + 1; j < history.size; ++j) {
-					int diff_x = int(history.measurement_avg[j] - history.measurement_avg[i]);
-					int diff_y = int(model_c_avg[j] - model_c_avg[i]);
-
-					if (diff_x > 0 && diff_y > 0) {
-						C += 1.0; // concordant
-					} else if (diff_x < 0 && diff_y < 0) {
-						C += 1.0; // concordant
-					} else if (diff_x > 0 && diff_y < 0) {
-						D += 1.0; // discordant
-					} else if (diff_x < 0 && diff_y > 0) {
-						D += 1.0; // discordant
-					} else {
-					      if (diff_x == 0) {
-							T_x += 1.0;
-						} if (diff_y == 0) {
-							T_y += 1.0;
-						}
-					}
-				}
-			}
-                  double n_0 = history.size * (history.size - 1) / 2;
-			double denominator = std::sqrt((n_0 - T_x) * (n_0 - T_y));
-			if (denominator == 0.0) {
-				sum_tmp =  0.0;
-			}else {
-				sum_tmp = (C - D) / denominator;
-			}
-		}
-		sum_tmp = 1 - sum_tmp;
-		sum_tmp = sum_tmp/(simulation_parameters.sigma * simulation_parameters.sigma);
-	}
      
 	return (exp(-0.5 * sum_tmp));
 }
@@ -686,24 +626,6 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
 	}
 }
 
-void calculate_measurements_list_rank(vector<double> &rel_meas_list, vector<double> data_list)
-{
-	rel_meas_list.resize(data_list.size());
-	if (data_list.size() == 1) {
-		rel_meas_list[0] = 0.0;
-		return;
-	}
-	vector<double> sortedData = data_list;
-	sort(sortedData.begin(), sortedData.end());
-	// Calculate Rank
-	for (size_t i = 0; i < data_list.size(); ++i) {
-		// Count the number of observations less than or equal to the current value
-		size_t count = count_if(sortedData.begin(), sortedData.end(),
-							[&](double x) { return data_list[i]-x > 0.1; });
-		// Calculate proportion
-		rel_meas_list[i] = static_cast<double>(count);
-	}
-}
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list)
 {
 	// normalize the measurements with max and min values

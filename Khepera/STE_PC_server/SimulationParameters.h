@@ -76,11 +76,8 @@ typedef enum infoFeature
 typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
-	GAUSSIAN_CDF = 1,
 	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
-	SPEARMAN = 4,
-	KENDALL = 5,
 	EMPIRICAL_CDF_NUM = 6,
 } eRelativeMethod;
 
@@ -96,7 +93,6 @@ typedef enum gasHitMethod
 	FIXED_THRES = 0,
 	MIN_MAX_THRES = 1,
 	SLIDING_WINDOW_THRES = 2,
-	FIXED_THRES_AND_GAUSSIAN_CDF = 3,
 } eGasHitMethod;
 
 typedef enum workingMode{

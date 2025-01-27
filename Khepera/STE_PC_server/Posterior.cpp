@@ -429,10 +429,6 @@ void Posterior::exhaustive_evaluation(struct history history){
 		{
 			calculate_measurements_list_empirical_CDF(relative_history_meas, history.measurement_avg);
 		}
-		if (simulation_parameters.relativeMethod == SPEARMAN)
-		{
-			calculate_measurements_list_rank(relative_history_meas, history.measurement_avg);
-		}
 		log_relative_history_meas(relative_measurements_logfile_name, 'a', relative_history_meas);
 	}
 	// for each element of the pdf
