@@ -4,7 +4,14 @@ dataTable = table();
 
 %% load the data
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Khepera/Results_0818/stop_sense_kld';
+work_station = "Desktop";
+% work_station = "Laptop"
+if work_station == "Desktop"
+    root_path = '/home/wjin/Workspace/continuous_STE/Results';
+else
+    root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
+end
+general_folder=[root_path, '/RAL_2025_results/baseline_exp/Results_2025-01-10/calibrate/'];
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103', 'pc', 'k4'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
@@ -19,7 +26,7 @@ for i = 1:numExperiments
 
     % ground truth and other params
     params = my_text2struct([folder_name_pc, '/param_log.csv']);
-%     params_k4 = my_text2struct([folder_name_k4, '/param_log.csv']);
+    params_k4 = my_text2struct([folder_name_k4, '/param_log.csv']);
     map_nbr = params.map_nbr;
     % stats
     expected_a_posteriori_file = dlmread([folder_name_pc, '/expected_a_posteriori.csv']);
@@ -36,6 +43,10 @@ for i = 1:numExperiments
     error(2) = source_real_position(2) - expected_a_posteriori(2);
     entropy_file = dlmread([folder_name_pc, '/entropy.csv']);
     entropy(1) = entropy_file(end,1);
+
+    % maximal measurement
+    measurement_his=dlmread([folder_name_pc, '/measurement_history.csv']);
+    max_meas = max(measurement_his(:,2)); 
     
     max_a_post(1:2) = max_a_post_file(end,2:3);
     convergence = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
@@ -53,16 +64,16 @@ for i = 1:numExperiments
 
     
     % strategy
-    %sampling_mode_idx = params_k4.sampling_mode;
-    sampling_mode_idx = 1;
+    sampling_mode_idx = params_k4.sampling_mode;
+    %sampling_mode_idx = 1;
     sampling_mode = "";
     switch sampling_mode_idx
         case 0
-            sampling_mode = "sense in motion";
-        case 1
             sampling_mode = "stop sense go";
-        case 2
+        case 1
             sampling_mode = "visit sense go";
+        case 2
+            sampling_mode = "sense in motion";
     end
 
     planning_mode_idx = params.planning_strategy;
@@ -75,10 +86,28 @@ for i = 1:numExperiments
         case 1
             planning_mode = "informative kld";
     end
-            
+    % sensor calibration
+    calibration_mode_idx = params_k4.sensor_calibration;
+    calibration_mode = "";
+    switch calibration_mode_idx
+        case 0
+            calibration_mode = "calibration on";
+        case 1 
+            calibration_mode = "calibration off";
+    end
+    % gas feature
+    gas_feature_idx = params.gas_feature;
+    gas_feature = "";
+    switch gas_feature_idx
+        case 0
+            gas_feature = "gas concentration";
+        case 2
+            gas_feature = "gas reading rank";
+    end
+    % sensor 
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode);
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode'};
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, max_meas, calibration_mode, gas_feature);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'maximal_meas', 'calibration_mode', 'gas_feature'};
     
     % Append the temporary table to the main dataTable
     dataTable = [dataTable; tempTable];
@@ -151,6 +180,21 @@ grid on;
 xlabel('Map number');
 title('Traveling distance');
 ylabel('Distance (m)');
+
+figure()
+plot([0 length(unique(dataTable.Map))], [0 0], 'g');
+hold on;
+boxplot(dataTable.maximal_meas, dataTable.Map,'Colors',custom_color);
+% ylim([0,50])
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%ylim([-3,4])
+xlabel('Map number');
+title('Maximal Meas');
+ylabel('mV');
+
 
 hold on
 

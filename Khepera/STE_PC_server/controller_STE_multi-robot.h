@@ -25,10 +25,15 @@
 #include "Position.h"
 #include "Constant.h"
 #include "Dbscan.h"
+#include "SimulationParameters.h"
 
 extern int nbr_obs;
 extern float margin;
 extern float ** obstacles;
+
+// simulation paramters
+
+extern SimulationParameters simulation_parameters;
 
 //parameters to estimate
 struct parameters_set{
@@ -39,52 +44,6 @@ struct parameters_set{
 	//double a_z;
 	//double b_z;
 };
-typedef enum planningStrategy{
-	GREEDY = 0,
-	INFORMATIVE_KLD = 1,
-	INFORMATIVE_CLUSTERING = 5,
-}ePlanningStrategy;
-
-typedef enum gasFeature{
-	CONCENTRATION = 0,
-	GASHIT = 1,
-}eGasFeature;
-
-typedef enum visitedList{
-	visitedList_ON = 0,
-	visitedList_OFF = 1,
-}eVisitedList;
-
-typedef enum infoFeature{
-	VARIANCE = 0,
-	MEAN = 1,
-	BELIEF = 2,
-}einfoFeature;
-
-typedef enum workingMode{
-	OFFLINE = 0,
-	EXPERIMENT = 1,
-	VIDEO = 2,
-}eworkingMode;
-
-// simulation paramters
-struct simulation_parameters{
-	eworkingMode workingMode;
-	float likelihood_error;
-	float gloabl_local_search_ratio;
-	int MCMC_iteration_num;
-	int MCMC_or_exhaustive_eval; //1 for MCMC, 0 for exhaustive evaluation
-	int number_of_robots;
-	int scenario;
-	int map_nbr;
-	ePlanningStrategy planningStrategy;
-	eGasFeature gasFeature;
-	eVisitedList visitedList;
-	einfoFeature infoFeature;
-	float cluster_entropy_ratio;
-	float measurement_error;
-};
-extern struct simulation_parameters simulation_parameters;
 
 //states of the finite state machine
 typedef enum state {
@@ -112,9 +71,11 @@ extern struct FSM FSM;
 //measurement history
 struct history{
 	int size;
+	vector<int> FSM_iter;
 	vector<Position> position;
 	vector<double> measurement_avg;
 	vector<double> measurement_std;
+	vector<int> gas_hit_event;
 };
 
 // message structure
@@ -142,10 +103,17 @@ void state_obstacle_avoidance();
 void state_listen();
 void state_read_goal();
 void state_read_goal_measurement();
+void random_planning();
+
+//likelihood functions
+double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose);
+// new likelihood with precomputed gas maps
+double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
+// new likelihood for relative concentrations
+double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
+double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model);
 
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
-double likelihood(struct history history, double *parameters, PlumeModel *model, bool verbose);
-double likelihood(struct history history, double *parameters, vector<float> model_c_avg);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 double randu();
@@ -158,5 +126,8 @@ bool send_goal_to_robot(double x, double y);
 int obstacle_or_not();
 void do_odometry();
 
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list , vector<double> data_list);
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> data_list);
+void calculate_measurements_list_rank(vector<double> &rel_meas_list, vector<double> data_list);
 
 #endif

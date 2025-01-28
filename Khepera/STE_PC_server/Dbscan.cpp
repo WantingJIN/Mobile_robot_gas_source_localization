@@ -7,7 +7,7 @@ DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat){
 	x_epsilon = x_eps;
 	y_epsilon = y_eps;
 	minPoints = minPts;
-	ratio = rat;
+	ratio = rat > 0 ? rat : 0;
 }
 
 vector<int> DBSCAN::findNeighbors(const CellPoint cell){
@@ -130,10 +130,10 @@ pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPo
     float maxY = numeric_limits<float>::min();
 
     for (auto& point : points){
-        minX = min(minX, point.x - float(x_resol/2));
-        minY = min(minY, point.y - float(y_resol/2));
-        maxX = max(maxX, point.x + float(x_resol/2));
-        maxY = max(maxY, point.y + float(y_resol/2));
+        minX = min(minX, point.x);
+        minY = min(minY, point.y);
+        maxX = max(maxX, point.x);
+        maxY = max(maxY, point.y);
     }
 
     CellPoint topLeft = {minX, minY, clusterId};

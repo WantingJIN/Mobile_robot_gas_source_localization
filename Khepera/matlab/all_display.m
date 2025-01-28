@@ -3,18 +3,18 @@ close all; clc; clear all;
 work_station = "Desktop";
 % work_station = "Laptop"
 if work_station == "Desktop"
-    root_path = '/home/durancea/plume_model_learning/Khepera';
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
 else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end
 
-folder_list = dir([root_path, '/Results_0808']);
+folder_list = dir([root_path, '/Results/Results_2024-12-08']);
 
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
 %%
-for i=1 :exp_number-1
+for i=20 :exp_number
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     folder_name_k4 = [folder_list(i).folder, '/', folder_list(i).name, '/k4'];
     folder_name_pc = [folder_list(i).folder, '/', folder_list(i).name, '/pc'];

@@ -2,7 +2,16 @@ clear all; clc; close all;
 
 %% dispatch
 % the general folder
-general_folder = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Results_0818/stop_sense_kld';
+close all; clc; clear all;
+% choose the last folder in log files
+work_station = "Desktop";
+% work_station = "Laptop";
+if work_station == "Desktop"
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera/Results';
+else
+    root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
+end
+general_folder = [root_path, '/Results_RAL_v1'];
 folder_list = dir(general_folder);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','bad','101','102','103'}));
 folder_list = folder_list([folder_list.isdir]);
@@ -27,7 +36,7 @@ for i=1:exp_number
     params = my_text2struct([folder_name_pc, '/param_log.csv']);
 
     % the right path of the folder
-    new_path = [general_folder '/' num2str(params.map_nbr)];
+    new_path = [general_folder '/' num2str(params.release_rate)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))
@@ -57,7 +66,7 @@ for i=1:number
 %     if(entropy(end,1) > 0.1 && size(entropy,1) < 200), rmdir(folder_name,'s'); continue; end
     % ground truth and other params
     params = my_text2struct([folder_name_pc, '/param_log.csv']);
-    map_nbr_list(i,1) = params.map_nbr;
+    release_rate_list(i,1) = params.release_rate;
     % stats
     expected_a_posteriori_file = dlmread([folder_name_pc, '/expected_a_posteriori.csv']);
     iteration_nbr_list(i) = size(expected_a_posteriori_file,1);
@@ -73,13 +82,16 @@ for i=1:number
     error_list(i,2) = source_real_position(2) - expected_a_posteriori(i,2);
     entropy = dlmread([folder_name_pc, '/entropy.csv']);
     entropy_list(i,1) = entropy(end,1);
+    % trajectory_length
+    trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
     
     max_a_post_list(i,1:2) = max_a_post(end,2:3);
     convergence_list(i,1) = sqrt((max_a_post_list(i,1) - expected_a_posteriori(i,1))^2 + (max_a_post_list(i,2) - expected_a_posteriori(i,2))^2);
     % experimental time
     goal_positions = dlmread([folder_name_k4, '/goal_position.csv']);
     exp_time_list(i) = (goal_positions(end, 5) - goal_positions(1,5))/1000;
-    
+    measurement_his = dlmread([folder_name_k4, '/measurement_history.csv']);
+    max_measurement_list(i) = max(measurement_his(:,2));
     % trajectory_length
     trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
     traj_length_sum = 0;
@@ -125,61 +137,75 @@ f = figure();
 f.Position = [10 10 950 800]; 
 custom_color = [44,136,217]./255;
 subplot(1,5,1)
-plot([0 length(unique(map_nbr_list))+0.5], [0 0], 'g');
+plot([0 length(unique(release_rate_list))+0.5], [0 0], 'g');
 hold on;
-boxplot(error_list(:,1), map_nbr_list,'Colors',custom_color);
+boxplot(error_list(:,1), release_rate_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([-1,10])
-xlabel('Map number');
+xlabel('Release rate');
 ylabel('Error (m)');
 title('Error on x');
 subplot(1,5,2);
-plot([0 length(unique(map_nbr_list))+0.5], [0 0], 'g');
+plot([0 length(unique(release_rate_list))+0.5], [0 0], 'g');
 hold on;
-boxplot(error_list(:,2), map_nbr_list,'Colors',custom_color);
+boxplot(error_list(:,2), release_rate_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([-3,4])
-xlabel('Map number');
+xlabel('Release rate');
 title('Error on y');
 ylabel('Error (m)');
 subplot(1,5,3);
-boxplot(iteration_nbr_list, map_nbr_list,'Colors',custom_color);
+boxplot(iteration_nbr_list, release_rate_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 ylim([0,50])
-xlabel('Map number');
+xlabel('Release rate');
 title('nbr iterations');
 subplot(1,5,4)
-plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+plot([0 length(unique(release_rate_list))], [0 0], 'g');
 hold on;
-boxplot(exp_time_list, map_nbr_list,'Colors',custom_color);
+boxplot(exp_time_list, release_rate_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 %ylim([-3,4])
-xlabel('Map number');
+xlabel('Release rate');
 title('Experiment time');
 ylabel('Time (s)');
 subplot(1,5,5)
-plot([0 length(unique(map_nbr_list))], [0 0], 'g');
+plot([0 length(unique(release_rate_list))], [0 0], 'g');
 hold on;
-boxplot(traj_length_list, map_nbr_list,'Colors',custom_color);
+boxplot(traj_length_list, release_rate_list,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
 %ylim([-3,4])
-xlabel('Map number');
+xlabel('Release rate');
 title('Traveling distance');
 ylabel('Distance (m)');
+
+figure();
+plot([0 length(unique(release_rate_list))], [0 0], 'g');
+hold on;
+boxplot(max_measurement_list, release_rate_list,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%ylim([-3,4])
+xlabel('Release rate');
+title('Maximal measurement list');
+ylabel('mV');
+
 
 saveas(f,[general_folder '/test_maps_results_comparison_all.png']);

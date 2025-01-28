@@ -3,16 +3,16 @@ clear all; close all; clc;
 work_station = "Desktop";
 % work_station = "Laptop"
 if work_station == "Desktop"
-    root_path = '/home/durancea/plume_model_learning/Khepera';
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
 else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end
    
-general_folder=[root_path, '/Results_0808'];
+general_folder=[root_path, '/Results_offline_2024-12-17'];
 
-experiment_path = uigetdir(general_folder);
+experiment_path = uigetdir(general_folder); 
 folder_name_k4 = [experiment_path, '/k4'];
-folder_name_pc = [experiment_path, '/pc'];
+folder_name_pc = [experiment_path, '/pc'];  
 
 pdf = dlmread([folder_name_pc, '/posterior_pdf_3D.csv']);
 
@@ -34,13 +34,16 @@ source_postion_file_name = [folder_name_pc '/source_position.txt'];
 source_file = fopen(source_postion_file_name, 'r');
 real_source_position = fscanf(source_file,'%f %f');
 real_source_position(3) = 0.1;
-if (params.gas_feature == 0)
-    % use gas concentration as gas feature
-    gas_information_map = dlmread([folder_name_pc,'/gas_information_map.csv']);
-end
-if (params.gas_feature == 1)
-    gas_information_map = dlmread([folder_name_pc,'/gas_hit_variance_map.csv']);
-end
+% if (params.gas_feature == 0)
+%     % use gas concentration as gas feature
+%     gas_information_map = dlmread([folder_name_pc,'/gas_information_map.csv']);
+% end
+% if (params.gas_feature == 1)
+%     gas_information_map = dlmread([folder_name_pc,'/gas_hit_variance_map.csv']);
+% end
+if (params.planning_strategy == 5)
+    gas_information_map = dlmread([folder_name_pc,'/posterior_pdf_3D.csv']);
+end 
 
 x=linspace(3,12.75,20);
 y=linspace(0,4,20);
@@ -53,7 +56,7 @@ f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
 subplot(1,3,1)
 if (gas_feature == 1)
     scatter(position_history(:,3),position_history(:,2),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-elseif (gas_feature == 0)
+elseif (gas_feature == 0 || gas_feature == 2)
     scatter(position_history(:,3),position_history(:,2),10,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
 end
 load MyColormap2; colormap(mymap); 
@@ -86,7 +89,7 @@ for i=1:size(pdf,1)
     subplot(1,3,3)
     % the last iteration the gas variance map won't update
     if i == size(pdf,1)
-        imagesc(y,x,reshape(gas_information_map(i-1,1:end-1),params.nbins(1), params.nbins(2))); hold on
+        imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
         if params.planning_strategy == 5
             cluster_num = cluster_bounding_boxes(i-1,1);
             if cluster_num > 0
@@ -104,7 +107,7 @@ for i=1:size(pdf,1)
         if params.planning_strategy == 5
             cluster_num = cluster_bounding_boxes(i,1);
             ratio = cluster_bounding_boxes(i,2);
-            gas_information_map_this_iteration = gas_information_map(i,1:end-1);
+            gas_information_map_this_iteration = gas_information_map(i,1:end);
             max_gas = max(gas_information_map_this_iteration);
             min_gas = min(gas_information_map_this_iteration);
             threshold = ((max_gas-min_gas)*ratio +min_gas);

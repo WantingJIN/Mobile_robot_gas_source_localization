@@ -2,6 +2,7 @@
 webots/plugins/physics/odor_physics/results/SENSOR_*
 webots/wb_output.txt
 webots_*/
+webots/controllers/controller_STE_multi-robot/controller_STE_multi-robot
 
 # Results
 Results/**
@@ -35,6 +36,8 @@ Khepera/bad/**
 Khepera/log_STE_multi/**
 Khepera/STE_PC_server/log_STE_multi/**
 Khepera/STE_PC_server/log.txt
+Khepera/STE_PC_server/CMakeLists.txt
+Khepera/STE_PC_server/STE_PC_server
 Khepera/STE_K4_client/makeenv
 Khepera/STE_offline/log_STE_multi/**
 Khepera/STE_offline/log_STE_**/**

@@ -59,8 +59,6 @@ typedef enum gasFeature
 	ABSOLUTE_VALUE = 0,
 	GASHIT = 1,
 	RELATIVE_VALUE = 2,
-	PDF = 3,
-	MI = 4,
 } eGasFeature;
 
 typedef enum visitedList
@@ -78,10 +76,9 @@ typedef enum infoFeature
 typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
-	GAUSSIAN_CDF = 1,
-	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
 	EMPIRICAL_CDF_AND_SLOPE = 4,
+	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
 } eRelativeMethod;
 
 typedef enum simuMode{
@@ -101,7 +98,8 @@ typedef enum gasHitMethod
 	FIXED_THRES = 0,
 	MIN_MAX_THRES = 1,
 	SLIDING_WINDOW_THRES = 2,
-	FIXED_THRES_AND_GAUSSIAN_CDF = 3,
+	SLIDING_WINDOW_THRES_NUM = 4,   // The likehood function is defined diffrently
+	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
 // parameters to estimate
@@ -129,7 +127,6 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-		int gas_sensor_noise_var;
 	      float sigma;
 		float lambda;
 		float sigmascoringfunction;

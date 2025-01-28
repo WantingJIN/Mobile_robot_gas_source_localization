@@ -4,6 +4,7 @@
 struct sKhepera4 khepera4;
 struct sOdorboard odorboard;
 struct sWindSensorBoard windsensorboard;
+struct sBraitenberg braitenberg;
 double odor_baseline_value = 0;
 sMsg STmsg;
 sUdpMsg udp_msgR;
@@ -17,6 +18,9 @@ void init(){
 	
 	//robot
 	khepera4_init();
+
+    // intialize the odometry
+    odometry_track_init();
 	
 	//get ID from file
 	if(access("ID.txt", F_OK) != -1 ){
@@ -74,6 +78,9 @@ void init(){
 	//get the initial position
     odometry_track_start_pos(&ot,0,0);
 
+    // Initialization of braitenberg controller
+    braitenberg_init(&braitenberg);    
+
 	//log files names
    	sprintf(folder_name, "./log_STE_multi"); //create a new folder for log files
 	mkdir(folder_name, 0755);
@@ -110,9 +117,9 @@ void init(){
     //default values for the simulation parameters
     // 1. likelihood_error; 2. gloabl_local_search_ratio; 3. MCMC_iteration_num; 4. MCMC_or_exhaustive_eval;
 	// 5. number_of_robots; 6. scenario; 7. map_nbr; 8. samplingMode; 9. processingMode; 10. sensorCalibration; 11. sampling_period;
-    // 12. wheel_speed 
-    //                                                       1    2    3   4  5  6  7        8                9           10  11
-    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, ON, 8, 400};
+    // 12. wheel_speed 13. sampling_dist_thresh
+    //                                                       1    2    3   4  5  6  7        8                9           10  11  12
+    simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, OFF, 8, 400, 0.1};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -183,7 +190,7 @@ void init(){
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
 	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
     fprintf(sim_param_file, "source_position %f %f %f\n", real_source_position[0], real_source_position[1], 0.1);
-    fprintf(sim_param_file, "robot's ID %d\n", ID);
+    fprintf(sim_param_file, "ID %d\n", ID);
     fprintf(sim_param_file, "sampling_mode %d\n", simulation_parameters.samplingMode);
     fprintf(sim_param_file, "processing_mode %d\n", simulation_parameters.processingMode);
     fprintf(sim_param_file, "sensor_calibration %d\n", simulation_parameters.sensorCalibration);
@@ -292,9 +299,12 @@ void establish_baseline(){
             updateCortexPos(&current_position);
         	go_to_goal(goal_position);  
         	//if obstacle, avoid
-        	if(obstacle_or_not() == 1)
-        		obstacle_avoidance(speed);
+        	// if(obstacle_or_not() == 1){
+            //     obstacle_avoidance(speed);
+            //     continue;
+            // }
         	set_wheels_speed(speed[0],speed[1]);
+            // braitenberg_run(&braitenberg);
         	usleep(SLEEP_PERIOD * 100);
     	}
     	//stop once reached
@@ -324,9 +334,9 @@ void establish_baseline(){
     printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
     log_baseline(min, max, odor_baseline_value);
     //starting point of the actuall algorithm random on Y
-    goal_position.x = 3 + (ID-101)/5;
+    goal_position.x = current_position.x;
     //NOTE - Khepera start position
-    goal_position.y = (randu() * (3 - 1 - SAFETY_MARGIN*2)) + SAFETY_MARGIN + 0.15;
+    goal_position.y = (randu() * (4 - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
     //goal_position.y = 2;
 
     printf("find the path using visibility graph \n");
@@ -399,15 +409,19 @@ void updateCortexPos(Position * position){
             new_y = FrameOfData->BodyData[i].Segments[0][1]/1000;
             // Check if the MCS is available; otherwise, use odometry instead
             if (new_x > 15.0 || new_x < 0.0 || new_y > 5.0 || new_y < 0.0){
-            //    if (!set_odometry_pos_from_MCS){
-            //        odometry_set_absolute_position_from_external(&ot, position->x, position->y, position->heading);
-            //        set_odometry_pos_from_MCS = true;
-            //    }
-            //    do_odometry();
-               printf("Error! my current position is (%f %f %f)\n", new_x, new_y);
-               continue;
+                MCS_data_available = false;
+                if (!set_odometry_pos_from_MCS){
+                    set_odometry_pos_from_MCS = true;
+                    odometry_track_start(&ot);
+                    odometry_set_absolute_position_from_external(position->x, position->y, position->heading);
+                    printf("Error with MCS!! Use odo instead.");
+                }
+                do_odometry(position);
+                printf("my current position is (%f %f)\n", position->x, position->y);
+                continue;
             }
             set_odometry_pos_from_MCS = false;
+            MCS_data_available = true;
             position->x=FrameOfData->BodyData[i].Segments[0][0]/1000;
             position->y=FrameOfData->BodyData[i].Segments[0][1]/1000;
             position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
@@ -434,7 +448,7 @@ int obstacle_or_not(){
 	for (int i = 1; i < SENSOR_NUMBER-2; i++){
 		sensors_value[i] = khepera4.infrared_proximity.sensor[i];
 		//if one of the sensors detect something, then obstacle
-		if(sensors_value[i] > 30){
+		if(sensors_value[i] > 100){
 			//printf("obstacle detected..!!!!!\n");
 			return 1;
 		}
@@ -580,7 +594,7 @@ void go_to_goal(Position goal){
 }
 
 void obstacle_avoidance(double speed[2]){
-	//printf("I'm avoiding obstacles... \n");
+	printf("I'm avoiding obstacles... \n");
 	//double khepera3_matrix[9][2] = {{-50,-500},{-200,400},{-300,500},{150, 100},{500,-400},{400,-200},{-50,-50},{-100,-100}};
 	//double khepera3_matrix[8][2] = {{-1,1},{1,-1},{3,-3},{-3, -3},{-3,3},{-1,1},{1,-1},{0,0}};
     double khepera4_matrix[8][2] = {{-0,1},{1,-1},{2,-2},{-3, -2},{-2,2},{-1,1},{1,-0},{0,0}};
@@ -677,11 +691,13 @@ double calibrate_sensor_reading (double raw_reading){
     if (simulation_parameters.sensorCalibration == ON){
         // a = 2.9;
         // b = 297.6;
-        a = 2.0;
-        b = 0;
+        // a = 2.0;
+        // b = 0;
+        a = 1.0;
+        b = 0.0;
     } else {
-        a = 1;
-        b = 0;
+        a = 1.0;
+        b = 0.0;
     }
     double calibrated_reading = (raw_reading - b) * a;
     
@@ -693,4 +709,67 @@ double calibrate_sensor_reading (double raw_reading){
         calibrated_reading = 0.0;
     }
     return calibrated_reading;
+}
+
+void braitenberg_run(struct sBraitenberg *braitenberg) {
+    int i;
+    int speed_left, speed_right;
+
+    // Take the next measurement
+    khepera4_infrared_proximity();
+
+    // Sum all sensor values with the Braitenberg bias and weights
+    speed_left = 0;
+    speed_right = 0;
+    for (i = 0; i < 12; i++) {
+        speed_left += (khepera4.infrared_proximity.sensor[i] + braitenberg->bias[i]) * braitenberg->weight_left[i];
+        speed_right += (khepera4.infrared_proximity.sensor[i] + braitenberg->bias[i]) * braitenberg->weight_right[i];
+    }
+
+    // Shift to be in the right order of magnitude
+    speed_left = speed_left / 10;
+    speed_right = speed_right / 10;
+
+    // Add the bias speed
+    speed_left += braitenberg->speed.left;
+    speed_right += braitenberg->speed.right;
+
+    // Set that speed
+    khepera4_drive_set_speed(speed_left, speed_right);
+    //printf("speed_left is %d, speed right is %d\n", speed_left, speed_right);
+
+    // Sleep
+    usleep(braitenberg->wait_us);
+    
+}
+
+void braitenberg_set_obstacle_avoidance(struct sBraitenberg *braitenberg, int aggressivity) {
+    braitenberg->weight_left[cKhepera4SensorsInfrared_BackLeft] = -1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Left] = 1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FrontLeft] = 3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FrontRight] = -3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Right] = -1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_BackRight] = 1 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Back] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorLeft] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorFrontLeft] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorFrontRight] = 0;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_FloorRight] = 0;
+
+    int i;
+    for (i = 0; i < 12; i++) {
+        braitenberg->weight_right[i] = -braitenberg->weight_left[i];
+        braitenberg->bias[i] = 20;
+    }
+    braitenberg->weight_right[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
+}
+
+void braitenberg_init(struct sBraitenberg *braitenberg) {
+    braitenberg_set_obstacle_avoidance(braitenberg, 1);
+    int speed = 200;
+    braitenberg->speed.left =  speed;
+    braitenberg->speed.right =  speed;
+    braitenberg->repeat =  0;
+    braitenberg->wait_us =  5000;
 }

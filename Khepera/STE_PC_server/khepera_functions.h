@@ -10,35 +10,18 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
-//#include <eigen3/Eigen/Dense>
 
-// extern "C" {
-//     #include "khepera4.h"
-//     #include "odorboard.h"
-//     #include "windsensorboard.h"
-//     #include "odometry_track.h"
-//     #include "odometry_goto.h"
-// }
 #include "udp_msg.h"
-//#include "wind_filter.h"
-// #include "vector3d.h" //defines the sVector3d type used in wind read
-#include "Message.h"
 
-// #include "cortex.h"
-// #include "CortexHandler.h"
+#include "Message.h"
+#include "SimulationParameters.h"
+
 
 #define WEBOTS 0
 #define KHEPERA 1
 #define PUMP_SPEED        0     //1024=stop, 0=max
 #define COMPUTERID  30
 #define SLEEP_PERIOD      50
-
-
-// extern struct sKhepera4 khepera4;
-// extern struct sOdorboard odorboard;
-// extern struct sWindSensorBoard windsensorboard;
-
-// extern struct sOdometryTrack ot;
 
 // log files
 extern char folder_name[25];
@@ -73,6 +56,9 @@ extern char config_logfile_name[256];
 extern char gas_information_map_logfile_name[512];
 extern char gas_hit_variance_map_logfile_name[512];
 extern char experiment_time_logfile_name[512];
+extern char visited_list_logfile_name[512];
+extern char relative_measurements_logfile_name[512];
+
 // read logfile from the experiment
 extern char logfile_folder_name[256];
 extern FILE* experiment_measurements_logfile;
@@ -87,6 +73,10 @@ extern FILE* scan_measurements_logfile;
 extern char scan_measurements_logfile_name[300];
 extern FILE* scan_position_logfile;
 extern char scan_position_logfile_name[300];
+
+// for storing debugging info
+extern FILE *console_logfile;
+extern char console_logfile_name[512];
 
 // finite state machine
 extern struct FSM FSM;
@@ -114,7 +104,7 @@ extern struct friends friends[MAX_NB_ROBOTS];
 
 extern int n_time_step;
 
-extern struct simulation_parameters simulation_parameters;
+extern SimulationParameters simulation_parameters;
 
 extern double odor_baseline_value;
 
@@ -152,6 +142,7 @@ void obstacle_avoidance(double speed[2]);
 void set_wheels_speed(double speed1, double speed2);
 void cleaning_up();
 void next_iteration_time();
+void set_logfile_names();
 
 
 #endif

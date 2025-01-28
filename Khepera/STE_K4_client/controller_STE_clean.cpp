@@ -123,6 +123,10 @@ VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 int finished = 0;
 
 bool set_odometry_pos_from_MCS = false;
+bool MCS_data_available = true;
+
+// store last position for minimum distance threshold in measurement update
+Position last_measurement_pos;
 
 //############################################### to fix
 int nb_robots = 1;
@@ -144,19 +148,26 @@ long long current_timestamp(){
 	return milliseconds;
 }
 
-void do_odometry() {
+void do_odometry(Position *position) {
     odometry_track_step(&ot);  
-    current_position.x = ot.result.x;// + init_pos_x;
-    current_position.y = -ot.result.y;// + init_pos_y;
-    current_position.heading = -ot.result.theta;// + init_pos_theta;
+    position->x = ot.result.x;// + init_pos_x;
+    position->y = -ot.result.y;// + init_pos_y;
+    position->heading = -ot.result.theta;// + init_pos_theta;
+}
+
+void odometry_set_absolute_position_from_external(const float ex_x, const float ex_y, const float ex_heading){
+	ot.result.x = ex_x;
+	ot.result.y = -ex_y;
+	ot.result.theta = -ex_heading;
+
 }
 
 double dist_to_goal(Position goal_position){
-    //Euclidean distance between current position to the goal
-    double dx, dy;
-    dx = goal_position.x-current_position.x;
-    dy = goal_position.y-current_position.y;
-    return sqrt(dx*dx+dy*dy);
+	//Euclidean distance between current position to the goal
+	double dx, dy;
+	dx = goal_position.x-current_position.x;
+	dy = goal_position.y-current_position.y;
+	return sqrt(dx*dx+dy*dy);
 }
 
 //show the measurement history on screen
@@ -290,14 +301,14 @@ void log_history(){
 	for (int i = 0; i < history.size; i++){
 		fprintf(position_history_logfile,"%d, %f, %f, %f\n", i, history.position[i].x,history.position[i].y,history.position[i].heading);
 	}
-    fclose(position_history_logfile);
-    // measurement
-    //FILE * measurement_history_logfile;
-    measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
+	fclose(position_history_logfile);
+	// measurement
+	//FILE * measurement_history_logfile;
+	measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
 		fprintf(measurement_history_logfile,"%d, %f, %f\n", i, history.measurement_avg[i], history.measurement_std[i]);
 	}
-    fclose(measurement_history_logfile);
+    	fclose(measurement_history_logfile);
    
 	//posterior 3D
 	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
@@ -326,12 +337,12 @@ void state_measuring(){
 	// printf("measuring sample number %d\n", sampleBuffer.n_samples);
 	std::vector<double> sample_from_map;
 	int history_size_before_sampling = history.size;
-    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
+      if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
 		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
-				printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
+				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				//printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement_avg.push_back(sample_from_map[i]);
 				//FIXME: temporary solution
@@ -340,7 +351,7 @@ void state_measuring(){
 			}
 		} else {
 			for(int i=0; i<sample_in_motion.size; i++){
-				printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
+				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
 				history.position.push_back(sample_in_motion.position[i]);
 				history.measurement_avg.push_back(sample_in_motion.measurement_avg[i]);
 				history.measurement_std.push_back(0.0);
@@ -388,8 +399,8 @@ void state_measuring(){
 	// send it to friends
 	// if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
 	// 	Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
-//   		send_msg(msg);
-//   	}
+	//   		send_msg(msg);
+	//   	}
 
 	double m_buffer[5] = {0};
 	int timeout = 10;
@@ -507,10 +518,23 @@ void state_moving(){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > simulation_parameters.sampling_period){
+			// Sampling distance threshold
+			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+			// {
+				// only record the measurement if the localization result is from MCS
+				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
+				if (MCS_data_available){
+					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+				      sample_in_motion.measurement_avg.push_back(instant_concentration);
+				      sample_in_motion.size++;
+
+				      last_measurement_pos.x = current_position.x;
+				      last_measurement_pos.y = current_position.y;
+				}
+				
+			//}
 			sample_counter = 0;
-			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-			sample_in_motion.measurement_avg.push_back(instant_concentration);
-			sample_in_motion.size++;
 		}
 	}
 	if(dist_to_goal(goal_position) > 0.05){
@@ -547,7 +571,7 @@ void state_moving(){
 }
 
 void state_obstacle_avoidance(){
-	//if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
+	if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
 	
 	//if no obstacle,
 	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
@@ -559,12 +583,7 @@ void state_obstacle_avoidance(){
 		FSM.hook = state_moving;
 		return;
 	}
-
-	obstacle_avoidance(speed);
-	
-	//wb_differential_wheels_set_speed(speed[0],speed[1]);
-	set_wheels_speed(speed[0],speed[1]);
-	usleep(100 * 1000);
+	braitenberg_run(&braitenberg);
 }
 
 

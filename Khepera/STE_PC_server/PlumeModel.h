@@ -81,6 +81,9 @@ public:
 	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf) = 0;
 	virtual void initialize_information_matrix() = 0;
+	// read from precomputed maps
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) = 0;
+
 
 };
 
@@ -200,11 +203,15 @@ public:
 	// resturns gas concentration map for a set of parameters
 	void initialize_gas_concentration_map_list();
 	void initialize_cell_measurement_list();
-    void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+      void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
 	void calculate_weighted_gas_hit_variance_map( double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 	void initialize_information_matrix();
+
+	// read from precomputed maps
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
+
 };
 
 #endif

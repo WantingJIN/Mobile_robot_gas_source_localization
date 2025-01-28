@@ -3,7 +3,7 @@ dataTable = table();
 %% dispatch the result to target folder
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'gas_hit/PID_gas_sliding_window_thres_lambda0.2'];
+dispatched_folder = [general_folder,'relative_meas/MOX_empirical_cdf/sigma_0.5'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -35,7 +35,7 @@ for i=1:exp_number
     %if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
-    new_path = [dispatched_folder,'/',num2str(params.vel_factor)];
+    new_path = [dispatched_folder,'/',num2str(params.map_nbr)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))

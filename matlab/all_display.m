@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/gas_hit/PID_fixed_thresh_1000/informative_clustering_maximal_info/sigma_0.8/1');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/relative_meas/new_EMPIRICAL_cdf_num/0.48');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 

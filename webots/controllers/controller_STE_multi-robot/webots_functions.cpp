@@ -222,21 +222,10 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 				alpha = Ts / (tau_d + Ts);
 			*sensor_reading = alpha * odor_concentration + previous_sensor_value * (1 - alpha);
 			previous_sensor_value = *sensor_reading;
-		}
-		if (simulation_parameters.gasSensor == NOISY_MOX ||
-		simulation_parameters.gasSensor == NOISY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
-		{
-			// add some random noise to the sensor reading
-			// define the sensor noise as a Gaussian distribution with mean = 0 
-			double mean = 0.0;
-			double sensor_noise = generateGaussianNoise(mean, simulation_parameters.gas_sensor_noise_var);
-			// gaussian noise
-			*sensor_reading += sensor_noise;
-			// constant error
-			//*sensor_reading += 200.0;
-			// scaling error
-			//*sensor_reading *= 2.0;
-
+			if (*sensor_reading < 0)
+			{
+				*sensor_reading = 0;
+			}
 		}
 		if (simulation_parameters.calibrationMode == LINEAR)
 		{
@@ -249,6 +238,23 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 			double raw_reading_before_calibration;
 			nolinear_reverse_con_to_raw_reading(sensor_reading, raw_reading_before_calibration);
 			*sensor_reading = raw_reading_before_calibration;
+		}
+		if (simulation_parameters.gasSensor == NOISY_MOX ||
+		simulation_parameters.gasSensor == NOISY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
+		{
+			// // add some random noise to the sensor reading
+			// // define the sensor noise as a Gaussian distribution with mean = 0 
+			// double mean = 0.0;
+			// double gas_sensor_noise_var = 40000;
+			// double sensor_noise = generateGaussianNoise(mean, gas_sensor_noise_var);
+			// // gaussian noise
+			// *sensor_reading += sensor_noise;
+			// // constant error
+			// //*sensor_reading += 200.0;
+			// // scaling error
+			// //*sensor_reading *= 2.0;
+			// Heteroscedastic Noise = background noise + noise propotional to the signal (intermittency of the plume)
+			addNoise(sensor_reading, 69.33, 10.8);
 		}
 		if (*sensor_reading < 0)
 		{
@@ -556,4 +562,18 @@ void set_logfile_names()
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
 
+}
+// Function to add noise to a sensor reading
+void addNoise(double* sensorReading, double sigma0 = 69.33, double k = 10.80) {
+    // Compute the standard deviation of the noise
+    double stdDev = std::sqrt(std::pow(sigma0, 2) + std::pow(k, 2) * std::abs(*sensorReading));
+
+    // Set up a random number generator for normal distribution
+    std::random_device rd; // Seed for randomness
+    std::mt19937 gen(rd()); // Mersenne Twister generator
+    std::normal_distribution<> dist(0.0, stdDev); // Mean 0, standard deviation stdDev
+
+    // Generate noise and add it to the sensor reading
+    double noise = dist(gen);
+    *sensorReading += noise;
 }
