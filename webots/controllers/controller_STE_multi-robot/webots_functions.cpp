@@ -146,7 +146,6 @@ void init()
 	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
-	fprintf(sim_param_file, "sigmascoringfunction %f\n", simulation_parameters.sigmascoringfunction);
 	fclose(sim_param_file);
 
 	simulation_parameters.log_simulation_parameters(config_logfile_name);

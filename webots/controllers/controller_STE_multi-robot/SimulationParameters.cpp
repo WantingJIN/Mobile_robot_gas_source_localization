@@ -52,7 +52,7 @@ ePlanningStrategy parse_planning_strategy(const char* str) {
 	if (strcmp(str, "RANDOM") == 0) return RANDOM;
 	if (strcmp(str, "LAWNMOWER") == 0) return LAWNMOWER;
 	if (strcmp(str, "BELIEF_CLUSTERING") == 0) return BELIEF_CLUSTERING;
-	if (strcmp(str, "NEW_STRATEGY") == 0) return NEW_STRATEGY;
+	if (strcmp(str, "SUM_A_STAR") == 0) return SUM_A_STAR;
 	if (strcmp(str, "INFORMATIVE_KLD") == 0) return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0) return INFO_CLUSTERING;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
@@ -106,6 +106,14 @@ eGasHitMethod parse_gas_hit_method(const char* str) {
 	if (strcmp(str, "SLIDING_WINDOW_THRES") == 0) return SLIDING_WINDOW_THRES;
 	if (strcmp(str, "SLIDING_WINDOW_THRES_NUM") == 0) return SLIDING_WINDOW_THRES_NUM;
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
+	exit(1);
+}
+
+eAStarScoreFun parse_A_star_score_fun(const char* str) {
+	if (strcmp(str, "RATIO") == 0) return RATIO;
+	if (strcmp(str, "LOG") == 0) return LOG;
+	if (strcmp(str, "SIGMOID") == 0) return SIGMOID;
+	fprintf(stderr, "Unknown A star score function: %s\n", str);
 	exit(1);
 }
 
@@ -196,12 +204,15 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			R0 = atof(value);
 		} else if (strcmp(key, "simuMode") == 0) {
 			simuMode = parse_simu_mode(value);
-		} else if (strcmp(key, "sigma") == 0) {
-			sigma = atof(value);
+		} else if (strcmp(key, "likelihoodSigma") == 0) {
+			likelihoodSigma = atof(value);
 		} else if (strcmp(key, "lambda") == 0) {
 			lambda = atof(value);	
-		} else if (strcmp(key, "sigmascoringfunction") == 0) {
-			sigmascoringfunction = atof(value);
+		} else if (strcmp(key, "scoreSigma") == 0) {
+			scoreSigma = atof(value);
+            } else if (strcmp(key, "AStarScoreFun") == 0) {
+			AStarScoreFun = parse_A_star_score_fun(value);
+
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -253,10 +264,11 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
 	fprintf(sim_param_file, "R0 %f\n", R0);
-	fprintf(sim_param_file, "sigma %f\n", sigma);
+	fprintf(sim_param_file, "likelihood_sigma %f\n", likelihoodSigma);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
+	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
+	fprintf(sim_param_file, "AStar_score_fun %d\n", AStarScoreFun);
 	fclose(sim_param_file);
-
 }
 
 

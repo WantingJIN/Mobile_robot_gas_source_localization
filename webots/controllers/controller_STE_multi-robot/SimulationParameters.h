@@ -51,8 +51,16 @@ typedef enum planningStrategy
 	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
 	INFO_CLUSTERING = 7,
-	NEW_STRATEGY = 8,
+	SUM_A_STAR = 8,
+	WEIGHTED_CLUSTERING = 9,
 } ePlanningStrategy;
+
+typedef enum AStarScoreFun
+{
+      RATIO = 0,
+	LOG = 1,
+	SIGMOID = 2,
+}eAStarScoreFun;
 
 typedef enum gasFeature
 {
@@ -127,9 +135,9 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	      float sigma;
+	      float likelihoodSigma;
 		float lambda;
-		float sigmascoringfunction;
+		float scoreSigma;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 
@@ -145,6 +153,8 @@ class SimulationParameters{
 		eSimuMode simuMode; 
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod; 
+
+	      eAStarScoreFun AStarScoreFun;
 
 		SimulationParameters();
 		~SimulationParameters();

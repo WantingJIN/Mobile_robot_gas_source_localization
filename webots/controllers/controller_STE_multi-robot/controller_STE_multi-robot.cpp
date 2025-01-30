@@ -580,7 +580,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		{
 			rel_hist_val = rel_history_list[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE)
@@ -591,7 +591,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		{
 			rel_hist_val = rel_history_list[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.sigma * simulation_parameters.sigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2)/(simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM){
@@ -604,7 +604,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 			// NOTE: take into account the measurement number information, to avoid the algorithm converge to fast to local minima 
 			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2)/(history.size + 1);
 		}
-		sum_tmp /= simulation_parameters.sigma * simulation_parameters.sigma;
+		sum_tmp /= simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma;
 	}
 	return (exp(-0.5 * sum_tmp));
 }
@@ -1237,7 +1237,7 @@ void belief_clustering_planning()
 
 void informative_clustering_planning()
 {
-	printf("Enter belief clustering planning \n");
+	printf("Enter informative clustering planning \n");
 	
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
 	clusters_bounding_box = clustering_information_blocks(gas_information_map);
@@ -1554,7 +1554,7 @@ int best_cell_index = 0;
 int radius_neighbor = 2;
 double sigma = 1;
 
-void Algo() {
+void accumulative_A_star() {
 
 	for (int i = 0; i< x_nbins*y_nbins; i++){
 				gas_information_map[i] = posterior.pdf[i];
@@ -1609,13 +1609,19 @@ void Algo() {
                     totalInfo += gas_information_map[pathIndex];
                 }
             }
-			//std::cout << "TotalInfo " << totalInfo << std::endl;
-			//std::cout << "PathLength " << pathLength << std::endl;'
-			double score = (simulation_parameters.sigmascoringfunction*totalInfo) / pathLength;
-			//double score = (simulation_parameters.sigmascoringfunction*totalInfo) / std::log(pathLength+1);
-			//double score = 1/(1+ exp(-simulation_parameters.sigmascoringfunction*totalInfo)) - 1/(1+ exp(-0.1*pathLength));
-            //double score = 350*totalInfo - 1*pathLength;
-			scores_map[index_cell] = score;
+		//std::cout << "TotalInfo " << totalInfo << std::endl;
+		//std::cout << "PathLength " << pathLength << std::endl;
+		double score = 0.0;
+		if (simulation_parameters.AStarScoreFun == RATIO){
+			score = (simulation_parameters.scoreSigma*totalInfo) / pathLength;
+		}
+	      if (simulation_parameters.AStarScoreFun == LOG){
+			score = (simulation_parameters.scoreSigma*totalInfo) / std::log(pathLength+1);
+		}
+		if (simulation_parameters.AStarScoreFun == SIGMOID){
+			score = 1/(1+ exp(-simulation_parameters.scoreSigma*totalInfo)) - 1/(1+ exp(-0.1*pathLength));
+		}
+		scores_map[index_cell] = score;
 			
             if (score > bestScore) {
                 bestScore = score;
@@ -1653,9 +1659,9 @@ void Algo() {
 		cell_visited_list[int(bestTarget.y)*x_nbins + int(bestTarget.x)] = 1;
 		markNeighboringCellsAsVisited(int(bestTarget.x), int(bestTarget.y), x_nbins, y_nbins, radius_neighbor, cell_visited_list);
 		
-        path_ = bestPath;
+        	path_ = bestPath;
 		path_in_meters = path_;
-        previous_path = bestPath;
+       	previous_path = bestPath;
 		previous_path_in_meters = previous_path;  // Sauvegarder comme chemin de secours
 
 		//RECONVERTIR EN METRE
@@ -1690,12 +1696,12 @@ void Algo() {
         	return;
     	}
 	}
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////// Afficher le chemin sélectionné
-    std::cout << "Optimal Path:" << std::endl;
-    for (const auto& pos : path_) {
-        std::cout << "(" << pos.x << ", " << pos.y << ") ";
-    }
-    std::cout << std::endl;
+   	////////////////////////////////////////////////////////////////////////////////////////////////////////// Afficher le chemin sélectionné
+	std::cout << "Optimal Path:" << std::endl;
+	for (const auto& pos : path_) {
+		std::cout << "(" << pos.x << ", " << pos.y << ") ";
+	}
+	std::cout << std::endl;
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//CAS DE STAGNATION
     if (previous_current_x_index == current_x_index && previous_current_y_index == current_y_index) {
@@ -1836,7 +1842,7 @@ void move_to_cluster_centroid(const pair<CellPoint, CellPoint>& cluster, double 
     printf("Moving to centroid: (%f, %f)\n", goal_position.x, goal_position.y);
 }
 
-void Algo_clustering(){
+void weighted_belief_clustering(){
 
 	for (int i = 0; i< x_nbins*y_nbins; i++){
 				gas_information_map[i] = posterior.pdf[i];
@@ -1869,16 +1875,6 @@ void Algo_clustering(){
 	}
 
 }
-
-
-
-
-
-
-
-
-
-
 
 void balance_expected_maximal_pdf()
 {
@@ -2614,11 +2610,14 @@ void state_updategoal()
 	case BELIEF_CLUSTERING:
 		belief_clustering_planning();
 		break;
-	case NEW_STRATEGY:
-		Algo();
+	case SUM_A_STAR:
+		accumulative_A_star();
 		//Algo_clustering();
 		
 		break;
+	case WEIGHTED_CLUSTERING:
+	     weighted_belief_clustering();
+	     break;
 	case INFO_CLUSTERING:
 		informative_clustering_planning();
 		break;
