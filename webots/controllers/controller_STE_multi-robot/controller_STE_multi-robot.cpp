@@ -45,6 +45,8 @@ FILE *gas_hit_variance_map_logfile;
 FILE *experiment_time_logfile;
 FILE *visited_list_logfile;
 FILE *scores_map_logfile;
+FILE *distance_map_logfile;
+FILE *acc_info_map_logfile;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
@@ -68,6 +70,8 @@ char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
 char scores_map_logfile_name[512];
+char distance_map_logfile_name[512];
+char acc_info_map_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -107,6 +111,8 @@ DeepCFDPlumeModel2D plume_model;
 double gas_information_map[x_nbins * y_nbins] = {0};
 double gas_hit_variance_map[x_nbins * y_nbins] = {0};
 double scores_map[x_nbins * y_nbins] = {0};
+double distance_map[x_nbins * y_nbins] = {0};
+double acc_info_map[x_nbins * y_nbins] = {0}; 
 int cell_visited_list[x_nbins * y_nbins] = {0};
 
 // current posterior distribution
@@ -454,6 +460,34 @@ void log_scores_map()
 	fprintf(scores_map_logfile, "%.9f\n", scores_map[(x_nbins * y_nbins) - 1]);
 
 	fclose(scores_map_logfile);
+}
+
+void log_distance_map()
+{
+	sprintf(distance_map_logfile_name, "%s/Results/current/101/distance_map.csv", workspacePath);
+	distance_map_logfile = fopen(distance_map_logfile_name, "a");
+
+	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+		fprintf(distance_map_logfile, "%.9f, ", distance_map[i]);
+
+	// Ajoutez la dernière valeur sans virgule
+	fprintf(distance_map_logfile, "%.9f\n", distance_map[(x_nbins * y_nbins) - 1]);
+
+	fclose(distance_map_logfile);
+}
+
+void log_acc_info_map()
+{
+	sprintf(acc_info_map_logfile_name, "%s/Results/current/101/acc_info_map.csv", workspacePath);
+	acc_info_map_logfile = fopen(acc_info_map_logfile_name, "a");
+
+	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+		fprintf(acc_info_map_logfile, "%.9f, ", acc_info_map[i]);
+
+	// Ajoutez la dernière valeur sans virgule
+	fprintf(acc_info_map_logfile, "%.9f\n", acc_info_map[(x_nbins * y_nbins) - 1]);
+
+	fclose(acc_info_map_logfile);
 }
 
 // ====================== ESTIMATION functions ========================= //
@@ -1591,15 +1625,14 @@ void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int
 std::vector<Position> path_;
 std::vector<Position> path_in_meters;
 std::vector<Position> previous_path;
-std::vector<Position> previous_path_in_meters;
 int compteur = 0;
 double radius = 10000.0;
 double mini_distance = 4.0;
-int previous_current_x_index = 0;
-int previous_current_y_index = 0;
+int previous_x_index = 0;
+int previous_y_index = 0;
 int maxStagnationIterations = 0;
 int stagnationCounter = 0;
-double max_info_ = -1;
+double max_info = -1;
 int best_cell_index = 0;
 int radius_neighbor = 2;
 double sigma = 1;
@@ -1621,29 +1654,33 @@ void accumulative_A_star()
 	// Parcourir toutes les cellules de la carte
 	for (int y = 0; y < y_nbins; y++)
 	{
-		for (int x = 0; x < y_nbins; x++)
+		for (int x = 0; x < x_nbins; x++)
 		{
 
 			int index_cell = y * x_nbins + x;
 
 			scores_map[index_cell] = 0;
 			////////////////////////////////////////////////////////////
-			if (gas_information_map[index_cell] > max_info_)
+			if (gas_information_map[index_cell] > max_info)
 			{
-				max_info_ = gas_information_map[index_cell]; // Mettre à jour la valeur maximale
+				max_info = gas_information_map[index_cell]; // Mettre à jour la valeur maximale
 				best_cell_index = index_cell;			   // Mettre à jour l'index de la meilleure cellule
 			}
 			////////////////////////////////////////////////////////////
-			if (cell_visited_list[index_cell] == 1)
+			if (simulation_parameters.visitedList == visitedList_ON){
+				if (cell_visited_list[index_cell] == 1)
 				continue;
+			}
 
 			Position target = {static_cast<float>(x), static_cast<float>(y)};
 			double distance_radius = std::sqrt(std::pow(current_x_index - target.x, 2) + std::pow(current_y_index - target.y, 2));
-
-			if (x == 0 || x == x_nbins - 1 || y == 0 || y == y_nbins - 1)
-				continue;
-			if (distance_radius > radius || distance_radius < mini_distance)
-				continue;
+                  
+			// // NOTE: why could not be the first point?
+			// if (x == 0 || x == x_nbins - 1 || y == 0 || y == y_nbins - 1)
+			// 	continue;
+			// // NOTE: not sure if this is necessary
+			// if (distance_radius > radius || distance_radius < mini_distance)
+			// 	continue;
 			// Vérifier que la cellule est valable
 
 			// if (gas_information_map[index_cell] <= 0) continue; // Ignorer les cellules sans information
@@ -1686,6 +1723,8 @@ void accumulative_A_star()
 				score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * pathLength));
 			}
 			scores_map[index_cell] = score;
+			distance_map[index_cell] = pathLength;
+			acc_info_map[index_cell] = totalInfo;
 
 			if (score > bestScore)
 			{
@@ -1695,27 +1734,16 @@ void accumulative_A_star()
 			}
 		}
 	}
-	double BestScore_in_map = -1000;
-	int bestCell_in_map = -1000;
-	for (int i = 0; i < x_nbins * y_nbins; ++i)
-	{
-		if (scores_map[i] > BestScore_in_map)
-		{
-			BestScore_in_map = scores_map[i];
-			bestCell_in_map = i;
-		}
-	}
-	int best_x_ = (bestCell_in_map % y_nbins) + 1;
-	int best_y_ = (bestCell_in_map / y_nbins) + 1;
-
-	std::cout << "Max score in scores_map: " << BestScore_in_map
-		    << " at coordinates (" << best_x_ << ", " << best_y_ << ")" << std::endl;
 
 	log_scores_map();
-
+	log_distance_map();
+	log_acc_info_map();
+      // find the point which has the maximal information
 	int best_x = (best_cell_index % y_nbins) + 1; // Calculer l'indice x à partir de l'index du tableau
 	int best_y = (best_cell_index / y_nbins) + 1;
-	// std::cout << "Cellule avec la plus grande info: (" << best_x << ", " << best_y << ") avec une information de: " << max_info_ << std::endl;
+	// std::cout << "Max info in map: " << max_info
+	// 	    << " at coordinates (" << best_x << ", " << best_y << ")" << std::endl;
+
 
 	if (bestScore > 0)
 	{
@@ -1730,7 +1758,6 @@ void accumulative_A_star()
 		path_ = bestPath;
 		path_in_meters = path_;
 		previous_path = bestPath;
-		previous_path_in_meters = previous_path; // Sauvegarder comme chemin de secours
 
 		// RECONVERTIR EN METRE
 		for (size_t i = 0; i < path_.size(); ++i)
@@ -1738,20 +1765,15 @@ void accumulative_A_star()
 			path_in_meters[i].x = path_[i].x * x_resol + source_x_min;
 			path_in_meters[i].y = path_[i].y * y_resol + source_y_min;
 		}
-		for (size_t i = 0; i < path_.size(); ++i)
-		{
-			previous_path_in_meters[i].x = path_[i].x * x_resol + source_x_min;
-			previous_path_in_meters[i].y = path_[i].y * y_resol + source_y_min;
-		}
 
 		if (path_.size() > 1)
 		{
 			if (dist_to_goal(path_[0]) < 0.5)
 			{
-				std::cout << "Le robot est trop proche du premier point du path." << std::endl;
+				//std::cout << "Le robot est trop proche du premier point du path." << std::endl;
 				goal_position = path_in_meters.back();
-				std::cout << "goal_POsition.x: " << goal_position.x << std::endl;
-				std::cout << "goal_POsition.y: " << goal_position.y << std::endl;
+				// std::cout << "goal_POsition.x: " << goal_position.x << std::endl;
+				// std::cout << "goal_POsition.y: " << goal_position.y << std::endl;
 			}
 			else
 			{
@@ -1767,7 +1789,8 @@ void accumulative_A_star()
 		}
 		else
 		{
-			std::cout << "Aucun chemin valide trouvé et aucun chemin précédent disponible." << std::endl;
+			std::cout << "No valid path found and no previous path available.\n" << std::endl;
+			fprintf(console_logfile, "No valid path found and no previous path available.\n");
 			return;
 		}
 	}
@@ -1780,7 +1803,7 @@ void accumulative_A_star()
 	std::cout << std::endl;
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// CAS DE STAGNATION
-	if (previous_current_x_index == current_x_index && previous_current_y_index == current_y_index)
+	if (previous_x_index == current_x_index && previous_y_index == current_y_index)
 	{
 		stagnationCounter++;
 		if (stagnationCounter >= maxStagnationIterations)
@@ -1790,14 +1813,16 @@ void accumulative_A_star()
 			goal_position.y = best_y;
 			stagnationCounter = 0; // Réinitialiser le compteur
 		}
+	      fprintf(console_logfile, "robot get block, navigate to maximal information piont\n");
+		fprintf(console_logfile, "maximal info goal position is (%f, %f) \n", goal_position.x, goal_position.y);
 	}
 	else
 	{
 		stagnationCounter = 0; // Réinitialiser si le robot a bougé
 	}
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////
-	previous_current_x_index = current_x_index;
-	previous_current_y_index = current_y_index;
+	previous_x_index = current_x_index;
+	previous_y_index = current_y_index;
 
 	std::cout << "goal_position.x: " << goal_position.x << std::endl;
 	std::cout << "goal_position.y: " << goal_position.y << std::endl;
@@ -2709,8 +2734,6 @@ void state_updategoal()
 		break;
 	case SUM_A_STAR:
 		accumulative_A_star();
-		// Algo_clustering();
-
 		break;
 	case WEIGHTED_CLUSTERING:
 		weighted_belief_clustering();
