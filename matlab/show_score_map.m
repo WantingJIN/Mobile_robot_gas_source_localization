@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/info_path_planning/map0/A_star';
+general_folder='../Results/new_planning/map10/A_star';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -42,13 +42,9 @@ entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
 real_source_position = params.source_position;
 
-if (params.planning_strategy == 5)
-    gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
-end 
-
-if (params.planning_strategy ==8)
-    gas_information_map = dlmread([experiment_file_path,'/scores_map.csv']);
-end
+gas_score_map = dlmread([experiment_file_path,'/scores_map.csv']);
+distance_map = dlmread([experiment_file_path,'/distance_map.csv']);
+acc_info_map = dlmread([experiment_file_path,'/acc_info_map.csv']);
 
 x=linspace(3,12.75,20);
 y=linspace(0,4,20);
@@ -57,8 +53,8 @@ trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
 
 %% show measurement
-f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
-subplot(1,3,1)
+f1 =figure('Position',[301.0000  100.4000  1800.6000  800.6000]);
+subplot(1,5,1)
 if (gas_feature == 1 )
     scatter(position_history(:,3),position_history(:,2),30,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
 elseif (gas_feature == 0 || gas_feature == 2)
@@ -73,11 +69,12 @@ xlim([0 4])
 ylim([2 13])
 ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
 title(['        Trajectory \newline and Measurements']);
+xlabel('Y(m)'); ylabel('X(m)')
 ax.TitleFontSizeMultiplier = 2;
 
 %% show pdf
 for i=1:size(pdf,1)
-    subplot(1,3,2)
+    subplot(1,5,2)
     imagesc(y,x,reshape(pdf(i,:),params.nbins(1),params.nbins(2)));
     if map_nbr~=0
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
@@ -90,29 +87,24 @@ for i=1:size(pdf,1)
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
-    axis equal; axis([-0.1,4.1,2.4,12.6]);
+    axis equal; 
     view(180,90);  colormap(mymap); 
     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
+    colorbar;caxis([0 Inf]);
+    xlabel('Y(m)'); ylabel('X(m)')
     ax.TitleFontSizeMultiplier = 2;
     
-    subplot(1,3,3)
-    % -------plot information map of each iter------------%
-    % the last iteration the information map won't update
+    subplot(1,5,3)
+    % -------plot score map of each iter------------%
+    % the last iteration the score map won't update
     if i == size(pdf,1)
-         imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
+         imagesc(y,x,reshape(gas_score_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
     else
-         imagesc(y,x,reshape(gas_information_map(i,1:end),params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas        
+         imagesc(y,x,reshape(gas_score_map(i,1:end),params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas        
     end
-     % -------plot relativegas measurements of each iter------------%
-    if (gas_feature == 2)
-        scatter(position_history(:,3),position_history(:,2),30,relative_measurements(i,:),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-        hold on
-    end
-
+  
     plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
     hold on
-    %rectplot = @(x1,y1,x2,y2) rectangle('Position',[x1 y1 x2 y2]);
-    
    
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on
@@ -124,11 +116,7 @@ for i=1:size(pdf,1)
     hold on
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);
-%     if (params.info_feature == 0)
-%         title(['Concentration variance map \newline           iteration ', num2str(i)]);
-%     elseif (params.info_feature == 1)
-     title(['Scoring function result \newline           iteration ', num2str(i)]);
-%     end
+    title(['Scoring function result \newline           iteration ', num2str(i)]);
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
     colorbar;caxis([0 Inf]);
     hold off;
@@ -136,6 +124,71 @@ for i=1:size(pdf,1)
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     ax.TitleFontSizeMultiplier = 2;
+    
+    subplot(1,5,4)
+    % -------plot disatance map of each iter------------%
+    % the last iteration the distance map won't update
+    if i == size(pdf,1)
+         imagesc(y,x,reshape(distance_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
+    else
+         imagesc(y,x,reshape(distance_map(i,1:end),params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas        
+    end
+ 
+
+    plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
+    hold on
+   
+    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    hold on
+    if map_nbr~=0
+        patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
+    end
+    hold on
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    hold on
+    axis equal; 
+    view(180,90);
+    title(['Distance map \newline           iteration ', num2str(i)]);
+    xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
+    colorbar;caxis([0 Inf]);
+    hold off;
+    xlim([0 4])
+    ylim([2 13])
+    ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
+    ax.TitleFontSizeMultiplier = 2;
+
+    subplot(1,5,5)
+    % -------plot acc info map of each iter------------%
+    % the last iteration the acc info map won't update
+    if i == size(pdf,1)
+         imagesc(y,x,reshape(acc_info_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
+    else
+         imagesc(y,x,reshape(acc_info_map(i,1:end),params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas        
+    end
+ 
+
+    plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
+    hold on
+   
+    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    hold on
+    if map_nbr~=0
+        patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
+    end
+    hold on
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    hold on
+    axis equal; 
+    view(180,90);
+    title(['Acc info map \newline           iteration ', num2str(i)]);
+    xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
+    colorbar;caxis([0 Inf]);
+    hold off;
+    xlim([0 4])
+    ylim([2 13])
+    ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
+    ax.TitleFontSizeMultiplier = 2;
+
     pause
     drawnow
 
@@ -195,28 +248,3 @@ close all
     % close all
 % end 
 
-%% show dispersion map
-% f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-% for i=1:size(gas_information_map,1)
-%     imagesc(y,x,reshape(gas_information_map(i,1:end-1),params.nbins(1), params.nbins(2)))
-%     hold on
-%     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
-%     hold on
-%     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
-%     hold on
-%     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
-%     hold on
-%     axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
-%     title(['Concentration Variance Map \newline           iteration ', num2str(i)]);
-%     xlabel('Y(m)'); ylabel('X(m)');
-%     load MyColormap2; colormap(mymap); colorbar;caxis([0 Inf]);
-%     hold off;
-%     xlim([0 4])
-%     ylim([2 13])
-%     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'reverse';
-%     ax = gca;
-%     ax.TitleFontSizeMultiplier = 3;
-%     pause;
-%     drawnow
-% %     saveas(f, [anim_folder,'/',num2str(i),'.png']);
-% end
