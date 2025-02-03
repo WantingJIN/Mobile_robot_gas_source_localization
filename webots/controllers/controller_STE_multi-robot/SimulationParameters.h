@@ -53,6 +53,7 @@ typedef enum planningStrategy
 	INFO_CLUSTERING = 7,
 	SUM_A_STAR = 8,
 	WEIGHTED_CLUSTERING = 9,
+	SUM_DIJKSTRA = 10,
 } ePlanningStrategy;
 
 typedef enum AStarScoreFun

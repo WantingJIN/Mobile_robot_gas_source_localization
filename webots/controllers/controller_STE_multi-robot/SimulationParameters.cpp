@@ -88,6 +88,10 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 		return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0)
 		return INFO_CLUSTERING;
+	if (strcmp(str, "WEIGHTED_CLUSTERING") == 0)
+		return WEIGHTED_CLUSTERING;
+	if (strcmp(str, "SUM_DIJKSTRA") == 0)
+		return SUM_DIJKSTRA;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
 	exit(1);
 }

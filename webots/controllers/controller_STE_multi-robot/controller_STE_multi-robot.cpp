@@ -1384,6 +1384,117 @@ void informative_clustering_planning()
 	}
 }
 
+// **Dijkstra’s Algorithm with Path Tracking**
+
+std::pair<std::vector<double>, std::unordered_map<int, Position>> 
+computeDijkstra(Position start, std::vector<std::pair<int, int>> directions) {
+    
+    std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
+    std::queue<std::pair<double, Position>> pq;
+
+    std::vector<double> dist_map(x_nbins * y_nbins, 1e3);
+    dist_map[start.index] = 0;
+    pq.push({0, start});
+    while (!pq.empty()) {
+        auto [currentDist, pos] = pq.front();
+        pq.pop();
+	
+        int x = static_cast<int>(pos.x_idx);
+        int y = static_cast<int>(pos.y_idx);
+        
+        // Expand neighbors
+        for (auto [dx, dy] : directions) {
+            int nx = x + dx, ny = y + dy;
+		Position neg(nx, ny); 
+            if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
+                double newDist = currentDist + 1; // Uniform cost movement
+                if (newDist < dist_map[neg.index]) {
+                    dist_map[neg.index] = newDist;
+                    pq.push({newDist, neg});
+                    cameFrom[neg.index] = {x, y};  // Store parent
+                }
+            }
+        }
+    }
+    return {dist_map, cameFrom};
+}
+
+// **Reconstruct Path from Dijkstra Results**
+std::vector<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom) {
+    std::vector<Position> path;
+    Position current = goal;
+    while (cameFrom.find(current.index) != cameFrom.end()) {
+        path.push_back(current);
+        current = cameFrom.at(current.index);
+    }
+    path.push_back(current);  // Add the starting position
+    std::reverse(path.begin(), path.end()); // Reverse to get the correct order
+    return path;
+}
+
+// **Main Function: Compute Accumulative Information Gain Using Dijkstra**
+void accumulative_Dijkstra() {
+	for (int i = 0; i < x_nbins * y_nbins; i++)
+	{
+		gas_information_map[i] = posterior.pdf[i];
+	}
+    // Directions for a 8-connected grid
+    std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    // Compute shortest distances and paths from current position to all cells
+    auto [distanceMap, cameFrom] = computeDijkstra(current_position, directions);
+
+    double bestScore = -1000; // Initialize the best score
+    Position bestTarget;
+    std::vector<Position> bestPath;
+
+    for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
+        for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
+		Position cell(x_idx,y_idx);
+            if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
+
+            double pathLength = distanceMap[cell.index];
+
+            if (pathLength == 1e3) continue; // Unreachable cell
+ 
+            // **Retrieve the path to this cell**
+            std::vector<Position> path = reconstructPath(cell, cameFrom);
+            if (path.empty()){
+			std::cout<<"no valid path exists";
+			continue; // Skip if no path exists	
+		} 
+
+            // **Accumulate total information gain along the path**
+            double totalInfo = 0.0;
+            for (const auto& pos : path) {
+		    
+                totalInfo += gas_information_map[pos.index]; // Sum information along the path
+            }
+		
+            // **Compute the score based on information-to-distance trade-off**
+            double score = totalInfo / std::max(1.0, pathLength); // Ratio Score
+            if (score > bestScore) {
+                bestScore = score;
+                bestTarget.copy_position(cell);
+                bestPath = path;
+            }
+        }
+    }
+
+    if (bestScore > 0) {
+        std::cout << "Best cell: (" << bestTarget.x << ", " << bestTarget.y << ") with score: " << bestScore << std::endl;
+        std::cout << "Optimal Path: ";
+        for (const auto& pos : bestPath) {
+            std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
+        }
+        std::cout << "Goal\n";
+	  goal_position.x = bestTarget.x;
+	  goal_position.y = bestTarget.y;
+    } else {
+        std::cout << "No valid path found.\n";
+    }
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 std::vector<Position> findOptimalPath(Position start, double target[2])
 {
@@ -2645,6 +2756,9 @@ void state_updategoal()
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
 		KLD_MAP_distance(1.0);
+		break;
+	case SUM_DIJKSTRA:
+	      accumulative_Dijkstra();
 		break;
 	default:
 		break;

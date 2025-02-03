@@ -1,6 +1,6 @@
 #ifndef POSITION_H
 #define POSITION_H
-
+#include "Constant.h"
 class Position
 {
 public:
@@ -8,10 +8,14 @@ public:
     float y;
     // float z;
     float heading;
+    int x_idx;
+    int y_idx;
+    int index;
 
     // constructor : everything set to 0
     Position();
     Position(float px, float py, float ph = 0);
+    Position(int px_idx, int py_idx);
     // copy constructor
     Position(const Position &p);
 
@@ -29,6 +33,7 @@ public:
     bool is_in_obstacle(float obs_xmin, float obs_xmax, float obs_ymin, float obs_ymax);
 
     int is_in_obstacle_list(float **obs_list, int nbr_obs);
+
 };
 
 #endif
