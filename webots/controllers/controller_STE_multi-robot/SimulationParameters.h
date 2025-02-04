@@ -56,12 +56,13 @@ typedef enum planningStrategy
 	SUM_DIJKSTRA = 10,
 } ePlanningStrategy;
 
-typedef enum AStarScoreFun
+typedef enum scoreFun
 {
       RATIO = 0,
 	LOG = 1,
 	SIGMOID = 2,
-}eAStarScoreFun;
+	SUM = 3,
+}eScoreFun;
 
 typedef enum gasFeature
 {
@@ -155,7 +156,7 @@ class SimulationParameters{
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod; 
 
-	      eAStarScoreFun AStarScoreFun;
+	      eScoreFun scoreFun;
 
 		SimulationParameters();
 		~SimulationParameters();

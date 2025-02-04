@@ -174,7 +174,7 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 	exit(1);
 }
 
-eAStarScoreFun parse_A_star_score_fun(const char *str)
+eScoreFun parse_score_fun(const char *str)
 {
 	if (strcmp(str, "RATIO") == 0)
 		return RATIO;
@@ -182,7 +182,9 @@ eAStarScoreFun parse_A_star_score_fun(const char *str)
 		return LOG;
 	if (strcmp(str, "SIGMOID") == 0)
 		return SIGMOID;
-	fprintf(stderr, "Unknown A star score function: %s\n", str);
+	if (strcmp(str, "SUM") == 0)
+		return SUM;
+	fprintf(stderr, "Unknown score function: %s\n", str);
 	exit(1);
 }
 
@@ -336,9 +338,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			scoreSigma = atof(value);
 		}
-		else if (strcmp(key, "AStarScoreFun") == 0)
+		else if (strcmp(key, "scoreFun") == 0)
 		{
-			AStarScoreFun = parse_A_star_score_fun(value);
+			scoreFun = parse_score_fun(value);
 		}
 		else
 		{
@@ -397,7 +399,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "likelihood_sigma %f\n", likelihoodSigma);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
-	fprintf(sim_param_file, "AStar_score_fun %d\n", AStarScoreFun);
+	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
 	fclose(sim_param_file);
 }
 

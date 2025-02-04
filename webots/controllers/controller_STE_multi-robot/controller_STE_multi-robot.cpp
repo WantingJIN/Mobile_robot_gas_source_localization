@@ -1471,7 +1471,25 @@ void accumulative_Dijkstra() {
             }
 		
             // **Compute the score based on information-to-distance trade-off**
-            double score = totalInfo / std::max(1.0, pathLength); // Ratio Score
+            double score;
+            if (simulation_parameters.scoreFun == RATIO)
+		{
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(1.0, pathLength);
+		}
+		if (simulation_parameters.scoreFun == LOG)
+		{
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(1.0, pathLength) + 1);
+		}
+		if (simulation_parameters.scoreFun == SIGMOID)
+		{
+			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(1.0, pathLength)));
+		}
+		if (simulation_parameters.scoreFun == SUM)
+		{
+			score = simulation_parameters.scoreSigma * totalInfo - (1 - simulation_parameters.scoreSigma) * pathLength;
+		}
+
+
             if (score > bestScore) {
                 bestScore = score;
                 bestTarget.copy_position(cell);
@@ -1728,15 +1746,15 @@ void accumulative_A_star()
 			// std::cout << "TotalInfo " << totalInfo << std::endl;
 			// std::cout << "PathLength " << pathLength << std::endl;
 			double score = 0.0;
-			if (simulation_parameters.AStarScoreFun == RATIO)
+			if (simulation_parameters.scoreFun == RATIO)
 			{
 				score = (simulation_parameters.scoreSigma * totalInfo) / pathLength;
 			}
-			if (simulation_parameters.AStarScoreFun == LOG)
+			if (simulation_parameters.scoreFun == LOG)
 			{
 				score = (simulation_parameters.scoreSigma * totalInfo) / std::log(pathLength + 1);
 			}
-			if (simulation_parameters.AStarScoreFun == SIGMOID)
+			if (simulation_parameters.scoreFun == SIGMOID)
 			{
 				score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * pathLength));
 			}
