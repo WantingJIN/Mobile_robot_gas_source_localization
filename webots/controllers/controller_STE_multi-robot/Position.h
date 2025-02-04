@@ -33,6 +33,8 @@ public:
     bool is_in_obstacle(float obs_xmin, float obs_xmax, float obs_ymin, float obs_ymax);
 
     int is_in_obstacle_list(float **obs_list, int nbr_obs);
+    
+    void calculate_index();
 
 };
 

@@ -1447,6 +1447,9 @@ void accumulative_Dijkstra() {
     Position bestTarget;
     std::vector<Position> bestPath;
 
+    double min_acc_info = 1e9, max_acc_info = -1e9;
+    double min_dist = 1e9, max_dist = -1e9;
+
     for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
         for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
 		Position cell(x_idx,y_idx);
@@ -1470,7 +1473,37 @@ void accumulative_Dijkstra() {
                 totalInfo += gas_information_map[pos.index]; // Sum information along the path
             }
 		
-            // **Compute the score based on information-to-distance trade-off**
+		acc_info_map[cell.index] = totalInfo;
+		distance_map[cell.index] = pathLength;
+
+		// Update min/max values
+		min_acc_info = std::min(min_acc_info, totalInfo);
+		max_acc_info = std::max(max_acc_info, totalInfo);
+		min_dist = std::min(min_dist, pathLength);
+		max_dist = std::max(max_dist, pathLength);
+        }
+    }
+
+    for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
+        for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
+		Position cell(x_idx,y_idx);
+            if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
+
+            if (max_acc_info != min_acc_info) {
+            	acc_info_map[cell.index] = (acc_info_map[cell.index] - min_acc_info) / (max_acc_info - min_acc_info);
+        	} else {
+            	acc_info_map[cell.index] = 0; // Avoid division by zero
+       	}
+		double totalInfo = acc_info_map[cell.index];
+
+        	if (max_dist != min_dist) {
+            	distance_map[cell.index] = (distance_map[cell.index] - min_dist) / (max_dist - min_dist);
+       	} else {
+            	distance_map[cell.index] = 0; // Avoid division by zero
+        	}
+		double pathLength = distance_map[cell.index];
+
+		// **Compute the score based on information-to-distance trade-off**
             double score;
             if (simulation_parameters.scoreFun == RATIO)
 		{
@@ -1488,18 +1521,21 @@ void accumulative_Dijkstra() {
 		{
 			score = simulation_parameters.scoreSigma * totalInfo - (1 - simulation_parameters.scoreSigma) * pathLength;
 		}
-
+            scores_map[cell.index] = score;
 
             if (score > bestScore) {
+		    std::vector<Position> path = reconstructPath(cell, cameFrom);
+		    if (path.empty()){
+				std::cout<<"no valid path exists";
+				continue; // Skip if no path exists	
+		    } 
                 bestScore = score;
                 bestTarget.copy_position(cell);
                 bestPath = path;
             }
-		acc_info_map[cell.index] = totalInfo;
-		scores_map[cell.index] = score;
-		distance_map[cell.index] = pathLength;
-        }
+	  }
     }
+
     log_scores_map();
     log_distance_map();
     log_acc_info_map();

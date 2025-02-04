@@ -45,6 +45,12 @@ Position::Position(const Position &to_copy_from)
 	index = to_copy_from.index;
 }
 
+void Position::calculate_index(){
+	x_idx = static_cast<int>((x - source_x_min) / x_resol);
+	y_idx = static_cast<int>((y - source_y_min) / y_resol);
+	index = y_idx * x_nbins + x_idx;
+}
+
 bool Position::operator==(const Position &o)
 {
 	return (o.x == x && o.y == y);

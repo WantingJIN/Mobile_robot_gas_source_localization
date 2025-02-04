@@ -324,6 +324,7 @@ void update_position()
 
 	compass_heading = wb_compass_get_values(compass);
 	current_position.heading = (-atan2(compass_heading[0], compass_heading[2]) + M_PI);
+	current_position.calculate_index();
 }
 
 int obstacle_or_not()
