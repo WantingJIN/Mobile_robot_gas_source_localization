@@ -1477,8 +1477,14 @@ void accumulative_Dijkstra() {
                 bestTarget.copy_position(cell);
                 bestPath = path;
             }
+		acc_info_map[cell.index] = totalInfo;
+		scores_map[cell.index] = score;
+		distance_map[cell.index] = pathLength;
         }
     }
+    log_scores_map();
+    log_distance_map();
+    log_acc_info_map();
 
     if (bestScore > 0) {
         std::cout << "Best cell: (" << bestTarget.x << ", " << bestTarget.y << ") with score: " << bestScore << std::endl;
