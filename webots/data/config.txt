@@ -24,5 +24,5 @@ simuMode = ONLINE
 R0 = 100
 likelihoodSigma = 0.48
 lambda = 0.7
-AStarScoreFun = RATIO
+scoreFun = SIGMOID
 scoreSigma = 400

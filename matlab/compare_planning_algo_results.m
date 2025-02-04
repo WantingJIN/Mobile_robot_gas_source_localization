@@ -7,7 +7,7 @@ dataTable = table();
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'info_path_planning/map10'];
+dispatched_folder = [general_folder,'info_planning/map9'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -40,11 +40,26 @@ for i=1:numExperiments
 %     if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
     sub_folder_name = '';
     if params.planning_strategy == 5
-        sub_folder_name = 'belief_clustering_ratio_10';
+        sub_folder_name = 'belief_clustering';
     end
     if params.planning_strategy == 8
         sub_folder_name = 'A_star';
     end
+    if params.planning_strategy == 10 
+        if params.score_fun == 0
+            sub_folder_name = 'Dijkstra_Ratio';
+        end
+        if params.score_fun == 1
+            sub_folder_name = 'Dijkstra_Log';
+        end
+        if params.score_fun == 2
+            sub_folder_name = 'Dijkstra_Sigmoid';
+        end
+        if params.score_fun == 3
+            sub_folder_name = 'Dijkstra_Sum';
+        end
+    end
+
     % the right path of the folder
     new_path = [dispatched_folder '/' sub_folder_name];
 
@@ -134,9 +149,22 @@ for i=1:numExperiments
     planning_algo = "";
     switch path_planning_idx
         case 5
-            planning_algo = "clustering_ratio_10";
+            planning_algo = "clustering";
         case 8
             planning_algo = "A star";
+        case 10
+            if params.score_fun == 0
+                planning_algo = "Dijkstra_Ratio";
+            end
+            if params.score_fun == 1
+                planning_algo = "Dijkstra_Log";
+            end
+            if params.score_fun == 2
+                planning_algo = "Dijkstra_Sigmoid";
+            end
+            if params.score_fun == 3
+                planning_algo = "Dijkstra_Sum";
+            end
     end
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
