@@ -222,6 +222,10 @@ double pt_distance(Position p1, Position p2)
 	return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
 }
 
+double index_distance(int x_idx_diff, int y_idx_diff){
+	return sqrt(pow(x_idx_diff * x_resol, 2) + pow(y_idx_diff * y_resol, 2));
+}
+
 // min distance between two robots position (p1 and p2) and their goals (g1 and g2)
 double min_distance(Position p1, Position g1, Position p2, Position g2)
 {
@@ -1386,29 +1390,38 @@ void informative_clustering_planning()
 
 // **Dijkstra’s Algorithm with Path Tracking**
 
+// Custom Comparator for Priority Queue (Alternative)
+struct ComparePosition {
+    bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
+        return a.first > b.first; // Min-heap: prioritize lower cost
+    }
+};
+
 std::pair<std::vector<double>, std::unordered_map<int, Position>> 
-computeDijkstra(Position start, std::vector<std::pair<int, int>> directions) {
+computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions) {
     
     std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
-    std::queue<std::pair<double, Position>> pq;
+    std::priority_queue<std::pair<double, Position>, 
+                        std::vector<std::pair<double, Position>>, 
+                        ComparePosition> pq;
 
     std::vector<double> dist_map(x_nbins * y_nbins, 1e3);
     dist_map[start.index] = 0;
     pq.push({0, start});
     while (!pq.empty()) {
-        auto [currentDist, pos] = pq.front();
+        auto [currentDist, pos] = pq.top();
         pq.pop();
 	
         int x = static_cast<int>(pos.x_idx);
         int y = static_cast<int>(pos.y_idx);
         
         // Expand neighbors
-        for (auto [dx, dy] : directions) {
+        for (auto [dx, dy, rel_dist] : directions) {
             int nx = x + dx, ny = y + dy;
 		Position neg(nx, ny); 
             if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
-                double newDist = currentDist + 1; // Uniform cost movement
-                if (newDist < dist_map[neg.index]) {
+                double newDist = currentDist + rel_dist;
+		    if (newDist < dist_map[neg.index]) {
                     dist_map[neg.index] = newDist;
                     pq.push({newDist, neg});
                     cameFrom[neg.index] = {x, y};  // Store parent
@@ -1439,7 +1452,9 @@ void accumulative_Dijkstra() {
 		gas_information_map[i] = posterior.pdf[i];
 	}
     // Directions for a 8-connected grid
-    std::vector<std::pair<int, int>> directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
+     {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
+     {-1, 1, index_distance(-1,1)}, {1, -1, index_distance(1,-1)}, {1, 1, index_distance(1,1)}};
     // Compute shortest distances and paths from current position to all cells
     auto [distanceMap, cameFrom] = computeDijkstra(current_position, directions);
 
@@ -1540,7 +1555,7 @@ void accumulative_Dijkstra() {
     log_distance_map();
     log_acc_info_map();
 
-    if (bestScore > 0) {
+    if (bestScore > -1e3) {
         std::cout << "Best cell: (" << bestTarget.x << ", " << bestTarget.y << ") with score: " << bestScore << std::endl;
         std::cout << "Optimal Path: ";
         for (const auto& pos : bestPath) {

@@ -7,11 +7,6 @@ general_folder='/home/durancea/plume_model_learning/Results/1703671246493/101';
 %experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
 
-anim_folder=[general_folder '/info'] ;
-if(~exist(anim_folder,'dir'))
-    mkdir(anim_folder);
-end
-
 clustering=0
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
 visited_list = dlmread([experiment_file_path, '/visited_list.csv']);

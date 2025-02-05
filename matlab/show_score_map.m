@@ -2,15 +2,11 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/new_planning/map10/A_star';
+general_folder='../Results/info_planning/MOX/map5/Dijkstra_Sum';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
 
-anim_folder=[general_folder '/info'] ;
-if(~exist(anim_folder,'dir'))
-    mkdir(anim_folder);
-end
 params = my_text2struct([experiment_file_path,'/param_log.csv']);       
 clustering = 1;
 visited_listd_true = 0;
@@ -84,48 +80,17 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
     hold on
+    axis equal; axis([-0.1,4.1,2.4,12.6]);
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
-    axis equal; 
     view(180,90);  colormap(mymap); 
-    title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
+    title(['Posterior pdf  \newline iteration ', num2str(i)]);
     colorbar;caxis([0 Inf]);
     xlabel('Y(m)'); ylabel('X(m)')
     ax.TitleFontSizeMultiplier = 2;
     
     subplot(1,5,3)
-    % -------plot score map of each iter------------%
-    % the last iteration the score map won't update
-    if i == size(pdf,1)
-         imagesc(y,x,reshape(gas_score_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
-    else
-         imagesc(y,x,reshape(gas_score_map(i,1:end),params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas        
-    end
-  
-    plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
-    hold on
-   
-    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
-    hold on
-    if map_nbr~=0
-        patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
-    end
-    hold on
-    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
-    hold on
-    axis equal; axis([-0.1,4.1,2.4,12.6]);
-    view(180,90);
-    title(['Scoring function result \newline           iteration ', num2str(i)]);
-    xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
-    colorbar;caxis([0 Inf]);
-    hold off;
-    xlim([0 4])
-    ylim([2 13])
-    ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
-    ax.TitleFontSizeMultiplier = 2;
-    
-    subplot(1,5,4)
     % -------plot disatance map of each iter------------%
     % the last iteration the distance map won't update
     if i == size(pdf,1)
@@ -148,7 +113,7 @@ for i=1:size(pdf,1)
     hold on
     axis equal; 
     view(180,90);
-    title(['Distance map \newline           iteration ', num2str(i)]);
+    title(['Distance map \newline iteration ', num2str(i)]);
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
     colorbar;caxis([0 Inf]);
     hold off;
@@ -157,7 +122,7 @@ for i=1:size(pdf,1)
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     ax.TitleFontSizeMultiplier = 2;
 
-    subplot(1,5,5)
+    subplot(1,5,4)
     % -------plot acc info map of each iter------------%
     % the last iteration the acc info map won't update
     if i == size(pdf,1)
@@ -180,7 +145,38 @@ for i=1:size(pdf,1)
     hold on
     axis equal; 
     view(180,90);
-    title(['Acc info map \newline           iteration ', num2str(i)]);
+    title(['Acc info map \newline iteration ', num2str(i)]);
+    xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
+    colorbar;caxis([0 Inf]);
+    hold off;
+    xlim([0 4])
+    ylim([2 13])
+    ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
+    ax.TitleFontSizeMultiplier = 2;
+
+    subplot(1,5,5)
+    % -------plot score map of each iter------------%
+    % the last iteration the score map won't update
+    if i == size(pdf,1)
+         imagesc(y,x,reshape(gas_score_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
+    else
+         imagesc(y,x,reshape(gas_score_map(i,1:end),params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas        
+    end
+  
+    plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
+    hold on
+   
+    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    hold on
+    if map_nbr~=0
+        patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
+    end
+    hold on
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    hold on
+    axis equal; axis([-0.1,4.1,2.4,12.6]);
+    view(180,90);
+    title(['Scoring function \newline iteration ', num2str(i)]);
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
     colorbar;caxis([0 Inf]);
     hold off;
