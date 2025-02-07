@@ -1,4 +1,4 @@
-likelihood_error = 775
+likelihood_error = 3000
 global_local_search_ratio = 0.5
 MCMC_iteration_num = 1000
 MCMC_or_exhaustive_eval = EXHAUSTIVE 
@@ -13,7 +13,7 @@ gasFeature = ABSOLUTE_VALUE
 visitedList = visitedList_ON
 infoFeature = VARIANCE 
 sampling_period = 10 
-cluster_entropy_ratio = 10 
+cluster_entropy_ratio = 6 
 vel_factor = 1 
 sampling_dist_thresh = 0.1 
 relativeMethod = EMPIRICAL_CDF_NUM

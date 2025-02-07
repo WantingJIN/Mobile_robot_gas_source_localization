@@ -2651,16 +2651,15 @@ void state_measuring()
 				printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 			log_position();
 			log_measurements();
-			if (!position_outside_arena(current_position))
-			{
-				history.position.push_back({current_position.x, current_position.y, 0});
-				// history.measurement[history.size] = sampleBuffer.average_concentration;
-				history.measurement.push_back(sampleBuffer.average_concentration);
-				history.gas_hit_event.push_back(0);
-				history.FSM_iter.push_back(FSM.n_cycles);
-				history.size++;
-				history_print(history);
-			}
+			
+			history.position.push_back({current_position.x, current_position.y, 0});
+			// history.measurement[history.size] = sampleBuffer.average_concentration;
+			history.measurement.push_back(sampleBuffer.average_concentration);
+			history.gas_hit_event.push_back(0);
+			history.FSM_iter.push_back(FSM.n_cycles);
+			history.size++;
+			history_print(history);
+			
 			// send it to friends
 			if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
 			{
@@ -2692,15 +2691,14 @@ void state_measuring()
 			printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 		log_position();
 		log_measurements();
-		if (!position_outside_arena(current_position))
-		{
-			history.position.push_back({current_position.x, current_position.y, 0});
-			history.measurement.push_back(sampleBuffer.average_concentration);
-			history.gas_hit_event.push_back(0);
-			history.FSM_iter.push_back(FSM.n_cycles);
-			history.size++;
-			history_print(history);
-		}
+		
+		history.position.push_back({current_position.x, current_position.y, 0});
+		history.measurement.push_back(sampleBuffer.average_concentration);
+		history.gas_hit_event.push_back(0);
+		history.FSM_iter.push_back(FSM.n_cycles);
+		history.size++;
+		history_print(history);
+	
 		// send it to friends
 		if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
 		{
@@ -2781,7 +2779,7 @@ void state_estimating()
 	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2))
-	// if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
+	//if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
 	{
 		// the end
 		FSM.state = STATE_FINISHED;
@@ -2931,25 +2929,23 @@ void state_moving()
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > simulation_parameters.sampling_period)
-		{
-			if (!position_outside_arena(current_position))
-			{
-				// Sampling distance threshold
-				// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-				// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-				//{
-				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-				sample_in_motion.measurement.push_back(instant_concentration);
-				sample_in_motion.size++;
-				ground_truth_in_motion.push_back(odor_concentration);
-				last_measurement_pos.x = current_position.x;
-				last_measurement_pos.y = current_position.y;
-				// printf("Distance between measurements = %f", dist_to_last_measurement);
-				// history.position.push_back({current_position.x, current_position.y, 0});
-				// history.measurement.push_back(instant_concentration);
-				// history.size++;
-				//}
-			}
+		{	
+			// Sampling distance threshold
+			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+			//{
+			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+			sample_in_motion.measurement.push_back(instant_concentration);
+			sample_in_motion.size++;
+			ground_truth_in_motion.push_back(odor_concentration);
+			last_measurement_pos.x = current_position.x;
+			last_measurement_pos.y = current_position.y;
+			// printf("Distance between measurements = %f", dist_to_last_measurement);
+			// history.position.push_back({current_position.x, current_position.y, 0});
+			// history.measurement.push_back(instant_concentration);
+			// history.size++;
+			//}
+		
 			sample_counter = 0;
 		}
 	}

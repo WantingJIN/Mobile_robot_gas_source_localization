@@ -7,7 +7,7 @@ dataTable = table();
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'info_planning/map9'];
+dispatched_folder = [general_folder,'info_planning/MOX/map9/likelihood3000'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -47,16 +47,16 @@ for i=1:numExperiments
     end
     if params.planning_strategy == 10 
         if params.score_fun == 0
-            sub_folder_name = 'Dijkstra_Ratio';
+            sub_folder_name = ['Dijkstra_Ratio_',num2str(params.score_sigma)];
         end
         if params.score_fun == 1
-            sub_folder_name = 'Dijkstra_Log';
+            sub_folder_name = ['Dijkstra_Log_', num2str(params.score_sigma)];
         end
         if params.score_fun == 2
-            sub_folder_name = 'Dijkstra_Sigmoid';
+            sub_folder_name = ['Dijkstra_Sigmoid_', num2str(params.score_sigma)];
         end
         if params.score_fun == 3
-            sub_folder_name = 'Dijkstra_Sum';
+            sub_folder_name = ['Dijkstra_Sum_', num2str(params.score_sigma)];
         end
     end
 
@@ -154,16 +154,16 @@ for i=1:numExperiments
             planning_algo = "A star";
         case 10
             if params.score_fun == 0
-                planning_algo = "Dijkstra_Ratio";
+                planning_algo = append("Dijkstra_Ratio_", num2str(params.score_sigma));
             end
             if params.score_fun == 1
-                planning_algo = "Dijkstra_Log";
+                planning_algo = append("Dijkstra_Log_", num2str(params.score_sigma));
             end
             if params.score_fun == 2
-                planning_algo = "Dijkstra_Sigmoid";
+                planning_algo = append("Dijkstra_Sigmoid_", num2str(params.score_sigma));
             end
             if params.score_fun == 3
-                planning_algo = "Dijkstra_Sum";
+                planning_algo = append("Dijkstra_Sum_", num2str(params.score_sigma));
             end
     end
             
@@ -262,4 +262,4 @@ annotation(f,'textbox',...
     'FontSize',12,...
     'FitBoxToText','off');
 
-saveas(f,[dispatched_folder '/release_rate_results_comparison.png']);
+saveas(f,[dispatched_folder '/path_planning_algo_comparison.png']);
