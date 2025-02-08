@@ -90,8 +90,10 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 		return INFO_CLUSTERING;
 	if (strcmp(str, "WEIGHTED_CLUSTERING") == 0)
 		return WEIGHTED_CLUSTERING;
-	if (strcmp(str, "SUM_DIJKSTRA") == 0)
-		return SUM_DIJKSTRA;
+	if (strcmp(str, "SUM_DIJKSTRA_FIX") == 0)
+		return SUM_DIJKSTRA_FIX;
+	if (strcmp(str, "SUM_DIJKSTRA_ADP") == 0)
+		return SUM_DIJKSTRA_ADP;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
 	exit(1);
 }
@@ -122,6 +124,8 @@ eInfoFeature parse_info_feature(const char *str)
 		return VARIANCE;
 	if (strcmp(str, "MEAN") == 0)
 		return MEAN;
+	if (strcmp(str, "PDF") == 0)
+		return PDF;
 	fprintf(stderr, "Unknown info feature: %s\n", str);
 	exit(1);
 }
@@ -184,6 +188,8 @@ eScoreFun parse_score_fun(const char *str)
 		return SIGMOID;
 	if (strcmp(str, "SUM") == 0)
 		return SUM;
+	if (strcmp(str, "EXP") == 0)
+		return EXP;
 	fprintf(stderr, "Unknown score function: %s\n", str);
 	exit(1);
 }

@@ -1095,10 +1095,17 @@ void calculate_information_gain()
 	{
 		plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
 	}
-	else if (simulation_parameters.infoFeature == MEAN)
+	if (simulation_parameters.infoFeature == MEAN)
 	{
 		plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
 	}
+      if (simulation_parameters.infoFeature == PDF){
+		for (int i = 0; i < x_nbins * y_nbins; i++)
+		{
+			gas_information_map[i] = posterior.pdf[i];
+		}
+	}
+
 	// printf("gas information map is: \n");
 	// for (int i = 0; i < x_nbins * y_nbins; i++)
 	// {
@@ -1447,10 +1454,7 @@ std::vector<Position> reconstructPath(Position goal, const std::unordered_map<in
 
 // **Main Function: Compute Accumulative Information Gain Using Dijkstra**
 void accumulative_Dijkstra() {
-	for (int i = 0; i < x_nbins * y_nbins; i++)
-	{
-		gas_information_map[i] = posterior.pdf[i];
-	}
+     calculate_information_gain();
     // Directions for a 8-connected grid
     std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
      {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
@@ -1522,20 +1526,34 @@ void accumulative_Dijkstra() {
             double score;
             if (simulation_parameters.scoreFun == RATIO)
 		{
-			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(1.0, pathLength);
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(0.0, pathLength);
 		}
 		if (simulation_parameters.scoreFun == LOG)
 		{
-			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(1.0, pathLength) + 1);
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(0.0, pathLength) + 1);
 		}
 		if (simulation_parameters.scoreFun == SIGMOID)
 		{
-			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(1.0, pathLength)));
+			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(0.0, pathLength)));
 		}
 		if (simulation_parameters.scoreFun == SUM)
 		{
-			score = simulation_parameters.scoreSigma * totalInfo - (1 - simulation_parameters.scoreSigma) * pathLength;
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_FIX)
+			{
+				score = simulation_parameters.scoreSigma * totalInfo - (1 - simulation_parameters.scoreSigma) * pathLength;
+			}
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
+				double dynamic_weight = 1.0 - posterior.entropy / simulation_parameters.cluster_entropy_ratio;
+				if (dynamic_weight < 0.0)
+					dynamic_weight = 0.0;
+				score = (1 - dynamic_weight) * totalInfo - dynamic_weight * pathLength;
+			}
 		}
+		if (simulation_parameters.scoreFun == EXP)
+		{
+			score = simulation_parameters.scoreSigma * exp(totalInfo) - (1.0 - simulation_parameters.scoreSigma) * exp(pathLength);
+		}
+
             scores_map[cell.index] = score;
 
             if (score > bestScore) {
@@ -1763,11 +1781,11 @@ void accumulative_A_star()
 			double distance_radius = std::sqrt(std::pow(current_x_index - target.x, 2) + std::pow(current_y_index - target.y, 2));
                   
 			// // NOTE: why could not be the first point?
-			// if (x == 0 || x == x_nbins - 1 || y == 0 || y == y_nbins - 1)
-			// 	continue;
+			if (x == 0 || x == x_nbins - 1 || y == 0 || y == y_nbins - 1)
+				continue;
 			// // NOTE: not sure if this is necessary
-			// if (distance_radius > radius || distance_radius < mini_distance)
-			// 	continue;
+			if (distance_radius > radius || distance_radius < mini_distance)
+				continue;
 			// Vérifier que la cellule est valable
 
 			// if (gas_information_map[index_cell] <= 0) continue; // Ignorer les cellules sans information
@@ -1830,7 +1848,6 @@ void accumulative_A_star()
 	int best_y = (best_cell_index / y_nbins) + 1;
 	// std::cout << "Max info in map: " << max_info
 	// 	    << " at coordinates (" << best_x << ", " << best_y << ")" << std::endl;
-
 
 	if (bestScore > 0)
 	{
@@ -2830,7 +2847,10 @@ void state_updategoal()
 		information_gain_navigation_approx();
 		KLD_MAP_distance(1.0);
 		break;
-	case SUM_DIJKSTRA:
+	case SUM_DIJKSTRA_FIX:
+	      accumulative_Dijkstra();
+		break;
+      case SUM_DIJKSTRA_ADP:
 	      accumulative_Dijkstra();
 		break;
 	default:

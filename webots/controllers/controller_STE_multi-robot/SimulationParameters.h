@@ -53,7 +53,8 @@ typedef enum planningStrategy
 	INFO_CLUSTERING = 7,
 	SUM_A_STAR = 8,
 	WEIGHTED_CLUSTERING = 9,
-	SUM_DIJKSTRA = 10,
+	SUM_DIJKSTRA_FIX = 10,
+	SUM_DIJKSTRA_ADP = 11,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -62,6 +63,7 @@ typedef enum scoreFun
 	LOG = 1,
 	SIGMOID = 2,
 	SUM = 3,
+	EXP = 4,
 }eScoreFun;
 
 typedef enum gasFeature
@@ -81,6 +83,7 @@ typedef enum infoFeature
 {
 	VARIANCE = 0,
 	MEAN = 1,
+	PDF = 2,
 } eInfoFeature;
 
 typedef enum relativeMethod
