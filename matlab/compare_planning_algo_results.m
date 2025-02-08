@@ -58,6 +58,21 @@ for i=1:numExperiments
         if params.score_fun == 3
             sub_folder_name = ['Dijkstra_Sum_', num2str(params.score_sigma)];
         end
+        if params.score_fun == 4
+            sub_folder_name = ['Dijkstra_Exp_', num2str(params.score_sigma)];
+        end
+        if params.info_feature == 0
+            sub_folder_name = 'Dijkstra_Sum_variance';
+        end
+        if params.info_feature == 1
+            sub_folder_name = 'Dijkstra_Sum_mean';
+        end
+        if params.info_feature == 2
+            sub_folder_name = 'Dijkstra_Sum_pdf';
+        end
+    end
+    if params.planning_strategy == 11
+        sub_folder_name = ['Dijkstra_Sum_ADP', num2str(params.cluster_ratio)];
     end
 
     % the right path of the folder
@@ -165,6 +180,21 @@ for i=1:numExperiments
             if params.score_fun == 3
                 planning_algo = append("Dijkstra_Sum_", num2str(params.score_sigma));
             end
+            if params.score_fun == 4
+                planning_algo = append("Dijkstra_Exp_", num2str(params.score_sigma));
+            end
+
+            % if params.info_feature == 0
+            %     planning_algo = "Dijkstra_Sum_variance";
+            % end
+            % if params.info_feature == 1
+            %     planning_algo = "Dijkstra_Sum_mean";
+            % end
+            % if params.info_feature == 2
+            %     planning_algo = "Dijkstra_Sum_pdf";
+            % end
+        case 11
+            planning_algo = append("Dijkstra_Sum_ADP", num2str(params.cluster_ratio));
     end
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
