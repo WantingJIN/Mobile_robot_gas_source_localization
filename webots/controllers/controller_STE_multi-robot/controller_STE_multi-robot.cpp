@@ -1521,6 +1521,8 @@ void accumulative_Dijkstra() {
             	distance_map[cell.index] = 0; // Avoid division by zero
         	}
 		double pathLength = distance_map[cell.index];
+            
+            if (totalInfo < 1e-2) continue; // Skip no information gain cells
 
 		// **Compute the score based on information-to-distance trade-off**
             double score;
