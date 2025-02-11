@@ -97,7 +97,15 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
 	exit(1);
 }
-
+eInfoSum parse_info_sum(const char *str)
+{
+	if (strcmp(str, "LINEAR_SUM") == 0)
+		return LINEAR_SUM;
+	if (strcmp(str, "EXP_SUM") == 0)
+		return EXP_SUM;
+	fprintf(stderr, "Unknown info sum: %s\n", str);
+	exit(1);
+}
 eGasFeature parse_gas_feature(const char *str)
 {
 	if (strcmp(str, "ABSOLUTE_VALUE") == 0)
@@ -348,6 +356,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			scoreFun = parse_score_fun(value);
 		}
+		else if (strcmp(key, "infoSum") == 0)
+		{
+			infoSum = parse_info_sum(value);
+		}
 		else
 		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
@@ -406,6 +418,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
 	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
+	fprintf(sim_param_file, "info_sum %d\n", infoSum);
 	fclose(sim_param_file);
 }
 

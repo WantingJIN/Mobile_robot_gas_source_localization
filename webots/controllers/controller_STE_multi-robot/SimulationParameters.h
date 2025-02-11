@@ -115,6 +115,12 @@ typedef enum gasHitMethod
 	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
+typedef enum infoSum
+{
+	LINEAR_SUM = 0,
+	EXP_SUM = 1,
+} eInfoSum;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -160,6 +166,8 @@ class SimulationParameters{
 		eGasHitMethod gasHitMethod; 
 
 	      eScoreFun scoreFun;
+
+		eInfoSum infoSum;
 
 		SimulationParameters();
 		~SimulationParameters();

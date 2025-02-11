@@ -158,6 +158,7 @@ double time_before_measuring;
 double time_after_measuring;
 double navigation_sampling_time_sum = 0;
 long long estimating_time_sum = 0; // computation time of the estimation part
+long long planning_time_sum = 0;	// computation time of the planning part
 
 // precomputed gas maps
 double c_avg[x_nbins * y_nbins][x_nbins * y_nbins]; // left: source position, right: estimated cell position
@@ -446,9 +447,16 @@ void log_experiment_time()
 {
 	double experiment_time = end_timestamp - start_timestamp;
 	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
+
+	double computation_time = (estimating_time_sum + planning_time_sum) / 1000.0;
+	double total_time = experiment_time + computation_time;
+
 	fprintf(experiment_time_logfile, "total experiment time (s): %f\n", experiment_time);
 	fprintf(experiment_time_logfile, "navigation and sampling time (s): %f\n", navigation_sampling_time_sum);
 	fprintf(experiment_time_logfile, "estimating time (s): %f\n", estimating_time_sum / 1000.0);
+	fprintf(experiment_time_logfile, "planning time (s): %f\n", planning_time_sum / 1000.0);
+	fprintf(experiment_time_logfile, "computation time (s): %f\n", computation_time);
+	fprintf(experiment_time_logfile, "total time (s): %f\n", total_time);
 	fclose(experiment_time_logfile);
 }
 
@@ -1487,10 +1495,17 @@ void accumulative_Dijkstra() {
 
             // **Accumulate total information gain along the path**
             double totalInfo = 0.0;
-            for (const auto& pos : path) {
-		    
-                totalInfo += gas_information_map[pos.index]; // Sum information along the path
-            }
+		if (simulation_parameters.infoSum == LINEAR_SUM){
+			for (const auto& pos : path) {		    
+			totalInfo += gas_information_map[pos.index]; // Sum information along the path
+			}
+
+		}
+		if (simulation_parameters.infoSum == EXP_SUM){
+			for (const auto& pos : path) {		    
+			totalInfo += exp(gas_information_map[pos.index])-1; // Sum information along the path
+			}
+		}
 		
 		acc_info_map[cell.index] = totalInfo;
 		distance_map[cell.index] = pathLength;
@@ -2816,6 +2831,8 @@ void state_estimating()
 
 void state_updategoal()
 {
+	// computation time of path planning
+	long long time_before_path_planning = current_timestamp();
 	fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 	if (VERBOSE)
 		printf("[%d] updating the goal\n", ID);
@@ -2895,6 +2912,8 @@ void state_updategoal()
 			FSM.state = STATE_MOVING;
 			FSM.hook = state_moving;
 			time_before_moving = wb_robot_get_time();
+			long long current_path_planning_time = current_timestamp() - time_before_path_planning;
+			planning_time_sum += current_path_planning_time;
 		}
 		else
 		{
