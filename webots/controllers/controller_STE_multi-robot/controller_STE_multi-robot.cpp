@@ -111,7 +111,7 @@ DeepCFDPlumeModel2D plume_model;
 double gas_information_map[x_nbins * y_nbins] = {0};
 double gas_hit_variance_map[x_nbins * y_nbins] = {0};
 double scores_map[x_nbins * y_nbins] = {0};
-double distance_map[x_nbins * y_nbins] = {0};
+double distance_map[x_nbins * y_nbins] = {1e3};
 double acc_info_map[x_nbins * y_nbins] = {0}; 
 int cell_visited_list[x_nbins * y_nbins] = {0};
 
@@ -1405,10 +1405,15 @@ void informative_clustering_planning()
 
 // **Dijkstra’s Algorithm with Path Tracking**
 
-// Custom Comparator for Priority Queue (Alternative)
+// Custom Comparator for Priority Queue
 struct ComparePosition {
     bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
         return a.first > b.first; // Min-heap: prioritize lower cost
+    }
+};
+struct ComparePosition2 {
+    bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
+        return a.first < b.first; // Min-heap: prioritize lower cost
     }
 };
 
@@ -1445,6 +1450,58 @@ computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> direct
         }
     }
     return {dist_map, cameFrom};
+}
+
+std::pair<std::vector<double>, std::unordered_map<int, Position>> 
+computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions) {
+
+    printf("Enter computeMultiDijkstra \n");
+    
+    std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
+    std::priority_queue<std::pair<double, Position>, 
+                        std::vector<std::pair<double, Position>>, 
+                        ComparePosition2> pq;
+
+//     std::vector<double> dist_map(x_nbins * y_nbins, 1e3);
+//     dist_map[start.index] = 0;
+//     std::vector<double> sum_info_map(x_nbins * y_nbins, 0);
+//     sum_info_map[start.index] = gas_information_map[start.index];
+    double start_dist = 0.0;
+    double start_info = gas_information_map[start.index];
+    double start_obj = simulation_parameters.scoreSigma * start_info - (1 - simulation_parameters.scoreSigma) * start_dist;
+    std::vector<double> obj_map(x_nbins * y_nbins, -1e3);
+    obj_map[start.index] = start_obj;
+    pq.push({start_obj, start});
+    int step_counter = 0;
+    //while (!pq.empty() && step_counter < simulation_parameters.planning_step) {
+    while (!pq.empty()) {
+	  step_counter++;
+        auto [currentObj, pos] = pq.top();
+        pq.pop();
+	   
+        int x = static_cast<int>(pos.x_idx);
+        int y = static_cast<int>(pos.y_idx);
+        
+        // Expand neighbors
+        for (auto [dx, dy, rel_dist] : directions) {
+            int nx = x + dx, ny = y + dy;
+		Position neg(nx, ny); 
+            if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
+                // normalize the relative distance
+		    double normalized_rel_dist = rel_dist / (index_distance(1, 1) * simulation_parameters.planning_step);
+                // the gas information map is already normalized (at least for PDF)
+		    double normalized_info_gain = gas_information_map[neg.index];
+		    double relativeObj = simulation_parameters.scoreSigma * normalized_info_gain - (1 - simulation_parameters.scoreSigma) * normalized_rel_dist;
+		    double newObj = currentObj + relativeObj;
+		    if (newObj > obj_map[neg.index]) {
+                    obj_map[neg.index] = newObj;
+                    pq.push({newObj, neg});
+                    cameFrom[neg.index] = {x, y};  // Store parent
+                }
+            }
+        }
+    }
+    return {obj_map, cameFrom};
 }
 
 // **Reconstruct Path from Dijkstra Results**
@@ -1602,6 +1659,62 @@ void accumulative_Dijkstra() {
     } else {
         std::cout << "No valid path found.\n";
     }
+}
+
+
+void multi_objective_Dijkstra() {
+	printf("Enter multi_objective_Dijkstra \n");
+     double bestScore = -1e2; // Initialize the best score
+     Position bestTarget;
+     std::vector<Position> bestPath;
+     calculate_information_gain();
+     
+     std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
+     {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
+     {-1, 1, index_distance(-1,1)}, {1, -1, index_distance(1,-1)}, {1, 1, index_distance(1,1)}};
+     
+     // Compute shortest distances and paths from current position to all cells
+     auto [costMap, cameFrom] = computeMultiDijkstra(current_position, directions);
+     
+	for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
+		for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
+			Position cell(x_idx,y_idx);
+			if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
+			double cost = costMap[cell.index];
+			scores_map[cell.index] = cost;
+			if (cost == -1e3) continue; // Unreachable cell
+			if (cost > bestScore) {
+				bestScore = cost;
+				bestTarget.copy_position(cell);
+				std::vector<Position> path = reconstructPath(cell, cameFrom);
+				if (path.empty()){
+					std::cout<<"no valid path exists";
+					continue; // Skip if no path exists	
+				}
+				bestPath = path;			
+			}
+		}
+	}
+
+	log_scores_map();
+	log_distance_map();
+	log_acc_info_map();
+
+	if (bestScore > -1e3) {
+		std::cout << "Best cell: (" << bestTarget.x << ", " << bestTarget.y << ") with score: " << bestScore << std::endl;
+		std::cout << "Optimal Path: ";
+		for (const auto& pos : bestPath) {
+			std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
+		}
+		std::cout << "Goal\n";
+		goal_position.x = bestTarget.x;
+		goal_position.y = bestTarget.y;
+	} else {
+		std::cout << "No valid path found.\n";
+		goal_position.x = current_position.x;
+		goal_position.y = current_position.y;
+	}
+     
 }
 
 
@@ -2871,6 +2984,9 @@ void state_updategoal()
 		break;
       case SUM_DIJKSTRA_ADP:
 	      accumulative_Dijkstra();
+		break;
+      case MULTI_DIJKSTRA:
+	      multi_objective_Dijkstra();
 		break;
 	default:
 		break;

@@ -55,6 +55,7 @@ typedef enum planningStrategy
 	WEIGHTED_CLUSTERING = 9,
 	SUM_DIJKSTRA_FIX = 10,
 	SUM_DIJKSTRA_ADP = 11,
+	MULTI_DIJKSTRA = 12,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -149,6 +150,7 @@ class SimulationParameters{
 	      float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
+		int planning_step;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 

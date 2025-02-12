@@ -84,7 +84,7 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 		return BELIEF_CLUSTERING;
 	if (strcmp(str, "SUM_A_STAR") == 0)
 		return SUM_A_STAR;
-	if (strcmp(str, "INFORMATIVE_KLD") == 0)
+	if (strcmp(str, "INFORMATIVE_KLD") == 0) 
 		return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0)
 		return INFO_CLUSTERING;
@@ -94,6 +94,8 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 		return SUM_DIJKSTRA_FIX;
 	if (strcmp(str, "SUM_DIJKSTRA_ADP") == 0)
 		return SUM_DIJKSTRA_ADP;
+	if (strcmp(str, "MULTI_DIJKSTRA") == 0)
+		return MULTI_DIJKSTRA;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
 	exit(1);
 }
@@ -360,6 +362,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			infoSum = parse_info_sum(value);
 		}
+		else if (strcmp(key, "planning_step") == 0)
+		{
+			planning_step = atoi(value);
+		}
 		else
 		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
@@ -419,6 +425,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
 	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
 	fprintf(sim_param_file, "info_sum %d\n", infoSum);
+	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fclose(sim_param_file);
 }
 
