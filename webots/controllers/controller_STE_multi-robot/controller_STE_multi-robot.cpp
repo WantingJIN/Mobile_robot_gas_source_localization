@@ -169,6 +169,7 @@ Position last_measurement_pos;
 // real source position
 double real_source_pos[3] = {0, 0, 0};
 
+bool use_visibility_path = true;
 // =========================== FUNCTIONS ================================ //
 // random value sampled from a normal distribution
 double randn(double mu, double sigma)
@@ -1525,16 +1526,16 @@ computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> d
 }
 
 // **Reconstruct Path from Dijkstra Results**
-std::vector<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom) {
-    std::vector<Position> path;
+std::list<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom) {
+    std::list<Position> dij_path;
     Position current = goal;
     while (cameFrom.find(current.index) != cameFrom.end()) {
-        path.push_back(current);
+        dij_path.push_back(current);
         current = cameFrom.at(current.index);
     }
-    path.push_back(current);  // Add the starting position
-    std::reverse(path.begin(), path.end()); // Reverse to get the correct order
-    return path;
+    dij_path.push_back(current);  // Add the starting position
+    std::reverse(dij_path.begin(), dij_path.end()); // Reverse to get the correct order
+    return dij_path;
 }
 
 // **Main Function: Compute Accumulative Information Gain Using Dijkstra**
@@ -1549,7 +1550,7 @@ void accumulative_Dijkstra() {
 
     double bestScore = -1000; // Initialize the best score
     Position bestTarget;
-    std::vector<Position> bestPath;
+    std::list<Position> bestPath;
 
     double min_acc_info = 1e9, max_acc_info = -1e9;
     double min_dist = 1e9, max_dist = -1e9;
@@ -1564,8 +1565,8 @@ void accumulative_Dijkstra() {
             if (pathLength == 1e3) continue; // Unreachable cell
  
             // **Retrieve the path to this cell**
-            std::vector<Position> path = reconstructPath(cell, cameFrom);
-            if (path.empty()){
+            std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+            if (dij_path.empty()){
 			std::cout<<"no valid path exists";
 			continue; // Skip if no path exists	
 		} 
@@ -1573,13 +1574,13 @@ void accumulative_Dijkstra() {
             // **Accumulate total information gain along the path**
             double totalInfo = 0.0;
 		if (simulation_parameters.infoSum == LINEAR_SUM){
-			for (const auto& pos : path) {		    
+			for (const auto& pos : dij_path) {		    
 			totalInfo += gas_information_map[pos.index]; // Sum information along the path
 			}
 
 		}
 		if (simulation_parameters.infoSum == EXP_SUM){
-			for (const auto& pos : path) {		    
+			for (const auto& pos : dij_path) {		    
 			totalInfo += exp(gas_information_map[pos.index])-1; // Sum information along the path
 			}
 		}
@@ -1651,14 +1652,14 @@ void accumulative_Dijkstra() {
             scores_map[cell.index] = score;
 
             if (score > bestScore) {
-		    std::vector<Position> path = reconstructPath(cell, cameFrom);
-		    if (path.empty()){
+		    std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+		    if (dij_path.empty()){
 				std::cout<<"no valid path exists";
 				continue; // Skip if no path exists	
 		    } 
                 bestScore = score;
                 bestTarget.copy_position(cell);
-                bestPath = path;
+                bestPath = dij_path;
             }
 	  }
     }
@@ -1686,7 +1687,7 @@ void multi_objective_Dijkstra() {
 	printf("Enter multi_objective_Dijkstra \n");
      double bestScore = -1e2; // Initialize the best score
      Position bestTarget;
-     std::vector<Position> bestPath;
+     std::list<Position> bestPath;
      calculate_information_gain();
      
      std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
@@ -1707,12 +1708,12 @@ void multi_objective_Dijkstra() {
 				bestScore = cost;
 				bestTarget.copy_position(cell);
 				//printf("current best Target is: %d, %d with score %f \n", bestTarget.x_idx, bestTarget.y_idx, cost);
-				std::vector<Position> path = reconstructPath(cell, cameFrom);
-				if (path.empty()){
+				std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+				if (dij_path.empty()){
 					std::cout<<"no valid path exists";
 					continue; // Skip if no path exists	
 				}
-				bestPath = path;			
+				bestPath = dij_path;			
 			}
 		}
 	}
@@ -1721,10 +1722,11 @@ void multi_objective_Dijkstra() {
 	log_distance_map();
 	log_acc_info_map();
 
-	if (bestScore > -1e3) {
+ 	if (bestScore > -1e3) {
+		path = bestPath;
 		std::cout << "Best cell: (" << bestTarget.x_idx << ", " << bestTarget.y_idx << ") with score: " << bestScore << std::endl;
 		std::cout << "Optimal Path: ";
-		for (const auto& pos : bestPath) {
+		for (const auto& pos : path) {
 			std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
 		}
 		std::cout << "Goal\n";
@@ -3008,6 +3010,7 @@ void state_updategoal()
 		break;
       case MULTI_DIJKSTRA:
 	      multi_objective_Dijkstra();
+		use_visibility_path = false;
 		break;
 	default:
 		break;
@@ -3021,21 +3024,23 @@ void state_updategoal()
 		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
 		// 	random_planning();
 		// }
+            if (use_visibility_path){
 
-		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-		goal_outside_obstacles(&goal_position);
-		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+			goal_outside_obstacles(&goal_position);
+			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
-		// find the path using visibility graph
-		VisiLibity::Point start(current_position.x, current_position.y);
-		VisiLibity::Point finish(goal_position.x, goal_position.y);
-		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-		// copy the path in another variable
-		for (unsigned k = 0; k < Polyline_path.size(); k++)
-		{
-			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-			path.push_back(p);
-			log_trajectory(p);
+			// find the path using visibility graph
+			VisiLibity::Point start(current_position.x, current_position.y);
+			VisiLibity::Point finish(goal_position.x, goal_position.y);
+			VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+			// copy the path in another variable
+			for (unsigned k = 0; k < Polyline_path.size(); k++)
+			{
+				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+				path.push_back(p);
+				log_trajectory(p);
+			}
 		}
 		i = path.begin();
 		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
