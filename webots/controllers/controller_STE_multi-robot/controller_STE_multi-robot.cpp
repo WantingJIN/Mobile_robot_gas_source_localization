@@ -1413,7 +1413,7 @@ struct ComparePosition {
 };
 struct ComparePosition2 {
     bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
-        return a.first < b.first; // Min-heap: prioritize lower cost
+        return a.first < b.first; // Min-heap: prioritize higher cost
     }
 };
 
@@ -1454,8 +1454,6 @@ computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> direct
 
 std::pair<std::vector<double>, std::unordered_map<int, Position>> 
 computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions) {
-
-    printf("Enter computeMultiDijkstra \n");
     
     std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
     std::priority_queue<std::pair<double, Position>, 
@@ -1473,30 +1471,52 @@ computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> d
     obj_map[start.index] = start_obj;
     pq.push({start_obj, start});
     int step_counter = 0;
-    //while (!pq.empty() && step_counter < simulation_parameters.planning_step) {
-    while (!pq.empty()) {
+    while (!pq.empty() && step_counter < simulation_parameters.planning_step) {
+    //while (!pq.empty()) {
 	  step_counter++;
         auto [currentObj, pos] = pq.top();
         pq.pop();
 	   
         int x = static_cast<int>(pos.x_idx);
         int y = static_cast<int>(pos.y_idx);
-        
+      //   printf("Current cell is : %d, %d, obj value is: %f \n", x, y, currentObj);
+	//   printf("Current cell's parents is : %d, %d \n", cameFrom[pos.index].x_idx, cameFrom[pos.index].y_idx);
         // Expand neighbors
         for (auto [dx, dy, rel_dist] : directions) {
             int nx = x + dx, ny = y + dy;
 		Position neg(nx, ny); 
-            if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
+		// when the neg is already in the path, skip it
+            Position current = pos;
+		bool in_path = false;
+		std::unordered_set<int> visited_positions;
+		while (cameFrom.find(current.index) != cameFrom.end()) {
+                  if (visited_positions.find(current.index) != visited_positions.end()) {
+				in_path = true;
+				break;
+			}
+    			visited_positions.insert(current.index);  // Mark node as visited
+
+         		current = cameFrom.at(current.index);
+			if (current.x_idx == nx && current.y_idx == ny){
+				in_path = true;
+				break;
+			}	
+            }
+
+		if (in_path) continue;
+		if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
                 // normalize the relative distance
-		    double normalized_rel_dist = rel_dist / (index_distance(1, 1) * simulation_parameters.planning_step);
+		    double normalized_rel_dist = (1 - simulation_parameters.scoreSigma) * rel_dist / (index_distance(1, 1) * simulation_parameters.planning_step);
                 // the gas information map is already normalized (at least for PDF)
-		    double normalized_info_gain = gas_information_map[neg.index];
-		    double relativeObj = simulation_parameters.scoreSigma * normalized_info_gain - (1 - simulation_parameters.scoreSigma) * normalized_rel_dist;
+		    double normalized_info_gain = simulation_parameters.scoreSigma * gas_information_map[neg.index];
+		    double relativeObj = normalized_info_gain - normalized_rel_dist;
+		    //printf("normalized rel dist: %f, normalized info gain: %f, relative obj: %f \n", normalized_rel_dist, normalized_info_gain, relativeObj);
 		    double newObj = currentObj + relativeObj;
 		    if (newObj > obj_map[neg.index]) {
                     obj_map[neg.index] = newObj;
                     pq.push({newObj, neg});
-                    cameFrom[neg.index] = {x, y};  // Store parent
+                    cameFrom[neg.index] = Position(x, y);  // Store parent
+			  //printf("neighbor cell is: %d, %d, parent is: %d, %d, obj value is: %f \n", nx, ny, x, y, newObj);
                 }
             }
         }
@@ -1648,7 +1668,7 @@ void accumulative_Dijkstra() {
     log_acc_info_map();
 
     if (bestScore > -1e3) {
-        std::cout << "Best cell: (" << bestTarget.x << ", " << bestTarget.y << ") with score: " << bestScore << std::endl;
+        std::cout << "Best cell: (" << bestTarget.x_idx << ", " << bestTarget.y_idx << ") with score: " << bestScore << std::endl;
         std::cout << "Optimal Path: ";
         for (const auto& pos : bestPath) {
             std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
@@ -1686,6 +1706,7 @@ void multi_objective_Dijkstra() {
 			if (cost > bestScore) {
 				bestScore = cost;
 				bestTarget.copy_position(cell);
+				//printf("current best Target is: %d, %d with score %f \n", bestTarget.x_idx, bestTarget.y_idx, cost);
 				std::vector<Position> path = reconstructPath(cell, cameFrom);
 				if (path.empty()){
 					std::cout<<"no valid path exists";
@@ -1701,7 +1722,7 @@ void multi_objective_Dijkstra() {
 	log_acc_info_map();
 
 	if (bestScore > -1e3) {
-		std::cout << "Best cell: (" << bestTarget.x << ", " << bestTarget.y << ") with score: " << bestScore << std::endl;
+		std::cout << "Best cell: (" << bestTarget.x_idx << ", " << bestTarget.y_idx << ") with score: " << bestScore << std::endl;
 		std::cout << "Optimal Path: ";
 		for (const auto& pos : bestPath) {
 			std::cout << "(" << pos.x << ", " << pos.y << ") -> ";

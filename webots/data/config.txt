@@ -25,6 +25,6 @@ R0 = 100
 likelihoodSigma = 0.48
 lambda = 0.7
 scoreFun = SUM
-scoreSigma = 0.5
+scoreSigma = 0.95
 infoSum = LINEAR_SUM
 planning_step = 10
