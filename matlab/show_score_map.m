@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/info_planning/MOX/map5/Dijkstra_Sum';
+general_folder='../Results/info_planning/map5/Dijkstra_Exp_pdf_linear_acc0.5';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -51,7 +51,7 @@ trajectory = [positions(1,:); trajectory];
 %% show measurement
 f1 =figure('Position',[301.0000  100.4000  1800.6000  800.6000]);
 subplot(1,5,1)
-if (gas_feature == 1 )
+if (gas_feature == 1)
     scatter(position_history(:,3),position_history(:,2),30,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
 elseif (gas_feature == 0 || gas_feature == 2)
     scatter(position_history(:,3),position_history(:,2),30,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
@@ -86,7 +86,7 @@ for i=1:size(pdf,1)
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     view(180,90);  colormap(mymap); 
     title(['Posterior pdf  \newline iteration ', num2str(i)]);
-    colorbar;caxis([0 Inf]);
+    colorbar;%caxis([0 Inf]);
     xlabel('Y(m)'); ylabel('X(m)')
     ax.TitleFontSizeMultiplier = 2;
     
@@ -115,7 +115,7 @@ for i=1:size(pdf,1)
     view(180,90);
     title(['Distance map \newline iteration ', num2str(i)]);
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
-    colorbar;caxis([0 Inf]);
+    colorbar;%caxis([0 Inf]);
     hold off;
     xlim([0 4])
     ylim([2 13])
@@ -147,7 +147,7 @@ for i=1:size(pdf,1)
     view(180,90);
     title(['Acc info map \newline iteration ', num2str(i)]);
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
-    colorbar;caxis([0 Inf]);
+    colorbar;%caxis([0 Inf]);
     hold off;
     xlim([0 4])
     ylim([2 13])
@@ -178,7 +178,7 @@ for i=1:size(pdf,1)
     view(180,90);
     title(['Scoring function \newline iteration ', num2str(i)]);
     xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
-    colorbar;caxis([0 Inf]);
+    colorbar;%caxis([0 Inf]);
     hold off;
     xlim([0 4])
     ylim([2 13])

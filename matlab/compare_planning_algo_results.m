@@ -2,12 +2,12 @@
 % Plots distance to true source location along y and x and the number of
 % iterations for convergence
 
-clear all; clc; %close all;
+clear all; clc; close all;
 dataTable = table();
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'info_planning/MOX/map9/likelihood3000'];
+dispatched_folder = [general_folder,'info_planning/map10'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -40,40 +40,53 @@ for i=1:numExperiments
 %     if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
     sub_folder_name = '';
     if params.planning_strategy == 5
-        sub_folder_name = 'belief_clustering';
+        sub_folder_name = ['belief_clustering', num2str(params.cluster_ratio)];
     end
     if params.planning_strategy == 8
         sub_folder_name = 'A_star';
     end
-    if params.planning_strategy == 10 
-        if params.score_fun == 0
-            sub_folder_name = ['Dijkstra_Ratio_',num2str(params.score_sigma)];
-        end
-        if params.score_fun == 1
-            sub_folder_name = ['Dijkstra_Log_', num2str(params.score_sigma)];
-        end
-        if params.score_fun == 2
-            sub_folder_name = ['Dijkstra_Sigmoid_', num2str(params.score_sigma)];
-        end
-        if params.score_fun == 3
-            sub_folder_name = ['Dijkstra_Sum_', num2str(params.score_sigma)];
-        end
-        if params.score_fun == 4
-            sub_folder_name = ['Dijkstra_Exp_', num2str(params.score_sigma)];
-        end
-        if params.info_feature == 0
-            sub_folder_name = 'Dijkstra_Sum_variance';
-        end
-        if params.info_feature == 1
-            sub_folder_name = 'Dijkstra_Sum_mean';
-        end
-        if params.info_feature == 2
-            sub_folder_name = 'Dijkstra_Sum_pdf';
-        end
+    if params.planning_strategy == 6
+        sub_folder_name = 'informative_KLD';
+    end
+    if params.planning_strategy == 10
+        sub_folder_name = 'Dijkstra_Fix';
+        sub_folder_name = [sub_folder_name, num2str(params.score_sigma)];
     end
     if params.planning_strategy == 11
-        sub_folder_name = ['Dijkstra_Sum_ADP', num2str(params.cluster_ratio)];
+        sub_folder_name = 'Dijkstra_ADP';
+        sub_folder_name = [sub_folder_name, num2str(params.cluster_ratio)];
     end
+    if params.score_fun == 0
+        sub_folder_name = [sub_folder_name, '_Ratio'];
+    end
+    if params.score_fun == 1
+        sub_folder_name = [sub_folder_name, '_Log'];
+    end
+    if params.score_fun == 2
+        sub_folder_name = [sub_folder_name, '_Sigmoid'];
+    end
+    if params.score_fun == 3
+        sub_folder_name = [sub_folder_name, '_Sum'];
+    end
+    if params.score_fun == 4
+        sub_folder_name = [sub_folder_name, '_Exp'];
+    end
+    if params.info_feature == 0
+        sub_folder_name = [sub_folder_name, '_variance'];
+    end
+    if params.info_feature == 1
+        sub_folder_name = [sub_folder_name, '_mean'];
+    end
+    if params.info_feature == 2
+        sub_folder_name = [sub_folder_name, '_pdf'];
+    end
+    if params.info_sum == 0
+        sub_folder_name = [sub_folder_name, '_linear_acc'];
+    end
+    if params.info_sum == 1
+        sub_folder_name = [sub_folder_name, '_nonlinear_acc'];
+    end
+   
 
     % the right path of the folder
     new_path = [dispatched_folder '/' sub_folder_name];
@@ -120,7 +133,8 @@ for i=1:numExperiments
     % nav_time = exp_time_file(2,2);
     % comp_time = exp_time_file(3,2);
     % exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
-    exp_time = exp_time_file(1,5).Var5; 
+    %exp_time = exp_time_file(1,5).Var5; 
+    exp_time = exp_time_file(3,4).Var4; 
     
     % error on X and Y (col 5 and 6)
     max_a_post = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
@@ -164,25 +178,35 @@ for i=1:numExperiments
     planning_algo = "";
     switch path_planning_idx
         case 5
-            planning_algo = "clustering";
+            planning_algo = append("clustering", num2str(params.cluster_ratio));
         case 8
             planning_algo = "A star";
         case 10
+            planning_algo = "Dijkstra_FIX";
             if params.score_fun == 0
-                planning_algo = append("Dijkstra_Ratio_", num2str(params.score_sigma));
+                planning_algo = append(planning_algo, "_Ratio");
             end
             if params.score_fun == 1
-                planning_algo = append("Dijkstra_Log_", num2str(params.score_sigma));
+                planning_algo = append(planning_algo, "_Log");
             end
             if params.score_fun == 2
-                planning_algo = append("Dijkstra_Sigmoid_", num2str(params.score_sigma));
+                planning_algo = append(planning_algo, "_Sigmoid");
             end
             if params.score_fun == 3
-                planning_algo = append("Dijkstra_Sum_", num2str(params.score_sigma));
+                planning_algo = append(planning_algo, "_Sum");
             end
             if params.score_fun == 4
-                planning_algo = append("Dijkstra_Exp_", num2str(params.score_sigma));
+                planning_algo = append(planning_algo, "_Exp");
             end
+            if params.info_sum == 0
+                planning_algo = append(planning_algo, "_linear_sum");
+            end
+            if params.info_sum == 1
+                planning_algo = append(planning_algo, "_nonlinear_sum");
+            end
+            planning_algo = append(planning_algo, num2str(params.score_sigma)); 
+        case 6
+            planning_algo = "informative KLD";
 
             % if params.info_feature == 0
             %     planning_algo = "Dijkstra_Sum_variance";
@@ -194,7 +218,29 @@ for i=1:numExperiments
             %     planning_algo = "Dijkstra_Sum_pdf";
             % end
         case 11
-            planning_algo = append("Dijkstra_Sum_ADP", num2str(params.cluster_ratio));
+            planning_algo = "Dijkstra_ADP";
+            if params.score_fun == 0
+                planning_algo = append(planning_algo, "_Ratio");
+            end
+            if params.score_fun == 1
+                planning_algo = append(planning_algo, "_Log");
+            end
+            if params.score_fun == 2
+                planning_algo = append(planning_algo, "_Sigmoid");
+            end
+            if params.score_fun == 3
+                planning_algo = append(planning_algo, "_Sum");
+            end
+            if params.score_fun == 4
+                planning_algo = append(planning_algo, "_Exp");
+            end
+            if params.info_sum == 0
+                planning_algo = append(planning_algo, "_linear_sum");
+            end
+            if params.info_sum == 1
+                planning_algo = append(planning_algo, "_nonlinear_sum");
+            end
+            planning_algo = append(planning_algo, num2str(params.cluster_ratio)); 
     end
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
@@ -223,7 +269,7 @@ lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
-ylim([-1,10])
+ylim([-3,10])
 xlabel('Planning Algo');
 ylabel('Error (m)');
 title('Error on x');
@@ -271,7 +317,7 @@ grid on;
 %     ylim([0,max(iteration_nbr_list)+1])
 xlabel('Planning Algo');
 ylabel('s');
-title('Experimental Time');
+title('Computation Time');
 
 
 %% calculate success rate

@@ -111,7 +111,7 @@ DeepCFDPlumeModel2D plume_model;
 double gas_information_map[x_nbins * y_nbins] = {0};
 double gas_hit_variance_map[x_nbins * y_nbins] = {0};
 double scores_map[x_nbins * y_nbins] = {0};
-double distance_map[x_nbins * y_nbins] = {1e3};
+double distance_map[x_nbins * y_nbins] = {0};
 double acc_info_map[x_nbins * y_nbins] = {0}; 
 int cell_visited_list[x_nbins * y_nbins] = {0};
 
@@ -506,7 +506,7 @@ void log_acc_info_map()
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps
-double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_precomp(struct history history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -527,14 +527,22 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 		py[i] = history.position[i].y;
 		idx[i] = floor((px[i] - source_x_min) / x_resol);
 		idy[i] = floor((py[i] - source_y_min) / y_resol);
+		// idx should be between 0 and x_nbins-1
+		if (idx[i] < 0) idx[i] = 0;
+		if (idx[i] >= x_nbins) idx[i] = x_nbins - 1;
+		// idy should be between 0 and y_nbins-1
+		if (idy[i] < 0) idy[i] = 0;
+		if (idy[i] >= y_nbins) idy[i] = y_nbins - 1;
 	}
 
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
 
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
 	{
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
+		// if (source_pos_idx == 0)
+		// 	fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.measurement[i], model_c_avg[i]);
 	}
 
 	return (exp(-0.5 * sum_tmp));
@@ -1538,9 +1546,42 @@ std::list<Position> reconstructPath(Position goal, const std::unordered_map<int,
     return dij_path;
 }
 
+void reset_metrics(){
+    for (int i = 0; i < x_nbins * y_nbins; i++)
+    {
+	  acc_info_map[i] = 0.0;
+	  distance_map[i] = 0.0;
+	  scores_map[i] = 0.0;
+    }
+}
+
+void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, int *cell_visited_list)
+{
+	// Parcours des cellules dans le voisinage
+	for (int dx = -radius_neighbor; dx <= radius_neighbor; ++dx)
+	{
+		for (int dy = -radius_neighbor; dy <= radius_neighbor; ++dy)
+		{
+			int neighbor_x = x + dx;
+			int neighbor_y = y + dy;
+
+			// Vérifier si la cellule voisine est dans les limites de la grille
+			if (neighbor_x >= 0 && neighbor_x < x_nbins_ && neighbor_y >= 0 && neighbor_y < y_nbins_)
+			{
+				// Calculer l'index dans le tableau
+				int index = neighbor_y * x_nbins_ + neighbor_x;
+				// Marquer la cellule voisine comme visitée
+				cell_visited_list[index] = 1;
+			}
+		}
+	}
+}
+
+
 // **Main Function: Compute Accumulative Information Gain Using Dijkstra**
 void accumulative_Dijkstra() {
      calculate_information_gain();
+     reset_metrics();
     // Directions for a 8-connected grid
     std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
      {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
@@ -1554,6 +1595,8 @@ void accumulative_Dijkstra() {
 
     double min_acc_info = 1e9, max_acc_info = -1e9;
     double min_dist = 1e9, max_dist = -1e9;
+
+    int radius_neighbor = 2;
 
     for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
         for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
@@ -1575,13 +1618,12 @@ void accumulative_Dijkstra() {
             double totalInfo = 0.0;
 		if (simulation_parameters.infoSum == LINEAR_SUM){
 			for (const auto& pos : dij_path) {		    
-			totalInfo += gas_information_map[pos.index]; // Sum information along the path
+				totalInfo += gas_information_map[pos.index]; // Sum information along the path
 			}
-
 		}
 		if (simulation_parameters.infoSum == EXP_SUM){
 			for (const auto& pos : dij_path) {		    
-			totalInfo += exp(gas_information_map[pos.index])-1; // Sum information along the path
+				totalInfo += exp(3*gas_information_map[pos.index])-1; // Sum information along the path
 			}
 		}
 		
@@ -1616,6 +1658,11 @@ void accumulative_Dijkstra() {
 		double pathLength = distance_map[cell.index];
             
             if (totalInfo < 1e-2) continue; // Skip no information gain cells
+		// skip visited cells
+		if (simulation_parameters.visitedList == visitedList_ON){
+			if (cell_visited_list[cell.index] == 1)
+				continue;
+		}
 
 		// **Compute the score based on information-to-distance trade-off**
             double score;
@@ -1646,7 +1693,7 @@ void accumulative_Dijkstra() {
 		}
 		if (simulation_parameters.scoreFun == EXP)
 		{
-			score = simulation_parameters.scoreSigma * exp(totalInfo) - (1.0 - simulation_parameters.scoreSigma) * exp(pathLength);
+			score = simulation_parameters.scoreSigma * (exp(totalInfo)-1) - (1.0 - simulation_parameters.scoreSigma) * pathLength;
 		}
 
             scores_map[cell.index] = score;
@@ -1677,6 +1724,8 @@ void accumulative_Dijkstra() {
         std::cout << "Goal\n";
 	  goal_position.x = bestTarget.x;
 	  goal_position.y = bestTarget.y;
+	  cell_visited_list[bestTarget.index] = 1;
+	  markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, x_nbins, y_nbins, radius_neighbor, cell_visited_list);
     } else {
         std::cout << "No valid path found.\n";
     }
@@ -1855,29 +1904,6 @@ std::vector<Position> findOptimalPath(Position start, double target[2])
 
 	// Si aucun chemin trouvé, retourner un chemin vide
 	return {};
-}
-
-
-void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, int *cell_visited_list)
-{
-	// Parcours des cellules dans le voisinage
-	for (int dx = -radius_neighbor; dx <= radius_neighbor; ++dx)
-	{
-		for (int dy = -radius_neighbor; dy <= radius_neighbor; ++dy)
-		{
-			int neighbor_x = x + dx;
-			int neighbor_y = y + dy;
-
-			// Vérifier si la cellule voisine est dans les limites de la grille
-			if (neighbor_x >= 0 && neighbor_x < x_nbins_ && neighbor_y >= 0 && neighbor_y < y_nbins_)
-			{
-				// Calculer l'index dans le tableau
-				int index = neighbor_y * x_nbins_ + neighbor_x;
-				// Marquer la cellule voisine comme visitée
-				cell_visited_list[index] = 1;
-			}
-		}
-	}
 }
 
 std::vector<Position> path_;

@@ -46,7 +46,7 @@ sigma=0.4 #noise level for the STE likelihood
 for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
-	for m in 10 #1 2 3 5 10 #0 1  
+	for m in 5 10 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
 		# for likelihood in 2000 3000
@@ -54,8 +54,9 @@ do
 	      # for R in 100 1500
 		# for thres in 100 300
 		# for lambda in 0.5 0.7 0.9
-		# for cluster_entropy_ratio in 6 8
-		for planningStrategy in "SUM_DIJKSTRA_FIX" "BELIEF_CLUSTERING" "INFORMATIVE_KLD"
+		#for cluster_entropy_ratio in 4 6
+		for planningStrategy in "SUM_DIJKSTRA_FIX" "BELIEF_CLUSTERING" 
+		# for scoreSigma in 0.4 0.5 0.7
 	      do
 			# sed -i "s/^R0 *= *.*/R0 = $R/" "$config_file"
 			# sed -i "s/^sigma *= *.*/sigma = $sigma/" "$config_file"
@@ -64,6 +65,7 @@ do
 			# sed -i "s/^lambda *= *.*/lambda = $lambda/" "$config_file"
 			# sed -i "s/^cluster_entropy_ratio *= *.*/cluster_entropy_ratio = $cluster_entropy_ratio/" "$config_file"
 			sed -i "s/^planningStrategy *= *.*/planningStrategy = $planningStrategy/" "$config_file"
+			# sed -i "s/^scoreSigma *= *.*/scoreSigma = $scoreSigma/" "$config_file"
 			# wind map and obstacle list
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
