@@ -58,6 +58,9 @@ extern char gas_hit_variance_map_logfile_name[512];
 extern char experiment_time_logfile_name[512];
 extern char visited_list_logfile_name[512];
 extern char relative_measurements_logfile_name[512];
+extern char scores_map_logfile_name[512];
+extern char distance_map_logfile_name[512];
+extern char acc_info_map_logfile_name[512];
 
 // read logfile from the experiment
 extern char logfile_folder_name[256];

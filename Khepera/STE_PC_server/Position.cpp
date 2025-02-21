@@ -5,18 +5,46 @@ Position::Position(){
 	x = 0;
 	y = 0;
 	heading = 0;
+
+	x_idx = 0;
+	y_idx = 0;
+	index = 0;
 }
 
 Position::Position(float px, float py, float ph){
 	x = px;
 	y = py;
 	heading = ph;
+
+	x_idx = static_cast<int>((x - source_x_min) / x_resol);
+	y_idx = static_cast<int>((y - source_y_min) / y_resol);
+	index = y_idx * x_nbins + x_idx;
+}
+
+Position::Position(int px_idx, int py_idx)
+{
+	x_idx = px_idx;
+	y_idx = py_idx;
+	index = y_idx * x_nbins + x_idx;
+
+	x = double(x_idx) * x_resol + source_x_min;
+	y = double(y_idx) * y_resol + source_y_min;
 }
 
 Position::Position(const Position & to_copy_from){
 	x = to_copy_from.x;
 	y = to_copy_from.y;
 	heading = to_copy_from.heading;
+
+	x_idx = to_copy_from.x_idx;
+	y_idx = to_copy_from.y_idx;
+	index = to_copy_from.index;
+}
+
+void Position::calculate_index(){
+	x_idx = static_cast<int>((x - source_x_min) / x_resol);
+	y_idx = static_cast<int>((y - source_y_min) / y_resol);
+	index = y_idx * x_nbins + x_idx;
 }
 
 bool Position::operator== (const Position& o){
@@ -31,6 +59,10 @@ void Position::copy_position(const Position to_copy_from){
 	x = to_copy_from.x;
 	y = to_copy_from.y;
 	heading = to_copy_from.heading;
+
+	x_idx = to_copy_from.x_idx;
+	y_idx = to_copy_from.y_idx;
+	index = to_copy_from.index;
 }
 
 void Position::set_to_zero(){

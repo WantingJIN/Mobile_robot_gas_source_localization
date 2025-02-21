@@ -44,7 +44,6 @@ eGasFeature parse_gas_feature(const char* str) {
 	if (strcmp(str, "ABSOLUTE_VALUE") == 0) return ABSOLUTE_VALUE;
 	if (strcmp(str, "GASHIT") == 0) return GASHIT;
 	if (strcmp(str, "RELATIVE_VALUE") == 0) return RELATIVE_VALUE;
-	if (strcmp(str, "PDF") == 0) return PDF;
 	fprintf(stderr, "Unknown gas feature: %s\n", str);
 	exit(1);
 }
@@ -57,6 +56,7 @@ eVisitedList parse_visited_list(const char* str) {
 eInfoFeature parse_info_feature(const char* str) {
 	if (strcmp(str, "VARIANCE") == 0) return VARIANCE;
 	if (strcmp(str, "MEAN") == 0) return MEAN;
+	if (strcmp(str, "PDF") == 0) return PDF;
 	fprintf(stderr, "Unknown info feature: %s\n", str);
 	exit(1);
 }
@@ -95,6 +95,32 @@ eReleaseRate parse_release_rate(const char* str) {
 	if (strcmp(str, "MIDDLE") == 0) return MIDDLE;
 	if (strcmp(str, "HIGH") == 0) return HIGH;
 	fprintf(stderr, "Unknown release rate: %s\n", str);
+	exit(1);
+}
+
+eScoreFun parse_score_fun(const char *str)
+{
+	if (strcmp(str, "RATIO") == 0)
+		return RATIO;
+	if (strcmp(str, "LOG") == 0)
+		return LOG;
+	if (strcmp(str, "SIGMOID") == 0)
+		return SIGMOID;
+	if (strcmp(str, "SUM") == 0)
+		return SUM;
+	if (strcmp(str, "EXP") == 0)
+		return EXP;
+	fprintf(stderr, "Unknown score function: %s\n", str);
+	exit(1);
+}
+
+eInfoSum parse_info_sum(const char *str)
+{
+	if (strcmp(str, "LINEAR_SUM") == 0)
+		return LINEAR_SUM;
+	if (strcmp(str, "EXP_SUM") == 0)
+		return EXP_SUM;
+	fprintf(stderr, "Unknown info sum: %s\n", str);
 	exit(1);
 }
 
@@ -194,6 +220,12 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			releaseRate = parse_release_rate(value);
 		} else if (strcmp(key, "experimental_logname") == 0) {
 			strcpy(experimental_logname, value);
+		} else if (strcmp(key, "scoreSigma") == 0) {
+			scoreSigma = atof(value);
+		} else if (strcmp(key, "scoreFun") == 0) {
+			scoreFun = parse_score_fun(value);
+		} else if (strcmp(key, "infoSum") == 0) {
+			infoSum = parse_info_sum(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -255,6 +287,9 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fprintf(sim_param_file, "release_rate %d\n", releaseRate);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
+	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
+	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
+	fprintf(sim_param_file, "info_sum %d\n", infoSum);
 	fclose(sim_param_file);
 }
 
