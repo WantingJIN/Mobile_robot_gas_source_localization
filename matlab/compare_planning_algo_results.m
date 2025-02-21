@@ -7,7 +7,7 @@ dataTable = table();
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'info_planning/map10'];
+dispatched_folder = [general_folder,'new_adp_dijkstra_test/map5'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -56,35 +56,37 @@ for i=1:numExperiments
         sub_folder_name = 'Dijkstra_ADP';
         sub_folder_name = [sub_folder_name, num2str(params.cluster_ratio)];
     end
-    if params.score_fun == 0
-        sub_folder_name = [sub_folder_name, '_Ratio'];
-    end
-    if params.score_fun == 1
-        sub_folder_name = [sub_folder_name, '_Log'];
-    end
-    if params.score_fun == 2
-        sub_folder_name = [sub_folder_name, '_Sigmoid'];
-    end
-    if params.score_fun == 3
-        sub_folder_name = [sub_folder_name, '_Sum'];
-    end
-    if params.score_fun == 4
-        sub_folder_name = [sub_folder_name, '_Exp'];
-    end
-    if params.info_feature == 0
-        sub_folder_name = [sub_folder_name, '_variance'];
-    end
-    if params.info_feature == 1
-        sub_folder_name = [sub_folder_name, '_mean'];
-    end
-    if params.info_feature == 2
-        sub_folder_name = [sub_folder_name, '_pdf'];
-    end
-    if params.info_sum == 0
-        sub_folder_name = [sub_folder_name, '_linear_acc'];
-    end
-    if params.info_sum == 1
-        sub_folder_name = [sub_folder_name, '_nonlinear_acc'];
+    if params.planning_strategy == 10 || params.planning_strategy == 11
+        if params.score_fun == 0
+            sub_folder_name = [sub_folder_name, '_Ratio'];
+        end
+        if params.score_fun == 1
+            sub_folder_name = [sub_folder_name, '_Log'];
+        end
+        if params.score_fun == 2
+            sub_folder_name = [sub_folder_name, '_Sigmoid'];
+        end
+        if params.score_fun == 3
+            sub_folder_name = [sub_folder_name, '_Sum'];
+        end
+        if params.score_fun == 4
+            sub_folder_name = [sub_folder_name, '_Exp'];
+        end
+        if params.info_feature == 0
+            sub_folder_name = [sub_folder_name, '_variance'];
+        end
+        if params.info_feature == 1
+            sub_folder_name = [sub_folder_name, '_mean'];
+        end
+        if params.info_feature == 2
+            sub_folder_name = [sub_folder_name, '_pdf'];
+        end
+        if params.info_sum == 0
+            sub_folder_name = [sub_folder_name, '_linear_acc'];
+        end
+        if params.info_sum == 1
+            sub_folder_name = [sub_folder_name, '_nonlinear_acc'];
+        end
     end
    
 
@@ -207,16 +209,6 @@ for i=1:numExperiments
             planning_algo = append(planning_algo, num2str(params.score_sigma)); 
         case 6
             planning_algo = "informative KLD";
-
-            % if params.info_feature == 0
-            %     planning_algo = "Dijkstra_Sum_variance";
-            % end
-            % if params.info_feature == 1
-            %     planning_algo = "Dijkstra_Sum_mean";
-            % end
-            % if params.info_feature == 2
-            %     planning_algo = "Dijkstra_Sum_pdf";
-            % end
         case 11
             planning_algo = "Dijkstra_ADP";
             if params.score_fun == 0
@@ -239,6 +231,15 @@ for i=1:numExperiments
             end
             if params.info_sum == 1
                 planning_algo = append(planning_algo, "_nonlinear_sum");
+            end
+            if params.info_feature == 0
+                planning_algo = append(planning_algo, "_variance");
+            end
+            if params.info_feature == 1
+                planning_algo = append(planning_algo, "_mean");
+            end
+            if params.info_feature == 2
+                planning_algo = append(planning_algo, "_pdf");
             end
             planning_algo = append(planning_algo, num2str(params.cluster_ratio)); 
     end
@@ -306,6 +307,7 @@ grid on;
 %     ylim([0,max(iteration_nbr_list)+1])
 xlabel('Planning Algo');
 ylabel('m');
+ylim([0,50])
 title('Trajctory Length');
 
 subplot(3,2,5);

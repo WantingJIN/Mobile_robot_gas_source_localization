@@ -1682,18 +1682,29 @@ void accumulative_Dijkstra() {
 		{
 			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_FIX)
 			{
-				score = simulation_parameters.scoreSigma * totalInfo - (1 - simulation_parameters.scoreSigma) * pathLength;
+				score = simulation_parameters.scoreSigma * totalInfo - (1.0 - simulation_parameters.scoreSigma) * pathLength;
 			}
 			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
+				// in the beginning, when the uncertainty is high, the dynamic weight is smaller
 				double dynamic_weight = 1.0 - posterior.entropy / simulation_parameters.cluster_entropy_ratio;
 				if (dynamic_weight < 0.0)
 					dynamic_weight = 0.0;
-				score = (1 - dynamic_weight) * totalInfo - dynamic_weight * pathLength;
+				score = dynamic_weight * totalInfo - (1.0 - dynamic_weight) * pathLength;
 			}
 		}
 		if (simulation_parameters.scoreFun == EXP)
 		{
-			score = simulation_parameters.scoreSigma * (exp(totalInfo)-1) - (1.0 - simulation_parameters.scoreSigma) * pathLength;
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_FIX)
+			{
+				score = simulation_parameters.scoreSigma * (exp(totalInfo) - 1.0) - (1.0 - simulation_parameters.scoreSigma) * pathLength;
+			}
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
+				// in the beginning, when the uncertainty is high, the dynamic weight is smaller
+				double dynamic_weight = 1.0 - posterior.entropy / simulation_parameters.cluster_entropy_ratio;
+				if (dynamic_weight < 0.0)
+					dynamic_weight = 0.0;
+				score = dynamic_weight * (exp(totalInfo) - 1.0) - (1.0 - dynamic_weight) * pathLength;
+			}
 		}
 
             scores_map[cell.index] = score;

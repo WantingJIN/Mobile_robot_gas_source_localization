@@ -7,7 +7,7 @@ clear all; clc; %close all;
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'relative_meas/new_EMPIRICAL_cdf_num'];
+dispatched_folder = [general_folder,'linear_fixed_Dijkstra/map0'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -40,7 +40,7 @@ for i=1:exp_number
 %     if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
-    new_path = [dispatched_folder '/' num2str(params.sigma)];
+    new_path = [dispatched_folder '/' num2str(params.score_sigma)];
 
     % move the folder with its friends in the right path
     if(~exist(new_path,'dir'))
@@ -74,7 +74,7 @@ for i=1:numExperiments
     % ground truth and other params
     params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
     
-    sigma_list(i,1) = params.sigma;
+    sigma_list(i,1) = params.score_sigma;
 %     tmp = folder_list(i).folder;
 %     parts = strsplit(tmp, '/');
 %     disp(parts{end})
@@ -90,7 +90,7 @@ for i=1:numExperiments
     % nav_time = exp_time_file(2,2);
     % comp_time = exp_time_file(3,2);
     % exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
-    exp_time_list(i) = exp_time_file(1,5).Var5; 
+    exp_time_list(i) = exp_time_file(3,4).Var4;
     
     % error on X and Y (col 5 and 6)
     max_a_post = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
