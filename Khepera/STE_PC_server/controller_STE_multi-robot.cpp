@@ -159,8 +159,14 @@ int sock = 0;
 static double start_timestamp;
 static double end_timestamp;
 double time_before_moving_and_measuring;
-double time_after_moving_and_measuring ;
+double time_after_moving_and_measuring;
 double navigation_sampling_time_sum = 0;
+double time_before_estimation;
+double time_after_estimation;
+double time_before_planning;
+double time_after_planning;
+double planning_computation_time_sum = 0;
+double estimation_computation_time_sum = 0;
 double sent_first_goal = false;
 
 // precomputed gas maps
@@ -471,9 +477,12 @@ void log_trajectory(Position p){
 
 void log_experiment_time(){
 	double experiment_time = end_timestamp - start_timestamp;
+	printf("total experiment time: %f\n", experiment_time);
 	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
 	fprintf(experiment_time_logfile, "total experiment time: %f\n", experiment_time);
 	fprintf(experiment_time_logfile, "navigation and sampling time: %f\n", navigation_sampling_time_sum);
+	fprintf(experiment_time_logfile, "planning computation time: %f\n", planning_computation_time_sum);
+	fprintf(experiment_time_logfile, "estimation computation time: %f\n", estimation_computation_time_sum);
     fclose(experiment_time_logfile);
 }
 
@@ -544,7 +553,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 
 
 // Likelihood with concentration values from precomputed gas maps
-double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_precomp(struct history history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -573,7 +582,7 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 		if (idy[i] >= y_nbins) idy[i] = y_nbins - 1;
 	}
 
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
 
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
@@ -1714,6 +1723,7 @@ void state_waiting(){
 
 void state_estimating(){
 	if(VERBOSE) printf("[%d] estimating...\n", ID);
+	time_before_estimation = get_exp_time();
 	//reinitialize
 	posterior.pdf_reset();
 	//estimation
@@ -1753,9 +1763,13 @@ void state_estimating(){
 		FSM.hook = state_updategoal;
 		printf("go to update goal\n");
 	}
+	time_after_estimation = get_exp_time();
+	estimation_computation_time_sum += time_after_estimation - time_before_estimation;
+	printf("estimation time: %f\n", time_after_estimation - time_before_estimation);
 }
 
 void state_updategoal(){
+	time_before_planning = get_exp_time();
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
       
       switch (simulation_parameters.planningStrategy)
@@ -1811,7 +1825,10 @@ void state_updategoal(){
 
 			//send the message
 			send_goal_to_robot(goal_position.x, goal_position.y);
-			time_before_moving_and_measuring = get_exp_time();
+			time_after_planning = get_exp_time();
+			printf("planning time: %f\n", time_after_planning - time_before_planning);
+			planning_computation_time_sum += time_after_planning - time_before_planning;
+		
 			sent_first_goal = true;
 
 			//move to listen
@@ -1857,6 +1874,7 @@ void state_updategoal(){
 
 
 void state_listen(){
+	time_before_moving_and_measuring = get_exp_time();
 	int success_recv_meas = -1;
 	int success_recv_size = -1;
       double buffer[5] = {0};
@@ -1897,7 +1915,8 @@ void state_listen(){
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
 		time_after_moving_and_measuring = get_exp_time();
-        if (sent_first_goal) {
+            if (sent_first_goal) {
+			printf("navigation sampling time: %f\n", time_after_moving_and_measuring - time_before_moving_and_measuring);
 			navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
 		}
 	}
