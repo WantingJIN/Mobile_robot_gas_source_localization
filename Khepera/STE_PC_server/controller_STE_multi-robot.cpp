@@ -156,8 +156,8 @@ VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 int sock = 0; 
 
 // log time
-static double start_timestamp;
-static double end_timestamp;
+double start_timestamp;
+double end_timestamp;
 double time_before_moving_and_measuring;
 double time_after_moving_and_measuring;
 double navigation_sampling_time_sum = 0;
@@ -1787,12 +1787,12 @@ void state_updategoal(){
 		information_gain_navigation_approx();
 	      KLD_MAP_distance(1.0);
 		break;
-      // case SUM_DIJKSTRA_FIX:
-	//       accumulative_Dijkstra();
-	// 	break;
-      // case SUM_DIJKSTRA_ADP:
-	//       accumulative_Dijkstra();
-	// 	break;
+    case SUM_DIJKSTRA_FIX:
+	      accumulative_Dijkstra();
+		break;
+    case SUM_DIJKSTRA_ADP:
+	      accumulative_Dijkstra();
+		break;
 	default:
 		break;
 	}
@@ -2045,8 +2045,8 @@ int main(int argc, char **argv){
 	console_logfile = fopen(console_logfile_name, "a");
 
 	// main loop
+	start_timestamp = get_exp_time();
 	while (FSM.state != STATE_FINISHED){
-		start_timestamp = get_exp_time();
 	   	//change state
 		//printf("state %d\n", FSM.state);
 		FSM.hook();

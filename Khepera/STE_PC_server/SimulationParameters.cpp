@@ -36,6 +36,8 @@ ePlanningStrategy parse_planning_strategy(const char* str) {
 	if (strcmp(str, "BELIEF_CLUSTERING") == 0) return BELIEF_CLUSTERING;
 	if (strcmp(str, "INFORMATIVE_KLD") == 0) return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0) return INFO_CLUSTERING;
+	if (strcmp(str, "SUM_DIJKSTRA_ADP") == 0) return SUM_DIJKSTRA_ADP;
+	if (strcmp(str, "SUM_DIJKSTRA_FIX") == 0) return SUM_DIJKSTRA_FIX;
 	fprintf(stderr, "Unknown planning strategy: %s\n", str);
 	exit(1);
 }
