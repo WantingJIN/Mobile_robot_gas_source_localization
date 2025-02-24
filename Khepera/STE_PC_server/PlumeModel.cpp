@@ -601,6 +601,16 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 		int idx_y = round((py[i] - min(c_torch[0]).item<float>()) / (c_torch[0][1] - c_torch[0][0]).item<float>());
 		// std::cout << "idx_x is: "<<idx_x;
 		// std::cout << " idx_y is: "<<idx_y << std::endl;
+		if (idx_x< 0)
+			idx_x = 0;
+
+		if (idx_y < 0)	
+			idx_y = 0;
+
+	    if (idx_x > x_nbins - 1)
+			idx_x = x_nbins - 1;
+		if (idx_y > y_nbins - 1)
+			idx_y = y_nbins - 1; 
 
 		c_avg[i] = output[0][0][idx_y][idx_x].item<float>();
 		// printf("Expected concentration for source %d: %f\n", i, model_c_avg[i]);

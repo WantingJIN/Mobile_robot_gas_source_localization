@@ -345,18 +345,18 @@ void Posterior::MCMC_evaluation(struct history history){
 				covar(i,j) = 0;
 		}
 	}
-
-	//error detection
-	// if (sample[0] > 9 && sample[0]< 11 && sample[1] >1 && sample[2]<1.5){
-	// 	double sample_likelihood = likelihood(history, sample, model,1);
+    double sample_likelihood = likelihood(history, sample, model, 1);
+	// int sample_indices[2];
+	// sample_indices[0] = floor((sample[0] - source_x_min) / x_resol);
+	// sample_indices[1] = floor((sample[1] - source_y_min) / y_resol);
+	// int sam_idx = indices_to_index(sample_indices);
+	// double sample_likelihood = likelihood_precomp(history, sample, sam_idx, model);
+	// if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
+	// 	if(VERBOSE) printf("!!!!!!!!!!!!!!done ---- prior = %d, likelihood = %f, sample: %f %f\n", 
+	// 		prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
+	// 	dirac_flag = 1;
+	// 	return;
 	// }
-	double sample_likelihood = likelihood(history, sample, model, 1);
-	if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-		if(VERBOSE) printf("!!!!!!!!!!!!!!done ---- prior = %d, likelihood = %f, sample: %f %f\n", 
-			prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
-		dirac_flag = 1;
-		return;
-	}
 	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 	update(posterior_value, sample);
 
@@ -389,6 +389,13 @@ void Posterior::MCMC_evaluation(struct history history){
 		
 		//calculate the acceptance chance
 		double candidate_likelihood = likelihood(history, candidate, model,0);
+        // int candidate_indices[2];
+		// candidate_indices[0] = floor((candidate[0] - source_x_min) / x_resol);
+		// candidate_indices[1] = floor((candidate[1] - source_y_min) / y_resol);
+		// int can_idx = indices_to_index(candidate_indices);
+		// double candidate_likelihood = likelihood_precomp(history, candidate, can_idx, model);
+		// printf("Finish checking candidate likelihood\n");
+
 		p_acceptance = (prior(candidate, nbr_dimension, model) * candidate_likelihood) /
 					   (prior(sample, nbr_dimension, model) * sample_likelihood);
 		if(p_acceptance > 1) p_acceptance = 1;
