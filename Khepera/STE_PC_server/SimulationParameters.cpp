@@ -228,7 +228,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			scoreFun = parse_score_fun(value);
 		} else if (strcmp(key, "infoSum") == 0) {
 			infoSum = parse_info_sum(value);
-		} else {
+		} else if (strcmp(key, "weighting_entropy_ratio") == 0) {
+			weighting_entropy_ratio = atof(value);
+		} 
+		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
 		}
@@ -292,6 +295,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
 	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
 	fprintf(sim_param_file, "info_sum %d\n", infoSum);
+	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fclose(sim_param_file);
 }
 

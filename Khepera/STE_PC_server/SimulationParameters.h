@@ -143,6 +143,7 @@ class SimulationParameters{
 	      float sigma;
 		float lambda;
 		float scoreSigma;
+		float weighting_entropy_ratio;
 
 		char experimental_logname[256];
 
