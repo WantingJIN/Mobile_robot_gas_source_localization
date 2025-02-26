@@ -151,6 +151,7 @@ class SimulationParameters{
 		float lambda;
 		float scoreSigma;
 		int planning_step;
+		float weighting_entropy_ratio;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 
