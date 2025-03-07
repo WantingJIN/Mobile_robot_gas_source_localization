@@ -1753,19 +1753,26 @@ void state_estimating(){
 	if(VERBOSE) printf("[%d] entropy : %f\n", ID, posterior.entropy);
 	
 	//check if time is up
-	//if(FSM.n_cycles == simulation_parameters.max_iter || posterior.entropy < 0.1){
-	if(FSM.n_cycles == simulation_parameters.max_iter || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
-		//the end
-		FSM.state = STATE_FINISHED;
-		end_timestamp = get_exp_time();
-	} else {
+	//if(FSM.n_cycles == simulation_parameters.max_iter || posterior.entropy < 0.1){  
+	if (simulation_parameters.workingMode == VIDEO) {
+		
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
-		printf("go to update goal\n");
+	} else {
+	
+		if(FSM.n_cycles == simulation_parameters.max_iter || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+			//the end
+			FSM.state = STATE_FINISHED;
+			end_timestamp = get_exp_time();
+		} else {
+			FSM.state = STATE_UPDATEGOAL;
+			FSM.hook = state_updategoal;
+			printf("go to update goal\n");
+		}
+		time_after_estimation = get_exp_time();
+		estimation_computation_time_sum += time_after_estimation - time_before_estimation;
+		printf("estimation time: %f\n", time_after_estimation - time_before_estimation);
 	}
-	time_after_estimation = get_exp_time();
-	estimation_computation_time_sum += time_after_estimation - time_before_estimation;
-	printf("estimation time: %f\n", time_after_estimation - time_before_estimation);
 }
 
 void state_updategoal(){
@@ -1839,6 +1846,8 @@ void state_updategoal(){
 		}
 		case VIDEO:
 		{
+			if (FSM.state == STATE_FINISHED)
+				break;
 			//send the goal to the supervisor
 			Message msg(ID, 0, goal_position, -1, goal_position, 0);
 			send_msg(msg);
@@ -1933,8 +1942,7 @@ void state_read_goal_measurement(){
 	char line[256];
 
     // Read the goal position
-	if (!feof(experiment_goalposition_logfile)){
-		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
+	if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5){
 		goal_position.x = f1;
 		goal_position.y = f2;
 		goal_position.heading = 0;
@@ -1979,26 +1987,22 @@ void state_read_goal_measurement(){
 
 }
 
-void state_read_goal(){
-	printf("Enter state read goal and measurment\n");
-	int d;
-	float f1, f2, f3; 
-	double t;
-	char line[256];
+void state_read_goal() {
+    printf("Enter state read goal\n");
+    int d;
+    float f1, f2, f3;
+    double t;
 
-    	// Read the goal position
-	if (!feof(experiment_goalposition_logfile)){
-		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
-		goal_position.x = f1;
-		goal_position.y = f2;
-		goal_position.heading = 0;
-		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
-	} else{
-		printf("End of experiment measurements file\n");
-		FSM.state = STATE_FINISHED;
-
-	}
-
+    // Attempt to read the goal position
+    if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5) {
+        goal_position.x = f1;
+        goal_position.y = f2;
+        goal_position.heading = 0;
+        printf("Goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+    } else {
+        printf("End of experiment goal position file or read error\n");
+        FSM.state = STATE_FINISHED;
+    }
 }
 
 

@@ -4,14 +4,14 @@
 # ID=103
 
 # set the map number
-map=9
+map=10
 # save experiment configuration
 releaseRate=MIDDLE
-read -r source_x source_y <<<"12.7 3"
+read -r source_x source_y <<<"12.7 2"
 
 #config file
 config_file="Data/config.txt"
-workMode=EXPERIMENT
+workMode="EXPERIMENT"
 
 echo $map > $STE_DDPM_ROOT/Khepera/Data/params/map_nbr.txt
 sed -i "s/^workMode *= *.*/workMode = $workMode/" "$config_file"
