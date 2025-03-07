@@ -117,7 +117,7 @@ void set_logfile_names(){
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
-      sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+    sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
 	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(relative_measurements_logfile_name, "%s/relative_measurements.csv", folder_name);
@@ -127,14 +127,14 @@ void set_logfile_names(){
 
     // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
 	// log name of the experiment and scan
-      strcpy(logfile_folder_name, simulation_parameters.experimental_logname);
+    strcpy(logfile_folder_name, simulation_parameters.experimental_logname);
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
-      sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+    sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
-      sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
+    sprintf(scan_folder_name, "%s/Khepera/Results/log_K4_scan_map5_11_2", workspacePath);
 	sprintf(scan_measurements_logfile_name, "%s/measurements.csv", scan_folder_name);
 	sprintf(scan_position_logfile_name, "%s/goal_position.csv", scan_folder_name);
 
