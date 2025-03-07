@@ -7,7 +7,7 @@ dataTable = table();
 %% dispatch
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'new_adp_dijkstra_test/map5'];
+dispatched_folder = [general_folder,'IROS_2025_results/map10'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -54,7 +54,7 @@ for i=1:numExperiments
     end
     if params.planning_strategy == 11
         sub_folder_name = 'Dijkstra_ADP';
-        sub_folder_name = [sub_folder_name, num2str(params.cluster_ratio)];
+        sub_folder_name = [sub_folder_name, num2str(params.weighting_entropy_ratio)];
     end
     if params.planning_strategy == 10 || params.planning_strategy == 11
         if params.score_fun == 0
@@ -137,7 +137,8 @@ for i=1:numExperiments
     % exp_time_list(i) = nav_time.Var2 + comp_time.Var2; 
     %exp_time = exp_time_file(1,5).Var5; 
     exp_time = exp_time_file(3,4).Var4; 
-    
+    total_time = exp_time_file(4,4).Var4;
+    nor_cmp_time = exp_time/iteration_nbr;
     % error on X and Y (col 5 and 6)
     max_a_post = dlmread([folder_list(i).folder, '/', folder_list(i).name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
     if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
@@ -241,13 +242,13 @@ for i=1:numExperiments
             if params.info_feature == 2
                 planning_algo = append(planning_algo, "_pdf");
             end
-            planning_algo = append(planning_algo, num2str(params.cluster_ratio)); 
+            planning_algo = append(planning_algo, num2str(params.weighting_entropy_ratio)); 
     end
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, estimate_error, gas_feature, planning_algo, traj_length);
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'estimate_error', 'gas_feature', 'planning_algo','traj_length'};
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, estimate_error, gas_feature, planning_algo, traj_length, total_time, nor_cmp_time);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'estimate_error', 'gas_feature', 'planning_algo','traj_length', 'total_time', 'nor_cmp_time'};
     
     % Append the temporary table to the main dataTable
     dataTable = [dataTable; tempTable];
@@ -311,7 +312,7 @@ ylim([0,50])
 title('Trajctory Length');
 
 subplot(3,2,5);
-boxplot(dataTable.exp_time, dataTable.planning_algo,'Colors',custom_color);
+boxplot(dataTable.nor_cmp_time, dataTable.planning_algo,'Colors',custom_color);
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
@@ -321,6 +322,17 @@ xlabel('Planning Algo');
 ylabel('s');
 title('Computation Time');
 
+
+figure()
+boxplot(dataTable.total_time, dataTable.planning_algo,'Colors',custom_color);
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'r');
+set(findobj(gca,'type','line'),'linew',1.2)
+grid on;
+%     ylim([0,max(iteration_nbr_list)+1])
+xlabel('Planning Algo');
+ylabel('s');
+title('Experimental Time');
 
 %% calculate success rate
 success_case = 0;
@@ -341,3 +353,9 @@ annotation(f,'textbox',...
     'FitBoxToText','off');
 
 saveas(f,[dispatched_folder '/path_planning_algo_comparison.png']);
+
+Mean_first = mean(dataTable.total_time(1:10))
+variance_first = std(dataTable.total_time(1:10))
+
+Mean_first = mean(dataTable.total_time(11:20))
+variance_first = std(dataTable.total_time(11:20))

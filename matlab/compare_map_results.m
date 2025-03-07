@@ -3,7 +3,7 @@ dataTable = table();
 %% dispatch the result to target folder
 % the general folder
 general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'relative_meas/MOX_empirical_cdf/sigma_0.5'];
+dispatched_folder = [general_folder,'algo_test'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -71,8 +71,8 @@ for i = 1:numExperiments
     expected_a_posteriori_file = dlmread([folder_name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
     iteration_nbr = size(expected_a_posteriori_file,1);
     expected_a_posteriori(1:2) = expected_a_posteriori_file(end,2:3);
-    if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
-    if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
+    if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,1); end
+    if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,2); end
     error(1) = params.source_position(1) - expected_a_posteriori(1);
     error(2) = params.source_position(2) - expected_a_posteriori(2);
     entropy_file = dlmread([folder_name, '/' num2str(ID(1)), '/entropy.csv']);

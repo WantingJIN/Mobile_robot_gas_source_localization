@@ -1,14 +1,14 @@
 clear all; close all; clc;
 % Work station
-%work_station = "Desktop";
-work_station = "Laptop"
+work_station = "Desktop";
+%work_station = "Laptop"
 if work_station == "Desktop"
     root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
 else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end
    
-general_folder=[root_path, '/Results_2025-02-21'];
+general_folder=[root_path, '/IROS_2025_Results/Adp_Dijkstra'];
 
 experiment_path = uigetdir(general_folder); 
 folder_name_k4 = [experiment_path, '/k4'];
@@ -50,17 +50,11 @@ end
 x=linspace(3,12.75,20);
 y=linspace(0,4,20);
 
-trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
-trajectory = [positions(1,:); trajectory];
 
 %% show measurement
 f1 =figure('Position',[301.0000  100.4000  1800.6000  800.6000]);
 subplot(1,5,1)
-if (gas_feature == 1)
-    scatter(position_history(:,3),position_history(:,2),30,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-elseif (gas_feature == 0 || gas_feature == 2)
-    scatter(position_history(:,3),position_history(:,2),30,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-end
+scatter(position_history(:,3),position_history(:,2),30,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
 load MyColormap2; colormap(mymap); 
 axis equal; axis([-0.1,4.1,2.4,12.6]);
 view(180,90);

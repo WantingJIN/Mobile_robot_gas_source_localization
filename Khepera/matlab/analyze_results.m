@@ -7,11 +7,11 @@ dataTable = table();
 work_station = "Desktop";
 % work_station = "Laptop"
 if work_station == "Desktop"
-    root_path = '/home/wjin/Workspace/continuous_STE/Results';
+    root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
 else
     root_path = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera';
 end
-general_folder=[root_path, '/RAL_2025_results/baseline_exp/Results_2025-01-10/calibrate/'];
+general_folder=[root_path, '/IROS_2025_Results/Adp_Dijkstra/'];
 folder_list = dir([general_folder '/**']);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..', '101', '102','103', 'pc', 'k4'}));
 folder_list = folder_list(~ismember({folder_list.folder}, general_folder));
@@ -51,8 +51,9 @@ for i = 1:numExperiments
     max_a_post(1:2) = max_a_post_file(end,2:3);
     convergence = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
     % experimental time
-    goal_positions = dlmread([folder_name_k4, '/goal_position.csv']);
-    exp_time = (goal_positions(end, 5) - goal_positions(1,5))/1000;
+
+    lines = readlines([folder_name_pc '/experiment_time.csv']);
+    exp_time = sscanf(lines(1), 'total experiment time: %f')/1000;
     
     % trajectory_length
     trajectory = dlmread([folder_name_k4, '/trajectory.csv']);
@@ -83,8 +84,10 @@ for i = 1:numExperiments
             planning_mode = "greedy";
         case 5
             planning_mode = "belief clustering";
-        case 1
-            planning_mode = "informative kld";
+        case 6
+            planning_mode = "information kld";
+        case 11
+            planning_mode = "information sum";
     end
     % sensor calibration
     calibration_mode_idx = params_k4.sensor_calibration;
@@ -181,19 +184,19 @@ xlabel('Map number');
 title('Traveling distance');
 ylabel('Distance (m)');
 
-figure()
-plot([0 length(unique(dataTable.Map))], [0 0], 'g');
-hold on;
-boxplot(dataTable.maximal_meas, dataTable.Map,'Colors',custom_color);
-% ylim([0,50])
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'r');
-set(findobj(gca,'type','line'),'linew',1.2)
-grid on;
-%ylim([-3,4])
-xlabel('Map number');
-title('Maximal Meas');
-ylabel('mV');
+% figure()
+% plot([0 length(unique(dataTable.Map))], [0 0], 'g');
+% hold on;
+% boxplot(dataTable.maximal_meas, dataTable.Map,'Colors',custom_color);
+% % ylim([0,50])
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'r');
+% set(findobj(gca,'type','line'),'linew',1.2)
+% grid on;
+% %ylim([-3,4])
+% xlabel('Map number');
+% title('Maximal Meas');
+% ylabel('mV');
 
 
 hold on

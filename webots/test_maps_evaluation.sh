@@ -54,11 +54,11 @@ do
 	      # for R in 100 1500
 		# for thres in 100 300
 		# for lambda in 0.5 0.7 0.9
-		# for cluster_entropy_ratio in 6 8 10 12
-		# for planningStrategy in 
+		# for planningStrategy in "INFORMATIVE_KLD"
 		# for scoreSigma in 0.4 0.5 0.7
 		# for scoreFun in "RATIO" "LOG" "SIGMOID"
-		for infoFeature in "VARIANCE" "MEAN" 
+		for infoFeature in "VARIANCE" "MEAN" "PDF"
+		# for weighting_entropy_ratio in 10
 	      do
 			# sed -i "s/^R0 *= *.*/R0 = $R/" "$config_file"
 			# sed -i "s/^sigma *= *.*/sigma = $sigma/" "$config_file"
@@ -70,6 +70,7 @@ do
 			# sed -i "s/^scoreSigma *= *.*/scoreSigma = $scoreSigma/" "$config_file"
 			# sed -i "s/^scoreFun *= *.*/scoreFun = $scoreFun/" "$config_file"
 			sed -i "s/^infoFeature *= *.*/infoFeature = $infoFeature/" "$config_file"
+			# sed -i "s/^weighting_entropy_ratio *= *.*/weighting_entropy_ratio = $weighting_entropy_ratio/" "$config_file"
 			# wind map and obstacle list
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt

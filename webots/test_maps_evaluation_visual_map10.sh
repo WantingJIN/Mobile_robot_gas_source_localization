@@ -6,12 +6,16 @@ echo "Start time : $now"
 webots=$WEBOTS_HOME/webots
 webots_folder="../webots"
 map_nbr_filename="../webots/data/map_nbr.txt"
+source_pos_filename="../webots/data/source_pos.txt"
 
 
 #{0..8}
 for m in 10
 do
 	echo $m > $map_nbr_filename
+	source_pos_y=2
+	source_pos_x=11
+	echo $source_pos_x $source_pos_y > $source_pos_filename
 
 	# wind map and obstacle list
 	cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
