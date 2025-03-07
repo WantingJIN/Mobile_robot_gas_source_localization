@@ -231,6 +231,7 @@ SimulationParameters::SimulationParameters()
 	calibrationMode = OFF;
 	simuMode = ONLINE;
 	R0 = 100;
+	weighting_entropy_ratio = 6;
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -366,6 +367,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			planning_step = atoi(value);
 		}
+		else if (strcmp(key, "weighting_entropy_ratio") == 0)
+		{
+			weighting_entropy_ratio = atof(value);
+		}
 		else
 		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
@@ -426,6 +431,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
 	fprintf(sim_param_file, "info_sum %d\n", infoSum);
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
+	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fclose(sim_param_file);
 }
 
