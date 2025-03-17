@@ -2,9 +2,6 @@
 #define KHEPERA_HEADER_H
 
 
-#include "controller_STE_clean.h"
-
-
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <iostream>
