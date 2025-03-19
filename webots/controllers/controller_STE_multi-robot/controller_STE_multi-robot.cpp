@@ -1259,8 +1259,8 @@ void state_updategoal()
 	      path_planner.informative_clustering_planning();
 		break;
 	case INFORMATIVE_KLD:
-		path_planner.information_gain_navigation_approx();
-		path_planner.KLD_MAP_distance(1.0);
+		path_planner.KLD_informative_goal_selection();
+		path_planner.KLD_distance_balance(1.0);
 		break;
 	case SUM_DIJKSTRA_FIX:
 	      path_planner.accumulative_Dijkstra();

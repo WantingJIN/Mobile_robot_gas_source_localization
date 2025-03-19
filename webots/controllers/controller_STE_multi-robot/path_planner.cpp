@@ -74,7 +74,7 @@ bool PathPlanner::position_outside_arena(Position p)
 	// if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
 }
-void PathPlanner::information_gain_navigation_approx()
+void PathPlanner::KLD_informative_goal_selection()
 {
 	float p0 = 0.5; // 50 cm
 	double KLD = 0, max_KLD = -100, max_meas = -100;
@@ -905,7 +905,7 @@ double PathPlanner::evaluate_cluster(const pair<CellPoint, CellPoint> &cluster)
 	return score;
 }
 
-void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, double gas_information_map[])
+void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, double information_map[])
 {
 	double total_x = 0.0;
 	double total_y = 0.0;
@@ -924,7 +924,7 @@ void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &clu
 		{
 
 			int index = y * x_nbins + x;
-			double value = gas_information_map[index];
+			double value = information_map[index];
 
 			// Accumulate total coordinates weighted by value
 			total_x += x * value;
@@ -1113,7 +1113,7 @@ void PathPlanner::balance_expected_maximal_pdf()
 // 	}
 // }
 
-void PathPlanner::KLD_MAP_distance(float gloabl_local_search_ratio)
+void PathPlanner::KLD_distance_balance(float gloabl_local_search_ratio)
 {
 	double best_point[2] = {0};
 	posterior->XYmarginal_distance_combined(current_position, gloabl_local_search_ratio, best_point);
