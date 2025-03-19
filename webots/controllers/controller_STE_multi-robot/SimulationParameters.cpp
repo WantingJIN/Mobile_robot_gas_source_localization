@@ -82,8 +82,6 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 		return LAWNMOWER;
 	if (strcmp(str, "BELIEF_CLUSTERING") == 0)
 		return BELIEF_CLUSTERING;
-	if (strcmp(str, "SUM_A_STAR") == 0)
-		return SUM_A_STAR;
 	if (strcmp(str, "INFORMATIVE_KLD") == 0) 
 		return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0)
