@@ -2,8 +2,8 @@ clear all; clc; close all;
 dataTable = table();
 %% dispatch the result to target folder
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'relative_meas/MOX_empirical_cdf/sigma_0.5'];
+general_folder = '/home/mzarias/Workspace/MT_Marc/Results/';
+dispatched_folder = [general_folder,'test'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'

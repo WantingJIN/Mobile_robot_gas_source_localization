@@ -25,7 +25,7 @@
 <FilamentSourceList>
 <FilamentSourceConstant>
 	<Radius>0.02</Radius>
-	<ReleaseAmount unit="filaments/s">53</ReleaseAmount>
+	<ReleaseAmount unit="filaments/s">10</ReleaseAmount>
 	<FilamentAmount>32</FilamentAmount>
 	<FilamentWidth>0.13733</FilamentWidth>
 	<FilamentOdorType>0</FilamentOdorType>

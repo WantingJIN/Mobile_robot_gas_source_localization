@@ -1,6 +1,7 @@
 #include "Dbscan.h"
 #include <stack>
 #include "Constant.h"
+#include <cstring>
 
 using namespace std;
 DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
@@ -138,7 +139,7 @@ void DBSCAN::run(double information[])
 	}
 	cluster_num = clusterId;
 	// print clustering results
-	// printResults();
+	printResults();
 	// calcalate cluster bounding boxes and log it
 	calculateBoundingBoxes();
 	logBoundingBoxes();
@@ -201,7 +202,7 @@ void DBSCAN::calculateBoundingBoxes()
 void DBSCAN::logBoundingBoxes()
 {
 	char clustering_bounding_boxes_logfile_name[512];
-	sprintf(clustering_bounding_boxes_logfile_name, "%s/Results/current/101/clustering_bounding_boxes.csv", workspacePath);
+	strcpy(clustering_bounding_boxes_logfile_name, "/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/current/101/clustering_bounding_boxes.csv");
 	FILE *clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
 	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
 	fprintf(clustering_bounding_boxes_logfile, "%f, ", ratio);

@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/release_rate_robutness/MOX/empirical_cdf_new_stop_condition/10';
+general_folder='/home/mzarias/Workspace/MT_Marc/Results/test/9';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;

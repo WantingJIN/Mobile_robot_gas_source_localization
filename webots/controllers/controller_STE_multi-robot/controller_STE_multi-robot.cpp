@@ -1087,92 +1087,89 @@ vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double informat
 
 void belief_clustering_planning()
 {
-	printf("Enter belief clustering planning \n");
-	
-	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	clusters_bounding_box = clustering_information_blocks(posterior.pdf);
-	if (clusters_bounding_box.size() == 0)
-	{
-		printf("no cluster found \n");
-		fprintf(console_logfile, "no cluster found \n");
-		maximal_belief_planning();
-		//maximal_information_planning();
-		return;
-	}
-	else
-	{
-		// fprintf(console_logfile, "clusters found \n");
-		// Find furthest vertex of each cluster
-		double max_dist_to_robot;
-		int max_dist_to_robot_index;
-		vector<Position> candidate_goal;
-		for (int i = 0; i < clusters_bounding_box.size(); i++)
-		{
-			max_dist_to_robot = 0;
-			max_dist_to_robot_index = 0;
-			// calculate the distance of each vertex to robot
-			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0),
-								Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
-								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
-								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
-			for (int i = 0; i < 4; i++)
-			{
-				double dist = dist_to_goal(cluster_vertex[i]);
-				if (dist > max_dist_to_robot)
-				{
-					max_dist_to_robot = dist;
-					max_dist_to_robot_index = i;
-				}
-			}
-			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
-		}
-		// find the closest unvisited point among candidate goals
-		double min_dist_to_robot = 1000;
-		int min_dist_to_robot_index = 0;
-		bool find_goal = false;
-		for (int j = 0; j < candidate_goal.size(); j++)
-		{
-			double dist = dist_to_goal(candidate_goal[j]);
-			if (dist < min_dist_to_robot)
-			{
-				if (simulation_parameters.visitedList == visitedList_ON)
-				{
-					int pos_coord[2];
-					pos_coord[0] = floor((candidate_goal[j].x - source_x_min) / x_resol);
-					pos_coord[1] = floor((candidate_goal[j].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
-					if (cell_visited_list[idx] == 0)
-					{
-						min_dist_to_robot = dist;
-						min_dist_to_robot_index = j;
-						find_goal = true;
-					}
-				}
-				else
-				{
-					min_dist_to_robot = dist;
-					min_dist_to_robot_index = j;
-					find_goal = true;
-				}
-			}
-		}
-		if (!find_goal)
-		{
-			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
-			//maximal_information_planning();
-			maximal_belief_planning();
-			return;
-		}
-		else
-		{
-			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
-			goal_position.y = candidate_goal[min_dist_to_robot_index].y;
-			goal_position.heading = 0;
-		}
+    printf("Enter belief clustering planning \n");
 
-		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
-		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
-	}
+    vector<pair<CellPoint, CellPoint>> clusters_bounding_box = clustering_information_blocks(posterior.pdf);
+    
+    if (clusters_bounding_box.empty()) {
+        printf("No cluster found \n");
+        fprintf(console_logfile, "No cluster found \n");
+        maximal_belief_planning();
+        return;
+    }
+
+    vector<Position> candidate_goal;
+    for (size_t i = 0; i < clusters_bounding_box.size(); i++) {
+        double max_dist_to_robot = 0;
+        int max_dist_to_robot_index = 0;
+
+        Position cluster_vertex[4] = {
+            Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0),
+            Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
+            Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
+            Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)
+        };
+
+        for (int j = 0; j < 4; j++) {
+            double dist = dist_to_goal(cluster_vertex[j]);
+            if (dist > max_dist_to_robot) {
+                max_dist_to_robot = dist;
+                max_dist_to_robot_index = j;
+            }
+        }
+        candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
+    }
+
+    if (candidate_goal.empty()) {
+        printf("Error: candidate_goal está vacío\n");
+        fprintf(console_logfile, "Error: candidate_goal está vacío\n");
+        maximal_belief_planning();
+        return;
+    }
+
+    double min_dist_to_robot = std::numeric_limits<double>::max();
+    int min_dist_to_robot_index = -1;
+    bool find_goal = false;
+
+    for (size_t j = 0; j < candidate_goal.size(); j++) {
+        double dist = dist_to_goal(candidate_goal[j]);
+        
+        if (dist < min_dist_to_robot) {
+            if (simulation_parameters.visitedList == visitedList_ON) {
+                int pos_coord[2] = {
+                    static_cast<int>(floor((candidate_goal[j].x - source_x_min) / x_resol)),
+                    static_cast<int>(floor((candidate_goal[j].y - source_y_min) / y_resol))
+                };
+                int idx = posterior.indices_to_index(pos_coord);
+                
+                if (idx >= 0 && idx < 400 && cell_visited_list[idx] == 0) {
+                    min_dist_to_robot = dist;
+                    min_dist_to_robot_index = j;
+                    find_goal = true;
+                }
+            } else {
+                min_dist_to_robot = dist;
+                min_dist_to_robot_index = j;
+                find_goal = true;
+            }
+        }
+    }
+
+    if (!find_goal || min_dist_to_robot_index == -1) {
+        printf("All cluster vertices visited, using maximal belief planning \n");
+        fprintf(console_logfile, "All cluster vertices visited, using maximal belief planning \n");
+        maximal_belief_planning();
+        return;
+    }
+
+    goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+    goal_position.y = candidate_goal[min_dist_to_robot_index].y;
+    goal_position.heading = 0;
+	// goal_position.x = current_position.x;
+	// goal_position.y = current_position.y;
+	// goal_position.heading = 0;
+
+    printf("New goal position: %f %f\n", goal_position.x, goal_position.y);
 }
 
 void informative_clustering_planning()
@@ -2137,11 +2134,11 @@ void state_moving()
 		}
 		go_to_goal(*i);  
 		// obstacle avoidance if necessary
-		//  if(obstacle_or_not() == 1){
-		//  	FSM.state = STATE_OBSTACLE_AVOIDANCE;
-		//  	FSM.hook  = state_obstacle_avoidance;
-		//  	return;
-		//  }
+		 if(obstacle_or_not() == 1){
+		 	FSM.state = STATE_OBSTACLE_AVOIDANCE;
+		 	FSM.hook  = state_obstacle_avoidance;
+		 	return;
+		 }
 		set_wheels_speed(speed[0], speed[1]);
 	}
 	else

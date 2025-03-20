@@ -72,7 +72,7 @@ do
 				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
 				source_pos_x=$(awk "BEGIN { print $source_pos_x_min + $k * $source_pos_x_step }")
 				echo $source_pos_x $source_pos_y > $source_pos_filename
-				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' '--no-rendering' &> wb_output.txt # >wb_output.txt
+				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt # >wb_output.txt
 				now=$(date +"%T")
 				echo "map $m  k $k  release amount $r R $R end time $now"
 			done
