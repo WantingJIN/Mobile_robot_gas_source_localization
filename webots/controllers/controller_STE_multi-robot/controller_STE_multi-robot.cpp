@@ -165,6 +165,55 @@ Position last_measurement_pos;
 // real source position
 double real_source_pos[3] = {0, 0, 0};
 
+// ==================== COMMUNICATION FUNCTIONS ========================== //
+void init_receiver_c()
+{
+    receiver = wb_robot_get_device("receiver_K4");
+    wb_receiver_enable(receiver, STEP_SIZE);
+	wb_receiver_set_channel(receiver, 600);
+}
+
+void receive_msg_sc()
+{
+	// receive and process supervisor messages
+	// debugging code
+	int queue_length = wb_receiver_get_queue_length(receiver);
+	if (queue_length > 0) {
+		printf("There is %d message in the queue.\n", queue_length);
+		while (queue_length > 0)
+		{
+			const void *data = wb_receiver_get_data(receiver);
+			Message *msg = (Message *)data;
+			
+			printf("Receiving message for the robot with ID: %d\n", msg->receiver_ID);
+			printf("Current ID: %d\n", ID);
+			
+			// verify is the received message is for the robot with this ID
+			if (msg->receiver_ID == ID)
+			{
+				printf("Message received for the robot %d: x = %f, y = %f\n",
+					msg->receiver_ID, msg->position.x, msg->position.y);
+				goal_position = msg->position;
+			}
+			else
+			{
+				// message for another robot
+				printf("This message is not for this robot, is for the robot %d.\n", msg->receiver_ID);
+				goal_position = msg->position;
+			}
+			
+			// move to the next package in the queue
+			wb_receiver_next_packet(receiver);
+
+			// update queue size after processing
+			queue_length = wb_receiver_get_queue_length(receiver);
+		}
+	} else {
+		printf("There are no messages in the queue.\n");
+	}
+}
+
+
 // =========================== FUNCTIONS ================================ //
 // random value sampled from a normal distribution
 double randn(double mu, double sigma)
@@ -1987,7 +2036,7 @@ void state_updategoal()
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
-		maximal_belief_planning();
+		receive_msg_sc();
 		break;
 	case BALANCE_MAXIMAL_EXPECTED:
 		balance_expected_maximal_pdf();
@@ -2013,7 +2062,7 @@ void state_updategoal()
 	}
 	if (FSM.state != STATE_FINISHED)
 	{
-		// The goal position is very close to current postion, swith to random planning
+		// The goal position is very close to current postion, switch to random planning
 		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
@@ -2170,53 +2219,6 @@ void state_obstacle_avoidance()
 	obstacle_avoidance_k4();
 }
 
-void init_receiver_c()
-{
-    receiver = wb_robot_get_device("receiver_K4");
-    wb_receiver_enable(receiver, STEP_SIZE);
-	wb_receiver_set_channel(receiver, 600);
-}
-
-void receive_msg_sc()
-{
-	// receive and process supervisor messages
-	// debugging code
-	int queue_length = wb_receiver_get_queue_length(receiver);
-	if (queue_length > 0) {
-		printf("There is %d message in the queue.\n", queue_length);
-		while (queue_length > 0)
-		{
-			const void *data = wb_receiver_get_data(receiver);
-			Message *msg = (Message *)data;
-			
-			printf("Receiving message for the robot with ID: %d\n", msg->receiver_ID);
-			printf("Current ID: %d\n", ID);
-			
-			// verify is the received message is for the robot with this ID
-			if (msg->receiver_ID == ID)
-			{
-				printf("Message received for the robot %d: x = %f, y = %f\n",
-					msg->receiver_ID, msg->position.x, msg->position.y);
-				goal_position = msg->position;
-			}
-			else
-			{
-				// message for another robot
-				printf("This message is not for this robot, is for the robot %d.\n", msg->receiver_ID);
-				goal_position = msg->position;
-			}
-			
-			// move to the next package in the queue
-			wb_receiver_next_packet(receiver);
-
-			// update queue size after processing
-			queue_length = wb_receiver_get_queue_length(receiver);
-		}
-	} else {
-		printf("There are no messages in the queue.\n");
-	}
-
-}
 
 // =========================== MAIN ============================== //
 
@@ -2297,9 +2299,6 @@ int main(int argc, char **argv)
 			receive_from_friends();
 			// printf("[%d] my history size is %d\n", ID, history.size);
 		}
-
-		// send message from supervisor to controller
-		receive_msg_sc();
 
 		// change state
 		FSM.hook();

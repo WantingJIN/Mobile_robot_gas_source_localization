@@ -84,27 +84,6 @@ void read_obstacle_list(){
     }
 }
 
-void init_receiver_s()
-{
-    receiver[0] = wb_robot_get_device("receiver_radio");
-    wb_receiver_enable(receiver[0], STEP_SIZE);
-    emitter = wb_robot_get_device("emitter_sup");
-}
-
-void send_msg_sc()
-{
-    // send a message to the controller
-    Message sup_to_con;
-    sup_to_con.receiver_ID = 103;
-    sup_to_con.position.x = 7.0;
-    sup_to_con.position.y = 3.0;
-    
-    wb_emitter_set_channel(emitter, 600);
-    wb_emitter_send(emitter, &sup_to_con, sizeof(Message));
-
-    printf("Message sent to the robot %d with goal: %f %f\n", sup_to_con.receiver_ID, sup_to_con.position.x, sup_to_con.position.y);
-}
-
 bool is_in_obstacle(float x, float y, float obs_xmin, float obs_xmax, float obs_ymin, float obs_ymax){
     if(x > obs_xmin && x < obs_xmax && y > obs_ymin && y < obs_ymax)
         return true;
@@ -121,6 +100,39 @@ int is_in_obstacle_list(float x, float y, float ** obs_list, int nbr_obs){
             return i;
     }
     return -1;
+}
+
+void init_receiver_s()
+{
+    receiver[0] = wb_robot_get_device("receiver_radio");
+    wb_receiver_enable(receiver[0], STEP_SIZE);
+    emitter = wb_robot_get_device("emitter_sup");
+}
+
+void send_msg_sc(int number_of_robots)
+{   
+    // set channel
+    wb_emitter_set_channel(emitter, 600);
+    // send a message to the controller
+    Message centralized_goal;
+    // centralized_goal.receiver_ID = 103;
+    // centralized_goal.position.x = 12.0;
+    // centralized_goal.position.y = 4.0;
+
+    //printf("Message sent to the robot %d with goal: %f %f\n", sup_to_con.receiver_ID, sup_to_con.position.x, sup_to_con.position.y);
+
+    for(int i=0; i<number_of_robots; i++){
+        do{
+            centralized_goal.receiver_ID = i+1;
+
+            centralized_goal.position.x = (((double)rand() / (double)RAND_MAX) * (5 - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;
+            centralized_goal.position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
+            centralized_goal.position.heading = 0;
+        }while(is_in_obstacle_list(centralized_goal.position.x, centralized_goal.position.y, obstacles, nbr_obs) != -1);
+        wb_emitter_send(emitter, &centralized_goal, sizeof(Message));
+    }
+
+    //printf("Message sent to the robot %d with RANDOM goal: %f %f\n", centralized_goal.receiver_ID, centralized_goal.position.x, centralized_goal.position.y);
 }
 
 // _________main___________
@@ -242,7 +254,8 @@ int main(void){
             }
             wb_receiver_next_packet(receiver[0]);
         }
-        send_msg_sc();
+        // send
+        send_msg_sc(number_of_robots);
     }
 
     //wb_supervisor_animation_stop_recording();
