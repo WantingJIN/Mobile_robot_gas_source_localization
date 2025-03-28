@@ -84,6 +84,27 @@ void read_obstacle_list(){
     }
 }
 
+void init_receiver_s()
+{
+    receiver[0] = wb_robot_get_device("receiver_radio");
+    wb_receiver_enable(receiver[0], STEP_SIZE);
+    emitter = wb_robot_get_device("emitter_sup");
+}
+
+void send_msg_sc()
+{
+    // send a message to the controller
+    Message sup_to_con;
+    sup_to_con.receiver_ID = 103;
+    sup_to_con.position.x = 7.0;
+    sup_to_con.position.y = 3.0;
+    
+    wb_emitter_set_channel(emitter, 600);
+    wb_emitter_send(emitter, &sup_to_con, sizeof(Message));
+
+    printf("Message sent to the robot %d with goal: %f %f\n", sup_to_con.receiver_ID, sup_to_con.position.x, sup_to_con.position.y);
+}
+
 bool is_in_obstacle(float x, float y, float obs_xmin, float obs_xmax, float obs_ymin, float obs_ymax){
     if(x > obs_xmin && x < obs_xmax && y > obs_ymin && y < obs_ymax)
         return true;
@@ -111,9 +132,9 @@ int main(void){
 
     //initialization
     wb_robot_init();
-    receiver[0] = wb_robot_get_device("receiver_radio");
-    wb_receiver_enable(receiver[0], STEP_SIZE);
-    emitter = wb_robot_get_device("emitter_sup");
+
+    //receiver initialization
+    init_receiver_s();
 
     if(access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1 ){
         FILE * sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
@@ -221,6 +242,7 @@ int main(void){
             }
             wb_receiver_next_packet(receiver[0]);
         }
+        send_msg_sc();
     }
 
     //wb_supervisor_animation_stop_recording();
