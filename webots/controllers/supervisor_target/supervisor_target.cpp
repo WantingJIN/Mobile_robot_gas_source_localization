@@ -279,21 +279,13 @@ int main(void){
 
             // if message was addressed to supervisor
             if(msg.receiver_ID == 0){
-                // Check if it's a belief map message
-                if (msg.measurement0_goal1 == 2) { // Suponiendo que 2 representa un belief map
-                    printf("SUPERVISOR -> Received belief map from Robot ID [%d]:\n", msg.sender_ID);
-                    printf("SUPERVISOR -> Received belief map with size: %zu\n", msg.belief_map.size());
-                    
-                    // Verificar que belief_map tiene valores y luego imprimir los primeros 10 valores
-                    if (msg.belief_map.size() > 0) {
-                        for (size_t i = 0; i < 10 && i < msg.belief_map.size(); i++) {
-                            printf("pdf[%zu]: %f\n", i, msg.belief_map[i]);
-                        }
-                    } else {
-                        printf("Error: Belief map is empty or not received correctly.\n");
-                        //a
+                // check if it is a belief map message
+                if(msg.receiver_ID == 0){
+                    if (msg.measurement0_goal1 == 2) { 
+                        printf("SUPERVISOR -> Received belief map max value from Robot ID [%d]: %f\n", msg.sender_ID, msg.belief_value);
                     }
                 }
+                
 
 
                 //terminate ?
