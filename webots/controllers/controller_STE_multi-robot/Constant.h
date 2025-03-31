@@ -6,7 +6,7 @@
                                                         : (x))
 #define PI 3.14159265358979
 #define TIME_STEP 64           // adjusts the speed (ms)
-#define SAFETY_MARGIN .2       // how far in meters are you ready to approach the walls
+#define SAFETY_MARGIN 0.2       // how far in meters are you ready to approach the walls
 #define WHEEL_RADIUS 0.021     // K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH 0.1054     // K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 150 //~10sec //number of measurements before averaging

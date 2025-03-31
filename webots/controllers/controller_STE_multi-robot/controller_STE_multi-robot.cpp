@@ -1087,48 +1087,86 @@ void maximal_information_planning()
 
 void maximal_belief_planning()
 {
-	printf("Enter maximal belief planning \n");
-	fprintf(console_logfile, "Enter maximal belief planning \n");
-	double best_point[2] = {0};
-	// find the maximal variance in gas variance map
-	double max_pdf = 0;
-	int max_pdf_index = 0;
-	int sum = 0;
-	for (int i = 0; i < x_nbins * y_nbins; i++)
-	{
-		if (simulation_parameters.visitedList == visitedList_ON)
-		{
-			if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0)
-			{ 
-				max_pdf = posterior.pdf[i];
-				max_pdf_index = i;
-			}		
-		}
-		else
-		{
-			if (posterior.pdf[i] > max_pdf)
-			{
-				max_pdf = posterior.pdf[i];
-				max_pdf_index = i;
-			}		
-		}
-	}
-	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+	if (simulation_parameters.teamStrategy != CENTRALIZED) {
+		// Crear un vector para almacenar todos los valores del belief map
+		std::vector<double> belief_map_values;
 
-      double epsilon = 1e-9; 
-      if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
-	{
-		printf("all the probable points have been visited \n");
-		fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
-		maximal_information_planning();
-		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-		return;
-	}
-	posterior.index_to_param_values(max_pdf_index, best_point);
+		// Copiar todo el belief map (posterior.pdf) en el vector belief_map_values
+		for (int i = 0; i < x_nbins * y_nbins; i++) {
+			belief_map_values.push_back(posterior.pdf[i]);
+		}
 
-	goal_position.x = best_point[0];
-	goal_position.y = best_point[1];
-	goal_position.heading = 0;
+		// Imprimir el belief map que se va a enviar
+		printf("CONTROLLER -> Sending belief map with %zu values:\n", belief_map_values.size());
+		for (int i = 0; i < 10 && i < belief_map_values.size(); i++) {  // Limitar a los primeros 10 valores
+			printf("pdf[%d]: %f\n", i, belief_map_values[i]);
+		}
+		// Crear el mensaje con el belief map completo
+		Message belief_msg(ID, 0, current_position, -1, goal_position, 2, belief_map_values);
+
+		// Enviar el mensaje
+		send_msg(belief_msg);
+
+		// Recibir mensajes del supervisor si es necesario
+		receive_msg_sc();
+	} else {
+        printf("Enter maximal belief planning \n");
+        fprintf(console_logfile, "Enter maximal belief planning \n");
+        double best_point[2] = {0};
+        // find the maximal variance in gas variance map
+        double max_pdf = 0;
+        int max_pdf_index = 0;
+        
+        for (int i = 0; i < x_nbins * y_nbins; i++) {
+            if (simulation_parameters.visitedList == visitedList_ON) {
+                if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0) { 
+                    max_pdf = posterior.pdf[i];
+                    max_pdf_index = i;
+                }       
+            } else {
+                if (posterior.pdf[i] > max_pdf) {
+                    max_pdf = posterior.pdf[i];
+                    max_pdf_index = i;
+                }       
+            }
+        }
+        
+        fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+
+        double epsilon = 1e-9; 
+        if (fabs(max_pdf - 0.0) < epsilon) { // all the possible points have been visited
+            printf("all the probable points have been visited \n");
+            fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
+            maximal_information_planning();
+            printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+            return;
+        }
+        
+        posterior.index_to_param_values(max_pdf_index, best_point);
+
+        goal_position.x = best_point[0];
+        goal_position.y = best_point[1];
+        goal_position.heading = 0;
+
+				// Crear un vector para almacenar todos los valores del belief map
+		std::vector<double> belief_map_values;
+
+		// Copiar todo el belief map (posterior.pdf) en el vector belief_map_values
+		for (int i = 0; i < x_nbins * y_nbins; i++) {
+			belief_map_values.push_back(posterior.pdf[i]);
+		}
+
+		// Imprimir el belief map que se va a enviar
+		printf("CONTROLLER -> Sending belief map with %zu values:\n", belief_map_values.size());
+		for (int i = 0; i < 10 && i < belief_map_values.size(); i++) {  // Limitar a los primeros 10 valores
+			printf("pdf[%d]: %f\n", i, belief_map_values[i]);
+		}
+		// Crear el mensaje con el belief map completo
+		Message belief_msg(ID, 0, current_position, -1, goal_position, 2, belief_map_values);
+
+		// Enviar el mensaje
+		send_msg(belief_msg);
+    }
 }
 
 
@@ -2036,7 +2074,7 @@ void state_updategoal()
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
-		receive_msg_sc();
+		maximal_belief_planning();
 		break;
 	case BALANCE_MAXIMAL_EXPECTED:
 		balance_expected_maximal_pdf();
@@ -2091,16 +2129,19 @@ void state_updategoal()
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
 		// move to the goal position
-		if(simulation_parameters.simuMode == ONLINE){
-			// update goal
-			FSM.state = STATE_MOVING;
-			FSM.hook = state_moving;
-			time_before_moving = wb_robot_get_time();
+		if (simulation_parameters.teamStrategy == CENTRALIZED) {
+			FSM.state = STATE_RECEIVE_GOAL;
+			FSM.hook = state_receive_goal;
 		} else {
-			FSM.state = STATE_READ_ALL;
-			FSM.hook  = state_read_positions_measurements;
+			if (simulation_parameters.simuMode == ONLINE) {
+				FSM.state = STATE_MOVING;
+				FSM.hook = state_moving;
+				time_before_moving = wb_robot_get_time();
+			} else {
+				FSM.state = STATE_READ_ALL;
+				FSM.hook = state_read_positions_measurements;
+			}
 		}
-		
 	}
 }
 
@@ -2219,6 +2260,12 @@ void state_obstacle_avoidance()
 	obstacle_avoidance_k4();
 }
 
+void state_receive_goal()
+{
+	//receive_msg_sc();
+	FSM.state = STATE_MOVING;
+	FSM.hook = state_moving;
+}
 
 // =========================== MAIN ============================== //
 

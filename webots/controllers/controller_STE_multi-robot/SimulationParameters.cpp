@@ -107,6 +107,13 @@ eGasHitMethod parse_gas_hit_method(const char* str) {
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
+eTeamStrategy parse_team_strategy(const char* str) {
+	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
+	if (strcmp(str, "DECENTRALIZED") == 0) return DECENTRALIZED;
+	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
+	fprintf(stderr, "Unknown team strategy: %s\n", str);
+	exit(1);
+}
 
 SimulationParameters::SimulationParameters(){
 	// default values
@@ -134,6 +141,7 @@ SimulationParameters::SimulationParameters(){
       calibrationMode = OFF;
 	simuMode = ONLINE; 
 	R0 = 100;
+	teamStrategy = CENTRALIZED;
 }
 
 
@@ -199,6 +207,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			sigma = atof(value);
 		} else if (strcmp(key, "lambda") == 0) {
 			lambda = atof(value);	
+		} else if (strcmp(key, "teamStrategy") == 0) {
+			teamStrategy = parse_team_strategy(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -252,6 +262,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "R0 %f\n", R0);
 	fprintf(sim_param_file, "sigma %f\n", sigma);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
+	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
 	fclose(sim_param_file);
 
 }

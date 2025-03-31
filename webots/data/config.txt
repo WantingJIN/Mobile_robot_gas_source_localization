@@ -24,3 +24,4 @@ simuMode = ONLINE
 R0 = 1500
 sigma = 0.48
 lambda = 0.7
+teamStrategy = CENTRALIZED

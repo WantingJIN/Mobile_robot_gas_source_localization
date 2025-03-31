@@ -17,6 +17,7 @@ Message::Message()
 	buffer_size = 0;
 }
 
+// constructor : set parameters
 Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag)
 {
 	sender_ID = _sender_ID;
@@ -27,6 +28,20 @@ Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _c
 	measurement0_goal1 = _flag;
 	params_to_buffer();
 	buffer_size = sizeof(double) * 10;
+}
+
+// constructor : belief map
+Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, const std::vector<double>& _belief_map)
+{
+    sender_ID = _sender_ID;
+    receiver_ID = _receiver_ID;
+    position.copy_position(_position);
+    concentration = _concentration;
+    goal.copy_position(_goal);
+    measurement0_goal1 = _flag;
+    belief_map = _belief_map;
+    params_to_buffer();
+    buffer_size = sizeof(double) * 10; // Mantiene buffer_size para compatibilidad
 }
 
 Message::Message(const void *m_buffer)
@@ -66,6 +81,14 @@ void Message::buffer_to_params()
 
 void Message::print_message()
 {
-	printf("Message from [%d] to [%d]. Position (%f,%f,%f). Concentration = %f. Goal (%f,%f,%f). Flag = %d.\n",
-		 sender_ID, receiver_ID, position.x, position.y, position.heading, concentration, goal.x, goal.y, goal.heading, measurement0_goal1);
+    printf("Message from [%d] to [%d]. Position (%f,%f,%f). Concentration = %f. Goal (%f,%f,%f). Flag = %d.\n",
+           sender_ID, receiver_ID, position.x, position.y, position.heading, concentration, goal.x, goal.y, goal.heading, measurement0_goal1);
+
+    if (!belief_map.empty()) {
+        printf("Belief Map: ");
+        for (size_t i = 0; i < belief_map.size(); i++) {
+            printf("%f ", belief_map[i]);
+        }
+        printf("\n");
+    }
 }

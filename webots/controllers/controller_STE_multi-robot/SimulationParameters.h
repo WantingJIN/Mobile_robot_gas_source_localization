@@ -101,6 +101,12 @@ typedef enum gasHitMethod
 	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
+typedef enum teamStrategy{
+	INDIVIDUAL = 0,
+	DECENTRALIZED = 1,
+	CENTRALIZED = 2,
+} eTeamStrategy;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -142,7 +148,8 @@ class SimulationParameters{
 		eRelativeMethod relativeMethod; 
 		eSimuMode simuMode; 
 		eCalibrationMode calibrationMode;
-		eGasHitMethod gasHitMethod; 
+		eGasHitMethod gasHitMethod;
+		eTeamStrategy teamStrategy;
 
 		SimulationParameters();
 		~SimulationParameters();

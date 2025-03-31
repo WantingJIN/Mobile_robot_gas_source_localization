@@ -336,7 +336,7 @@ int obstacle_or_not()
 		// if one of the sensors detect something, then obstacle
 		if (sensors_value[i] > 200)
 		{
-			printf("[%d] obstacle detected..!!!!! %d %f\n", ID, i, sensors_value[i]);
+			// printf("[%d] obstacle detected..!!!!! %d %f\n", ID, i, sensors_value[i]);
 			return 1;
 		}
 	}

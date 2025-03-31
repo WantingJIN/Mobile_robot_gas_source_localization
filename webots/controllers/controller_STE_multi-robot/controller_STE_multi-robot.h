@@ -44,6 +44,7 @@ typedef enum state
 	STATE_OBSTACLE_AVOIDANCE = 6,
 	STATE_READ_ALL = 7,
 	STATE_READ_INITIAL = 8,
+	STATE_RECEIVE_GOAL = 9,
 } eState;
 
 // finite state machine
@@ -93,6 +94,7 @@ void state_waiting();
 void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
+void state_receive_goal();
 
 // old
 double likelihood(struct history history, double *parameters, PlumeModel *model);
