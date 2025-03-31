@@ -280,11 +280,23 @@ int main(void){
             // if message was addressed to supervisor
             if(msg.receiver_ID == 0){
                 // check if it is a belief map message
-                if(msg.receiver_ID == 0){
-                    if (msg.measurement0_goal1 == 2) { 
-                        printf("SUPERVISOR -> Received belief map max value from Robot ID [%d]: %f\n", msg.sender_ID, msg.belief_value);
+
+                if (msg.measurement0_goal1 == 2) { 
+                    printf("SUPERVISOR -> Received belief map from Robot ID [%d]:\n", msg.sender_ID);
+                    
+                    // option 1 (better)
+                    for (int i = 0; i < 400; i++) {
+                        printf("%f ", msg.belief_map[i]);
                     }
+
+                    // option 2 (also valid)
+                    // for (int i = 10; i < 410; i++) {
+                    //     printf("%f ", msg.buffer[i]);
+                    // }
+                    
+                    printf("\n");
                 }
+
                 
 
 

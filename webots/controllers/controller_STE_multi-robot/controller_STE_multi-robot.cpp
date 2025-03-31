@@ -1124,11 +1124,19 @@ void maximal_belief_planning()
     goal_position.y = best_point[1];
     goal_position.heading = 0;
 
-	printf("CONTROLLER -> Sending max belief value : %f \n", max_pdf);
-    // send max belief value
-    Message msg(ID, 0, Position(), 0, Position(), 2, max_pdf);
-    send_msg(msg);
+	printf("CONTROLLER -> Belief Map before sending:\n");
+
+	for (int i = 0; i < x_nbins * y_nbins; i++) {
+		printf("%f ", posterior.pdf[i]);
+	}
+	printf("\n");
+
+	printf("CONTROLLER -> Sending belief map from Robot ID [%d] to supervisor\n", ID);
+
+	Message msg(ID, 0, Position(), 0, Position(), 2, posterior.pdf);
+	send_msg(msg);
 }
+
 
 
 
