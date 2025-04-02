@@ -35,6 +35,10 @@
 WbDeviceTag receiver[MAX_NB_ROBOTS];         // Supervisor receivers
 WbDeviceTag emitter;
 
+//
+double belief_101[400] = {0}, belief_102[400] = {0}, belief_103[400] = {0};
+int received_101 = 0, received_102 = 0, received_103 = 0;
+
 // message structure
 struct message{
     int sender_ID;
@@ -112,74 +116,29 @@ void init_receiver_s()
 
 void send_msg_sc(int number_of_robots)
 {   
-    // set channel
-    wb_emitter_set_channel(emitter, 600);
-    // send a message to the controller
-    Message centralized_goal;
+    // // set channel
+    // wb_emitter_set_channel(emitter, 600);
+    // // send a message to the controller
+    // Message centralized_goal;
 
-
-    // CONSTANT VALUE
-    // centralized_goal.receiver_ID = 103;
-    // centralized_goal.position.x = 12.0;
-    // centralized_goal.position.y = 4.0;
-    //printf("Message sent to the robot %d with goal: %f %f\n", sup_to_con.receiver_ID, sup_to_con.position.x, sup_to_con.position.y);
-
-
-    // RANDOM VALUE
-    // for(int i=0; i<number_of_robots; i++){
-    //     do{
-    //         centralized_goal.receiver_ID = i+1;
-
-    //         centralized_goal.position.x = (((double)rand() / (double)RAND_MAX) * (5 - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;
-    //         centralized_goal.position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
-    //         centralized_goal.position.heading = 0;
-    //     }while(is_in_obstacle_list(centralized_goal.position.x, centralized_goal.position.y, obstacles, nbr_obs) != -1);
-    //     wb_emitter_send(emitter, &centralized_goal, sizeof(Message));
-    // }
-    //printf("Message sent to the robot %d with RANDOM goal: %f %f\n", centralized_goal.receiver_ID, centralized_goal.position.x, centralized_goal.position.y);
-
-
-    // BELIEF MERGING
 
 }
 
 void merge_beliefs() {
+    double merged[400] = {0};
+
+    for (int i = 0; i < 400; i++) {
+        merged[i] = belief_101[i] + belief_102[i] + belief_103[i];
+    }
+
     Message centralized_goal;
-    // static std::map<int, Position> received_positions; // Almacena las posiciones de los robots
-    // static const int required_ids[] = {101, 102, 103}; // IDs esperados
-
-    // // Verifica si el sender_ID es 101, 102 o 103
-    // if (msg.sender_ID == 101 || msg.sender_ID == 102 || msg.sender_ID == 103) {
-    //     received_positions[msg.sender_ID] = msg.position; // Almacena la posición
-    // }
-
-    // // Si hemos recibido los tres mensajes
-    // if (received_positions.size() == 3) {
-    //     Position centralized_goal;
-    //     centralized_goal.x = 0.0;
-    //     centralized_goal.y = 0.0;
-
-    //     // Calcular el promedio de las posiciones
-    //     for (int id : required_ids) {
-    //         centralized_goal.x += received_positions[id].x;
-    //         centralized_goal.y += received_positions[id].y;
-    //     }
-    //     centralized_goal.x /= 3.0;
-    //     centralized_goal.y /= 3.0;
-
-    //     wb_emitter_send(emitter, &centralized_goal, sizeof(Message));
-
-    //     // Imprimir el resultado para depuración
-    //     printf("Centralized Goal: x = %f, y = %f\n", centralized_goal.x, centralized_goal.y);
-
-    //     // Reiniciar la estructura para la siguiente ronda
-    //     received_positions.clear();
-    // }
-    centralized_goal.position.x = 7.0;
-    centralized_goal.position.y = 3.0;
+    //centralized_goal.position.x = 7.0;
+    //centralized_goal.position.y = 3.0;
+    centralized_goal.measurement0_goal1 = 3;
+    memcpy(centralized_goal.belief_map, merged, sizeof(merged));
+    wb_emitter_set_channel(emitter, 600);
     wb_emitter_send(emitter, &centralized_goal, sizeof(Message));
 }
-
 
 // _________main___________
 int main(void){
@@ -269,6 +228,7 @@ int main(void){
     //long long start_time = current_timestamp();
     //wb_supervisor_animation_start_recording("../../../Results/current/animation.html");
 
+    bool new_data_received = false;
     // start the controller
     while (wb_robot_step(STEP_SIZE) != -1 ){ //&& current_timestamp()-start_time < TIMEOUT
         //listen to the radio, if some news arrive, then remove the last marker, and place a new one
@@ -282,7 +242,7 @@ int main(void){
                 // check if it is a belief map message
 
                 if (msg.measurement0_goal1 == 2) { 
-                    printf("SUPERVISOR -> Received belief map from Robot ID [%d]:\n", msg.sender_ID);
+                    printf("SUPERVISOR -> (2) Received belief map from Robot ID [%d]:\n", msg.sender_ID);
                     
                     // option 1 (better)
                     for (int i = 0; i < 400; i++) {
@@ -295,6 +255,23 @@ int main(void){
                     // }
                     
                     printf("\n");
+
+                    if (msg.sender_ID == 101) {
+                        memcpy(belief_101, msg.belief_map, sizeof(belief_101));
+                        received_101 = 1;
+                    } else if (msg.sender_ID == 102) {
+                        memcpy(belief_102, msg.belief_map, sizeof(belief_102));
+                        received_102 = 1;
+                    } else if (msg.sender_ID == 103) {
+                        memcpy(belief_103, msg.belief_map, sizeof(belief_103));
+                        received_103 = 1;
+                    }
+
+                    if (received_101 && received_102 && received_103) {
+                        merge_beliefs();
+                        received_101 = received_102 = received_103 = 0;
+                        new_data_received = true; 
+                    }
                 }
 
                 
@@ -321,9 +298,14 @@ int main(void){
             }
             wb_receiver_next_packet(receiver[0]);
         }
+
+
+        if (new_data_received) {
+            new_data_received = false;
+        }
         // send
         // send_msg_sc(number_of_robots);
-        merge_beliefs();
+        // merge_beliefs();
     }
 
     //wb_supervisor_animation_stop_recording();

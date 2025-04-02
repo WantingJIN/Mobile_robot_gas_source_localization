@@ -173,6 +173,36 @@ void init_receiver_c()
 	wb_receiver_set_channel(receiver, 600);
 }
 
+void receive_merged_belief_map()
+{
+	// receive and process supervisor messages
+	// debugging code
+	int queue_length = wb_receiver_get_queue_length(receiver);
+	if (queue_length > 0) {
+		printf("There is %d message in the queue.\n", queue_length);
+		while (queue_length > 0)
+		{
+			const void *data = wb_receiver_get_data(receiver);
+			Message *msg = (Message *)data;
+			if (msg->measurement0_goal1 == 3){
+				printf("CONTROLLER -> (3) Received merged belief map from supervisor: \n");
+				for (int i = 0; i < 400; i++) {
+					posterior.pdf[i] = msg->belief_map[i];  // ACTUALIZAR PDF
+                    printf("%f ", msg->belief_map[i]);
+                }
+				printf("\n");
+			}			
+			// move to the next package in the queue
+			wb_receiver_next_packet(receiver);
+
+			// update queue size after processing
+			queue_length = wb_receiver_get_queue_length(receiver);
+		}
+	} else {
+		printf("There are no messages in the queue.\n");
+	}
+}
+
 void receive_msg_sc()
 {
 	// receive and process supervisor messages
@@ -184,7 +214,7 @@ void receive_msg_sc()
 		{
 			const void *data = wb_receiver_get_data(receiver);
 			Message *msg = (Message *)data;
-			
+
 			printf("Receiving message for the robot with ID: %d\n", msg->receiver_ID);
 			printf("Current ID: %d\n", ID);
 			
@@ -1087,54 +1117,99 @@ void maximal_information_planning()
 
 void maximal_belief_planning()
 {
-    printf("Enter maximal belief planning \n");
-    fprintf(console_logfile, "Enter maximal belief planning \n");
-    double best_point[2] = {0};
-    double max_pdf = 0;
-    int max_pdf_index = 0;
-    
-    for (int i = 0; i < x_nbins * y_nbins; i++) {
-        if (simulation_parameters.visitedList == visitedList_ON) {
-            if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0) { 
-                max_pdf = posterior.pdf[i];
-                max_pdf_index = i;
-            }       
-        } else {
-            if (posterior.pdf[i] > max_pdf) {
-                max_pdf = posterior.pdf[i];
-                max_pdf_index = i;
-            }       
-        }
-    }
-    
-    fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+	if (simulation_parameters.teamStrategy == CENTRALIZED) {
+		printf("Enter maximal belief planning \n");
+		fprintf(console_logfile, "Enter maximal belief planning \n");
 
-    double epsilon = 1e-9; 
-    if (fabs(max_pdf - 0.0) < epsilon) { 
-        printf("all the probable points have been visited \n");
-        fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
-        maximal_information_planning();
-        printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-        return;
-    }
-    
-    posterior.index_to_param_values(max_pdf_index, best_point);
-    
-    goal_position.x = best_point[0];
-    goal_position.y = best_point[1];
-    goal_position.heading = 0;
+		receive_merged_belief_map();
 
-	printf("CONTROLLER -> Belief Map before sending:\n");
 
-	for (int i = 0; i < x_nbins * y_nbins; i++) {
-		printf("%f ", posterior.pdf[i]);
+		double best_point[2] = {0};
+		double max_pdf = 0;
+		int max_pdf_index = 0;
+		
+		for (int i = 0; i < x_nbins * y_nbins; i++) {
+			if (simulation_parameters.visitedList == visitedList_ON) {
+				if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0) { 
+					max_pdf = posterior.pdf[i];
+					max_pdf_index = i;
+				}       
+			} else {
+				if (posterior.pdf[i] > max_pdf) {
+					max_pdf = posterior.pdf[i];
+					max_pdf_index = i;
+				}       
+			}
+		}
+		
+		fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+
+		double epsilon = 1e-9; 
+		if (fabs(max_pdf - 0.0) < epsilon) { 
+			printf("all the probable points have been visited \n");
+			fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
+			maximal_information_planning();
+			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+			return;
+		}
+
+		posterior.index_to_param_values(max_pdf_index, best_point);
+		
+		printf("Computing new goal for pdf[1]: %f \n", posterior.pdf[0]);
+		goal_position.x = best_point[0];
+		goal_position.y = best_point[1];
+		goal_position.heading = 0;
+
+		printf("CONTROLLER -> (0) Belief Map before sending:\n");
+
+		for (int i = 0; i < x_nbins * y_nbins; i++) {
+			printf("%f ", posterior.pdf[i]);
+		}
+		printf("\n");
+
+		printf("CONTROLLER -> (1) Sending belief map from Robot ID [%d] to supervisor\n", ID);
+
+		Message msg(ID, 0, Position(), 0, Position(), 2, posterior.pdf);
+		send_msg(msg);
+
+	} else{
+		printf("Enter maximal belief planning \n");
+		fprintf(console_logfile, "Enter maximal belief planning \n");
+		double best_point[2] = {0};
+		double max_pdf = 0;
+		int max_pdf_index = 0;
+		
+		for (int i = 0; i < x_nbins * y_nbins; i++) {
+			if (simulation_parameters.visitedList == visitedList_ON) {
+				if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0) { 
+					max_pdf = posterior.pdf[i];
+					max_pdf_index = i;
+				}       
+			} else {
+				if (posterior.pdf[i] > max_pdf) {
+					max_pdf = posterior.pdf[i];
+					max_pdf_index = i;
+				}       
+			}
+		}
+		
+		fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+
+		double epsilon = 1e-9; 
+		if (fabs(max_pdf - 0.0) < epsilon) { 
+			printf("all the probable points have been visited \n");
+			fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
+			maximal_information_planning();
+			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+			return;
+		}
+		
+		posterior.index_to_param_values(max_pdf_index, best_point);
+		
+		goal_position.x = best_point[0];
+		goal_position.y = best_point[1];
+		goal_position.heading = 0;
 	}
-	printf("\n");
-
-	printf("CONTROLLER -> Sending belief map from Robot ID [%d] to supervisor\n", ID);
-
-	Message msg(ID, 0, Position(), 0, Position(), 2, posterior.pdf);
-	send_msg(msg);
 }
 
 
