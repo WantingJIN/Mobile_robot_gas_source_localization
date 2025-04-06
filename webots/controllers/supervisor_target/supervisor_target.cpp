@@ -14,7 +14,6 @@
 #include <unistd.h> //access
 #include <sys/time.h>
 #include <fstream>
-#include <map>
 
 #include <webots/receiver.h>
 #include <webots/emitter.h>
@@ -34,10 +33,6 @@
 
 WbDeviceTag receiver[MAX_NB_ROBOTS];         // Supervisor receivers
 WbDeviceTag emitter;
-
-//
-double belief_101[400] = {0}, belief_102[400] = {0}, belief_103[400] = {0};
-int received_101 = 0, received_102 = 0, received_103 = 0;
 
 // message structure
 struct message{
@@ -107,39 +102,6 @@ int is_in_obstacle_list(float x, float y, float ** obs_list, int nbr_obs){
     return -1;
 }
 
-void init_receiver_s()
-{
-    receiver[0] = wb_robot_get_device("receiver_radio");
-    wb_receiver_enable(receiver[0], STEP_SIZE);
-    emitter = wb_robot_get_device("emitter_sup");
-}
-
-void send_msg_sc(int number_of_robots)
-{   
-    // // set channel
-    // wb_emitter_set_channel(emitter, 600);
-    // // send a message to the controller
-    // Message centralized_goal;
-
-
-}
-
-void merge_beliefs() {
-    double merged[400] = {0};
-
-    for (int i = 0; i < 400; i++) {
-        merged[i] = belief_101[i] + belief_102[i] + belief_103[i];
-    }
-
-    Message centralized_goal;
-    //centralized_goal.position.x = 7.0;
-    //centralized_goal.position.y = 3.0;
-    centralized_goal.measurement0_goal1 = 3;
-    memcpy(centralized_goal.belief_map, merged, sizeof(merged));
-    wb_emitter_set_channel(emitter, 600);
-    wb_emitter_send(emitter, &centralized_goal, sizeof(Message));
-}
-
 // _________main___________
 int main(void){
     const void * news;
@@ -149,9 +111,9 @@ int main(void){
 
     //initialization
     wb_robot_init();
-
-    //receiver initialization
-    init_receiver_s();
+    receiver[0] = wb_robot_get_device("receiver_radio");
+    wb_receiver_enable(receiver[0], STEP_SIZE);
+    emitter = wb_robot_get_device("emitter_sup");
 
     if(access("../../data/simulation_parameters/number_of_robots.txt", F_OK) != -1 ){
         FILE * sim_param_file = fopen("../../data/simulation_parameters/number_of_robots.txt", "r");
@@ -228,7 +190,6 @@ int main(void){
     //long long start_time = current_timestamp();
     //wb_supervisor_animation_start_recording("../../../Results/current/animation.html");
 
-    bool new_data_received = false;
     // start the controller
     while (wb_robot_step(STEP_SIZE) != -1 ){ //&& current_timestamp()-start_time < TIMEOUT
         //listen to the radio, if some news arrive, then remove the last marker, and place a new one
@@ -239,46 +200,8 @@ int main(void){
 
             // if message was addressed to supervisor
             if(msg.receiver_ID == 0){
-                // check if it is a belief map message
-
-                if (msg.measurement0_goal1 == 2) { 
-                    printf("SUPERVISOR -> (2) Received belief map from Robot ID [%d]:\n", msg.sender_ID);
-                    
-                    // option 1 (better)
-                    for (int i = 0; i < 400; i++) {
-                        printf("%f ", msg.belief_map[i]);
-                    }
-
-                    // option 2 (also valid)
-                    // for (int i = 10; i < 410; i++) {
-                    //     printf("%f ", msg.buffer[i]);
-                    // }
-                    
-                    printf("\n");
-
-                    if (msg.sender_ID == 101) {
-                        memcpy(belief_101, msg.belief_map, sizeof(belief_101));
-                        received_101 = 1;
-                    } else if (msg.sender_ID == 102) {
-                        memcpy(belief_102, msg.belief_map, sizeof(belief_102));
-                        received_102 = 1;
-                    } else if (msg.sender_ID == 103) {
-                        memcpy(belief_103, msg.belief_map, sizeof(belief_103));
-                        received_103 = 1;
-                    }
-
-                    if (received_101 && received_102 && received_103) {
-                        merge_beliefs();
-                        received_101 = received_102 = received_103 = 0;
-                        new_data_received = true; 
-                    }
-                }
-
-                
-
-
                 //terminate ?
-                else if((msg.position.x == -1) && (msg.position.y == -1)){
+                if((msg.position.x == -1) && (msg.position.y == -1)){
                     //eliminate the robot that finished and its target indicator
                     double robot_position[3] = {-10,-10,0};
                     wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("n",msg.sender_ID)),"translation"), robot_position);
@@ -298,14 +221,6 @@ int main(void){
             }
             wb_receiver_next_packet(receiver[0]);
         }
-
-
-        if (new_data_received) {
-            new_data_received = false;
-        }
-        // send
-        // send_msg_sc(number_of_robots);
-        // merge_beliefs();
     }
 
     //wb_supervisor_animation_stop_recording();

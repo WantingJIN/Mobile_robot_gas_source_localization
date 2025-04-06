@@ -129,6 +129,7 @@ void update_position();
 int obstacle_or_not();
 void receive_from_friends();
 double get_exp_time();
+void init_receiver(int step_size);
 void send_msg(Message msg);
 void set_wheels_speed(double speed1, double speed2);
 void cleaning_up();

@@ -45,6 +45,11 @@ typedef enum state
 	STATE_READ_ALL = 7,
 	STATE_READ_INITIAL = 8,
 	STATE_RECEIVE_GOAL = 9,
+	STATE_RECEIVE_PDF = 10,
+	STATE_SEND_GOAL = 11,
+	STATE_SEND_PDF = 12,
+	STATE_MERGE_PDF = 13,
+	STATE_UPDATEGOAL_TEAM = 14,
 } eState;
 
 // finite state machine
@@ -95,6 +100,11 @@ void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
 void state_receive_goal();
+void state_receive_pdf();
+void state_send_goal();
+void state_send_pdf();
+void state_merge_pdf();
+void state_updategoal_team();
 
 // old
 double likelihood(struct history history, double *parameters, PlumeModel *model);

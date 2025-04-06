@@ -349,7 +349,7 @@ void obstacle_avoidance_k4()
 	// if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
 	// IR sensors on K4 are respectively : {back_left, left, front_left, front, front_right, right, back_right, back}
 	// double khepera4_matrix[SENSOR_NUMBER][2] = {{2,1},{3,1},{3,0},{1,1},{0,3},{1,3},{1,2},{2,2}};
-	// The one behind is working
+	// The one below is working
 	double khepera4_matrix[SENSOR_NUMBER][2] = {{1, 1}, {1, -1}, {2, -2}, {-2, -3}, {-2, 2}, {-1, 1}, {0, 1}, {1, 1}};//{{-2, 4}, {-3, 5}, {-7, 7}, {7, -6}, {5, -4}, {4, -2}, {-0.5, -0.5}, {-0.5, -0.5}};//{{-0.5,-0.5}, {-2, 4}, {-4, 3}, {3,3}, {4, -5}, {4, -2}, {-0.5,-0.5}, {-0.5,-0.5}};
 	// double khepera4_matrix[SENSOR_NUMBER][2] ={{-2, 4}, {-3, 5}, {-7, 7}, {7, -6}, {5, -4}, {4, -2}, {-0.5, -0.5}, {-0.5, -0.5}}; //from webots' breitenberg controller
 	// double khepera4_matrix[SENSOR_NUMBER][2] = {{0, 1}, {1, -1}, {2, -2}, {-3, -2.5}, {-2, 2}, {-1, 1}, {1, 0}, {0, 0}};
@@ -457,6 +457,13 @@ double get_exp_time()
 {
 	return wb_robot_get_time();
 }
+
+void init_receiver(int step_size) {
+    receiver = wb_robot_get_device("receiver_K4");
+    wb_receiver_enable(receiver, step_size);
+    wb_receiver_set_channel(receiver, 601);
+}
+
 
 void send_msg(Message msg)
 {
