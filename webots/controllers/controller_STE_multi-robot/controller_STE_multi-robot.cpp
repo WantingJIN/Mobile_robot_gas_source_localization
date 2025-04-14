@@ -21,6 +21,7 @@
 using namespace std;
 
 #define STEP_SIZE	64 
+#define LIMIT_N_TIME_STEP	78	
 
 // Global Variables
 
@@ -1118,6 +1119,12 @@ void maximal_merged_belief_planning()
 	top_values[0], top_indices[0],
 	top_values[1], top_indices[1],
 	top_values[2], top_indices[2]);
+
+	
+	cell_visited_list[top_indices[0]] = 1;
+	cell_visited_list[top_indices[1]] = 1;
+	cell_visited_list[top_indices[2]] = 1;
+
 
 	// assign goals to the maximal merged belief map values
 	double best_points[3][2] = {0};
@@ -2256,6 +2263,16 @@ void state_moving()
 		 	return;
 		 }
 		set_wheels_speed(speed[0], speed[1]);
+		
+		if (n_time_step % LIMIT_N_TIME_STEP == 0 && n_time_step != 0)
+		{
+			//set_wheels_speed(0, 0);
+			sampleBuffer.reset_all();
+			path.clear();
+			printf("Robot ID [%d]. Number of iteration is %d", ID, n_time_step);
+			FSM.state = STATE_MEASURING;
+			FSM.hook  = state_measuring;
+		}
 	}
 	else
 	{
