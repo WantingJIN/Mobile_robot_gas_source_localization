@@ -375,57 +375,10 @@ void Posterior::MCMC_evaluation(struct history history)
 		}
 	}
 
-	// //error detection
-	// double sample_likelihood = likelihood(history, sample, model);
-	// // if the expected value is not a valid sample to start with
-	// if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-	// 	// we start with the max a posteriori value
-	// 	model->get_max_a_post_value(sample);
-	// 	sample_likelihood = likelihood(history, sample, model);
-	// }
-	// // if max a post value is also not a valid sample
-	// while(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-	// 	if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f %f %f %f\n",
-	// 		prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1], sample[2], sample[3], sample[4]);
-	// 	// we choose a sample randomly
-	// 	model->random_params(sample);
-	// 	sample_likelihood = likelihood(history, sample, model);
-	// 	printf("Started from random sample\n");
-	// }
-
-	// check if expected value is in obstacle and relocate if so
-	// Position tmp_p(sample[0], sample[1], 0);
-	// goal_outside_obstacles(&tmp_p);
-	// sample[0] = tmp_p.x;
-	// sample[1] = tmp_p.y;
-
-	// error detection
 	double sample_likelihood = likelihood(history, sample, model);
-	// if (prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0)
-	// {
-	// 	if (VERBOSE)
-	// 		printf("done ---- prior = %d, likelihood = %f, sample: %f %f\n",
-	// 			 prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
-	// 	dirac_flag = 1;
-	// 	return;
-	// }
-
+	
 	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 	update(posterior_value, sample);
-
-	// get model concentrations
-	//  if(history.size==1){
-	//  	vector<vector<float>> model_c_avg(history.size, vector<float> (model->param_list[0].nbins * model->param_list[1].nbins));
-	//  	model->concentration(history.position, history.size, 0, model_c_avg);
-	//  	// FILE* model_values = fopen("/data/FaezehRahbar/Projects/Data-driven_plume_model/webots/model_values.csv","w");
-	//  	// std::ofstream output_file("/data/FaezehRahbar/Projects/Data-driven_plume_model/webots/model_values.csv");
-	//  //   	std::ostream_iterator<float> output_iterator(output_file, "\n");
-	//  //   	std::copy(model_c_avg.begin(), model_c_avg.end(), output_iterator);
-	// 	for(const auto& row : model_c_avg) {
-	//    		std::copy(row.cbegin(), row.cend(), std::ostream_iterator<float>(std::cout, " "));
-	//  			std::cout << '\n';
-	//  		}
-	//    }
 
 	// copy sample and last_sample before starting
 	memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
