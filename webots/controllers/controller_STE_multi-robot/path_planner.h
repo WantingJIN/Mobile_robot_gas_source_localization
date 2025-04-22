@@ -77,7 +77,6 @@ public:
     void random_navigation();
     bool position_outside_arena(Position p);
     void KLD_informative_goal_selection();
-    void balance_exploration_exploitation(float gloabl_local_search_ratio);
     void random_planning();
     void lawnmower_planning();
     void calculate_information_gain();
@@ -92,7 +91,7 @@ public:
     void weighted_belief_clustering();
     void balance_expected_maximal_pdf();
     void joint_planning();
-    void KLD_distance_balance(float gloabl_local_search_ratio);
+    void KLD_distance_balance();
     void goal_outside_obstacles(Position *goal);
     vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double information_map[]);
 

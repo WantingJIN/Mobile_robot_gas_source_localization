@@ -6,7 +6,7 @@
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include <random>
-
+#include "likelihood_estimator.h"
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -481,13 +481,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	double sample[nbr_dimension];
 	vector<double> relative_history_meas = history.measurement;
 	vector<double> slope_history_meas;
-	vector<double> pdf_history_meas;
-	double mean, stddev;
 
-	if (simulation_parameters.gasFeature == GASHIT)
-	{
-		printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
-	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
@@ -523,7 +517,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model);
 		}
 		// add the new value to the sum
 		sum += pdf[i];

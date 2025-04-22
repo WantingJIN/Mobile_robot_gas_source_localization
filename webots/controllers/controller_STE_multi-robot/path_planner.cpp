@@ -1,5 +1,6 @@
 #include "path_planner.h"
 
+extern SimulationParameters simulation_parameters;
 
 PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history)
 {
@@ -10,7 +11,7 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 PathPlanner:: ~PathPlanner()
 {
 }
-
+// TODO - maybe merge this to greedy_information_planning
 void PathPlanner::maximal_belief_planning()
 {
 	printf("Enter maximal belief planning \n");
@@ -109,8 +110,6 @@ void PathPlanner::KLD_informative_goal_selection()
 		tmp_position.x = candidate_pos.x;
 		tmp_position.y = candidate_pos.y;
 		tmp_position.heading = 0;
-		// printf("position : %f %f\n", tmp_position.x, tmp_position.y);
-		// printf("position : %f %f %f\n", j*p0 * cos(l*theta0) * sin(k*phi0),j*p0 * sin(l*theta0) * sin(k*phi0),j*p0 * cos(k*phi0));
 		if (position_outside_arena(tmp_position))
 			continue;
 		// calculate the expected concentration on position
@@ -139,22 +138,6 @@ void PathPlanner::KLD_informative_goal_selection()
 	}
 }
 
-void PathPlanner::balance_exploration_exploitation(float gloabl_local_search_ratio)
-{
-	float ratio = gloabl_local_search_ratio;
-	float vec1[2] = {0}, vec2[2] = {0};
-	printf("current_position : %f %f , goal position : %f %f , estimated source : %f %f \n", current_position.x, current_position.y,
-		 goal_position.x, goal_position.y, plume_model->max_a_post_value[0], plume_model->max_a_post_value[1]);
-	vec1[0] = goal_position.x - current_position.x; // exploration
-	vec1[1] = goal_position.y - current_position.y;
-	vec2[0] = plume_model->max_a_post_value[0] - current_position.x; // TODO: to improve
-	vec2[1] = plume_model->max_a_post_value[1] - current_position.y;
-	goal_position.x = current_position.x + ratio * vec1[0] + (1 - ratio) * vec2[0];
-	goal_position.y = current_position.y + ratio * vec1[1] + (1 - ratio) * vec2[1];
-	goal_position.heading = 0;
-	// printf("new goal position : %f %f %f\n", goal_position[0],goal_position[1],goal_position[2]);
-}
-
 void PathPlanner::random_planning()
 {
 	printf("Enter random planning \n");
@@ -167,6 +150,7 @@ void PathPlanner::random_planning()
 	} while (goal_position.is_in_obstacle_list(obstacles, nbr_obs) != -1);
 }
 
+//TODO - Now can only be used in obstacle free environment
 void PathPlanner::lawnmower_planning()
 {
 	printf("Enter lawnmower planning \n");
@@ -210,12 +194,6 @@ void PathPlanner::calculate_information_gain()
 		}
 	}
 
-	// printf("gas information map is: \n");
-	// for (int i = 0; i < x_nbins * y_nbins; i++)
-	// {
-	// 	printf("%f, ", gas_information_map[i]);
-	// }
-	// printf("\n");
 }
 
 
@@ -223,7 +201,7 @@ double PathPlanner::index_distance(int x_idx_diff, int y_idx_diff){
 	return sqrt(pow(x_idx_diff * x_resol, 2) + pow(y_idx_diff * y_resol, 2));
 }
 
-
+// FIXME - If the information is PDF, then the logic is a bit wrong
 void PathPlanner::maximal_information_planning()
 {
 	printf("Enter maximal information planning \n");
@@ -1113,14 +1091,14 @@ void PathPlanner::balance_expected_maximal_pdf()
 // 	}
 // }
 
-void PathPlanner::KLD_distance_balance(float gloabl_local_search_ratio)
+void PathPlanner::KLD_distance_balance()
 {
 	double best_point[2] = {0};
-	posterior->XYmarginal_distance_combined(current_position, gloabl_local_search_ratio, best_point);
+	posterior->XYmarginal_distance_combined(current_position, 1.0, best_point);
 	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
 
-	float ratio = 0.3; // gloabl_local_search_ratio;//simulation_parameters.gloabl_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
+	float ratio = simulation_parameters.global_local_search_ratio; //ratio of exploration //entropy_posterior/10;//
 	float vec1[2] = {0}, vec2[2] = {0};
 	// printf("current_position : %f %f %f, goal position : %f %f %f, estimated source : %f %f %f\n", current_position[0],current_position[1],current_position[2],
 	//	goal_position[0],goal_position[1],goal_position[2], estimated_source_parameters.source_position[0],estimated_source_parameters.source_position[1],estimated_source_parameters.source_position[2]);

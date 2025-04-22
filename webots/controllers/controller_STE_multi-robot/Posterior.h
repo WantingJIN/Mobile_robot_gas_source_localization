@@ -64,6 +64,20 @@ public:
     void log_pdf(const char *file_name, char writing_mode);
     void log_marginal_pdf(const char *file_name, char writing_mode);
     void log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas);
+
+    // // external functions defined in the likelihood_estimator.cpp
+
+    // extern double likelihood(const struct history history, double *parameters, PlumeModel *model);
+    // extern double likelihood_precomp(const struct history history, double *parameters, int source_pos_idx, PlumeModel *model);
+    // extern double likelihood_rel_con(const struct history history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model);
+    // extern double likelihood_gas_hit(const struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
+
+    // // prior function
+    // extern bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
+
+    // // private functions
+    // extern void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list);
+    // extern void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list); 
 };
 
 #endif

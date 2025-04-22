@@ -152,7 +152,7 @@ class SimulationParameters{
 		int planning_step;
 		float weighting_entropy_ratio;
 
-		eEvaluationMethod MCMC_or_exhaustive_eval;
+		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
 		eSamplingMode samplingMode; 
 		eProcessingMode processingMode; 

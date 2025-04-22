@@ -94,15 +94,6 @@ void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
 
-// old
-double likelihood(struct history history, double *parameters, PlumeModel *model);
-// new likelihood with precomputed gas maps
-double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
-// new likelihood for relative concentrations
-double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
-bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
-
 double randu();
 long long current_timestamp();
 double dist_to_goal(Position goal);
@@ -113,8 +104,5 @@ void goal_outside_obstacles(Position *goal);
 int obstacle_or_not();
 void do_odometry();
 
-// calculate the Gaussian distribution of the history and the CDF of the data
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list);
-void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list);
 void information_clustering_planning();
 #endif

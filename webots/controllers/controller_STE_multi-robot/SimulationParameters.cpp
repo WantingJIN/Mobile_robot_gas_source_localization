@@ -209,7 +209,7 @@ SimulationParameters::SimulationParameters()
 	likelihood_error = 30;
 	global_local_search_ratio = 0.5;
 	MCMC_iteration_num = 1000;
-	MCMC_or_exhaustive_eval = EXHAUSTIVE;
+	BayesianModelingMethod = EXHAUSTIVE;
 	number_of_robots = 1;
 	scenario = NO_COM_NO_COOR;
 	map_nbr = 0;
@@ -253,9 +253,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			global_local_search_ratio = atof(value);
 		}
-		else if (strcmp(key, "MCMC_or_exhaustive_eval") == 0)
+		else if (strcmp(key, "BayesianModelingMethod") == 0)
 		{
-			MCMC_or_exhaustive_eval = parse_evaluation_method(value);
+			BayesianModelingMethod = parse_evaluation_method(value);
 		}
 		else if (strcmp(key, "number_of_robots") == 0)
 		{
@@ -402,7 +402,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "likelihood_error %f\n", likelihood_error);
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);
-	fprintf(sim_param_file, "MCMC_or_exhaustive_eval %d\n", MCMC_or_exhaustive_eval);
+	fprintf(sim_param_file, "BayesianModelingMethod %d\n", BayesianModelingMethod);
 	fprintf(sim_param_file, "number_of_robots %d\n", number_of_robots);
 	fprintf(sim_param_file, "scenario %d\n", scenario);
 	fprintf(sim_param_file, "map_nbr %d\n", map_nbr);
