@@ -6,7 +6,6 @@
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include <random>
-#include "likelihood_estimator.h"
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -376,7 +375,7 @@ void Posterior::MCMC_evaluation(struct history history)
 	}
 
 	double sample_likelihood = likelihood(history, sample, model);
-	
+
 	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 	update(posterior_value, sample);
 
@@ -432,7 +431,6 @@ void Posterior::exhaustive_evaluation(struct history &history)
 {
 	int i = 0;
 	double sample[nbr_dimension];
-	vector<double> relative_history_meas = history.measurement;
 	vector<double> slope_history_meas;
 
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
@@ -440,16 +438,14 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
-			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
+			calculate_normalized_relative_measurements(history.relative_meas, history.measurement);
 		}
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 
 		{
-			calculate_measurements_list_empirical_CDF(relative_history_meas, slope_history_meas, history.measurement);
+			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.measurement);
 		}
-
-		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -466,7 +462,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{

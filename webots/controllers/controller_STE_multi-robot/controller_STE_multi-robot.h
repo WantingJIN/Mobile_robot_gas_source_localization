@@ -65,6 +65,7 @@ struct history
 	vector<Position> position;
 	vector<double> measurement;
 	vector<int> gas_hit_event;
+	vector<double> relative_meas;
 };
 
 // message structure

@@ -1322,7 +1322,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 
 void PathPlanner::log_scores_map()
 {
-	sprintf(scores_map_logfile_name, "%s/Results/current/101/scores_map.csv", workspacePath);
 	scores_map_logfile = fopen(scores_map_logfile_name, "a");
 
 	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
@@ -1336,7 +1335,6 @@ void PathPlanner::log_scores_map()
 
 void PathPlanner::log_distance_map()
 {
-	sprintf(distance_map_logfile_name, "%s/Results/current/101/distance_map.csv", workspacePath);
 	distance_map_logfile = fopen(distance_map_logfile_name, "a");
 
 	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
@@ -1350,7 +1348,6 @@ void PathPlanner::log_distance_map()
 
 void PathPlanner::log_acc_info_map()
 {
-	sprintf(acc_info_map_logfile_name, "%s/Results/current/101/acc_info_map.csv", workspacePath);
 	acc_info_map_logfile = fopen(acc_info_map_logfile_name, "a");
 
 	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur

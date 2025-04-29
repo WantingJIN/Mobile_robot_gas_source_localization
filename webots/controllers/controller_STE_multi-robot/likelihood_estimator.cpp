@@ -48,7 +48,7 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, vector<double> rel_history_list, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model)
 {
 
 	// float sigma = 0.22;// works well for Gaussian CDF
@@ -84,7 +84,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		sigma = 0.49; // works well for Normalization
 		for (int i = 0; i < history.size; i++)
 		{
-			rel_hist_val = rel_history_list[i];
+			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
@@ -95,7 +95,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
-			rel_hist_val = rel_history_list[i];
+			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
 		}
@@ -106,7 +106,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
-			rel_hist_val = rel_history_list[i];
+			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
 		}
@@ -117,7 +117,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 		// sigma = 0.48;// works well for Empirical CDF NUM
 		for (int i = 0; i < history.size; i++)
 		{
-			rel_hist_val = rel_history_list[i];
+			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
 			// NOTE: take into account the measurement number information, to avoid the algorithm converge to fast to local minima
 			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2) / (history.size + 1);
@@ -149,7 +149,7 @@ double likelihood(struct history &history, double *parameters, PlumeModel *model
 	return (exp(-0.5 * sum_tmp));
 }
 
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list)
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> data_list)
 {
 	rel_meas_list.resize(data_list.size());
 	slope_list.resize(data_list.size());
@@ -183,9 +183,15 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
 	slope_list[0] = slope_list[1];
 }
 
-void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list)
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> data_list)
 {
-	// normalize the measurements with max and min values
+      rel_meas_list.resize(data_list.size());
+	if (data_list.size() == 1)
+	{
+		rel_meas_list[0] = 0.0;
+		return;
+	}
+      // normalize the measurements with max and min values
 	double max_val = *max_element(data_list.begin(), data_list.end());
 	double min_val = *min_element(data_list.begin(), data_list.end());
 	// printf("max: %f, min: %f\n", max_val, min_val);
@@ -194,11 +200,11 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, v
 	{
 		if (abs(max_val - min_val) < 0.1)
 		{
-			rel_meas_list.push_back(0);
+			rel_meas_list[i] = 0.0;
 		}
 		else
 		{
-			rel_meas_list.push_back((data_list[i] - min_val) / (max_val - min_val));
+			rel_meas_list[i] = (data_list[i] - min_val) / (max_val - min_val);
 		}
 		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
 	}

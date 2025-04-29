@@ -1,0 +1,80 @@
+map_nbr: 0 
+number_of_robots: 1
+scenario: NO_COM_NO_COOR 
+simuMode: ONLINE
+BayesianModelingMethod: EXHAUSTIVE
+BayesianModelingConfig:
+    MCMC:
+      MCMC_iteration_num: 1000
+ 	
+samplingMode: CONTINOUS_SAMPLING
+samplingConfig:
+  CONTINOUS_SAMPLING:
+    sampling_dist_thresh: 0.1
+    sampling_period: 10
+    
+gasSensor: MOX
+gasSenosrConfig:
+    MOX:
+    	response_time_constant: 0.72
+    	recovery_time_constant: 0.92
+    SLOW_MOX:
+    	response_time_constant: 2.06
+    	recovery_time_constant: 4.53
+    VERY_SLOW_MOX:
+      response_time_constant: 5.19
+      recovery_time_constant: 19.74
+    sensorNoise:
+    	sigma_0: 69.33
+    	k: 10.80
+
+gasFeature: ABSOLUTE_VALUE
+gasHitMethod: FIXED_THRES_NUM
+relativeMethod: EMPIRICAL_CDF_NUM
+gasFeatureConfig:
+    ABSOLUTE_VALUE:
+        likelihood_error: 2000
+    RELATIVE_VALUE:
+        NORMALIZATION:
+            likelihoodSigma: 0.49
+        EMPIRICAL_CDF:
+            likelihoodSigma: 0.45
+        EMPIRICAL_CDF_AND_SLOPE:
+            likelihoodSigma: 0.45
+        EMPIRICAL_CDF_NUM: 
+            likelihoodSigma: 0.48
+    GASHIT:
+        FIXED_THRES_NUM:
+            gasHitThres: 1000
+        SLIDING_WINDOW_THRES:
+            with_num_normalization: NUM_ON
+            lambda: 0.7
+        
+infoFeature: VARIANCE
+planningStrategy: SUM_DIJKSTRA_ADP
+planningConfig:
+    SUM_DIJKSTRA_FIX:
+        scoreFun: EXP
+        scoreSigma: 0.5
+        infoSum: LINEAR_SUM
+    SUM_DIJKSTRA_ADP:
+        scoreFun: EXP
+        weighting_entropy_ratio: 10
+        infoSum: LINEAR_SUM
+    BELIEF_CLUSTERING:
+        cluster_entropy_ratio: 10
+    INFORMATIVE_KLD:
+        global_local_search_ratio: 0.5
+    MULTI_DIJKSTRA:
+        planning_step: 10
+
+
+processingMode: NO_PROCESSING
+visitedList: visitedList_OFF
+vel_factor: 1
+calibrationMode: OFF
+calibrationConfig:
+    NOLINEAR: 
+        R0: 100
+
+

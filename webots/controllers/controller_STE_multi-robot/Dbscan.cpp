@@ -200,11 +200,8 @@ void DBSCAN::calculateBoundingBoxes()
 
 void DBSCAN::logBoundingBoxes()
 {
-	char clustering_bounding_boxes_logfile_name[512];
-	sprintf(clustering_bounding_boxes_logfile_name, "%s/Results/current/101/clustering_bounding_boxes.csv", workspacePath);
-	FILE *clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
-	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
-	fprintf(clustering_bounding_boxes_logfile, "%f, ", ratio);
+	clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
+
 	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++)
 	{
 		fprintf(clustering_bounding_boxes_logfile, "%f, %f, %f, %f, ", iter->first.x, iter->first.y, iter->second.x, iter->second.y);

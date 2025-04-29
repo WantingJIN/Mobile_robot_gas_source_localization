@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef PATH_PLANNER_H
 #define PATH_PLANNER_H
 #include "controller_STE_multi-robot.h"
@@ -15,10 +17,10 @@ extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
 
-extern FILE *gas_information_map_logfile;
-extern FILE *scores_map_logfile;
-extern FILE *distance_map_logfile;
-extern FILE *acc_info_map_logfile;
+FILE *gas_information_map_logfile;
+FILE *scores_map_logfile;
+FILE *distance_map_logfile;
+FILE *acc_info_map_logfile;
 
 
 // text file for storing some prints for debugging

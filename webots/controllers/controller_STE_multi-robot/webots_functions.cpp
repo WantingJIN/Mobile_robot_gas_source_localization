@@ -537,7 +537,6 @@ void set_logfile_names()
 	}
 	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
 	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
-	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
 	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
 	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
 	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
@@ -549,10 +548,14 @@ void set_logfile_names()
 	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
 	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
-	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
-	// // to save some debugging console input
+	sprintf(clustering_bounding_boxes_logfile_name, "%s/clustering_bounding_boxes.csv", folder_name);
+	sprintf(acc_info_map_logfile_name, "%s/acc_info_map.csv", folder_name);
+	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
+	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
+
+	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation

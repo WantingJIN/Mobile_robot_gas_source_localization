@@ -1,9 +1,11 @@
+#pragma once
 #ifndef DBSCAN_H
 #define DBSCAN_H
 
 #include <vector>
 #include <cmath>
 #include "CellMeasurements.h"
+
 
 #define UNCLASSIFIED -1
 #define CORE_POINT 1
@@ -12,6 +14,8 @@
 
 using namespace std;
 
+extern char clustering_bounding_boxes_logfile_name[512];
+FILE *clustering_bounding_boxes_logfile;
 class DBSCAN
 {
 public:

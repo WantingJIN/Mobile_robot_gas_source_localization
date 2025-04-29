@@ -4,6 +4,7 @@
 #include "controller_STE_multi-robot.h"
 #include "PlumeModel.h"
 #include "Position.h"
+#include "likelihood_estimator.h"
 
 // for storing debugging info
 extern FILE *console_logfile;

@@ -27,8 +27,6 @@ using namespace std;
 char folder_name[256];
 FILE *goalposition_logfile;
 FILE *measurements_logfile;
-FILE *posterior_logfile;
-FILE *posteriorpdf_logfile;
 FILE *expected_a_posteriori_logfile;
 FILE *likelihood_logfile;
 FILE *measurement_history_logfile;
@@ -36,25 +34,17 @@ FILE *position_history_logfile;
 FILE *max_a_posteriori_logfile;
 FILE *posterior_pdf_3D;
 FILE *entropy_logfile;
-FILE *tmp_file;
 FILE *config_logfile;
 FILE *trajectory_logfile;
 FILE *gas_concentration_map_logfile;
-FILE *gas_information_map_logfile;
-FILE *gas_hit_variance_map_logfile;
 FILE *experiment_time_logfile;
 FILE *visited_list_logfile;
-FILE *scores_map_logfile;
-FILE *distance_map_logfile;
-FILE *acc_info_map_logfile;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
 
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
-char posterior_logfile_name[512];
-char posteriorpdf_logfile_name[512];
 char expected_a_posteriori_logfile_name[512];
 char max_a_posteriori_logfile_name[512];
 char likelihood_logfile_name[512];
@@ -65,10 +55,10 @@ char entropy_logfile_name[512];
 char config_logfile_name[512];
 char trajectory_logfile_name[512];
 char gas_concentration_map_logfile_name[512];
-char gas_information_map_logfile_name[512];
-char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
+char clustering_bounding_boxes_logfile_name[512];
+char gas_information_map_logfile_name[512];
 char scores_map_logfile_name[512];
 char distance_map_logfile_name[512];
 char acc_info_map_logfile_name[512];
@@ -101,7 +91,6 @@ double speed[2] = {0};
 // robot's position and measurement history
 struct history history;
 struct history sample_in_motion;
-vector<double> ground_truth_in_motion;
 
 int sample_counter = 0;
 // plume model
@@ -361,17 +350,6 @@ void log_entropy()
 	fclose(entropy_logfile);
 }
 
-void log_gas_hit_variance_map()
-{
-	gas_hit_variance_map_logfile = fopen(gas_hit_variance_map_logfile_name, "a");
-
-	for (int i = 0; i < x_nbins * y_nbins; i++)
-		fprintf(gas_hit_variance_map_logfile, "%.9f, ", gas_hit_variance_map[i]);
-
-	fprintf(gas_hit_variance_map_logfile, "\n");
-
-	fclose(gas_hit_variance_map_logfile);
-}
 
 void log_history()
 {
@@ -388,13 +366,18 @@ void log_history()
 	measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++)
 	{
-		// printf("history.measurement[%d] = %d\n", i, history.gas_hit_event[i]);
-		fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.measurement[i], history.gas_hit_event[i], history.FSM_iter[i]);
+		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE){
+			fprintf(measurement_history_logfile, "%d, %f, %d\n", i, history.measurement[i], history.FSM_iter[i]);
+		}
+		if (simulation_parameters.gasFeature == RELATIVE_VALUE){
+			fprintf(measurement_history_logfile, "%d, %f, %f, %d\n", i, history.measurement[i], history.relative_meas[i], history.FSM_iter[i]);
+		}
+		if (simulation_parameters.gasFeature == GASHIT){
+			fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.measurement[i], history.gas_hit_event[i], history.FSM_iter[i]);
+		}
 	}
-	fclose(measurement_history_logfile);
 
-	// posterior 3D
-	// posterior.log_pdf(posterior_pdf_3D_name, 'w');
+	fclose(measurement_history_logfile);
 }
 
 void log_visited_list()
@@ -536,57 +519,31 @@ void state_measuring()
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
-			for (int i = 0; i < sample_in_motion.size; i++)
-			{
-				// printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
-				// printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
-				// printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
-				history.position.push_back(sample_in_motion.position[i]);
-				history.measurement.push_back(sample_from_map[i]);
-				history.gas_hit_event.push_back(0);
-				history.FSM_iter.push_back(FSM.n_cycles);
-				history.size++;
-				// mark the cell as visited
-				if (simulation_parameters.visitedList == visitedList_ON)
-				{
-					int pos_coord[2];
-					pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
-					pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
-					cell_visited_list[idx] = 1;
-				}
-			}
 		}
-		else
+
+		for (int i = 0; i < sample_in_motion.size; i++)
 		{
-			// if else, save the instant measurement directly
-			for (int i = 0; i < sample_in_motion.size; i++)
-			{
-				if (simulation_parameters.gasSensor == MOX)
-				{
-					// printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement[i]);
-					// printf("ground truth at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, ground_truth_in_motion[i]);
-				}
-				history.position.push_back(sample_in_motion.position[i]);
+			history.position.push_back(sample_in_motion.position[i]);
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+				history.measurement.push_back(sample_from_map[i]);
+			else
 				history.measurement.push_back(sample_in_motion.measurement[i]);
-				history.gas_hit_event.push_back(0);
-				history.FSM_iter.push_back(FSM.n_cycles);
-				history.size++;
-				// mark the cell as visited
-				if (simulation_parameters.visitedList == visitedList_ON)
-				{
-					int pos_coord[2];
-					pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
-					pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
-					cell_visited_list[idx] = 1;
-				}
+			history.FSM_iter.push_back(FSM.n_cycles);
+			history.size++;
+			// mark the cell as visited
+			if (simulation_parameters.visitedList == visitedList_ON)
+			{
+				int pos_coord[2];
+				pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
+				pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
+				int idx = posterior.indices_to_index(pos_coord);
+				cell_visited_list[idx] = 1;
 			}
 		}
+		
 		sample_in_motion.position.clear();
 		sample_in_motion.measurement.clear();
 		sample_in_motion.size = 0;
-		ground_truth_in_motion.clear();
 		sample_from_map.clear();
 
 		// save the instant reading at the goal position as well; we only care about the ground truth here
@@ -594,20 +551,12 @@ void state_measuring()
 		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 
-		// printf("wind intensity reading: %f\n", sampleBuffer.instant_wind_intensity);
-		// printf("wind orientation: %f\n", sampleBuffer.instant_wind_angle);
-		// printf("Speed 0: %f\n", speed[0]);
-		// printf("Speed 1: %f\n", speed[1]);
-		// printf("Robot lin vel: %f\n", ((speed[0] + speed[1]) * WHEEL_RADIUS / 2));
-		// printf("Robot orientation: %f\n", current_position.heading);
-
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
 		// FIXME - add the case for reverse sensor model
 		history.position.push_back({current_position.x, current_position.y, 0});
 		// history.measurement[history.size] = sampleBuffer.average_concentration;
 		history.measurement.push_back(sampleBuffer.average_concentration);
-		history.gas_hit_event.push_back(0);
 		history.FSM_iter.push_back(FSM.n_cycles);
 		history.size++;
 		// mark the current cell as visited
@@ -659,7 +608,6 @@ void state_measuring()
 			history.position.push_back({current_position.x, current_position.y, 0});
 			// history.measurement[history.size] = sampleBuffer.average_concentration;
 			history.measurement.push_back(sampleBuffer.average_concentration);
-			history.gas_hit_event.push_back(0);
 			history.FSM_iter.push_back(FSM.n_cycles);
 			history.size++;
 			history_print(history);
@@ -698,7 +646,6 @@ void state_measuring()
 		
 		history.position.push_back({current_position.x, current_position.y, 0});
 		history.measurement.push_back(sampleBuffer.average_concentration);
-		history.gas_hit_event.push_back(0);
 		history.FSM_iter.push_back(FSM.n_cycles);
 		history.size++;
 		history_print(history);
@@ -951,7 +898,6 @@ void state_moving()
 			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
 			sample_in_motion.measurement.push_back(instant_concentration);
 			sample_in_motion.size++;
-			ground_truth_in_motion.push_back(odor_concentration);
 			last_measurement_pos.x = current_position.x;
 			last_measurement_pos.y = current_position.y;
 			// printf("Distance between measurements = %f", dist_to_last_measurement);
