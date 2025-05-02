@@ -6,6 +6,8 @@
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include <random>
+// for storing debugging info
+extern FILE *console_logfile;
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)

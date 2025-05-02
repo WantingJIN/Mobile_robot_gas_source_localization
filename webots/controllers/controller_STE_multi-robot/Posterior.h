@@ -6,8 +6,6 @@
 #include "Position.h"
 #include "likelihood_estimator.h"
 
-// for storing debugging info
-extern FILE *console_logfile;
 
 class Posterior
 {

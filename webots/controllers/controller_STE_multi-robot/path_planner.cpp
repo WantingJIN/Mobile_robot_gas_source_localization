@@ -1,6 +1,23 @@
 #include "path_planner.h"
 
 extern SimulationParameters simulation_parameters;
+FILE *gas_information_map_logfile;
+FILE *scores_map_logfile;
+FILE *distance_map_logfile;
+FILE *acc_info_map_logfile;
+extern Position goal_position;
+extern Position current_position;
+extern SimulationParameters simulation_parameters;
+extern int cell_visited_list[x_nbins * y_nbins];
+
+extern char gas_information_map_logfile_name[512];
+extern char scores_map_logfile_name[512];
+extern char distance_map_logfile_name[512];
+extern char acc_info_map_logfile_name[512];
+
+
+// text file for storing some prints for debugging
+extern FILE *console_logfile;
 
 PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history)
 {

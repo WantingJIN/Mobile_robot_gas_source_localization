@@ -3,6 +3,8 @@
 #include "Constant.h"
 
 using namespace std;
+extern char clustering_bounding_boxes_logfile_name[512];
+FILE *clustering_bounding_boxes_logfile;
 DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
 {
 	x_epsilon = x_eps;

@@ -6,27 +6,6 @@
 #include "Posterior.h"
 #include "PlumeModel.h"
 
-extern Position goal_position;
-extern Position current_position;
-extern SimulationParameters simulation_parameters;
-extern int cell_visited_list[x_nbins * y_nbins];
-
-
-extern char gas_information_map_logfile_name[512];
-extern char scores_map_logfile_name[512];
-extern char distance_map_logfile_name[512];
-extern char acc_info_map_logfile_name[512];
-
-FILE *gas_information_map_logfile;
-FILE *scores_map_logfile;
-FILE *distance_map_logfile;
-FILE *acc_info_map_logfile;
-
-
-// text file for storing some prints for debugging
-extern FILE *console_logfile;
-
-
 
 struct ComparePosition {
       bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {

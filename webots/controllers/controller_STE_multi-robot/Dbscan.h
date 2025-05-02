@@ -14,8 +14,6 @@
 
 using namespace std;
 
-extern char clustering_bounding_boxes_logfile_name[512];
-FILE *clustering_bounding_boxes_logfile;
 class DBSCAN
 {
 public:
