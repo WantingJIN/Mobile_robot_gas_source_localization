@@ -123,5 +123,6 @@ void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX
 double generateGaussianNoise(double mean, double variance);
 void set_logfile_names();
 void addNoise(double* sensorReading, double sigma0 , double k);
+void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading);
 
 #endif

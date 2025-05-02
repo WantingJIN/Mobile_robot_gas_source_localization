@@ -262,6 +262,38 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 	}
 }
 
+void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading){
+	double Ts = TIME_STEP / 1000.0; // sampling frequency
+	double reverse_sensor_reading = 0.0;
+	double tau_r = 0, tau_d = 0;
+	if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX)
+	{
+		tau_r = 0.72; // time constant for the rise (our default sensor)
+		tau_d = 0.92; // time constant for the decay
+	}
+	if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX)
+	{
+		tau_r = 2.06; // time constant for the rise (slow sensor)
+		tau_d = 4.53; // time constant for the decay
+	}
+	if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
+	{
+		tau_r = 5.19;  // time constant for the rise (very slow MOX TGS2600)
+		tau_d = 19.74; // time constant for the decay
+	}
+	double alpha = 0.0;
+	if (sensor_reading > previous_sensor_reading) // rising phase
+		alpha = tau_r / Ts;
+	else // decaying phase
+		alpha = tau_d / Ts;
+	reverse_sensor_reading = (1 + alpha) * sensor_reading - alpha * previous_sensor_reading;
+	// printf("reverse_sensor_reading %f\n", reverse_sensor_reading);
+	// printf("sensor_reading %f\n", sensor_reading);
+	// printf("odor_concentration %f\n", odor_concentration);
+	previous_sensor_reading = sensor_reading;
+	sensor_reading = reverse_sensor_reading;
+}
+
 void linear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
 {
 	double a = 3.0;

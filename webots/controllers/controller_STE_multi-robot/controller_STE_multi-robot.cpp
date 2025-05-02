@@ -96,9 +96,6 @@ int sample_counter = 0;
 // plume model
 DeepCFDPlumeModel2D plume_model;
 
-// gas information map
-double gas_hit_variance_map[x_nbins * y_nbins] = {0};
-
 int cell_visited_list[x_nbins * y_nbins] = {0};
 
 // current posterior distribution
@@ -524,6 +521,8 @@ void state_measuring()
 		for (int i = 0; i < sample_in_motion.size; i++)
 		{
 			history.position.push_back(sample_in_motion.position[i]);
+			// if there is some post-processing, then use the sample from the gas map
+			// otherwise, use the raw sample from the robot
 			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 				history.measurement.push_back(sample_from_map[i]);
 			else
@@ -546,7 +545,7 @@ void state_measuring()
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 
-		// save the instant reading at the goal position as well; we only care about the ground truth here
+		// save the measurement at the goal position as well
 		double odor_concentration = 0.0;
 		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
@@ -580,6 +579,8 @@ void state_measuring()
 		navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
 		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 	}
+	// if the sampling mode is stop and go, then sample for several seconds and take the average value
+	// Only the average value is used for the estimation
 	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING)
 	{
 		// Sample for several seconds and take the average value
@@ -825,7 +826,8 @@ void state_updategoal()
 		// send the goal to the supervisor
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
-		// move to the goal position
+		// if online simulation: move to the goal position
+		// if offline simulation: read the next goal position and measurements from the file
 		if (simulation_parameters.simuMode == ONLINE)
 		{
 			// update goal
@@ -850,44 +852,16 @@ void state_moving()
 	{
 		sample_counter++;
 		// sample and run kernel
-		double instant_concentration = 0.0;
+		double sensor_reading = 0.0;
 		double odor_concentration = 0.0;
-		double reverse_sensor_reading = 0.0;
-		odor_read(&instant_concentration, odor_concentration);
+		odor_read(&sensor_reading, odor_concentration);
 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
-			double Ts = TIME_STEP / 1000.0; // sampling frequency
-			double tau_r = 0, tau_d = 0;
-			if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX)
-			{
-				tau_r = 0.72; // time constant for the rise (our default sensor)
-				tau_d = 0.92; // time constant for the decay
-			}
-			if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX)
-			{
-				tau_r = 2.06; // time constant for the rise (slow sensor)
-				tau_d = 4.53; // time constant for the decay
-			}
-			if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
-			{
-				tau_r = 5.19;  // time constant for the rise (very slow MOX TGS2600)
-				tau_d = 19.74; // time constant for the decay
-			}
-			double alpha = 0.0;
-			if (instant_concentration > previous_sensor_reading) // rising phase
-				alpha = tau_r / Ts;
-			else // decaying phase
-				alpha = tau_d / Ts;
-			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
-			// printf("reverse_sensor_reading %f\n", reverse_sensor_reading);
-			// printf("instant_concentration %f\n", instant_concentration);
-			// printf("odor_concentration %f\n", odor_concentration);
-			previous_sensor_reading = instant_concentration;
-			instant_concentration = reverse_sensor_reading;
+			reverse_sensor_model(sensor_reading, previous_sensor_reading);
 		}
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
-			gas_map.runKernelAlgorithm(current_position, instant_concentration);
+			gas_map.runKernelAlgorithm(current_position, sensor_reading);
 		}
 		if (sample_counter > simulation_parameters.sampling_period)
 		{	
@@ -896,16 +870,10 @@ void state_moving()
 			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
 			//{
 			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-			sample_in_motion.measurement.push_back(instant_concentration);
+			sample_in_motion.measurement.push_back(sensor_reading);
 			sample_in_motion.size++;
 			last_measurement_pos.x = current_position.x;
-			last_measurement_pos.y = current_position.y;
-			// printf("Distance between measurements = %f", dist_to_last_measurement);
-			// history.position.push_back({current_position.x, current_position.y, 0});
-			// history.measurement.push_back(instant_concentration);
-			// history.size++;
-			//}
-		
+			last_measurement_pos.y = current_position.y;	
 			sample_counter = 0;
 		}
 	}
