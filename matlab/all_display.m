@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/mzarias/Workspace/MT_Marc/Results/test/9');
+folder_list = dir('/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/test/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 

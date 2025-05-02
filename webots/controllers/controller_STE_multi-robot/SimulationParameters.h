@@ -103,7 +103,7 @@ typedef enum gasHitMethod
 
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
-	DECENTRALIZED = 1,
+	DISTRIBUTED = 1,
 	CENTRALIZED = 2,
 } eTeamStrategy;
 
@@ -132,8 +132,9 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	      float sigma;
+	    float sigma;
 		float lambda;
+		int update_goal_time;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
 		eScenario scenario; 

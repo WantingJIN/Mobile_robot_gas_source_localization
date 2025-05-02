@@ -109,7 +109,7 @@ eGasHitMethod parse_gas_hit_method(const char* str) {
 }
 eTeamStrategy parse_team_strategy(const char* str) {
 	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
-	if (strcmp(str, "DECENTRALIZED") == 0) return DECENTRALIZED;
+	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
 	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
 	fprintf(stderr, "Unknown team strategy: %s\n", str);
 	exit(1);
@@ -142,6 +142,7 @@ SimulationParameters::SimulationParameters(){
 	simuMode = ONLINE; 
 	R0 = 100;
 	teamStrategy = CENTRALIZED;
+	update_goal_time = 10;
 }
 
 
@@ -209,6 +210,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			lambda = atof(value);	
 		} else if (strcmp(key, "teamStrategy") == 0) {
 			teamStrategy = parse_team_strategy(value);
+		} else if (strcmp(key, "updateGoalTime") == 0) {
+			update_goal_time = atoi(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -263,6 +266,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "sigma %f\n", sigma);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
+	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fclose(sim_param_file);
 
 }

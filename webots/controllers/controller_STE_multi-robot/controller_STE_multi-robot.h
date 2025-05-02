@@ -50,6 +50,8 @@ typedef enum state
 	STATE_SEND_PDF = 12,
 	STATE_MERGE_PDF = 13,
 	STATE_UPDATEGOAL_TEAM = 14,
+	STATE_SHARE_PDF = 15,
+	STATE_REGION_ALLOCATION = 16,
 } eState;
 
 // finite state machine
@@ -105,6 +107,8 @@ void state_send_goal();
 void state_send_pdf();
 void state_merge_pdf();
 void state_updategoal_team();
+void state_share_pdf();
+void state_region_allocation();
 
 // old
 double likelihood(struct history history, double *parameters, PlumeModel *model);

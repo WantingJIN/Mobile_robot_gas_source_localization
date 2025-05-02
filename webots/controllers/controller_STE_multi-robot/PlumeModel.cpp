@@ -203,14 +203,14 @@ double GaussianPlumeModel2D::approx_concentration(Position robot_position, doubl
 
 void GaussianPlumeModel2D::print_expected_val()
 {
-	printf("Expected value: Q=%f @(%f %f) sigma y: %f %f  \n",
-		 expected_value[2], expected_value[0], expected_value[1], expected_value[3], expected_value[4]);
+	// printf("Expected value: Q=%f @(%f %f) sigma y: %f %f  \n",
+	// 	 expected_value[2], expected_value[0], expected_value[1], expected_value[3], expected_value[4]);
 }
 
 void GaussianPlumeModel2D::print_max_a_post_val()
 {
-	printf("MaxApost value: Q=%f @(%f %f) sigma y: %f %f  \n",
-		 max_a_post_value[2], max_a_post_value[0], max_a_post_value[1], max_a_post_value[3], max_a_post_value[4]);
+	// printf("MaxApost value: Q=%f @(%f %f) sigma y: %f %f  \n",
+	// 	 max_a_post_value[2], max_a_post_value[0], max_a_post_value[1], max_a_post_value[3], max_a_post_value[4]);
 }
 
 void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) {}
@@ -379,14 +379,14 @@ double NNGaussianPlumeModel2D::approx_concentration(Position robot_position, dou
 
 void NNGaussianPlumeModel2D::print_expected_val()
 {
-	printf("Expected value: Q=%f @(%f %f) \n",
-		 expected_value[2], expected_value[0], expected_value[1]);
+	// printf("Expected value: Q=%f @(%f %f) \n",
+	// 	 expected_value[2], expected_value[0], expected_value[1]);
 }
 
 void NNGaussianPlumeModel2D::print_max_a_post_val()
 {
-	printf("MaxApost value: Q=%f @(%f %f)  \n",
-		 max_a_post_value[2], max_a_post_value[0], max_a_post_value[1]);
+	// printf("MaxApost value: Q=%f @(%f %f)  \n",
+	// 	 max_a_post_value[2], max_a_post_value[0], max_a_post_value[1]);
 }
 
 void NNGaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) {}
@@ -720,14 +720,14 @@ double DeepCFDPlumeModel2D::approx_concentration(Position robot_position, double
 
 void DeepCFDPlumeModel2D::print_expected_val()
 {
-	printf("Expected value: @(%f %f)\n",
-		 expected_value[0], expected_value[1]);
+	// printf("Expected value: @(%f %f)\n",
+	// 	 expected_value[0], expected_value[1]);
 }
 
 void DeepCFDPlumeModel2D::print_max_a_post_val()
 {
-	printf("MaxApost value: @(%f %f)\n",
-		 max_a_post_value[0], max_a_post_value[1]);
+	// printf("MaxApost value: @(%f %f)\n",
+	// 	 max_a_post_value[0], max_a_post_value[1]);
 }
 
 void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode)

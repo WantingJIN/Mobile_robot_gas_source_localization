@@ -486,7 +486,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 	if (simulation_parameters.gasFeature == GASHIT)
 	{
-		printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
+		//printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
