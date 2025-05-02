@@ -6,12 +6,12 @@
                                                         : (x))
 #define PI 3.14159265358979
 #define TIME_STEP 64           // adjusts the speed (ms)
-#define SAFETY_MARGIN .2       // how far in meters are you ready to approach the walls
+#define SAFETY_MARGIN 0.2       // how far in meters are you ready to approach the walls
 #define WHEEL_RADIUS 0.021     // K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
 #define AXLE_LENGTH 0.1054     // K4: 0.0527×2 	//K3: 0.08841
 #define ODOR_FILTER_LENGTH 150 //~10sec //number of measurements before averaging
 // #define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
-#define MAX_ITER 30
+#define MAX_ITER 300
 #define MAX_SPEED 47.61 // K3: 35748.4
 #define SENSOR_NUMBER 8
 #define MAX_NB_ROBOTS 3

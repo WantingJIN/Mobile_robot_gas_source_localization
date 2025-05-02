@@ -120,6 +120,11 @@ typedef enum infoSum
 	LINEAR_SUM = 0,
 	EXP_SUM = 1,
 } eInfoSum;
+typedef enum teamStrategy{
+	INDIVIDUAL = 0,
+	DECENTRALIZED = 1,
+	CENTRALIZED = 2,
+} eTeamStrategy;
 
 // parameters to estimate
 struct parameters_set
@@ -165,7 +170,8 @@ class SimulationParameters{
 		eRelativeMethod relativeMethod; 
 		eSimuMode simuMode; 
 		eCalibrationMode calibrationMode;
-		eGasHitMethod gasHitMethod; 
+		eGasHitMethod gasHitMethod;
+		eTeamStrategy teamStrategy;
 
 	      eScoreFun scoreFun;
 

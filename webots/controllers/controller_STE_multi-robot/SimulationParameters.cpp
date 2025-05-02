@@ -185,6 +185,13 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
+eTeamStrategy parse_team_strategy(const char* str) {
+	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
+	if (strcmp(str, "DECENTRALIZED") == 0) return DECENTRALIZED;
+	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
+	fprintf(stderr, "Unknown team strategy: %s\n", str);
+	exit(1);
+}
 
 eScoreFun parse_score_fun(const char *str)
 {
@@ -230,6 +237,7 @@ SimulationParameters::SimulationParameters()
 	simuMode = ONLINE;
 	R0 = 100;
 	weighting_entropy_ratio = 6;
+	teamStrategy = CENTRALIZED;
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -369,6 +377,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			weighting_entropy_ratio = atof(value);
 		}
+		else if (strcmp(key, "teamStrategy") == 0) {
+			teamStrategy = parse_team_strategy(value);
+		}
 		else
 		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
@@ -430,6 +441,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "info_sum %d\n", infoSum);
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
+	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
 	fclose(sim_param_file);
 }
 

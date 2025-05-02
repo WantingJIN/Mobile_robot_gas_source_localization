@@ -29,3 +29,4 @@ scoreSigma = 0.5
 infoSum = LINEAR_SUM
 planning_step = 10
 weighting_entropy_ratio = 10
+teamStrategy = CENTRALIZED

@@ -21,6 +21,9 @@
 
 using namespace std;
 
+#define STEP_SIZE	64 
+#define LIMIT_N_TIME_STEP	78	
+
 // Global Variables
 
 // log files
@@ -86,8 +89,10 @@ SampleBuffer sampleBuffer(ODOR_FILTER_LENGTH);
 
 // position in m
 Position goal_position;
+Position goal_position_team[3];
 Position current_position;
 double speed[2] = {0};
+
 // robot's position and measurement history
 struct history history;
 struct history sample_in_motion;
@@ -507,6 +512,7 @@ void state_read_positions_measurements()
 
 void state_measuring()
 {
+	printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	// printf("measuring sample number %d\n", measurements.n_samples);
 	vector<double> sample_from_map;
 	// if robot is sensing while moving, saving the measurement in motion
@@ -669,6 +675,7 @@ void state_measuring()
 
 void state_estimating()
 {
+	printf("Robot ID [%d]: STATE_ESTIMATING \n", ID);
 	if (VERBOSE)
 		printf("[%d] estimating...\n", ID);
 
@@ -738,9 +745,48 @@ void state_estimating()
 		// log the finish time stamp
 		end_timestamp = wb_robot_get_time();
 		printf("end time stamp: %f\n", end_timestamp);
-		printf("Current state is STATE_FINISHED\n");
+		printf("Robot ID [%d]: Current state is STATE_FINISHED\n", ID);
+
+        // transfer state_finished to the rest of the team
+        if (ID == 101)
+        {
+            // if 101 finished
+            Message msg_finished_101_to_102(ID, 102, Position(), -1, Position(), -1);
+            send_msg(msg_finished_101_to_102);
+            Message msg_finished_101_to_103(ID, 103, Position(), -1, Position(), -1);
+            send_msg(msg_finished_101_to_103);
+        }
+        else if (ID == 102)
+        {
+            // if 102 finished
+            Message msg_finished_102_to_101(ID, 101, Position(), -1, Position(), -1);
+            send_msg(msg_finished_102_to_101);
+            Message msg_finished_102_to_103(ID, 103, Position(), -1, Position(), -1);
+            send_msg(msg_finished_102_to_103);
+        }
+        else if (ID == 103)
+        {
+            // if 103 finished
+            Message msg_finished_103_to_101(ID, 101, Position(), -1, Position(), -1);
+            send_msg(msg_finished_103_to_101);
+            Message msg_finished_103_to_102(ID, 102, Position(), -1, Position(), -1);
+            send_msg(msg_finished_103_to_102);
+        }
+
 	}
-	else
+	else if (simulation_parameters.teamStrategy == CENTRALIZED)
+	{
+		if (ID == 101)
+		{
+			FSM.state = STATE_RECEIVE_PDF;
+			FSM.hook = state_receive_pdf;
+		}
+		else if (ID == 102 || ID == 103)
+		{
+			FSM.state = STATE_SEND_PDF;
+			FSM.hook = state_send_pdf;
+		}
+	} else
 	{
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
@@ -845,8 +891,16 @@ void state_updategoal()
 	}
 }
 
+bool entered_state_moving = false;
+
 void state_moving()
-{
+{	
+
+	if (!entered_state_moving) {
+        printf("Robot ID [%d]: STATE_MOVING \n", ID);
+        entered_state_moving = true;
+    }
+
 	// printf("moving toward the goal\n");
 	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
@@ -880,7 +934,7 @@ void state_moving()
 	// verify if arrived to the goal if applicable
 	// fprintf(console_logfile, "check dist to end goal \n");
 	// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-	if (dist_to_goal(goal_position) > 0.05)
+	if (dist_to_goal(goal_position) > 0.15)
 	{
 
 		if (i == path.end())
@@ -897,12 +951,22 @@ void state_moving()
 		}
 		go_to_goal(*i);
 		// obstacle avoidance if necessary
-		//  if(obstacle_or_not() == 1){
-		//  	FSM.state = STATE_OBSTACLE_AVOIDANCE;
-		//  	FSM.hook  = state_obstacle_avoidance;
-		//  	return;
-		//  }
+		 if(obstacle_or_not() == 1){
+		 	FSM.state = STATE_OBSTACLE_AVOIDANCE;
+		 	FSM.hook  = state_obstacle_avoidance;
+		 	return;
+		 }
 		set_wheels_speed(speed[0], speed[1]);
+		
+		if (n_time_step % LIMIT_N_TIME_STEP == 0 && n_time_step != 0)
+		{
+			//set_wheels_speed(0, 0);
+			sampleBuffer.reset_all();
+			path.clear();
+			printf("Robot ID [%d]. Number of iteration is %d", ID, n_time_step);
+			FSM.state = STATE_MEASURING;
+			FSM.hook  = state_measuring;
+		}
 	}
 	else
 	{
@@ -917,6 +981,7 @@ void state_moving()
 		navigation_sampling_time_sum += time_after_moving - time_before_moving;
 		time_before_measuring = wb_robot_get_time();
 		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
+		entered_state_moving = false;
 	}
 }
 
@@ -925,6 +990,316 @@ void state_obstacle_avoidance()
 	// printf("avoiding obstacle\n");
 	obstacle_avoidance_k4();
 }
+
+void state_send_goal()
+{
+	printf("Robot ID [%d]: STATE_SEND_GOAL \n", ID);
+
+	if (FSM.state != STATE_FINISHED)
+	{
+		// The goal position is very close to current postion, swith to random planning
+		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		// {
+		// 	printf("The goal position is very close to current postion, switch to random planning \n");
+		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		// 	random_planning();
+		// }
+
+		// goal position for Robot [101]
+		goal_position = goal_position_team[0];
+		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
+		goal_outside_obstacles(&goal_position);
+		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+
+		// find the path using visibility graph
+		VisiLibity::Point start(current_position.x, current_position.y);
+		VisiLibity::Point finish(goal_position.x, goal_position.y);
+		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+
+		// copy the path in another variable
+		for (unsigned k = 0; k < Polyline_path.size(); k++)
+		{
+			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+			path.push_back(p);
+			log_trajectory(p);
+		}
+		i = path.begin();
+		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+		// send the goal to the supervisor
+		Message msg(ID, 0, goal_position, -1, goal_position, 0);
+		send_msg(msg);
+
+
+		// send goal positions to Robot [102] and [103]
+		Message msg_send_goal_102(101, 102, goal_position_team[1], -1, goal_position_team[1], 0);
+		send_msg(msg_send_goal_102);
+
+		Message msg_send_goal_103(101, 103, goal_position_team[2], -1, goal_position_team[2], 0);
+		send_msg(msg_send_goal_103);
+
+		// move to the goal position
+		if(simulation_parameters.simuMode == ONLINE){
+			// update goal
+			FSM.state = STATE_MOVING;
+			FSM.hook = state_moving;
+			time_before_moving = wb_robot_get_time();
+		} else {
+			FSM.state = STATE_READ_ALL;
+			FSM.hook  = state_read_positions_measurements;
+		}
+		
+	}
+}
+
+bool entered_state_receive_goal = false;
+
+void state_receive_goal() {
+
+	if (!entered_state_receive_goal) {
+        printf("Robot ID [%d]: STATE_RECEIVE_GOAL \n", ID);
+        entered_state_receive_goal = true;
+    }
+
+    bool goal_received = false;
+
+    // message queue lenght
+    int queue_length = wb_receiver_get_queue_length(receiver);
+    // printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
+
+    if (queue_length == 0) return;
+
+    while (wb_receiver_get_queue_length(receiver) > 0) {
+        const void *data = wb_receiver_get_data(receiver);
+        const double* buffer = (const double*)data;
+
+        // link sender and receiver with buffer
+        int sender_ID = (int)buffer[0];
+        int receiver_ID = (int)buffer[1];
+		int flag_finished = (int)buffer[9];
+        printf("Robot ID [%d]: Checking message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
+		
+		//check if state_finished
+		if (flag_finished == -1) {
+			printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+			return;
+		}
+
+		// check if message comes from robot 101
+        if (sender_ID == 101) {
+            if (receiver_ID == ID) {  // this message is for this robot?
+                printf("Robot ID [%d]: Valid goal received from sender_ID %d!\n", ID, sender_ID);
+
+                // assign the goal to the robot specified in the receiver ID
+                goal_position.x = buffer[6];
+                goal_position.y = buffer[7];
+                goal_position.heading = buffer[8];
+                
+                // print new goal position
+                printf("Robot ID [%d]: Set goal_position = %f %f\n", ID, goal_position.x, goal_position.y);
+
+                goal_received = true;
+            } else {
+                printf("Robot ID [%d]: Message not for this robot (receiver_ID: %d).\n", ID, receiver_ID);
+            }
+        } else {
+            printf("Robot ID [%d]: Ignored message from sender_ID: %d (not from 101).\n", ID, sender_ID);
+        }
+
+        // delete current message and go to check the next message in the queue
+        wb_receiver_next_packet(receiver);
+
+        // if goal position for some robot already received, go out from the while
+        if (goal_received) break;
+    }
+
+    // in case no goals received yet, remain in this state
+    if (!goal_received) {
+        printf("Robot ID [%d]: No goal received, staying in STATE_RECEIVE_GOAL.\n", ID);
+        return;
+    }
+
+    // print goal position for some of the robots
+    printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
+    goal_outside_obstacles(&goal_position);
+    printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
+
+    VisiLibity::Point start(current_position.x, current_position.y);
+    VisiLibity::Point finish(goal_position.x, goal_position.y);
+    VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+
+    for (unsigned k = 0; k < Polyline_path.size(); k++) {
+        Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+        path.push_back(p);
+        log_trajectory(p);
+    }
+
+    i = path.begin();
+
+    // we send the msg containing the goal position, which will be received by the state_receive_goal
+    Message msg(ID, 0, goal_position, -1, goal_position, 0);
+    send_msg(msg);
+
+    if (simulation_parameters.simuMode == ONLINE) {
+        FSM.state = STATE_MOVING;
+        FSM.hook = state_moving;
+		entered_state_receive_goal = true;
+        time_before_moving = wb_robot_get_time();
+    } else {
+        FSM.state = STATE_READ_ALL;
+        FSM.hook = state_read_positions_measurements;
+		entered_state_receive_goal = true;
+    }
+}
+
+void state_send_pdf()
+{	
+    printf("Robot ID [%d]: STATE_SEND_PDF \n", ID);
+
+    if (ID == 102 && posterior.pdf != nullptr) {
+		printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
+		Message msg_send_bm_102(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
+        send_msg(msg_send_bm_102);
+		printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
+	
+		FSM.state = STATE_RECEIVE_GOAL;
+        FSM.hook = state_receive_goal;
+    }
+
+	if (ID == 103 && posterior.pdf != nullptr) {
+		printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
+		Message msg_send_bm_103(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
+		send_msg(msg_send_bm_103);
+		printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
+
+		FSM.state = STATE_RECEIVE_GOAL;
+		FSM.hook = state_receive_goal;
+    }
+}
+
+static double belief_map_101[400] = {0};
+static double belief_map_102[400] = {0};
+static double belief_map_103[400] = {0};
+static int received_102 = 0;
+static int received_103 = 0;
+bool printed = false;
+bool entered_state_receive_pdf = false;
+
+void state_receive_pdf() 
+{	
+
+	if (!entered_state_receive_pdf) {
+        printf("Robot ID [%d]: STATE_RECEIVE_PDF \n", ID);
+        entered_state_receive_pdf = true;
+    }
+
+    if (!printed && posterior.pdf != nullptr) {
+        memcpy(belief_map_101, posterior.pdf, 400 * sizeof(double));
+
+        printf("Robot ID [%d]: Belief map.\n", ID);
+        for (int i = 0; i < 400; i++) {
+            printf("%f ", belief_map_101[i]);
+        }
+        printf("\n");
+
+        printed = true;
+    }
+
+    int queue_length = wb_receiver_get_queue_length(receiver);
+    // printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
+
+    while (wb_receiver_get_queue_length(receiver) > 0) {
+        const void *data = wb_receiver_get_data(receiver);
+        const double* buffer = (const double*)data;
+
+        int sender_ID = (int)buffer[0];
+        int receiver_ID = (int)buffer[1];
+		int flag_finished = (int)buffer[9];
+
+        printf("Robot ID [%d]: Received message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
+
+		//check if state_finished
+		if (flag_finished == -1) {
+			printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+			return;
+		}
+
+        if (sender_ID == 102) {
+            printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
+            memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
+			for (int i = 0; i < 400; i++) {
+            	printf("%f ", belief_map_102[i]);
+        	}
+			printf("\n");
+            received_102 = 1;
+        } 
+        else if (sender_ID == 103) {
+            printf("Robot ID [%d]: Received belief map from Robot ID [103]\n", ID);
+            memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
+			for (int i = 0; i < 400; i++) {
+            	printf("%f ", belief_map_103[i]);
+        	}
+			printf("\n");
+            received_103 = 1;
+        }
+
+        wb_receiver_next_packet(receiver);
+    }
+
+    if (received_102 && received_103) {
+        received_102 = 0;
+        received_103 = 0;
+        printed = false;
+
+        printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
+        FSM.state = STATE_MERGE_PDF;
+        FSM.hook = state_merge_pdf;
+		entered_state_receive_pdf = false;
+    } else {
+        // printf("Robot ID [%d]: Waiting for all belief maps...\n", ID);
+    }
+}
+
+static double belief_map_merged[400] = {0};
+
+void state_merge_pdf() 
+{
+	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
+
+	for (int i = 0; i < 400; i++) {
+		belief_map_merged[i] = belief_map_101[i] + belief_map_102[i] + belief_map_103[i];
+	}
+
+	printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
+	printf("Robot ID [%d]: Merged belief map is: \n", ID);		
+	for (int i = 0; i < 400; i++) {
+		printf("%f ", belief_map_merged[i]);
+	}
+	printf("\n");
+	memcpy(posterior.pdf, belief_map_merged, 400 * sizeof(double));
+	FSM.state = STATE_UPDATEGOAL_TEAM;
+	FSM.hook = state_updategoal_team;
+}
+
+void state_updategoal_team()
+{
+	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
+
+	maximal_merged_belief_planning();
+
+	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
+
+	for (int i = 0; i < 3; i++) {
+		printf("Robot [%d]: Goal position -> x: %f, y: %f\n", 101 + i, goal_position_team[i].x, goal_position_team[i].y);
+	}
+
+	FSM.state = STATE_SEND_GOAL;
+	FSM.hook = state_send_goal;
+}
+
 
 // =========================== MAIN ============================== //
 
@@ -966,6 +1341,9 @@ int main(int argc, char **argv)
 
 	// File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");
+
+	// initialize the receiver
+	init_receiver(STEP_SIZE);
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED)

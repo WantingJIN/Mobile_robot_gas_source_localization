@@ -11,14 +11,19 @@ public:
     Position position;
     double concentration;
     Position goal;
-    int measurement0_goal1; // binary flag that shows what is the values we are sharing
-    double buffer[10];
+    int measurement0_goal1; // binary flag that shows what values we are sharing
+    double belief_map[400]; // new atribute to store the max belief value
+    double buffer[410]; // augmented buffer size for the max belief value
     int buffer_size;
 
     // constructor : everithing set to 0
     Message();
-    // constructor : set parameters
+    
+    // constructor : standard
     Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag);
+    
+    // constructor : max belief value
+    Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, double _belief_map[400]);
     Message(const void *m_buffer);
 
     void params_to_buffer();

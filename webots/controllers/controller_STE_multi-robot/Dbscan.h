@@ -23,7 +23,6 @@ public:
 
 public:
     DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat);
-
     ~DBSCAN() {}
     vector<int> findNeighbors(const CellPoint cell);
     void expandCluster(CellPoint &cell, vector<int> &neighbors, int clusterId);

@@ -275,7 +275,7 @@ for i=1:exp_number
     saveas(f2all,[folder_name '/trajectory.png']);
     saveas(f0,[folder_name '/estimation_evolution.png']);    
     
-    close(f1all); 
-    close(f2all);
-    close(f0);
+    %close(f1all); 
+    %lose(f2all);
+    %close(f0);
 end
