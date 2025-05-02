@@ -434,7 +434,6 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	double sample[nbr_dimension];
 	vector<double> slope_history_meas;
-
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);

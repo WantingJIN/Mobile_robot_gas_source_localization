@@ -122,7 +122,7 @@ typedef enum infoSum
 } eInfoSum;
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
-	DECENTRALIZED = 1,
+	DISTRIBUTED = 1,
 	CENTRALIZED = 2,
 } eTeamStrategy;
 
@@ -156,6 +156,7 @@ class SimulationParameters{
 		float scoreSigma;
 		int planning_step;
 		float weighting_entropy_ratio;
+		int update_goal_time;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
