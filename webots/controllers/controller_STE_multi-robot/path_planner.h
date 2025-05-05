@@ -66,6 +66,8 @@ public:
     void belief_clustering_planning();
     void accumulative_Dijkstra();
     std::list<Position> multi_objective_Dijkstra();
+    void maximal_merged_belief_planning();
+
     void calculate_mean_value_within_cluster(const pair<CellPoint, CellPoint> &cluster, double &mean_value, double &min_value, double &max_value);
     double evaluate_cluster(const pair<CellPoint, CellPoint> &cluster);
     void move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, double information_map[]);

@@ -6,6 +6,7 @@ FILE *scores_map_logfile;
 FILE *distance_map_logfile;
 FILE *acc_info_map_logfile;
 extern Position goal_position;
+extern Position goal_position_team[3];
 extern Position current_position;
 extern SimulationParameters simulation_parameters;
 extern int cell_visited_list[x_nbins * y_nbins];
@@ -14,6 +15,8 @@ extern char gas_information_map_logfile_name[512];
 extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
+extern int ID;
+
 
 
 // text file for storing some prints for debugging
@@ -1388,4 +1391,78 @@ void PathPlanner::log_gas_information_map()
 	fprintf(gas_information_map_logfile, "%.9f\n", gas_information_map[x_nbins * y_nbins - 1]);
 
 	fclose(gas_information_map_logfile);
+}
+
+void PathPlanner:: maximal_merged_belief_planning()
+{
+	// compute maximal merged belief map values
+	std::vector<int> top1_indices, top2_indices, top3_indices;
+	double top1 = -1, top2 = -1, top3 = -1;
+	double epsilon = 1e-6;
+
+	for (int i = 0; i < x_nbins * y_nbins; i++) {
+
+		if (simulation_parameters.visitedList == visitedList_ON && cell_visited_list[i] != 0)
+			continue;
+
+		double value = posterior->pdf[i];
+
+		if (value > top1 + epsilon) {
+			// shift down
+			top3 = top2; top3_indices = top2_indices;
+			top2 = top1; top2_indices = top1_indices;
+			top1 = value; top1_indices = {i};
+		}
+		else if (fabs(value - top1) < epsilon) {
+			top1_indices.push_back(i);
+		}
+		else if (value > top2 + epsilon) {
+			top3 = top2; top3_indices = top2_indices;
+			top2 = value; top2_indices = {i};
+		}
+		else if (fabs(value - top2) < epsilon) {
+			top2_indices.push_back(i);
+		}
+		else if (value > top3 + epsilon) {
+			top3 = value; top3_indices = {i};
+		}
+		else if (fabs(value - top3) < epsilon) {
+			top3_indices.push_back(i);
+		}
+	}
+
+	int top_indices[3] = {-1, -1, -1};
+	double top_values[3] = {top1, top2, top3};
+
+	if (!top1_indices.empty())
+		top_indices[0] = top1_indices[rand() % top1_indices.size()];
+	if (!top2_indices.empty())
+		top_indices[1] = top2_indices[rand() % top2_indices.size()];
+	if (!top3_indices.empty())
+		top_indices[2] = top3_indices[rand() % top3_indices.size()];
+
+	printf("Robot ID [%d]: Top 3 maximal merged belief map values:\n1) Value: %f at index %d\n2) Value: %f at index %d\n3) Value: %f at index %d\n", ID,
+	top_values[0], top_indices[0],
+	top_values[1], top_indices[1],
+	top_values[2], top_indices[2]);
+
+	cell_visited_list[top_indices[0]] = 1;
+	cell_visited_list[top_indices[1]] = 1;
+	cell_visited_list[top_indices[2]] = 1;
+
+	// assign goals to the maximal merged belief map values
+	double best_points[3][2] = {0};
+	int max_indices[3] = {top_indices[0], top_indices[1], top_indices[2]};
+
+	for (int i = 0; i < 3; i++) {
+		posterior->index_to_param_values(max_indices[i], best_points[i]);
+		goal_position_team[i].x = best_points[i][0];
+		goal_position_team[i].y = best_points[i][1];
+		goal_position_team[i].heading = 0;
+	}
+
+	printf("Robot [101]: Assigned possitions to each robot are:\n 1) Robot [101]: %f, %f \n 2) Robot [102]: %f, %f \n 3) Robot [103]: %f, %f\n",
+	goal_position_team[0].x, goal_position_team[0].y,
+	goal_position_team[1].x, goal_position_team[1].y,
+	goal_position_team[2].x, goal_position_team[2].y);
 }

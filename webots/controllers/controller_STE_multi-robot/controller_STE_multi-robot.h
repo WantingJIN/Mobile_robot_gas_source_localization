@@ -114,7 +114,6 @@ void state_region_allocation();
 double randu();
 long long current_timestamp();
 double dist_to_goal(Position goal);
-void goal_outside_obstacles(Position *goal);
 
 // double target_evaluation(double position[][3]);
 // void get_gps_position(Position external_gps_position);

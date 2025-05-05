@@ -1007,150 +1007,6 @@ void state_moving()
 }
 
 
-// bool entered_state_moving = false;
-
-// void state_moving()
-// {	
-// 	if (!entered_state_moving) {
-//         printf("Robot ID [%d]: STATE_MOVING \n", ID);
-
-// 		double now = wb_robot_get_time();
-//     	double time_between_movements = now - time_after_moving;
-//     	printf("Robot ID [%d]: Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements);
-
-//         time_before_moving = now;
-//         entered_state_moving = true;
-//     }
-
-// 	// printf("moving toward the goal\n");
-// 	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
-// 	{
-// 		sample_counter++;
-// 		// sample and run kernel
-// 		double instant_concentration = 0.0;
-// 		double odor_concentration = 0.0;
-// 		double reverse_sensor_reading = 0.0;
-// 		odor_read(&instant_concentration, odor_concentration);
-// 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-// 		{
-// 			double Ts = TIME_STEP / 1000.0; // sampling frequency
-// 			double tau_r = 0, tau_d = 0; 
-// 			if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX){
-// 				tau_r = 0.72;   // time constant for the rise (our default sensor)		  
-// 			      tau_d = 0.92;   // time constant for the decay		  
-// 			}
-// 			if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX){
-// 				tau_r = 2.06;   // time constant for the rise (slow sensor)	  
-// 			      tau_d = 4.53;   // time constant for the decay	  
-// 			}
-// 			if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX){
-// 				tau_r = 5.19;   // time constant for the rise (very slow MOX TGS2600)	  
-// 			      tau_d = 19.74;  // time constant for the decay	  
-// 			}
-// 			double alpha = 0.0;
-// 			if (instant_concentration > previous_sensor_reading) // rising phase
-// 				alpha = tau_r / Ts;
-// 			else // decaying phase
-// 				alpha = tau_d / Ts;
-// 			reverse_sensor_reading = (1 + alpha) * instant_concentration - alpha * previous_sensor_reading;
-// 			// printf("reverse_sensor_reading %f\n", reverse_sensor_reading);
-//         	// printf("instant_concentration %f\n", instant_concentration);
-//             // printf("odor_concentration %f\n", odor_concentration); 
-// 			previous_sensor_reading = instant_concentration;
-// 			instant_concentration = reverse_sensor_reading;
-// 		}
-// 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-// 		{
-// 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
-// 		}
-// 		if (sample_counter > simulation_parameters.sampling_period)
-// 		{
-// 			if (!position_outside_arena(current_position))
-// 			{
-// 				// Sampling distance threshold
-// 				float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-// 				if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-// 				{
-// 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-// 					sample_in_motion.measurement.push_back(instant_concentration);
-// 					sample_in_motion.size++;
-// 					ground_truth_in_motion.push_back(odor_concentration);
-// 					last_measurement_pos.x = current_position.x;
-// 					last_measurement_pos.y = current_position.y;
-// 					// printf("Distance between measurements = %f", dist_to_last_measurement);
-// 					history.position.push_back({current_position.x, current_position.y, 0});
-// 					history.measurement.push_back(instant_concentration);
-// 					history.size++;
-// 				}
-// 			}
-// 			sample_counter = 0;
-// 		}
-// 	}
-// 	// verify if arrived to the goal if applicable
-// 	fprintf(console_logfile, "check dist to end goal \n");
-//     fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y); 
-// 	if (dist_to_goal(goal_position) > 0.05)
-// 	{
-// 		if (i == path.end())
-// 		{
-// 			fprintf(console_logfile, "path end goal reached \n");
-// 		}
-// 		// move
-// 		if (dist_to_goal(*i) <= 0.05 && i != path.end())
-// 		{
-// 			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-// 			i++;
-// 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y); 
-// 		}
-// 		go_to_goal(*i); 
-// 		// obstacle avoidance if necessary
-// 		if(obstacle_or_not() == 1){
-// 		 	FSM.state = STATE_OBSTACLE_AVOIDANCE;
-// 		 	FSM.hook  = state_obstacle_avoidance;
-// 		 	return;
-// 		}
-// 		set_wheels_speed(speed[0], speed[1]);
-
-// 		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
-
-// 		if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
-// 		{	
-// 			double now = wb_robot_get_time();
-// 			double time_between_movements_time_step = now - time_before_moving;
-// 			printf("Robot ID [%d]: Time outside STATE_MOVING time_step: %f seconds\n", ID, time_between_movements_time_step);
-// 			fprintf(console_logfile, "Robot ID [%d]: Time outside STATE_MOVING time_step: %f seconds\n", ID, time_between_movements_time_step);
-// 			//set_wheels_speed(0, 0); 
-// 			sampleBuffer.reset_all();
-// 			path.clear();
-
-// 			// back to measuring
-// 		 	FSM.state = STATE_MEASURING;
-// 		 	FSM.hook  = state_measuring;
-
-// 		 	time_after_moving = now;
-// 		 	entered_state_moving = false;
-// 		}
-// 	}
-// 	else
-// 	{
-// 		set_wheels_speed(0, 0);
-// 		sampleBuffer.reset_all();
-// 		path.clear();
-
-// 		// back to measuring
-// 		FSM.state = STATE_MEASURING;
-// 		FSM.hook = state_measuring;
-
-// 		double now = wb_robot_get_time();
-// 		time_after_moving = now;
-// 		navigation_sampling_time_sum += now - time_before_moving;
-// 		time_before_measuring = wb_robot_get_time();
-// 		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
-// 		entered_state_moving = false;
-// 	}
-// }
-
-
 void state_obstacle_avoidance()
 {
 	// printf("avoiding obstacle\n");
@@ -1174,7 +1030,7 @@ void state_send_goal()
 		// goal position for Robot [101]
 		goal_position = goal_position_team[0];
 		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		goal_outside_obstacles(&goal_position);
+		path_planner.goal_outside_obstacles(&goal_position);
 		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 		// find the path using visibility graph
@@ -1288,7 +1144,7 @@ void state_receive_goal() {
 
     // print goal position for some of the robots
     //printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-    goal_outside_obstacles(&goal_position);
+    path_planner.goal_outside_obstacles(&goal_position);
     printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
 
     VisiLibity::Point start(current_position.x, current_position.y);
@@ -1651,7 +1507,7 @@ void state_updategoal_team()
 {
 	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
 
-	maximal_merged_belief_planning();
+	path_planner.maximal_merged_belief_planning();
 
 	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
 
