@@ -57,9 +57,9 @@ do
 		# for planningStrategy in "INFORMATIVE_KLD"
 		# for scoreSigma in 0.4 0.5 0.7
 		# for scoreFun in "RATIO" "LOG" "SIGMOID"
-		for infoFeature in "VARIANCE" "MEAN" "PDF"
+		# for infoFeature in "VARIANCE" "MEAN" "PDF"
 		# for weighting_entropy_ratio in 10
-	      do
+	      # do
 			# sed -i "s/^R0 *= *.*/R0 = $R/" "$config_file"
 			# sed -i "s/^sigma *= *.*/sigma = $sigma/" "$config_file"
 			# sed -i "s/^likelihood_error *= *.*/likelihood_error = $likelihood/" "$config_file"
@@ -69,7 +69,7 @@ do
 			# sed -i "s/^planningStrategy *= *.*/planningStrategy = $planningStrategy/" "$config_file"
 			# sed -i "s/^scoreSigma *= *.*/scoreSigma = $scoreSigma/" "$config_file"
 			# sed -i "s/^scoreFun *= *.*/scoreFun = $scoreFun/" "$config_file"
-			sed -i "s/^infoFeature *= *.*/infoFeature = $infoFeature/" "$config_file"
+			# sed -i "s/^infoFeature *= *.*/infoFeature = $infoFeature/" "$config_file"
 			# sed -i "s/^weighting_entropy_ratio *= *.*/weighting_entropy_ratio = $weighting_entropy_ratio/" "$config_file"
 			# wind map and obstacle list
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
@@ -86,7 +86,7 @@ do
 				now=$(date +"%T")
 				echo "map $m  k $k  release amount $r R $R end time $now"
 			done
-	      done	
+	      # done	
 	done
 done
 
