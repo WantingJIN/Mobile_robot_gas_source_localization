@@ -31,6 +31,7 @@ void init()
 	khepera4_drive_init();
 	const char *ID_char = wb_robot_get_name();
 	ID = atoi(ID_char);
+	self_index = ID - 101;
 
 	// odor and wind sensors
 	char tag_name[256];

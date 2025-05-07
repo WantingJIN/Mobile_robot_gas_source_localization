@@ -92,6 +92,7 @@ extern struct history history;
 
 // robot's ID
 extern int ID;
+extern int self_index;
 
 // message structure
 extern struct message message;

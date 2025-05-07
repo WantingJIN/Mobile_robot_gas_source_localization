@@ -108,6 +108,7 @@ PathPlanner path_planner(&plume_model, &posterior, &history);
 
 // robot's ID
 int ID;
+int self_index;
 
 // message structure
 struct message message;
@@ -158,6 +159,14 @@ Position last_measurement_pos;
 double real_source_pos[3] = {0, 0, 0};
 
 bool use_visibility_path = true;
+
+// store the belief maps of the whole team
+static double belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
+static int received_flags[MAX_NB_ROBOTS] = {0};
+static double belief_map_merged[MAP_SIZE] = {0};
+
+bool printed = false;
+bool entered_state_receive_pdf = false;
 // =========================== FUNCTIONS ================================ //
 // random value sampled from a normal distribution
 double randn(double mu, double sigma)
@@ -743,55 +752,32 @@ void state_estimating()
 		printf("end time stamp: %f\n", end_timestamp);
 		printf("Robot ID [%d]: Current state is STATE_FINISHED\n", ID);
 
-		// transfer state_finished to the rest of the team
-		if (ID == 101)
-		{
-			// if 101 finished
-			Message msg_finished_101_to_102(ID, 102, Position(), -1, Position(), -1);
-			send_msg(msg_finished_101_to_102);
-			Message msg_finished_101_to_103(ID, 103, Position(), -1, Position(), -1);
-			send_msg(msg_finished_101_to_103);
-		}
-		else if (ID == 102)
-		{
-			// if 102 finished
-			Message msg_finished_102_to_101(ID, 101, Position(), -1, Position(), -1);
-			send_msg(msg_finished_102_to_101);
-			Message msg_finished_102_to_103(ID, 103, Position(), -1, Position(), -1);
-			send_msg(msg_finished_102_to_103);
-		}
-		else if (ID == 103)
-		{
-			// if 103 finished
-			Message msg_finished_103_to_101(ID, 101, Position(), -1, Position(), -1);
-			send_msg(msg_finished_103_to_101);
-			Message msg_finished_103_to_102(ID, 102, Position(), -1, Position(), -1);
-			send_msg(msg_finished_103_to_102);
-		}
+		broadcast_state_finished();
 	}
-	else if (simulation_parameters.teamStrategy == CENTRALIZED)
+	if (simulation_parameters.teamStrategy == CENTRALIZED)
 	{
-		if (ID == 101)
+		if (ID == CENTRAL_MASTER_ID)
 		{
 			FSM.state = STATE_RECEIVE_PDF;
 			FSM.hook = state_receive_pdf;
 		}
-		else if (ID == 102 || ID == 103)
+		else
 		{
 			FSM.state = STATE_SEND_PDF;
 			FSM.hook = state_send_pdf;
 		}
 	}
-	else if (simulation_parameters.teamStrategy == DISTRIBUTED)
+	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 		FSM.state = STATE_SHARE_PDF;
 		FSM.hook = state_share_pdf;
 	}
-	else
+	if (simulation_parameters.teamStrategy == INDIVIDUAL)
 	{
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
 	}
+
 }
 
 void state_updategoal()
@@ -1051,12 +1037,13 @@ void state_send_goal()
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
 
-		// send goal positions to Robot [102] and [103]
-		Message msg_send_goal_102(101, 102, goal_position_team[1], -1, goal_position_team[1], 0);
-		send_msg(msg_send_goal_102);
-
-		Message msg_send_goal_103(101, 103, goal_position_team[2], -1, goal_position_team[2], 0);
-		send_msg(msg_send_goal_103);
+		for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+			int target_ID = 101 + i;
+			if (target_ID == ID) continue;  // Skip self
+	    
+			Message msg(ID, target_ID, goal_position_team[i], -1, goal_position_team[i], 0); // -1 for STATE_FINISHED flag
+			send_msg(msg);
+		}
 
 		// move to the goal position
 		if (simulation_parameters.simuMode == ONLINE)
@@ -1115,7 +1102,7 @@ void state_receive_goal()
 		}
 
 		// check if message comes from robot 101
-		if (sender_ID == 101)
+		if (sender_ID == CENTRAL_MASTER_ID)
 		{
 			if (receiver_ID == ID)
 			{ // this message is for this robot?
@@ -1189,37 +1176,17 @@ void state_send_pdf()
 {
 	printf("Robot ID [%d]: STATE_SEND_PDF \n", ID);
 
-	if (ID == 102 && posterior.pdf != nullptr)
+	if (posterior.pdf != nullptr)
 	{
 		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send_bm_102(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_send_bm_102);
-		// printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
-
-		FSM.state = STATE_RECEIVE_GOAL;
-		FSM.hook = state_receive_goal;
-	}
-
-	if (ID == 103 && posterior.pdf != nullptr)
-	{
-		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send_bm_103(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_send_bm_103);
+		Message msg_send(ID, CENTRAL_MASTER_ID, Position(), -1, Position(), 0, posterior.pdf);
+		send_msg(msg_send);
 		// printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
 
 		FSM.state = STATE_RECEIVE_GOAL;
 		FSM.hook = state_receive_goal;
 	}
 }
-
-static double belief_map_101[400] = {0};
-static double belief_map_102[400] = {0};
-static double belief_map_103[400] = {0};
-static int received_101 = 0;
-static int received_102 = 0;
-static int received_103 = 0;
-bool printed = false;
-bool entered_state_receive_pdf = false;
 
 void state_receive_pdf()
 {
@@ -1229,18 +1196,16 @@ void state_receive_pdf()
 		entered_state_receive_pdf = true;
 	}
 
-	if (simulation_parameters.teamStrategy == CENTRALIZED)
+	// if the team strategy is centralized, then the robot 101 receives the belief maps from the other robots
+	// if the team strategy is distributed, then all robots receive the belief maps from each other
+	bool is_centralized = (simulation_parameters.teamStrategy == CENTRALIZED && ID == CENTRAL_MASTER_ID);
+	bool is_distributed = simulation_parameters.teamStrategy == DISTRIBUTED;
+
+	if (is_centralized || is_distributed)
 	{
 		if (!printed && posterior.pdf != nullptr)
 		{
-			memcpy(belief_map_101, posterior.pdf, 400 * sizeof(double));
-
-			// printf("Robot ID [%d]: Belief map.\n", ID);
-			// for (int i = 0; i < 400; i++) {
-			//     printf("%f ", belief_map_101[i]);
-			// }
-			// printf("\n");
-
+			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(double));
 			printed = true;
 		}
 
@@ -1267,244 +1232,80 @@ void state_receive_pdf()
 				return;
 			}
 
-			if (sender_ID == 102)
+			int sender_index = sender_ID - 101;
+
+			// Skip self and invalid indices
+			if (sender_ID != ID && sender_index >= 0 && sender_index < MAX_NB_ROBOTS)
 			{
-				// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-				memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
-				// for (int i = 0; i < 400; i++) {
-				// 	printf("%f ", belief_map_102[i]);
-				// }
-				// printf("\n");
-				received_102 = 1;
-			}
-			else if (sender_ID == 103)
-			{
-				// printf("Robot ID [%d]: Received belief map from Robot ID [103]\n", ID);
-				memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
-				// for (int i = 0; i < 400; i++) {
-				// 	printf("%f ", belief_map_103[i]);
-				// }
-				// printf("\n");
-				received_103 = 1;
+				memcpy(belief_maps[sender_index], &buffer[10], MAP_SIZE * sizeof(double));
+				received_flags[sender_index] = 1;
 			}
 
 			wb_receiver_next_packet(receiver);
 		}
 
-		if (received_102 && received_103)
+		// Check if all others have sent their belief maps
+		int all_received = 1;
+		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
 		{
-			received_102 = 0;
-			received_103 = 0;
+			if (i == self_index)
+				continue;
+			if (!received_flags[i])
+			{
+				all_received = 0;
+				printf("Robot ID [%d]: Waiting for belief map from Robot ID [%d]\n", ID, 101 + i);
+				break;
+			}
+		}
+	
+		if (all_received)
+		{
+
+			// Reset state for next round
+			for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+			{
+				received_flags[i] = 0;
+			}
 			printed = false;
 
-			// printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
 			FSM.state = STATE_MERGE_PDF;
 			FSM.hook = state_merge_pdf;
 			entered_state_receive_pdf = false;
 		}
 	}
-	else if (simulation_parameters.teamStrategy == DISTRIBUTED)
-	{
-		if (!printed && posterior.pdf != nullptr)
-		{
-			if (ID == 101)
-			{
-				memcpy(belief_map_101, posterior.pdf, 400 * sizeof(double));
-				printf("Robot ID [%d]: Belief map.\n", ID);
-				for (int i = 0; i < 400; i++)
-				{
-					printf("%f ", belief_map_101[i]);
-				}
-				printf("\n");
-			}
-			else if (ID == 102)
-			{
-				memcpy(belief_map_102, posterior.pdf, 400 * sizeof(double));
-				printf("Robot ID [%d]: Belief map.\n", ID);
-				for (int i = 0; i < 400; i++)
-				{
-					printf("%f ", belief_map_102[i]);
-				}
-				printf("\n");
-			}
-			else if (ID == 103)
-			{
-				memcpy(belief_map_103, posterior.pdf, 400 * sizeof(double));
-				printf("Robot ID [%d]: Belief map.\n", ID);
-				for (int i = 0; i < 400; i++)
-				{
-					printf("%f ", belief_map_103[i]);
-				}
-				printf("\n");
-			}
-
-			// printf("Robot ID [%d]: Belief map.\n", ID);
-			// for (int i = 0; i < 400; i++) {
-			//     printf("%f ", belief_map_101[i]);
-			// }
-			// printf("\n");
-
-			printed = true;
-		}
-
-		int queue_length = wb_receiver_get_queue_length(receiver);
-		// printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
-
-		while (wb_receiver_get_queue_length(receiver) > 0)
-		{
-			const void *data = wb_receiver_get_data(receiver);
-			const double *buffer = (const double *)data;
-
-			int sender_ID = (int)buffer[0];
-			int receiver_ID = (int)buffer[1];
-			int flag_finished = (int)buffer[9];
-
-			printf("Robot ID [%d]: Received message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
-
-			// check if state_finished
-			if (flag_finished == -1)
-			{
-				// printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				return;
-			}
-			if (ID == 101)
-			{
-				if (sender_ID == 102)
-				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-					memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_102 = 1;
-				}
-				else if (sender_ID == 103)
-				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-					memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_103 = 1;
-				}
-
-				wb_receiver_next_packet(receiver);
-
-				if (received_102 && received_103)
-				{
-					received_102 = 0;
-					received_103 = 0;
-					printed = false;
-
-					// printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-					FSM.state = STATE_MERGE_PDF;
-					FSM.hook = state_merge_pdf;
-					entered_state_receive_pdf = false;
-				}
-			}
-			else if (ID == 102)
-			{
-				if (sender_ID == 101)
-				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-					memcpy(belief_map_101, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_101 = 1;
-				}
-				else if (sender_ID == 103)
-				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-					memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_103 = 1;
-				}
-
-				wb_receiver_next_packet(receiver);
-
-				if (received_101 && received_103)
-				{
-					received_101 = 0;
-					received_103 = 0;
-					printed = false;
-
-					// printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-					FSM.state = STATE_MERGE_PDF;
-					FSM.hook = state_merge_pdf;
-					entered_state_receive_pdf = false;
-				}
-			}
-			else if (ID == 103)
-			{
-				if (sender_ID == 101)
-				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-					memcpy(belief_map_101, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_101 = 1;
-				}
-				else if (sender_ID == 102)
-				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-					memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_102 = 1;
-				}
-
-				wb_receiver_next_packet(receiver);
-
-				if (received_101 && received_102)
-				{
-					received_101 = 0;
-					received_102 = 0;
-					printed = false;
-
-					// printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-					FSM.state = STATE_MERGE_PDF;
-					FSM.hook = state_merge_pdf;
-					entered_state_receive_pdf = false;
-				}
-			}
-		}
-	}
 }
-
-static double belief_map_merged[400] = {0};
 
 void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
-	// multiplication of belief maps
-	for (int i = 0; i < 400; i++)
+	// Initialize to 1.0 for multiplicative identity
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
-		belief_map_merged[i] = belief_map_101[i] * belief_map_102[i] * belief_map_103[i];
+		belief_map_merged[i] = 1.0;
+	}
+
+	// Multiply belief maps from other robots (excluding self)
+	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
+	{
+		if (r == self_index)
+			continue; // Skip self
+
+		for (int i = 0; i < MAP_SIZE; i++)
+		{
+			belief_map_merged[i] *= belief_maps[r][i];
+		}
 	}
 
 	// normalize belief map
 	double sum = 0.0;
-	for (int i = 0; i < 400; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		sum += belief_map_merged[i];
 	}
 
 	if (sum > 0)
 	{
-		for (int i = 0; i < 400; i++)
+		for (int i = 0; i < MAP_SIZE; i++)
 		{
 			belief_map_merged[i] /= sum;
 		}
@@ -1512,12 +1313,12 @@ void state_merge_pdf()
 
 	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
 	printf("Robot ID [%d]: Merged belief map is: \n", ID);
-	for (int i = 0; i < 400; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		printf("%f ", belief_map_merged[i]);
 	}
 	printf("\n");
-	memcpy(posterior.pdf, belief_map_merged, 400 * sizeof(double));
+	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
 
 	if (simulation_parameters.teamStrategy == CENTRALIZED)
 	{
@@ -1550,34 +1351,24 @@ void state_updategoal_team()
 
 void state_share_pdf()
 {
-	printf("Robot ID [%d]: STATE_SHARE_PDF \n", ID);
-	if (ID == 101 && posterior.pdf != nullptr)
-	{
-		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_101_to_102(ID, 102, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_share_pdf_101_to_102);
-		Message msg_share_pdf_101_to_103(ID, 103, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_share_pdf_101_to_103);
-	}
-	else if (ID == 102 && posterior.pdf != nullptr)
-	{
-		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_102_to_101(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_share_pdf_102_to_101);
-		Message msg_share_pdf_102_to_103(ID, 103, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_share_pdf_102_to_103);
-	}
-	else if (ID == 103 && posterior.pdf != nullptr)
-	{
-		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_103_to_101(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_share_pdf_103_to_101);
-		Message msg_share_pdf_103_to_102(ID, 102, Position(), -1, Position(), 0, posterior.pdf);
-		send_msg(msg_share_pdf_103_to_102);
-	}
+    printf("Robot ID [%d]: STATE_SHARE_PDF\n", ID);
 
-	FSM.state = STATE_RECEIVE_PDF;
-	FSM.hook = state_receive_pdf;
+    if (posterior.pdf == NULL) {
+        printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
+    } else {
+        for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+            int target_ID = 101 + i;
+            if (target_ID == ID) continue; // skip self
+
+            Message msg(ID, target_ID, Position(), -1, Position(), 0, posterior.pdf);
+            send_msg(msg);
+
+            printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
+        }
+    }
+
+    FSM.state = STATE_RECEIVE_PDF;
+    FSM.hook = state_receive_pdf;
 }
 
 void state_region_allocation()
@@ -1691,4 +1482,19 @@ int main(int argc, char **argv)
 	delete[] obstacles;
 
 	exit(0);
+}
+// Broadcast STATE_FINISHED to all teammates
+void broadcast_state_finished()
+{
+    printf("Robot ID [%d]: Broadcasting STATE_FINISHED\n", ID);
+
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        int target_ID = 101 + i;
+        if (target_ID == ID) continue;  // Skip self
+
+        Message msg(ID, target_ID, Position(), -1, Position(), -1); // -1 for STATE_FINISHED flag
+        send_msg(msg);
+
+        printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
+    }
 }

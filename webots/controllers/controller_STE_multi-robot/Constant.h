@@ -14,7 +14,7 @@
 #define MAX_ITER 30
 #define MAX_SPEED 47.61 // K3: 35748.4
 #define SENSOR_NUMBER 8
-#define MAX_NB_ROBOTS 3
+#define MAX_NB_ROBOTS 5
 // wind tunnel boundaries
 #define XMIN 3.0
 #define YMIN 0.16
@@ -56,6 +56,8 @@
 #define a_y_resol (static_cast<double>(a_y_max - a_y_min) / a_y_nbins)
 #define b_y_resol (static_cast<double>(b_y_max - b_y_min) / b_y_nbins)
 #define MAX_DISTANCE 10.77 // from (2.75,0) to (12.75,4)
+#define MAP_SIZE x_nbins * y_nbins
+#define CENTRAL_MASTER_ID 101
 
 #define VERBOSE 1
 

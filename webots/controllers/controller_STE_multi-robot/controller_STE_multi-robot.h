@@ -121,4 +121,6 @@ int obstacle_or_not();
 void do_odometry();
 
 void information_clustering_planning();
+
+void broadcast_state_finished();
 #endif
