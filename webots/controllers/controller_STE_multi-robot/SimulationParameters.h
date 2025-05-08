@@ -126,6 +126,18 @@ typedef enum teamStrategy{
 	CENTRALIZED = 2,
 } eTeamStrategy;
 
+typedef enum stopCondition{
+	ENTROPY_ONLY = 0,
+	SPREAD_ONLY = 1,
+	ENTROPY_SPREAD = 2,
+} eStopCondition;
+
+typedef enum updataGoalPolicy{
+	GOAL_REACHED = 0,
+	FIXED_FREQ = 1,
+	BELIEF_DIFF = 2,
+} eUpdateGoalPolicy;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -175,8 +187,10 @@ class SimulationParameters{
 		eTeamStrategy teamStrategy;
 
 	      eScoreFun scoreFun;
-
 		eInfoSum infoSum;
+
+		eStopCondition stopCondition;
+		eUpdateGoalPolicy updateGoalPolicy;
 
 		SimulationParameters();
 		~SimulationParameters();

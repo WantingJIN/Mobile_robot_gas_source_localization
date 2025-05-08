@@ -193,6 +193,22 @@ eTeamStrategy parse_team_strategy(const char* str) {
 	exit(1);
 }
 
+eStopCondition parse_stop_condition(const char* str) {
+	if (strcmp(str, "ENTROPY_ONLY") == 0) return ENTROPY_ONLY;
+	if (strcmp(str, "SPREAD_ONLY") == 0) return SPREAD_ONLY;
+	if (strcmp(str, "ENTROPY_SPREAD") == 0) return ENTROPY_SPREAD;
+	fprintf(stderr, "Unknown stop condition: %s\n", str);
+	exit(1);
+}
+
+eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
+	if (strcmp(str, "GOAL_REACHED") == 0) return GOAL_REACHED;
+	if (strcmp(str, "FIXED_FREQ") == 0) return FIXED_FREQ;
+	if (strcmp(str, "BELIEF_DIFF") == 0) return BELIEF_DIFF;
+	fprintf(stderr, "Unknown update goal policy: %s\n", str);
+	exit(1);
+}
+
 eScoreFun parse_score_fun(const char *str)
 {
 	if (strcmp(str, "RATIO") == 0)
@@ -239,6 +255,7 @@ SimulationParameters::SimulationParameters()
 	weighting_entropy_ratio = 6;
 	teamStrategy = CENTRALIZED;
 	update_goal_time = 10;
+	stopCondition = ENTROPY_ONLY;
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -383,12 +400,19 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		} 
 		else if (strcmp(key, "updateGoalTime") == 0) {
 			update_goal_time = atoi(value);
-		} else {
+		}
+		else if (strcmp(key, "stopCondition") == 0) {
+			stopCondition = parse_stop_condition(value);
+		}
+		else if (strcmp(key, "updateGoalPolicy") == 0) {
+			updateGoalPolicy = parse_update_goal_policy(value);
+		}
+		else
+		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
-		}
+		} 
 	}
-
 	fclose(file);
 }
 void SimulationParameters::rewrite_parameters_from_file()

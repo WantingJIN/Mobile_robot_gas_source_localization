@@ -710,10 +710,7 @@ void state_estimating()
 	}
 
 	// printf("sum posterior : %f \n", posterior.sum);
-	posterior.process();
-	log_expected_a_posteriori();
-	log_max_a_posteriori();
-	log_entropy();
+	posterior.normalize();
 	posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
 	FSM.n_cycles++;
@@ -738,23 +735,27 @@ void state_estimating()
 	estimating_time_sum += current_estimation_time;
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
-	// check if time is up
-	// if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2))
-	// if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
+	// check if stopping condition is reached
+	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
 	{
-		// the end
-		FSM.state = STATE_FINISHED;
-		// log the finish time stamp
-		end_timestamp = wb_robot_get_time();
-		printf("end time stamp: %f\n", end_timestamp);
-		printf("Robot ID [%d]: Current state is STATE_FINISHED\n", ID);
-
-		broadcast_state_finished();
+		// calculate entropy and spread
+		posterior.process();
+      	posterior.calculate_entropy_and_spread();
+		log_expected_a_posteriori();
+		log_max_a_posteriori();
+		log_entropy();
+		
+		bool is_stop_condition_reached = check_stop_condition();
+		if (is_stop_condition_reached)
+		{
+			FSM.state = STATE_FINISHED;
+			return;
+		} else {
+			FSM.state = STATE_UPDATEGOAL;
+			FSM.hook = state_updategoal;
+		}
 	}
-	if (simulation_parameters.teamStrategy == CENTRALIZED)
+	else if (simulation_parameters.teamStrategy == CENTRALIZED)
 	{
 		if (ID == CENTRAL_MASTER_ID)
 		{
@@ -767,17 +768,11 @@ void state_estimating()
 			FSM.hook = state_send_pdf;
 		}
 	}
-	if (simulation_parameters.teamStrategy == DISTRIBUTED)
+	else if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 		FSM.state = STATE_SHARE_PDF;
 		FSM.hook = state_share_pdf;
 	}
-	if (simulation_parameters.teamStrategy == INDIVIDUAL)
-	{
-		FSM.state = STATE_UPDATEGOAL;
-		FSM.hook = state_updategoal;
-	}
-
 }
 
 void state_updategoal()
@@ -957,23 +952,25 @@ void state_moving()
 
 		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
 
-		if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
-		{
-			double time_now_time_step_far = wb_robot_get_time();
-			double time_between_movements_time_step_far = time_now_time_step_far - time_after_moving;
-			printf("Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
-			fprintf(console_logfile, "Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
-			// set_wheels_speed(0, 0);
-			sampleBuffer.reset_all();
-			path.clear();
-			// printf("Robot ID [%d]. Number of iteration is %d\n", ID, n_time_step);
-			FSM.state = STATE_MEASURING;
-			FSM.hook = state_measuring;
-			time_after_moving = wb_robot_get_time();
-			entered_state_moving = false;
+		if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
+			if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
+				{
+				double time_now_time_step_far = wb_robot_get_time();
+				double time_between_movements_time_step_far = time_now_time_step_far - time_after_moving;
+				printf("Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
+				fprintf(console_logfile, "Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
+				// set_wheels_speed(0, 0);
+				sampleBuffer.reset_all();
+				path.clear();
+				// printf("Robot ID [%d]. Number of iteration is %d\n", ID, n_time_step);
+				FSM.state = STATE_MEASURING;
+				FSM.hook = state_measuring;
+				time_after_moving = wb_robot_get_time();
+				entered_state_moving = false;
+			}
 		}
 	}
-	else
+	else 
 	{
 		double time_now_time_step_near = wb_robot_get_time();
 		double time_between_movements_time_step_near = time_now_time_step_near - time_after_moving;
@@ -1319,17 +1316,34 @@ void state_merge_pdf()
 	}
 	printf("\n");
 	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
-
-	if (simulation_parameters.teamStrategy == CENTRALIZED)
+      // Check the stopping condition after merging
+	posterior.process();
+      posterior.calculate_entropy_and_spread();
+	log_expected_a_posteriori();
+	log_max_a_posteriori();
+	log_entropy();
+	bool is_stop_condition_reached = check_stop_condition();
+	if (is_stop_condition_reached)
 	{
-		FSM.state = STATE_UPDATEGOAL_TEAM;
-		FSM.hook = state_updategoal_team;
+		FSM.state = STATE_FINISHED;
+		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+		broadcast_state_finished();
+		return;
+	} else {
+		if (simulation_parameters.teamStrategy == CENTRALIZED)
+		{
+				FSM.state = STATE_UPDATEGOAL_TEAM;
+				FSM.hook = state_updategoal_team;
+			
+		}
+		else if (simulation_parameters.teamStrategy == DISTRIBUTED)
+		{
+			FSM.state = STATE_REGION_ALLOCATION;
+			FSM.hook = state_region_allocation;
+		}
 	}
-	else if (simulation_parameters.teamStrategy == DISTRIBUTED)
-	{
-		FSM.state = STATE_REGION_ALLOCATION;
-		FSM.hook = state_region_allocation;
-	}
+	
 }
 
 void state_updategoal_team()
@@ -1497,4 +1511,32 @@ void broadcast_state_finished()
 
         printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
     }
+}
+
+bool check_stop_condition()
+{
+	bool is_stop_condition_reached = false;
+	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
+		if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 ){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
+		if (FSM.n_cycles == MAX_ITER || (posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
+		if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	}
+	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	if (is_stop_condition_reached)
+	{
+		// log the finish time stamp
+		end_timestamp = wb_robot_get_time();
+		printf("Robot ID [%d]: Stop condition reached!\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
+	}
+	return is_stop_condition_reached;
 }

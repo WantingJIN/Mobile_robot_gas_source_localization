@@ -280,36 +280,34 @@ void Posterior::update(double value, double *sample)
 	sum += value;
 }
 
-// normalization + entropy + expected value + max a posterior (value and parameter set) using only the pdf
-void Posterior::process()
+void Posterior::normalize()
 {
-	int i = 0, j = 0;
-	int indices[nbr_dimension];
-	double bin_values[nbr_dimension];
-	max = 0;
-	entropy = 0;
-	double possible_source_x_index_min = x_nbins;
-	double possible_source_x_index_max = 0;
-	double possible_source_y_index_min = y_nbins;
-	double possible_source_y_index_max = 0;
-	for (j = 0; j < nbr_dimension; j++)
-		model->expected_value[j] = 0;
-
-	// for every value in the pdf
+	int i = 0;
+	// normalize the pdf
 	for (i = 0; i < nbr_element; i++)
 	{
-		// normalize
-		// printf("%f / %f =  %f ", pdf[i],sum, pdf[i]/sum);
 		if (sum == 0)
 		{
 			printf("!!!!!!!!!!!!!sum is equal to zero!\n");
 			fprintf(console_logfile, "!!!!!!!!!!!!!sum is equal to zero!\n");
 		}
 		pdf[i] /= sum;
+	}
+}
 
-		// entropy
-		if (pdf[i] > 0)
-			entropy += pdf[i] * log(pdf[i]);
+// normalization + expected value + max a posterior (value and parameter set) using only the pdf
+void Posterior::process()
+{
+	int i = 0, j = 0;
+	int indices[nbr_dimension];
+	double bin_values[nbr_dimension];
+	max = 0;
+	for (j = 0; j < nbr_dimension; j++)
+		model->expected_value[j] = 0;
+
+	// for every value in the pdf
+	for (i = 0; i < nbr_element; i++)
+	{
 		// find the set of param corresponding to index i
 		index_to_param_values(i, bin_values);
 		// max value and max a post value
@@ -324,7 +322,29 @@ void Posterior::process()
 			model->expected_value[j] += bin_values[j] * pdf[i];
 		// marginal
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
+	}
+	// print on screen
+	if (VERBOSE)
+		model->print_expected_val();
+	if (VERBOSE)
+		model->print_max_a_post_val();
+	
+}
+void Posterior::calculate_entropy_and_spread()
+{
+	entropy = 0;
+	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_max = 0;
+	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_max = 0;
+	int indices[nbr_dimension];
+	for (int i = 0; i < nbr_element; i++)
+	{
+		if (pdf[i] > 0)
+			entropy += pdf[i] * log(pdf[i]);
+		index_to_indices(i, indices);
 		// spatial spread
+		// FIXME: hardcoded threshold to consider a cell as a possible source
 		if (pdf[i] > 1e-3){
 			if (indices[0] > possible_source_x_index_max)
 				possible_source_x_index_max = indices[0];
@@ -337,12 +357,7 @@ void Posterior::process()
 		}
 	}
 	entropy = -1 * entropy;
-	// print on screen
-	if (VERBOSE)
-		model->print_expected_val();
-	if (VERBOSE)
-		model->print_max_a_post_val();
-	
+	// printf("entropy: %f\n", entropy);
 	x_spatial_spread = possible_source_x_index_max - possible_source_x_index_min;
 	y_spatial_spread = possible_source_y_index_max - possible_source_y_index_min;
 }
