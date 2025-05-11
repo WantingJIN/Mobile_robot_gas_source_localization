@@ -550,7 +550,9 @@ void set_logfile_names()
 	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
+	sprintf(whole_position_history_logfile_name, "%s/whole_position_history.csv", folder_name);
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
 	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);

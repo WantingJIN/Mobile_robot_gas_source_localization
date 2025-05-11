@@ -32,8 +32,10 @@ FILE *expected_a_posteriori_logfile;
 FILE *likelihood_logfile;
 FILE *measurement_history_logfile;
 FILE *position_history_logfile;
+FILE *whole_position_history_logfile;
 FILE *max_a_posteriori_logfile;
 FILE *posterior_pdf_3D;
+FILE *posterior_pdf_3D_cluster;
 FILE *entropy_logfile;
 FILE *tmp_file;
 FILE *config_logfile;
@@ -56,7 +58,9 @@ char max_a_posteriori_logfile_name[512];
 char likelihood_logfile_name[512];
 char measurement_history_logfile_name[512];
 char position_history_logfile_name[512];
+char whole_position_history_logfile_name[512];
 char posterior_pdf_3D_name[512];
+char posterior_pdf_3D_cluster_name[512];
 char entropy_logfile_name[512];
 char config_logfile_name[512];
 char trajectory_logfile_name[512];
@@ -119,7 +123,11 @@ struct message message;
 // list of other robots
 struct friends friends[MAX_NB_ROBOTS];
 
+// iteration number
 int n_time_step = 0;
+
+// update pdf cluster
+int upd_pdf_cluster = 0;
 
 SimulationParameters simulation_parameters;
 
@@ -383,6 +391,7 @@ void log_history()
 	position_history_logfile = fopen(position_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++)
 	{
+		upd_pdf_cluster = i;
 		fprintf(position_history_logfile, "%d, %f, %f, %f\n", i, history.position[i].x, history.position[i].y, history.position[i].heading);
 	}
 	fclose(position_history_logfile);
@@ -398,6 +407,17 @@ void log_history()
 
 	// posterior 3D
 	// posterior.log_pdf(posterior_pdf_3D_name, 'w');
+}
+
+void log_whole_position_history()
+{
+	whole_position_history_logfile = fopen(whole_position_history_logfile_name, "a"); // append mode, to add new rows without removing the previous ones
+
+	// Save current position of the robot
+	fprintf(whole_position_history_logfile, "%f,%f,", current_position.x, current_position.y);
+
+	fprintf(whole_position_history_logfile, "\n");
+	fclose(whole_position_history_logfile);
 }
 
 void log_visited_list()
@@ -429,6 +449,29 @@ void log_experiment_time()
 	fprintf(experiment_time_logfile, "estimating time (s): %f\n", estimating_time_sum / 1000.0);
 	fclose(experiment_time_logfile);
 }
+
+void log_posterior_pdf_3d_cluster(const int* belief_clusters)
+{
+	posterior_pdf_3D_cluster = fopen(posterior_pdf_3D_cluster_name, "a"); // append mode, to add new rows without removing the previous ones
+
+	// Save current position of the robot
+	fprintf(posterior_pdf_3D_cluster, "%f,%f,", current_position.x, current_position.y);
+
+	// Save clusterized belief map in one row of the .csv
+	for (int y = 0; y < y_nbins; ++y) {
+		for (int x = 0; x < x_nbins; ++x) {
+			int idx = y * x_nbins + x;
+			fprintf(posterior_pdf_3D_cluster, "%d", belief_clusters[idx]);
+
+			if (x != x_nbins - 1 || y != y_nbins - 1) // no coma at the end
+				fprintf(posterior_pdf_3D_cluster, ",");
+		}
+	}
+
+	fprintf(posterior_pdf_3D_cluster, "\n");
+	fclose(posterior_pdf_3D_cluster);
+}
+
 
 // ====================== CLUSTERING FUNCTIONS ========================= //
 void index_to_xy(int index, int &x, int &y) {
@@ -527,6 +570,9 @@ void clusterize_belief_map(const int top_indices[3]) {
 		}
 		printf("\n");
 	}
+	
+	// print in csv file for post analysis
+	log_posterior_pdf_3d_cluster(belief_clusters);
 
 	// print cluster size
 	printf("\nCluster sizes:\n");
@@ -1274,7 +1320,7 @@ void maximal_belief_planning()
 		return;
 	}
 	posterior.index_to_param_values(max_pdf_index, best_point);
-
+	printf("EL INDICE %d, con valor %f, pertenece a las coordenadas: %f %f",max_pdf_index, max_pdf,best_point[0], best_point[1]);
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
@@ -2335,6 +2381,7 @@ void state_estimating()
 	log_entropy();
 	posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
+
 	FSM.n_cycles++;
 	if (VERBOSE)
 		printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
@@ -2609,6 +2656,9 @@ void state_moving()
 		 }
 		set_wheels_speed(speed[0], speed[1]);
 		
+		// save the current position in logfile
+		log_whole_position_history();
+
 		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
 
 		// if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
@@ -2838,10 +2888,10 @@ void state_send_goal()
 
 
 		// send goal positions to Robot [102] and [103]
-		Message msg_send_goal_102(101, 102, goal_position_team[1], -1, goal_position_team[1], 0);
+		Message msg_send_goal_102(101, 102, goal_position_team[1], -1, goal_position_team[1], 1);
 		send_msg(msg_send_goal_102);
 
-		Message msg_send_goal_103(101, 103, goal_position_team[2], -1, goal_position_team[2], 0);
+		Message msg_send_goal_103(101, 103, goal_position_team[2], -1, goal_position_team[2], 1);
 		send_msg(msg_send_goal_103);
 
 		// move to the goal position
@@ -2945,7 +2995,7 @@ void state_receive_goal() {
     i = path.begin();
 
     // we send the msg containing the goal position, which will be received by the state_receive_goal
-    Message msg(ID, 0, goal_position, -1, goal_position, 0);
+    Message msg(ID, 0, goal_position, -1, goal_position, 1);
     send_msg(msg);
 
     if (simulation_parameters.simuMode == ONLINE) {
@@ -2966,7 +3016,7 @@ void state_send_pdf()
 
     if (ID == 102 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send_bm_102(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_send_bm_102(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
         send_msg(msg_send_bm_102);
 		//printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
 	
@@ -2976,7 +3026,7 @@ void state_send_pdf()
 
 	if (ID == 103 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send_bm_103(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_send_bm_103(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
 		send_msg(msg_send_bm_103);
 		//printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
 
@@ -3330,23 +3380,23 @@ void state_share_pdf()
 	printf("Robot ID [%d]: STATE_SHARE_PDF \n", ID);
 	if (ID == 101 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_101_to_102(ID, 102, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_share_pdf_101_to_102(ID, 102, Position(), -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_101_to_102);
-		Message msg_share_pdf_101_to_103(ID, 103, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_share_pdf_101_to_103(ID, 103, Position(), -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_101_to_103);
     }
 	else if (ID == 102 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_102_to_101(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_share_pdf_102_to_101(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
 		send_msg(msg_share_pdf_102_to_101);
-		Message msg_share_pdf_102_to_103(ID, 103, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_share_pdf_102_to_103(ID, 103, Position(), -1, Position(), 1, posterior.pdf);
 		send_msg(msg_share_pdf_102_to_103);
 	}
 	else if (ID == 103 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_103_to_101(ID, 101, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_share_pdf_103_to_101(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_103_to_101);
-		Message msg_share_pdf_103_to_102(ID, 102, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_share_pdf_103_to_102(ID, 102, Position(), -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_103_to_102);
     }
 

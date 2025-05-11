@@ -217,7 +217,6 @@ int main(void){
                     if(VERBOSE) printf("received position : %f %f for ID [%d]\n", msg.position.x , msg.position.y, msg.sender_ID);
                     double robot_goal[3] = {msg.position.x, msg.position.y, 0.0};
                     wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("goal_",msg.sender_ID)),"translation"), robot_goal);
-                    
                 }
             }
             wb_receiver_next_packet(receiver[0]);

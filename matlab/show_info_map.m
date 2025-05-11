@@ -88,6 +88,17 @@ ax.TitleFontSizeMultiplier = 2;
 for i=1:size(pdf,1)
     subplot(1,3,2)
     imagesc(y,x,reshape(pdf(i,:),params.nbins(1),params.nbins(2)));
+%     % Etiqueta de número de celda en cada posición
+%     nbins_X = params.nbins(1);
+%     nbins_Y = params.nbins(2);
+%     for row = 1:nbins_X
+%         for col = 1:nbins_Y
+%             cell_number = (col-1)*nbins_X + row;
+%             % y(col) es la coordenada Y, x(row) es X (porque imagesc usa Y primero)
+%             text(y(col), x(row), num2str(cell_number), 'Color', 'w', 'FontSize', 7, 'HorizontalAlignment', 'center');
+%         end
+%     end
+
     if map_nbr~=0
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
@@ -204,6 +215,15 @@ for i=1:size(pdf,1)
 
 
 end
+
+mat = reshape(pdf(i,:), params.nbins(1), params.nbins(2));
+for row = 1:params.nbins(1)
+    for col = 1:params.nbins(2)
+        cell_number = (col-1)*params.nbins(1) + row;
+        text(y(col), x(row), num2str(cell_number), 'Color', 'w', 'FontSize', 8);
+    end
+end
+
 
 % Close the figure 
 close(f1);
