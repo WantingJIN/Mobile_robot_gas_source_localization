@@ -25,18 +25,18 @@ int main(int argc, const char* argv[]) {
 
     // Load the number of maps
     int m;
-    std::ifstream f("/home/durancea/plume_model_learning/webots/data/map_nbr.txt");
+    std::ifstream f("/home/wjin/Workspace/continuous_STE/webots/data/map_nbr.txt");
     f >> m;
     f.close();
 
     // Load the model
-    torch::jit::script::Module DeepCFD = torch::jit::load("DeepCFD_libtorch_model.pt", device);
+    torch::jit::script::Module DeepCFD = torch::jit::load("../../DeepCFD_libtorch_model.pt", device);
 
     // Initialize the positions
     float sx = 3.224360, sy = 2.772563;
 
     // Load mat file
-    std::string mat_address = "/home/durancea/plume_model_learning/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "test_flowdef_sdf_emptysourcepos.mat";
+    std::string mat_address = "/home/wjin/Workspace/continuous_STE/Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
     //convert string to char*
     std::cout << mat_address << std::endl;
     char *mat_adr = new char[mat_address.length() + 1];
