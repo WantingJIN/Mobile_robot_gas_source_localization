@@ -42,7 +42,7 @@ Khepera/STE_K4_client/makeenv
 Khepera/STE_offline/log_STE_multi/**
 Khepera/STE_offline/log_STE_**/**
 Khepera/Results/**
-
+**/makeenv
 
 # executable file 
 **/build/
