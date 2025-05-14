@@ -1,6 +1,9 @@
 #include "likelihood_estimator.h"
 
-
+extern int nbr_obs;
+extern float margin;
+extern float **obstacles;
+extern SimulationParameters simulation_parameters;
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)

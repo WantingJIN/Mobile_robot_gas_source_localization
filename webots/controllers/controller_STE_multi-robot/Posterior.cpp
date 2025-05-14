@@ -8,6 +8,7 @@
 #include <random>
 // for storing debugging info
 extern FILE *console_logfile;
+extern SimulationParameters simulation_parameters;
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)

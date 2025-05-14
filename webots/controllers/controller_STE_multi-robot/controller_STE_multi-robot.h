@@ -25,11 +25,6 @@
 #include "Dbscan.h"
 #include "SimulationParameters.h"
 
-extern int nbr_obs;
-extern float margin;
-extern float **obstacles;
-extern SimulationParameters simulation_parameters;
-// extern float obstacles[][4];
 
 // states of the finite state machine
 typedef enum state

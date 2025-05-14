@@ -16,7 +16,9 @@ extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
 extern int ID;
-
+extern int nbr_obs;
+extern float margin;
+extern float **obstacles;
 
 
 // text file for storing some prints for debugging
