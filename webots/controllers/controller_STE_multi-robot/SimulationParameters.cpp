@@ -415,7 +415,7 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	}
 	fclose(file);
 }
-void SimulationParameters::rewrite_parameters_from_file()
+void SimulationParameters::read_mapID_from_file()
 {
 	// read simulation parameters
 	FILE *sim_param_file;
