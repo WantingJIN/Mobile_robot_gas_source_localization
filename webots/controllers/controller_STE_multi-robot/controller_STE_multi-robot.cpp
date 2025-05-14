@@ -557,40 +557,6 @@ void state_measuring()
 		sample_in_motion.measurement.clear();
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
-
-		// save the measurement at the goal position as well
-		double odor_concentration = 0.0;
-		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
-		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
-
-		sampleBuffer.add_all_to_buffer();
-		sampleBuffer.average_all();
-		// FIXME - add the case for reverse sensor model
-		history.position.push_back({current_position.x, current_position.y, 0});
-		// history.measurement[history.size] = sampleBuffer.average_concentration;
-		history.measurement.push_back(sampleBuffer.average_concentration);
-		history.FSM_iter.push_back(FSM.n_cycles);
-		history.size++;
-		// mark the current cell as visited
-		if (simulation_parameters.visitedList == visitedList_ON)
-		{
-			int pos_coord[2];
-			pos_coord[0] = floor((current_position.x - source_x_min) / x_resol);
-			pos_coord[1] = floor((current_position.y - source_y_min) / y_resol);
-			int idx = posterior.indices_to_index(pos_coord);
-			cell_visited_list[idx] = 1;
-		}
-		// if (VERBOSE)
-		// 	printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
-		log_position();
-		log_measurements();
-		history_print(history);
-		// go to estimation
-		FSM.state = STATE_ESTIMATING;
-		FSM.hook = state_estimating;
-		time_after_measuring = wb_robot_get_time();
-		navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
-		// printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 	}
 	// if the sampling mode is stop and go, then sample for several seconds and take the average value
 	// Only the average value is used for the estimation
@@ -608,40 +574,15 @@ void state_measuring()
 			// add samples to buffers
 			sampleBuffer.add_all_to_buffer();
 			// printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
+			return;
 		}
 		else
 		{
 			// average all samples
 			sampleBuffer.average_all();
-			// log and save
-			if (VERBOSE)
-				printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
-			log_position();
-			log_measurements();
-
-			history.position.push_back({current_position.x, current_position.y, 0});
-			// history.measurement[history.size] = sampleBuffer.average_concentration;
-			history.measurement.push_back(sampleBuffer.average_concentration);
-			history.FSM_iter.push_back(FSM.n_cycles);
-			history.size++;
-			history_print(history);
-
-			// // send it to friends
-			// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
-			// {
-			// 	Message msg(ID, 1, history.position[(history.size) - 1], sampleBuffer.average_concentration, goal_position, 0);
-			// 	send_msg(msg);
-			// }
-
-			// go to estimation
-			FSM.state = STATE_ESTIMATING;
-			FSM.hook = state_estimating;
-			time_after_measuring = wb_robot_get_time();
-			navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
-			printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 		}
 	}
-	if (simulation_parameters.samplingMode == SENSE_WITHOUT_STOP)
+	if (simulation_parameters.samplingMode == SENSE_WITHOUT_STOP || simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
 		// continue measuring odor concentration
 		double odor_concentration = 0.0;
@@ -652,32 +593,44 @@ void state_measuring()
 		// add samples to buffers
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
-		// log and save
-		if (VERBOSE)
-			printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
-		log_position();
-		log_measurements();
-
-		history.position.push_back({current_position.x, current_position.y, 0});
-		history.measurement.push_back(sampleBuffer.average_concentration);
-		history.FSM_iter.push_back(FSM.n_cycles);
-		history.size++;
-		history_print(history);
-
-		// // send it to friends
-		// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
-		// {
-		// 	Message msg(ID, 1, history.position[(history.size) - 1], sampleBuffer.average_concentration, goal_position, 0);
-		// 	send_msg(msg);
-		// }
-
-		// go to estimation
-		FSM.state = STATE_ESTIMATING;
-		FSM.hook = state_estimating;
-		time_after_measuring = wb_robot_get_time();
-		navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
-		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 	}
+
+	history.position.push_back({current_position.x, current_position.y, 0});
+	history.measurement.push_back(sampleBuffer.average_concentration);
+	history.FSM_iter.push_back(FSM.n_cycles);
+	history.size++;
+	history_print(history);
+
+	// mark the current cell as visited
+	if (simulation_parameters.visitedList == visitedList_ON)
+	{
+		int pos_coord[2];
+		pos_coord[0] = floor((current_position.x - source_x_min) / x_resol);
+		pos_coord[1] = floor((current_position.y - source_y_min) / y_resol);
+		int idx = posterior.indices_to_index(pos_coord);
+		cell_visited_list[idx] = 1;
+	}
+	// log and save
+	if (VERBOSE)
+		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+	log_position();
+	log_measurements();
+
+
+	// // send it to friends
+	// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
+	// {
+	// 	Message msg(ID, 1, history.position[(history.size) - 1], sampleBuffer.average_concentration, goal_position, 0);
+	// 	send_msg(msg);
+	// }
+
+	// go to estimation
+	FSM.state = STATE_ESTIMATING;
+	FSM.hook = state_estimating;
+	time_after_measuring = wb_robot_get_time();
+	navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
+	printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
+	
 }
 
 void state_estimating()
