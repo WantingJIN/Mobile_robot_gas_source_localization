@@ -99,12 +99,11 @@ typedef enum simuMode{
 	OFFLINE = 1,
 }eSimuMode;
 
-typedef enum calibrationMode
+typedef enum sensorCalibration
 {
-	OFF = 0,
-	LINEAR = 1,
-	NOLINEAR = 2,
-} eCalibrationMode;
+	ON = 0,
+	OFF = 1,
+} eSensorCalibration;
 
 typedef enum gasHitMethod
 {
@@ -169,6 +168,7 @@ class SimulationParameters{
 		int planning_step;
 		float weighting_entropy_ratio;
 		int update_goal_time;
+		int wheel_speed;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
@@ -182,7 +182,7 @@ class SimulationParameters{
 		
 		eRelativeMethod relativeMethod; 
 		eSimuMode simuMode; 
-		eCalibrationMode calibrationMode;
+		eSensorCalibration sensorCalibration;
 		eGasHitMethod gasHitMethod;
 		eTeamStrategy teamStrategy;
 
@@ -196,7 +196,7 @@ class SimulationParameters{
 		~SimulationParameters();
 
         	void load_simulation_parameters_from_config(const char *filename);
-		void rewrite_parameters_from_file();
+		void read_mapID_from_file();
 		void log_simulation_parameters(const char *filename);
 };
 

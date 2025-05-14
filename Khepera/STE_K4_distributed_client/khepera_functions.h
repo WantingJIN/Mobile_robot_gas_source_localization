@@ -26,7 +26,7 @@ extern "C" {
 #include "cortex.h"
 #include "CortexHandler.h"
 #include "visilibity.hpp"
-
+#include "Constant.h"
 
 #define WEBOTS 0
 #define KHEPERA 1
@@ -59,6 +59,7 @@ extern FILE* tmp_file;
 extern FILE* config_logfile;
 extern FILE* trajectory_logfile;
 extern FILE* baseline_measurements_logfile;
+extern FILE* visited_list_logfile;
 
 extern char goalposition_logfile_name[256];
 extern char measurements_logfile_name[256];
@@ -74,11 +75,10 @@ extern char entropy_logfile_name[256];
 extern char config_logfile_name[256];
 extern char trajectory_logfile_name[256];
 extern char baseline_measurements_logfile_name[256];
+extern char visited_list_logfile_name[256];
 
 // finite state machine
 extern struct FSM FSM;
-// robot's measurements
-extern struct measurements measurements;
 
 extern Position goal_position; //position in m
 extern Position current_position; //position in m
@@ -100,8 +100,6 @@ extern struct message message;
 extern struct friends friends[MAX_NB_ROBOTS];
 
 extern int n_time_step;
-
-extern struct simulation_parameters simulation_parameters;
 
 extern double odor_baseline_value;
 
@@ -149,6 +147,7 @@ void init();
 void initCommSwisTrack();
 int initCortexComm();
 void initCommRobot();
+void set_logfile_names();
 void establish_baseline();
 double odor_read();
 double wind_read();

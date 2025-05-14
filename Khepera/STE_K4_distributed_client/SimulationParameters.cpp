@@ -159,14 +159,12 @@ eSimuMode parse_simu_mode(const char *str)
 	fprintf(stderr, "Unknown simulation mode: %s\n", str);
 	exit(1);
 }
-eCalibrationMode parse_calibration_mode(const char *str)
+eSensorCalibration parse_calibration_mode(const char *str)
 {
+	if (strcmp(str, "ON") == 0)
+		return ON;
 	if (strcmp(str, "OFF") == 0)
 		return OFF;
-	if (strcmp(str, "LINEAR") == 0)
-		return LINEAR;
-	if (strcmp(str, "NOLINEAR") == 0)
-		return NOLINEAR;
 	fprintf(stderr, "Unknown calibration mode: %s\n", str);
 	exit(1);
 }
@@ -249,13 +247,14 @@ SimulationParameters::SimulationParameters()
 	sampling_dist_thresh = 0.1;
 	relativeMethod = EMPIRICAL_CDF;
 	gasHitMethod = SLIDING_WINDOW_THRES;
-	calibrationMode = OFF;
+	sensorCalibration = OFF;
 	simuMode = ONLINE;
 	R0 = 100;
 	weighting_entropy_ratio = 6;
 	teamStrategy = CENTRALIZED;
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
+	wheel_speed = 400;
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -355,9 +354,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			gas_hit_threshold = atoi(value);
 		}
-		else if (strcmp(key, "calibrationMode") == 0)
+		else if (strcmp(key, "sensorCalibration") == 0)
 		{
-			calibrationMode = parse_calibration_mode(value);
+			sensorCalibration = parse_calibration_mode(value);
 		}
 		else if (strcmp(key, "R0") == 0)
 		{
@@ -415,7 +414,7 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	}
 	fclose(file);
 }
-void SimulationParameters::rewrite_parameters_from_file()
+void SimulationParameters::read_mapID_from_file()
 {
 	// read simulation parameters
 	FILE *sim_param_file;
@@ -456,7 +455,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fprintf(sim_param_file, "relative_method %d\n", relativeMethod);
 	fprintf(sim_param_file, "simu_mode %d\n", simuMode);
-	fprintf(sim_param_file, "calibration_mode %d\n", calibrationMode);
+	fprintf(sim_param_file, "sensor_calibration %d\n", sensorCalibration);
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);
 	fprintf(sim_param_file, "R0 %f\n", R0);
@@ -469,6 +468,9 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
+	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
+	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);
+	fprintf(sim_param_file, "wheel_speed %d\n", wheel_speed);
 	fclose(sim_param_file);
 }
 

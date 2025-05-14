@@ -10,6 +10,8 @@
 #include <fstream>
 #include "controller_STE_distributed.h"
 #include "khepera_functions.h"
+#include "Constant.h"
+#include "SimulationParameters.h"
 
 #include "Position.h"
 
@@ -33,6 +35,7 @@ FILE* expected_a_posteriori_logfile;
 FILE* likelihood_logfile;
 FILE* measurement_history_logfile;
 FILE* position_history_logfile;
+FILE* visited_list_logfile;
 FILE* max_a_posteriori_logfile;
 FILE* posterior_pdf_3D;
 FILE* entropy_logfile;
@@ -55,6 +58,7 @@ char entropy_logfile_name[256];
 char config_logfile_name[256];
 char trajectory_logfile_name[256];
 char baseline_measurements_logfile_name[256];
+char visited_list_logfile_name[256];
 
 // finite state machine
 struct FSM FSM;
@@ -90,7 +94,9 @@ struct friends friends[MAX_NB_ROBOTS];
 
 int n_time_step = 0;
 
-struct simulation_parameters simulation_parameters;
+SimulationParameters simulation_parameters;
+
+int cell_visited_list[x_nbins * y_nbins] = {0};
 
 int msg_counter = 0;
 
@@ -174,7 +180,7 @@ double dist_to_goal(Position goal_position){
 void history_print(struct history history){
 	printf("_____ Sample History _____ \n");
 	for(int i=0; i<history.size; i++){
-		printf("%d : %f (+/- %f) @ (%f, %f)\n", i, history.measurement_avg[i], history.measurement_std[i], history.position[i].x, history.position[i].y);
+		printf("%d : %f (+/- %f) @ (%f, %f)\n", i, history.measurement[i], history.measurement_std[i], history.position[i].x, history.position[i].y);
 	}
 	printf("__________________________ \n");
 }
@@ -306,12 +312,24 @@ void log_history(){
 	//FILE * measurement_history_logfile;
 	measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
-		fprintf(measurement_history_logfile,"%d, %f, %f\n", i, history.measurement_avg[i], history.measurement_std[i]);
+		fprintf(measurement_history_logfile,"%d, %f, %f\n", i, history.measurement[i], history.measurement_std[i]);
 	}
     	fclose(measurement_history_logfile);
    
 	//posterior 3D
 	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
+}
+
+void log_visited_list()
+{
+	visited_list_logfile = fopen(visited_list_logfile_name, "a");
+
+	for (int i = 0; i < x_nbins * y_nbins; i++)
+		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
+
+	fprintf(visited_list_logfile, "\n");
+
+	fclose(visited_list_logfile);
 }
 
 void log_trajectory(Position p){
@@ -334,36 +352,47 @@ void state_waiting(){
 }
 
 void state_measuring(){
-	// printf("measuring sample number %d\n", sampleBuffer.n_samples);
+      printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	std::vector<double> sample_from_map;
 	int history_size_before_sampling = history.size;
-      if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING){
-		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
+      if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
+	{
+		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
+		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+		{
 			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
-			for(int i=0; i<sample_in_motion.size; i++){
-				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
-				//printf("measurement from gas map at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_from_map[i]);
-				history.position.push_back(sample_in_motion.position[i]);
-				history.measurement_avg.push_back(sample_from_map[i]);
-				//FIXME: temporary solution
-				history.measurement_std.push_back(0.0);
-				history.size++;
-			}
-		} else {
-			for(int i=0; i<sample_in_motion.size; i++){
-				//printf("instant measurement at (%f, %f) is %f\n", sample_in_motion.position[i].x, sample_in_motion.position[i].y, sample_in_motion.measurement_avg[i]);
-				history.position.push_back(sample_in_motion.position[i]);
-				history.measurement_avg.push_back(sample_in_motion.measurement_avg[i]);
-				history.measurement_std.push_back(0.0);
-				history.size++;
+		}
+
+		for (int i = 0; i < sample_in_motion.size; i++)
+		{
+			history.position.push_back(sample_in_motion.position[i]);
+			// if there is some post-processing, then use the sample from the gas map
+			// otherwise, use the raw sample from the robot
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+				history.measurement.push_back(sample_from_map[i]);
+			else
+				history.measurement.push_back(sample_in_motion.measurement[i]);
+			history.measurement_std.push_back(0.0);
+			history.FSM_iter.push_back(FSM.n_cycles);
+			history.size++;
+			// mark the cell as visited
+			if (simulation_parameters.visitedList == visitedList_ON)
+			{
+				int pos_coord[2];
+				pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
+				pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
+				// FIXME - comment this out to include posterior later
+				// int idx = posterior.indices_to_index(pos_coord);
+				// cell_visited_list[idx] = 1;
 			}
 		}
 		sample_in_motion.position.clear();
-		sample_in_motion.measurement_avg.clear();
+		sample_in_motion.measurement.clear();
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
+
 	}
-	if (simulation_parameters.samplingMode == STOP_AND_SENSE){
+	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING){
 		while(sampleBuffer.n_samples < ODOR_FILTER_LENGTH){
 			//continue measuring odor concentration
 			sampleBuffer.instant_concentration = odor_read();
@@ -382,73 +411,81 @@ void state_measuring(){
 		sampleBuffer.average_all();
 	}
 	
-	//log and save
+	//log and save the measurements at the goal position
 	if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 	log_position();
 	log_measurements();
 	history.position.push_back({current_position.x, current_position.y, 0.0});
-	// FIXME: temporay fix of gas measurement
 	double calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
 	if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
-	history.measurement_avg.push_back((sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value));
-	// if(history.measurement_avg[history.size] < 0) history.measurement_avg[history.size] = 0;
+	history.measurement.push_back(calibrated_sensor_reading);
+	// if(history.measurement[history.size] < 0) history.measurement[history.size] = 0;
 	history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
 	history.size++;
 	history_print(history);
 
-	// send it to friends
-	// if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-	// 	Message msg(ID, 1, history.position[(history.size)-1], sampleBuffer.average_concentration, goal_position, 0);
-	//   		send_msg(msg);
-	//   	}
-
-	double m_buffer[5] = {0};
-	int timeout = 10;
-	int success = -1;
-
-	//send the message
-	int history_size_after_sampling = history.size;
-
-	printf("history size before : %d, after ; %d \n", history_size_before_sampling, history_size_after_sampling);
-	// first send the size of the message
-	int measurement_size = history_size_after_sampling -  history_size_before_sampling;
-	do{
-		success = send(sock, &measurement_size, sizeof(measurement_size), 0);
-		--timeout;
-	} while(success == -1 && timeout > 0);
-	if(success > 0){
-		printf("successfully sent measurement_size %d \n", measurement_size);
-		timeout = 10;
+	if (simulation_parameters.visitedList == visitedList_ON)
+	{
+		int pos_coord[2];
+		pos_coord[0] = floor((current_position.x - source_x_min) / x_resol);
+		pos_coord[1] = floor((current_position.y - source_y_min) / y_resol);
+		// FIXME - comment this out to include posterior later
+		// int idx = posterior.indices_to_index(pos_coord);
+		// cell_visited_list[idx] = 1;
 	}
-	else
-		printf("failed to send measurement_size %d \n", measurement_size);
+
+	// send the measurement to the server
+	// double m_buffer[5] = {0};
+	// int timeout = 10;
+	// int success = -1;
+
+	// //send the message
+	// int history_size_after_sampling = history.size;
+
+	// printf("history size before : %d, after ; %d \n", history_size_before_sampling, history_size_after_sampling);
+	// // first send the size of the message
+	// int measurement_size = history_size_after_sampling -  history_size_before_sampling;
+	// do{
+	// 	success = send(sock, &measurement_size, sizeof(measurement_size), 0);
+	// 	--timeout;
+	// } while(success == -1 && timeout > 0);
+	// if(success > 0){
+	// 	printf("successfully sent measurement_size %d \n", measurement_size);
+	// 	timeout = 10;
+	// }
+	// else
+	// 	printf("failed to send measurement_size %d \n", measurement_size);
 
 
-	for (int i = history_size_before_sampling; i < history_size_after_sampling; i++) {
-		m_buffer[0] = i;
-		m_buffer[1] = history.position[i].x;
-		m_buffer[2] = history.position[i].y;
-		m_buffer[3] = history.measurement_avg[i];
-		m_buffer[4] = history.measurement_std[i];
-		//variable = (condition) ? expressionTrue : expressionFalse;
-		do{
-			success = send(sock, m_buffer, sizeof(m_buffer), 0);
-			--timeout;
-		} while(success == -1 && timeout > 0);
-		if(success > 0){
-			printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
-			timeout = 10;
+	// for (int i = history_size_before_sampling; i < history_size_after_sampling; i++) {
+	// 	m_buffer[0] = i;
+	// 	m_buffer[1] = history.position[i].x;
+	// 	m_buffer[2] = history.position[i].y;
+	// 	m_buffer[3] = history.measurement[i];
+	// 	m_buffer[4] = history.measurement_std[i];
+	// 	//variable = (condition) ? expressionTrue : expressionFalse;
+	// 	do{
+	// 		success = send(sock, m_buffer, sizeof(m_buffer), 0);
+	// 		--timeout;
+	// 	} while(success == -1 && timeout > 0);
+	// 	if(success > 0){
+	// 		printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+	// 		timeout = 10;
 
-		}
-		else
-			printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
+	// 	}
+	// 	else
+	// 		printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
 	
 
-	// send the measurement to the server and wait for new orders
-	FSM.state = STATE_LISTEN;
-	FSM.hook  = state_listen;
-	}
+	// // send the measurement to the server and wait for new orders
+	// FSM.state = STATE_LISTEN;
+	// FSM.hook  = state_listen;
+	// }
+
+	FSM.state = STATE_ESTIMATING;
+	FSM.hook  = state_estimating;
 }
+void state_estimating(){}
 
 void state_listen(){
 	int result;
@@ -496,7 +533,7 @@ void state_moving(){
 		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
 		if (instant_concentration < 0) instant_concentration = 0;
 		double reverse_sensor_reading = 0.0;
-		if (simulation_parameters.processingMode == REVERSE_SENSOR_MODEL){
+		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION){
 			// FIXME: temporary attemp for reverse sensor model
 			double Ts = 0.1; // sampling frequency
 			double tau_r = 0.5; // time constant for the rise
@@ -514,7 +551,7 @@ void state_moving(){
 			previous_sensor_reading = instant_concentration;
 			instant_concentration = reverse_sensor_reading;
 		}
-		if (simulation_parameters.processingMode == KERNEL_INTERPOLATION){
+		if (simulation_parameters.processingMode == KERNEL_MAPPING){
 			gas_map.runKernelAlgorithm(current_position, instant_concentration);
 		}
 		if (sample_counter > simulation_parameters.sampling_period){
@@ -526,7 +563,7 @@ void state_moving(){
 				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
 				if (MCS_data_available){
 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-				      sample_in_motion.measurement_avg.push_back(instant_concentration);
+				      sample_in_motion.measurement.push_back(instant_concentration);
 				      sample_in_motion.size++;
 
 				      last_measurement_pos.x = current_position.x;
@@ -621,50 +658,19 @@ int main(int argc, char **argv){
 	// main loop
 	while (FSM.state != STATE_FINISHED){
 		update_position();
-		
-		//send info to the others
-		// if(simulation_parameters.scenario == COM_COOR){
-		// 	// if a robot is already sampling (i.e. STATE_MEASURING), its goal should not be swapped with anyone. Therefore we send 0 as goal and current position
-		// 	if(FSM.state == STATE_MEASURING && n_time_step%100 == 0){
-		// 		Position tmp;
-		// 		Message msg(msg_counter, ID, 1, tmp, sampleBuffer.average_concentration, tmp, 1, 0);
-		// 		send_msg(msg);
-		// 	}else{
-		// 		if(n_time_step%100 == 0){
-		// 			//wb_emitter_set_channel(emitter, 10);
-		// 			Message msg(++msg_counter, ID, 1, current_position, sampleBuffer.average_concentration, goal_position, 1, 0);
-		// 			//printf("[%d] I am sendig my position %f %f %f and my goal %f %f %f\n", ID,current_position[0],current_position[1], current_position[2], goal_position[0],goal_position[1],goal_position[2]);
-  //   				//wb_emitter_send(emitter, msg.buffer, msg.buffer_size);
-  //   				send_msg(msg);
-  //   			}
-  //   		}
-  //   	}
-		// //receive info from colleagues
-		// if(simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR){
-		// 	//printf("Robot %d has %d unread messages! \n", ID, wb_receiver_get_queue_length(receiver));
-		// 	receive_from_friends();
-		// 	//printf("[%d] my history size is %d\n", ID, history.size);
-		// }
-		// //resend all the un-acked messages
-		// // int tmp_counter = 0;
-		// for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
-		// 	//printf("[%lld] (%d) sending un-acked message %d to %d\n", current_timestamp(), tmp_counter++, it->msg_ID, it->receiver_ID);
-		// 	//(*it).print_message();
-  //           send_msg(*it);
-		// }
 	   	//change state
-    	FSM.hook();
-    	//next
-    	next_iteration_time();
-    	n_time_step++;
+		FSM.hook();
+		//next
+		next_iteration_time();
+		n_time_step++;
 	}
 	// final logs
 	log_history();
 	cleaning_up();
 	//free the allocated memory to obstacle array
-    for(int i = 0; i < nbr_obs; i++)
-    	delete[] obstacles[i];
-	delete[] obstacles;
-	exit(0);
+	for(int i = 0; i < nbr_obs; i++)
+		delete[] obstacles[i];
+		delete[] obstacles;
+		exit(0);
 }
 
