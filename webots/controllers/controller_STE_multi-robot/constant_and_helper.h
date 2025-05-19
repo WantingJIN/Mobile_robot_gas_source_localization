@@ -1,6 +1,6 @@
 #ifndef CONSTANT_H
 #define CONSTANT_H
-
+#include <math.h>
 // Constant variables
 #define BOUND(x, a, b) (((x) < (a)) ? (a) : ((x) > (b)) ? (b) \
                                                         : (x))
@@ -56,7 +56,7 @@
 #define a_y_resol (static_cast<double>(a_y_max - a_y_min) / a_y_nbins)
 #define b_y_resol (static_cast<double>(b_y_max - b_y_min) / b_y_nbins)
 #define MAX_DISTANCE 10.77 // from (2.75,0) to (12.75,4)
-#define MAP_SIZE x_nbins * y_nbins
+#define MAP_SIZE x_nbins * y_nbins // number of cells in the map
 #define CENTRAL_MASTER_ID 101
 
 #define VERBOSE 1
@@ -65,5 +65,35 @@
 
 // declare the global parameter - the root path of the project
 extern const char *workspacePath;
+
+inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
+      *idx_x = (int)floor((x - source_x_min) / x_resol);
+      *idx_y = (int)floor((y - source_y_min) / y_resol);
+}
+inline void indices_to_position_2D(int idx_x, int idx_y, float *x, float *y){
+      *x = source_x_min + idx_x * x_resol + x_resol / 2.0;
+      *y = source_y_min + idx_y * y_resol + y_resol / 2.0;
+}
+inline int position_to_index_2D(float x, float y){
+      int idx_x = (int)floor((x - source_x_min) / x_resol);
+      int idx_y = (int)floor((y - source_y_min) / y_resol);
+      int idx = idx_x + idx_y * x_nbins;
+      return idx;
+}
+inline void index_to_position_2D(int idx, float *x, float *y){
+      int idx_x = idx % x_nbins;
+      int idx_y = idx / x_nbins;
+      *x = source_x_min + idx_x * x_resol + x_resol / 2.0;
+      *y = source_y_min + idx_y * y_resol + y_resol / 2.0;
+}
+inline void index_to_indices_2D(int idx, int *idx_x, int *idx_y){
+      *idx_x = idx % x_nbins;
+      *idx_y = idx / x_nbins;
+}
+inline int indices_to_index_2D(int idx_x, int idx_y){
+      int idx = idx_x + idx_y * x_nbins;
+      return idx;
+}
+
 
 #endif

@@ -1,6 +1,6 @@
 #include "Dbscan.h"
 #include <stack>
-#include "Constant.h"
+#include "constant_and_helper.h"
 #include <cstring>
 
 using namespace std;
@@ -95,7 +95,7 @@ void DBSCAN::run(double information[])
 {
 	double max_info = 0;
 	double min_info = 100000;
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		if (information[i] > max_info)
 		{
@@ -114,8 +114,7 @@ void DBSCAN::run(double information[])
 			if (information[j * y_nbins + i] > ratio * (max_info - min_info) + min_info)
 			{
 				CellPoint cell;
-				cell.x = i * x_resol + source_x_min + x_resol / 2;
-				cell.y = j * y_resol + source_y_min + y_resol / 2;
+				indices_to_position_2D(i, j, &cell.x, &cell.y);
 				cell.cluster_id = UNCLASSIFIED;
 				cell_list.push_back(cell);
 			}

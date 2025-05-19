@@ -19,19 +19,15 @@ Position::Position(float px, float py, float ph)
 	y = py;
 	heading = ph;
 
-	x_idx = static_cast<int>((x - source_x_min) / x_resol);
-	y_idx = static_cast<int>((y - source_y_min) / y_resol);
-	index = y_idx * x_nbins + x_idx;
+	position_to_indices_2D(x, y, &x_idx, &y_idx);
+	index = indices_to_index_2D(x_idx, y_idx);
 }
 
 Position::Position(int px_idx, int py_idx)
 {
 	x_idx = px_idx;
 	y_idx = py_idx;
-	index = y_idx * x_nbins + x_idx;
-
-	x = double(x_idx) * x_resol + source_x_min;
-	y = double(y_idx) * y_resol + source_y_min;
+	index = indices_to_index_2D(x_idx, y_idx);
 }
 
 Position::Position(const Position &to_copy_from)
@@ -46,9 +42,7 @@ Position::Position(const Position &to_copy_from)
 }
 
 void Position::calculate_index(){
-	x_idx = static_cast<int>((x - source_x_min) / x_resol);
-	y_idx = static_cast<int>((y - source_y_min) / y_resol);
-	index = y_idx * x_nbins + x_idx;
+	index = indices_to_index_2D(x_idx, y_idx);
 }
 
 bool Position::operator==(const Position &o)

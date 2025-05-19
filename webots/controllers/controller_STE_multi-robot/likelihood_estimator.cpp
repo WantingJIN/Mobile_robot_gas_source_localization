@@ -26,8 +26,7 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 	{
 		px[i] = history.position[i].x;
 		py[i] = history.position[i].y;
-		idx[i] = floor((px[i] - source_x_min) / x_resol);
-		idy[i] = floor((py[i] - source_y_min) / y_resol);
+		position_to_indices_2D(px[i], py[i], &idx[i], &idy[i]);
 		// idx should be between 0 and x_nbins-1
 		if (idx[i] < 0) idx[i] = 0;
 		if (idx[i] >= x_nbins) idx[i] = x_nbins - 1;
@@ -71,8 +70,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 	{
 		px[i] = history.position[i].x;
 		py[i] = history.position[i].y;
-		idx[i] = floor((px[i] - source_x_min) / x_resol);
-		idy[i] = floor((py[i] - source_y_min) / y_resol);
+		position_to_indices_2D(px[i], py[i], &idx[i], &idy[i]);
 	}
 
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
@@ -230,8 +228,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	{
 		px[i] = history.position[i].x;
 		py[i] = history.position[i].y;
-		idx[i] = floor((px[i] - source_x_min) / x_resol);
-		idy[i] = floor((py[i] - source_y_min) / y_resol);
+		position_to_indices_2D(px[i], py[i], &idx[i], &idy[i]);
 	}
 
 	// extract predicted concentration values by model

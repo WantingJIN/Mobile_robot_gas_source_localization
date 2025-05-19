@@ -98,7 +98,7 @@ int sample_counter = 0;
 // plume model
 DeepCFDPlumeModel2D plume_model;
 
-int cell_visited_list[x_nbins * y_nbins] = {0};
+int cell_visited_list[MAP_SIZE] = {0};
 
 // current posterior distribution
 Posterior posterior(&plume_model);
@@ -150,7 +150,7 @@ long long estimating_time_sum = 0; // computation time of the estimation part
 long long planning_time_sum = 0;   // computation time of the planning part
 
 // precomputed gas maps
-double c_avg[x_nbins * y_nbins][x_nbins * y_nbins]; // left: source position, right: estimated cell position
+double c_avg[MAP_SIZE][MAP_SIZE]; // left: source position, right: estimated cell position
 
 // store last position for minimum distance threshold in measurement update
 Position last_measurement_pos;
@@ -394,7 +394,7 @@ void log_visited_list()
 {
 	visited_list_logfile = fopen(visited_list_logfile_name, "a");
 
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
 
 	fprintf(visited_list_logfile, "\n");
@@ -493,8 +493,7 @@ void state_read_positions_measurements()
 		goal_position.y = f2;
 		goal_position.heading = 0;
 		int pos_coord[2];
-		pos_coord[0] = floor((goal_position.x - source_x_min) / x_resol);
-		pos_coord[1] = floor((goal_position.y - source_y_min) / y_resol);
+		position_to_indices_2D(goal_position.x, goal_position.y, &pos_coord[0], &pos_coord[1]);
 		int idx = posterior.indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 		// printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
@@ -546,8 +545,7 @@ void state_measuring()
 			if (simulation_parameters.visitedList == visitedList_ON)
 			{
 				int pos_coord[2];
-				pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
-				pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
+				position_to_indices_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y, &pos_coord[0], &pos_coord[1]);
 				int idx = posterior.indices_to_index(pos_coord);
 				cell_visited_list[idx] = 1;
 			}
@@ -605,8 +603,7 @@ void state_measuring()
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
 		int pos_coord[2];
-		pos_coord[0] = floor((current_position.x - source_x_min) / x_resol);
-		pos_coord[1] = floor((current_position.y - source_y_min) / y_resol);
+		position_to_indices_2D(current_position.x, current_position.y, &pos_coord[0], &pos_coord[1]);
 		int idx = posterior.indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 	}
@@ -1382,7 +1379,7 @@ int main(int argc, char **argv)
 	// wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
-	plume_model.initialize_information_matrix();
+	plume_model.initialize_potential_gas_maps();
 	// plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// File for saving console messages

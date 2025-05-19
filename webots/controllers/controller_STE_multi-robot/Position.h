@@ -1,6 +1,6 @@
 #ifndef POSITION_H
 #define POSITION_H
-#include "Constant.h"
+#include "constant_and_helper.h"
 class Position
 {
 public:

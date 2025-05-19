@@ -21,7 +21,7 @@
 #include "SampleBuffer.h"
 #include "Position.h"
 #include "gasMap2D.h"
-#include "Constant.h"
+#include "constant_and_helper.h"
 #include "Dbscan.h"
 #include "SimulationParameters.h"
 
