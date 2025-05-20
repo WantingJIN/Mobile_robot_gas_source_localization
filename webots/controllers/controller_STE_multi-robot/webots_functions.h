@@ -95,7 +95,13 @@ extern char experiment_position_logfile_name[512];
 
 // for storing debugging info
 extern FILE *console_logfile;
+extern FILE *clustering_debugging_logfile_101;
+extern FILE *clustering_debugging_logfile_102;
+extern FILE *clustering_debugging_logfile_103;
 extern char console_logfile_name[512];
+extern char clustering_debugging_name_101[512];
+extern char clustering_debugging_name_102[512];
+extern char clustering_debugging_name_103[512];
 
 // finite state machine
 extern struct FSM FSM;

@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/mzarias/Workspace/MT_Marc/Results/test/9';
+general_folder='/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/cluster_analysis';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;

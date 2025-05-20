@@ -10,8 +10,9 @@ end
 exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment folder
 
 % === Visualization speed settings ===
-repr_vel = 5;           % How many steps to skip per frame (for robot position update)
-video_repr_vel = 20;    % Frame rate of the output video
+show_cell_indices = true;
+repr_vel = 2;           % How many steps to skip per frame (for robot position update)
+video_repr_vel = 10;    % Frame rate of the output video
 
 % === Robot IDs and corresponding colors ===
 robot_ids = [101, 102, 103];
@@ -35,6 +36,7 @@ belief_maps = belief_data(:, 3:end);  % columns containing map values
 % === Load goal positions for each robot ===
 goal_positions = cell(1,3);
 goal_idx = ones(1,3);  % keep track of which goal each robot is targeting
+goal_update_count = 0;
 for r = 1:3
     goal_path = fullfile(exp_folder, num2str(robot_ids(r)), 'goal_position.csv');
     goal_data = readmatrix(goal_path);
@@ -58,10 +60,42 @@ xlabel('X (m)');
 ylabel('Y (m)');
 title('Animated Belief Maps');
 
-% === Cell grid setup (20x20 grid) ===
+% Add key press callback for pausing
+set(gcf, 'KeyPressFcn', @keypress_callback);
+global is_paused;
+is_paused = false;
+
+% === Cell grid setup (20x20 grid) with adjusted physical coordinates ===
 cols = 20; rows = 20;
-cell_width = 16 / cols;
-cell_height = 4 / rows;
+x_edges = linspace(3, 12.75, cols + 1);  % 21 edges → 20 cells
+y_edges = linspace(0, 4, rows + 1);
+cell_widths = diff(x_edges);   % width of each cell (uniform)
+cell_heights = diff(y_edges);  % height of each cell (uniform)
+
+% === Draw grid cells ===
+cell_handles = gobjects(rows, cols);
+text_handles = gobjects(rows, cols);  % para mostrar índices
+for i = 1:cols
+    for j = 1:rows
+        x = x_edges(i);
+        y = y_edges(j);
+        w = cell_widths(i);
+        h = cell_heights(j);
+        cell_handles(j, i) = rectangle('Position', [x, y, w, h], ...
+            'FaceColor', [1 1 1], 'EdgeColor', [0.85 0.85 0.85]);
+
+        % === Mostramos los índices si está activado ===
+        if show_cell_indices
+            bin_idx = (j - 1) * cols + (i - 1);  
+            cx = x + w/2;
+            cy = y + h/2;
+            text_handles(j, i) = text(cx, cy, num2str(bin_idx), ...
+                'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
+                'FontSize', 8, 'Color', [0.2 0.2 0.2]);
+        end
+    end
+end
+
 
 % === Define soft colors for class coloring ===
 green_soft = [0.75 0.95 0.75];
@@ -69,17 +103,6 @@ blue_soft  = [0.75 0.75 0.95];
 red_soft   = [0.95 0.75 0.75];
 yellow = [1, 0.75, 0.1];  % used for estimated source
 dark_gray  = [0.3 0.3 0.3];  % used for walls and obstacles
-
-% === Draw grid cells ===
-cell_handles = gobjects(rows, cols);
-for i = 1:cols
-    for j = 1:rows
-        x = (i - 1) * cell_width;
-        y = (j - 1) * cell_height;
-        cell_handles(j, i) = rectangle('Position', [x, y, cell_width, cell_height], ...
-            'FaceColor', [1 1 1], 'EdgeColor', [0.85 0.85 0.85]);
-    end
-end
 
 % === Draw walls ===
 rectangle('Position', [-wall_thickness, -wall_thickness, 16 + wall_thickness, wall_thickness], 'FaceColor', dark_gray);
@@ -120,7 +143,7 @@ t_idx = ones(1, 3);
 done = false(1, 3);
 
 % === Animation loop ===
-for frame_t = 1:10000  % large upper bound to avoid infinite loops
+for frame_t = 1:10000
     all_reached = true;
 
     for r = 1:3
@@ -140,7 +163,6 @@ for frame_t = 1:10000  % large upper bound to avoid infinite loops
                 end
             end
 
-            % Update robot marker position
             if ~waiting(r)
                 set(robot_markers(r), 'XData', curr_pos(1), 'YData', curr_pos(2));
                 last_pos(r, :) = curr_pos;
@@ -150,11 +172,9 @@ for frame_t = 1:10000  % large upper bound to avoid infinite loops
                     done(r) = true;
                 end
             else
-                % Stay at last known position
                 set(robot_markers(r), 'XData', last_pos(r,1), 'YData', last_pos(r,2));
             end
 
-            % Update goal marker
             if goal_idx(r) <= size(goal_positions{r}, 1)
                 set(goal_markers(r), 'XData', gx, 'YData', gy);
             end
@@ -163,72 +183,74 @@ for frame_t = 1:10000  % large upper bound to avoid infinite loops
         end
     end
 
-    % If all robots have reached their goals, update to next set
     if all_reached
         for r = 1:3
             goal_idx(r) = goal_idx(r) + 1;
             waiting(r) = false;
         end
+        goal_update_count = goal_update_count + 1;
     end
 
-    % === Update belief map (only when robot 101 moves) ===
+    % Update belief map (only for robot 101)
     rx = last_pos(1,1);
     ry = last_pos(1,2);
     idx = find(belief_x == rx & belief_y == ry, 1);
     if ~isempty(idx)
-        delete(findall(gca, 'Type', 'text'));  % clear previous text labels
-
+        delete(findall(gca, 'Tag', 'belief_text'));
         belief_map = belief_maps(idx, :);
         for col = 1:cols
             for row = 1:rows
                 map_idx = (row - 1) * cols + col;
                 value = belief_map(map_idx);
-
-                % Assign soft color based on class label
                 switch value
-                    case 1
-                        color = red_soft;
-                    case 2
-                        color = blue_soft;
-                    case 3
-                        color = green_soft;
-                    otherwise
-                        color = [1 1 1];
+                    case 1, color = red_soft;
+                    case 2, color = blue_soft;
+                    case 3, color = green_soft;
+                    otherwise, color = [1 1 1];
                 end
                 set(cell_handles(row, col), 'FaceColor', color);
-
-                % Optional: show cell index (for debugging)
-                cx = (col - 0.5) * cell_width;
-                cy = (row - 0.5) * cell_height;
-                text(cx, cy, num2str(map_idx), 'FontSize', 6, ...
-                     'HorizontalAlignment', 'center');
             end
         end
     end
 
-    % === Display frame ===
-    title(sprintf('Timestep %d', frame_t));
+    % === Pause mechanism ===
     drawnow;
+    while is_paused
+        pause(0.1);  % wait while paused
+    end
+
     pause(0.00001);
-    %frame = getframe(gcf);  % uncomment to save all frames
-    %writeVideo(v, frame);
+    frame = getframe(gcf);
+    writeVideo(v, frame);
 
     if all(done)
         break;
     end
 end
 
-% === Plot estimated source position (yellow star) ===
-expected_path = fullfile(exp_folder, '101', 'expected_a_posteriori.csv');
+% === Plot estimated source position ===
+expected_path = fullfile(exp_folder, '102', 'expected_a_posteriori.csv');
 expected_data = readmatrix(expected_path);
 estimated_x = expected_data(end, 2);
 estimated_y = expected_data(end, 3);
-
 plot(estimated_x, estimated_y, 'p', 'MarkerSize', 16, ...
     'MarkerEdgeColor', 'k', 'MarkerFaceColor', yellow);
 
-% Save final frame to video
+% Save final frame and close
 frame = getframe(gcf);
 writeVideo(v, frame);
 close(v);
 disp(['Video saved to: ', output_video_path]);
+
+% === Callback function for spacebar press ===
+function keypress_callback(~, event)
+    if strcmp(event.Key, 'space')
+        global is_paused;
+        is_paused = ~is_paused;
+        if is_paused
+            disp('⏸️  Animation paused. Press [space] again to resume.');
+        else
+            disp('▶️  Animation resumed.');
+        end
+    end
+end

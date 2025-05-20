@@ -563,6 +563,9 @@ void set_logfile_names()
 	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
 	// // to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+	sprintf(clustering_debugging_name_101, "%s/clustering_debugging_101.txt", folder_name);
+	sprintf(clustering_debugging_name_102, "%s/clustering_debugging_102.txt", folder_name);
+	sprintf(clustering_debugging_name_103, "%s/clustering_debugging_103.txt", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment and scan

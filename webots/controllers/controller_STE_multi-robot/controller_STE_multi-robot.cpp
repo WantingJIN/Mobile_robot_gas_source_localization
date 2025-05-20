@@ -48,6 +48,9 @@ FILE *visited_list_logfile;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
+FILE *clustering_debugging_logfile_101;
+FILE *clustering_debugging_logfile_102;
+FILE *clustering_debugging_logfile_103;
 
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
@@ -72,6 +75,9 @@ char visited_list_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
+char clustering_debugging_name_101[512];
+char clustering_debugging_name_102[512];
+char clustering_debugging_name_103[512];
 
 // read data from file
 char logfile_folder_name[256];
@@ -96,6 +102,13 @@ Position goal_position;
 Position goal_position_team[3];
 Position current_position;
 double speed[2] = {0};
+
+static double curr_pos_101_x = 0;
+static double curr_pos_101_y = 0;
+static double curr_pos_102_x = 0;
+static double curr_pos_102_y = 0;
+static double curr_pos_103_x = 0;
+static double curr_pos_103_y = 0;
 
 // robot's position and measurement history
 struct history history;
@@ -520,27 +533,27 @@ void clusterize_belief_map(const int top_indices[3]) {
 	std::fill(belief_clusters, belief_clusters + total_cells, -1);  // -1 = not assigned
 
 	// label cells according to the nearest cluster (BALANCED MAX 1/n cells)
-	for (const auto &[dist2, idx, k] : cell_distances) {
-		if (belief_clusters[idx] != -1) continue; // if already assigned
-		if (cluster_sizes[k] < max_cells_per_cluster) {
-			belief_clusters[idx] = k + 1; // Clusters con 1, 2, 3
-			cluster_sizes[k]++;
-		}
-	}
-
-	// label cells according to the nearest cluster (without balanced restriction)
-	// for (int i = 0; i < total_cells; ++i) {
-	// 	double min_dist = dist_map[0][i];
-	// 	int min_k = 0;
-	// 	for (int k = 1; k < 3; ++k) {
-	// 		if (dist_map[k][i] < min_dist) {
-	// 			min_dist = dist_map[k][i];
-	// 			min_k = k;
-	// 		}
+	// for (const auto &[dist2, idx, k] : cell_distances) {
+	// 	if (belief_clusters[idx] != -1) continue; // if already assigned
+	// 	if (cluster_sizes[k] < max_cells_per_cluster) {
+	// 		belief_clusters[idx] = k + 1; // Clusters con 1, 2, 3
+	// 		cluster_sizes[k]++;
 	// 	}
-	// 	belief_clusters[i] = min_k + 1;
-	// 	cluster_sizes[min_k]++;
 	// }
+
+	// // label cells according to the nearest cluster (without balanced restriction)
+	for (int i = 0; i < total_cells; ++i) {
+		double min_dist = dist_map[0][i];
+		int min_k = 0;
+		for (int k = 1; k < 3; ++k) {
+			if (dist_map[k][i] < min_dist) {
+				min_dist = dist_map[k][i];
+				min_k = k;
+			}
+		}
+		belief_clusters[i] = min_k + 1;
+		cluster_sizes[min_k]++;
+	}
 
 	// create binary masks for each cluster
 	for (int i = 0; i < total_cells; ++i) {
@@ -549,73 +562,137 @@ void clusterize_belief_map(const int top_indices[3]) {
 		pdf_mask_103[i] = (belief_clusters[i] == 3) ? 1 : 0;
 	}
 
-	// print distance maps
-	for (int k = 0; k < 3; ++k) {
-		printf("\nDistance Map to Seed %d:\n", k + 1);
-		for (int y = 0; y < y_nbins; ++y) {
-			for (int x = 0; x < x_nbins; ++x) {
-				int idx = y * x_nbins + x;
-				printf("%5.1f ", dist_map[k][idx]);
-			}
-			printf("\n");
-		}
-	}
+	// // print distance maps
+	// for (int k = 0; k < 3; ++k) {
+	// 	printf("\nDistance Map to Seed %d:\n", k + 1);
+	// 	for (int y = 0; y < y_nbins; ++y) {
+	// 		for (int x = 0; x < x_nbins; ++x) {
+	// 			int idx = y * x_nbins + x;
+	// 			printf("%5.1f ", dist_map[k][idx]);
+	// 		}
+	// 		printf("\n");
+	// 	}
+	// }
 
-	// print clusterized map (labelled with 1, 2 and 3)
-	printf("\nBalanced Clusterized Belief Map (1, 2, 3):\n");
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%d ", belief_clusters[idx]);
-		}
-		printf("\n");
-	}
+	// // print clusterized map (labelled with 1, 2 and 3)
+	// printf("\nBalanced Clusterized Belief Map (1, 2, 3):\n");
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%d ", belief_clusters[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
 	
 	// print in csv file for post analysis
 	log_posterior_pdf_3d_cluster(belief_clusters);
 
-	// print cluster size
-	printf("\nCluster sizes:\n");
-	for (int k = 0; k < 3; ++k)
-		printf("Cluster %d: %d cells\n", k + 1, cluster_sizes[k]);
+	// // print cluster size
+	// printf("\nCluster sizes:\n");
+	// for (int k = 0; k < 3; ++k)
+	// 	printf("Cluster %d: %d cells\n", k + 1, cluster_sizes[k]);
 
-	// print binary masks for each cluster
-	printf("\nPDF Mask 101 (cluster 1):\n");
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%d ", pdf_mask_101[idx]);
+	// // print binary masks for each cluster
+	// printf("\nPDF Mask 101 (cluster 1):\n");
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%d ", pdf_mask_101[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
+	if (ID == 101)
+	{
+
+		fprintf(clustering_debugging_logfile_101, "\nBalanced Clusterized Belief Map (1, 2, 3):\n");
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_101,"%d ", belief_clusters[idx]);
+			}
+			fprintf(clustering_debugging_logfile_101,"\n");
 		}
-		printf("\n");
+
+		fprintf(clustering_debugging_logfile_101, "\nRobot ID [%d]: Cluster binary mask:\n", ID);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_101, "%d ", pdf_mask_101[idx]);
+			}
+			fprintf(clustering_debugging_logfile_101, "\n");
+		}
 	}
 
-	printf("\nPDF Mask 102 (cluster 2):\n");
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%d ", pdf_mask_102[idx]);
+	if (ID == 102)
+	{
+
+		fprintf(clustering_debugging_logfile_102, "\nBalanced Clusterized Belief Map (1, 2, 3):\n");
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_102,"%d ", belief_clusters[idx]);
+			}
+			fprintf(clustering_debugging_logfile_102,"\n");
 		}
-		printf("\n");
+
+		fprintf(clustering_debugging_logfile_102, "\nRobot ID [%d]: Cluster binary mask:\n", ID);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_102, "%d ", pdf_mask_102[idx]);
+			}
+			fprintf(clustering_debugging_logfile_102, "\n");
+		}	
 	}
 
-	printf("\nPDF Mask 103 (cluster 3):\n");
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%d ", pdf_mask_103[idx]);
-		}
-		printf("\n");
-	}
+	if (ID == 103)
+	{
 
-	// print the belief map before clusterizing
-	printf("\nRobot ID [%d]: Posterior PDF before clusterizing:\n", ID);
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%.5f ", posterior.pdf[idx]);
+		fprintf(clustering_debugging_logfile_103, "\nBalanced Clusterized Belief Map (1, 2, 3):\n");
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_103,"%d ", belief_clusters[idx]);
+			}
+			fprintf(clustering_debugging_logfile_103,"\n");
 		}
-		printf("\n");
+
+		fprintf(clustering_debugging_logfile_103, "\nRobot ID [%d]: Cluster binary mask:\n", ID);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_103, "%d ", pdf_mask_103[idx]);
+			}
+			fprintf(clustering_debugging_logfile_103, "\n");
+		}	
 	}
+	// printf("\nPDF Mask 102 (cluster 2):\n");
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%d ", pdf_mask_102[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
+
+	// printf("\nPDF Mask 103 (cluster 3):\n");
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%d ", pdf_mask_103[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
+
+	// // print the belief map before clusterizing
+	// printf("\nRobot ID [%d]: Posterior PDF before clusterizing:\n", ID);
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%.5f ", posterior.pdf[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
 	
 	// assign each cluster to each robot (label 1 to robot 1, label 2 to robot 2, label 3 to robot 3)
 	// remove the zones of the original belief map that do not belong to the clusters
@@ -628,15 +705,15 @@ void clusterize_belief_map(const int top_indices[3]) {
 			posterior.pdf[i] *= pdf_mask_103[i];
 	}
 
-	// print the new clusterized belief map
-	printf("\nRobot ID [%d]: Posterior PDF after clusterizing:\n", ID);
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%.5f ", posterior.pdf[idx]);
-		}
-		printf("\n");
-	}
+	// // print the new clusterized belief map
+	// printf("\nRobot ID [%d]: Posterior PDF after clusterizing:\n", ID);
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%.5f ", posterior.pdf[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
 
 	// normalize posterior_pdf clusterized
 	double sum = 0.0;
@@ -656,15 +733,15 @@ void clusterize_belief_map(const int top_indices[3]) {
 	}
 	printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum_def);
 
-	// print posterior_pdf clusterized and normalized, which will be used for goal computation
-	printf("\nRobot ID [%d]: Posterior PDF after clusterizing and normalizing:\n", ID);
-	for (int y = 0; y < y_nbins; ++y) {
-		for (int x = 0; x < x_nbins; ++x) {
-			int idx = y * x_nbins + x;
-			printf("%.5f ", posterior.pdf[idx]);
-		}
-		printf("\n");
-	}
+	// // print posterior_pdf clusterized and normalized, which will be used for goal computation
+	// printf("\nRobot ID [%d]: Posterior PDF after clusterizing and normalizing:\n", ID);
+	// for (int y = 0; y < y_nbins; ++y) {
+	// 	for (int x = 0; x < x_nbins; ++x) {
+	// 		int idx = y * x_nbins + x;
+	// 		printf("%.5f ", posterior.pdf[idx]);
+	// 	}
+	// 	printf("\n");
+	// }
 
 }
 
@@ -1288,6 +1365,42 @@ void maximal_belief_planning()
 		}
 		printf("\n");
 	}
+	
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101, "\nRobot ID [%d]: posterior.pdf that is going to be analyzed for goal extraction:\n", ID);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_101, "%.5f ", posterior.pdf[idx]);
+			}
+			fprintf(clustering_debugging_logfile_101, "\n");
+		}		
+	}
+
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102, "\nRobot ID [%d]: posterior.pdf that is going to be analyzed for goal extraction:\n", ID);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_102, "%.5f ", posterior.pdf[idx]);
+			}
+			fprintf(clustering_debugging_logfile_102, "\n");
+		}		
+	}
+
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103, "\nRobot ID [%d]: posterior.pdf that is going to be analyzed for goal extraction:\n", ID);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				fprintf(clustering_debugging_logfile_103, "%.5f ", posterior.pdf[idx]);
+			}
+			fprintf(clustering_debugging_logfile_103, "\n");
+		}		
+	}
 
 	for (int i = 0; i < x_nbins * y_nbins; i++)
 	{
@@ -1310,6 +1423,20 @@ void maximal_belief_planning()
 	}
 	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
 
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+	}
+
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+	}
+
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+	}
       double epsilon = 1e-9; 
       if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
 	{
@@ -1320,10 +1447,39 @@ void maximal_belief_planning()
 		return;
 	}
 	posterior.index_to_param_values(max_pdf_index, best_point);
-	printf("EL INDICE %d, con valor %f, pertenece a las coordenadas: %f %f",max_pdf_index, max_pdf,best_point[0], best_point[1]);
+	printf("THE INDEX %d, WITH VALUE %f, CORRESPONDS TO THE COORDINATES: %f %f\n",max_pdf_index, max_pdf,best_point[0], best_point[1]);
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101, "THE INDEX %d, WITH VALUE %f, CORRESPONDS TO THE COORDINATES: %f %f\n",max_pdf_index, max_pdf,best_point[0], best_point[1]);
+	}
+
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102, "THE INDEX %d, WITH VALUE %f, CORRESPONDS TO THE COORDINATES: %f %f\n",max_pdf_index, max_pdf,best_point[0], best_point[1]);
+	}
+
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103, "THE INDEX %d, WITH VALUE %f, CORRESPONDS TO THE COORDINATES: %f %f\n",max_pdf_index, max_pdf,best_point[0], best_point[1]);
+	}
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
 	goal_position.heading = 0;
+
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101, "Assigned goal is: %f %f\n",goal_position.x, goal_position.y);
+	}
+
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102, "Assigned goal is: %f %f\n",goal_position.x, goal_position.y);
+	}
+
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103, "Assigned goal is: %f %f\n",goal_position.x, goal_position.y);
+	}
 }
 
 // void maximal_merged_belief_planning()
@@ -1514,6 +1670,29 @@ void maximal_merged_belief_planning_deterministic()
 		top_values[1], top_indices[1],
 		top_values[2], top_indices[2]);
 
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101,"Robot ID [%d]: Top 3 maximal merged belief map values:\n1) Value: %f at index %d\n2) Value: %f at index %d\n3) Value: %f at index %d\n", ID,
+		top_values[0], top_indices[0],
+		top_values[1], top_indices[1],
+		top_values[2], top_indices[2]);
+	}
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102,"Robot ID [%d]: Top 3 maximal merged belief map values:\n1) Value: %f at index %d\n2) Value: %f at index %d\n3) Value: %f at index %d\n", ID,
+		top_values[0], top_indices[0],
+		top_values[1], top_indices[1],
+		top_values[2], top_indices[2]);
+	}
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103,"Robot ID [%d]: Top 3 maximal merged belief map values:\n1) Value: %f at index %d\n2) Value: %f at index %d\n3) Value: %f at index %d\n", ID,
+		top_values[0], top_indices[0],
+		top_values[1], top_indices[1],
+		top_values[2], top_indices[2]);
+	}
+
+
 	cell_visited_list[top_indices[0]] = 1;
 	cell_visited_list[top_indices[1]] = 1;
 	cell_visited_list[top_indices[2]] = 1;
@@ -1522,6 +1701,56 @@ void maximal_merged_belief_planning_deterministic()
 
 }
 
+void centroid_currentposition_planning_deterministic()
+{
+    // Parámetros de la grilla
+    constexpr int x_nbins_func = 20;
+    constexpr int y_nbins_func = 20;
+    constexpr double x_min_func = 3.0;
+    constexpr double x_max_func = 12.75;
+    constexpr double y_min_func = 0.0;
+    constexpr double y_max_func = 4.0;
+
+    constexpr double dx = (x_max_func - x_min_func) / x_nbins_func; // 0.4875
+    constexpr double dy = (y_max_func - y_min_func) / y_nbins_func; // 0.2
+
+    // Convert from (x,y) coordinates in meters to discrete bin of the grid
+    auto pos_to_bin_index = [&](double x, double y) -> int {
+        int ix = static_cast<int>(std::floor((x - x_min_func) / dx));
+        int iy = static_cast<int>(std::floor((y - y_min_func) / dy));
+        if (ix < 0) ix = 0; else if (ix >= x_nbins_func) ix = x_nbins_func - 1;
+        if (iy < 0) iy = 0; else if (iy >= y_nbins_func) iy = y_nbins_func - 1;
+        return iy * x_nbins_func + ix;
+    };
+
+    // Compute index for each robot
+    int top_indices[3];
+    top_indices[0] = pos_to_bin_index(curr_pos_101_x, curr_pos_101_y);
+    top_indices[1] = pos_to_bin_index(curr_pos_102_x, curr_pos_102_y);
+    top_indices[2] = pos_to_bin_index(curr_pos_103_x, curr_pos_103_y);
+
+    // Visited cells
+    cell_visited_list[top_indices[0]] = 1;
+    cell_visited_list[top_indices[1]] = 1;
+    cell_visited_list[top_indices[2]] = 1;
+
+    // Print in webots
+    printf("Posiciones de los robots:\n");
+    printf("1) Robot 101: (%f, %f) -> Bin %d\n", curr_pos_101_x, curr_pos_101_y, top_indices[0]);
+    printf("2) Robot 102: (%f, %f) -> Bin %d\n", curr_pos_102_x, curr_pos_102_y, top_indices[1]);
+    printf("3) Robot 103: (%f, %f) -> Bin %d\n", curr_pos_103_x, curr_pos_103_y, top_indices[2]);
+
+    // Print in logfile
+    if (ID == 101)
+        fprintf(clustering_debugging_logfile_101, "Robot ID [%d]: Bin %d (x=%f, y=%f)\n", ID, top_indices[0], curr_pos_101_x, curr_pos_101_y);
+    else if (ID == 102)
+        fprintf(clustering_debugging_logfile_102, "Robot ID [%d]: Bin %d (x=%f, y=%f)\n", ID, top_indices[1], curr_pos_102_x, curr_pos_102_y);
+    else if (ID == 103)
+        fprintf(clustering_debugging_logfile_103, "Robot ID [%d]: Bin %d (x=%f, y=%f)\n", ID, top_indices[2], curr_pos_103_x, curr_pos_103_y);
+
+    // Call cluster function
+    clusterize_belief_map(top_indices);
+}
 
 vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double information_map[])
 {
@@ -2381,8 +2610,23 @@ void state_estimating()
 	log_entropy();
 	posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
-
 	FSM.n_cycles++;
+
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101, "\nFSM cycle: %d\n", FSM.n_cycles);
+	}
+
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102, "\nFSM cycle: %d\n", FSM.n_cycles);
+	}
+
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103, "\nFSM cycle: %d\n", FSM.n_cycles);
+	}
+
 	if (VERBOSE)
 		printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
 	// if (VERBOSE)
@@ -2470,6 +2714,8 @@ void state_estimating()
 	}
 }
 
+static int flag_finished_global = 0;
+
 void state_updategoal()
 {
 	printf("Robot ID [%d]: STATE_UPDATEGOAL \n", ID);
@@ -2480,7 +2726,6 @@ void state_updategoal()
 	{
 	case GREEDY:
 		maximal_belief_planning();
-		//maximal_merged_belief_planning_deterministic();
 		break;
 	case BALANCE_MAXIMAL_EXPECTED:
 		balance_expected_maximal_pdf();
@@ -2535,6 +2780,11 @@ void state_updategoal()
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
 		
+		if (flag_finished_global == 1) {
+			FSM.state = STATE_FINISHED;
+			return;
+		}
+
 		// move to the goal position
 		if(simulation_parameters.simuMode == ONLINE){
 			// update goal
@@ -3016,7 +3266,7 @@ void state_send_pdf()
 
     if (ID == 102 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send_bm_102(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_send_bm_102(ID, 101, current_position, -1, Position(), 1, posterior.pdf);
         send_msg(msg_send_bm_102);
 		//printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
 	
@@ -3026,7 +3276,7 @@ void state_send_pdf()
 
 	if (ID == 103 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send_bm_103(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_send_bm_103(ID, 101, current_position, -1, Position(), 1, posterior.pdf);
 		send_msg(msg_send_bm_103);
 		//printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
 
@@ -3043,6 +3293,10 @@ static int received_102 = 0;
 static int received_103 = 0;
 bool printed = false;
 bool entered_state_receive_pdf = false;
+int ready_from_101 = 0;
+int ready_from_102 = 0;
+int ready_from_103 = 0;
+int i_am_ready = 0;
 
 void state_receive_pdf() 
 {	
@@ -3051,132 +3305,31 @@ void state_receive_pdf()
         entered_state_receive_pdf = true;
     }
 
-	if (simulation_parameters.teamStrategy == CENTRALIZED)
-	{
-		if (!printed && posterior.pdf != nullptr) {
-			memcpy(belief_map_101, posterior.pdf, 400 * sizeof(double));
-
-			// printf("Robot ID [%d]: Belief map.\n", ID);
-			// for (int i = 0; i < 400; i++) {
-			//     printf("%f ", belief_map_101[i]);
-			// }
-			// printf("\n");
-
-			printed = true;
-		}
-
-		int queue_length = wb_receiver_get_queue_length(receiver);
-		// printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
-
-		while (wb_receiver_get_queue_length(receiver) > 0) {
-			const void *data = wb_receiver_get_data(receiver);
-			const double* buffer = (const double*)data;
-
-			int sender_ID = (int)buffer[0];
-			int receiver_ID = (int)buffer[1];
-			int flag_finished = (int)buffer[9];
-
-			printf("Robot ID [%d]: Received message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
-
-			//check if state_finished
-			if (flag_finished == -1) {
-				//printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				return;
-			}
-
-			if (sender_ID == 102) {
-				// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
-				memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
-				// for (int i = 0; i < 400; i++) {
-				// 	printf("%f ", belief_map_102[i]);
-				// }
-				// printf("\n");
-				received_102 = 1;
-			} 
-			else if (sender_ID == 103) {
-				// printf("Robot ID [%d]: Received belief map from Robot ID [103]\n", ID);
-				memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
-				// for (int i = 0; i < 400; i++) {
-				// 	printf("%f ", belief_map_103[i]);
-				// }
-				// printf("\n");
-				received_103 = 1;
-			}
-
-			wb_receiver_next_packet(receiver);
-		}
-
-		if (received_102 && received_103) 
-		{
-			received_102 = 0;
-			received_103 = 0;
-			printed = false;
-
-			//printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-			FSM.state = STATE_MERGE_PDF;
-			FSM.hook = state_merge_pdf;
-			entered_state_receive_pdf = false;
-		}
-	} else if (simulation_parameters.teamStrategy == DISTRIBUTED)
+	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 		if (!printed && posterior.pdf != nullptr) 
 		{
 			if (ID == 101)
 			{
 				memcpy(belief_map_101, posterior.pdf, 400 * sizeof(double));
-				printf("Robot ID [%d]: Belief map.\n", ID);
-				for (int i = 0; i < 400; i++) {
-				    printf("%f ", belief_map_101[i]);
-				}
-				printf("\n");
-				// double sum_def = 0.0;
-				// for (int i = 0; i < 400; i++) {
-				// 	sum_def += belief_map_101[i];
-				// }
-				// printf("Robot ID [%d]: Sum of individual belief map is %f \n", ID, sum_def);
+				curr_pos_101_x = current_position.x;
+				curr_pos_101_y = current_position.y;
 			}
 			else if (ID == 102)
 			{
 				memcpy(belief_map_102, posterior.pdf, 400 * sizeof(double));
-				printf("Robot ID [%d]: Belief map.\n", ID);
-				for (int i = 0; i < 400; i++) {
-				    printf("%f ", belief_map_102[i]);
-				}
-				printf("\n");
-				// double sum_def = 0.0;
-				// for (int i = 0; i < 400; i++) {
-				// 	sum_def += belief_map_102[i];
-				// }
-				// printf("Robot ID [%d]: Sum of individual belief map is %f \n", ID, sum_def);
+				curr_pos_102_x = current_position.x;
+				curr_pos_102_y = current_position.y;
 			}
-			else if (ID ==103)
+			else if (ID == 103)
 			{
 				memcpy(belief_map_103, posterior.pdf, 400 * sizeof(double));
-				printf("Robot ID [%d]: Belief map.\n", ID);
-				for (int i = 0; i < 400; i++) {
-				    printf("%f ", belief_map_103[i]);
-				}
-				printf("\n");
-				// double sum_def = 0.0;
-				// for (int i = 0; i < 400; i++) {
-				// 	sum_def += belief_map_103[i];
-				// }
-				// printf("Robot ID [%d]: Sum of individual belief map is %f \n", ID, sum_def);
+				curr_pos_103_x = current_position.x;
+				curr_pos_103_y = current_position.y;
 			}
-
-			// printf("Robot ID [%d]: Belief map.\n", ID);
-			// for (int i = 0; i < 400; i++) {
-			//     printf("%f ", belief_map_101[i]);
-			// }
-			// printf("\n");
 
 			printed = true;
 		}
-
-		int queue_length = wb_receiver_get_queue_length(receiver);
-		// printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
 
 		while (wb_receiver_get_queue_length(receiver) > 0) 
 		{
@@ -3184,132 +3337,124 @@ void state_receive_pdf()
 			const double* buffer = (const double*)data;
 
 			int sender_ID = (int)buffer[0];
-			int receiver_ID = (int)buffer[1];
+			int message_type = (int)buffer[1]; // -99 means READY message
 			int flag_finished = (int)buffer[9];
 
-			printf("Robot ID [%d]: Received message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
-
-			//check if state_finished
+			// Handle FINISHED flag
 			if (flag_finished == -1) {
-				//printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
+				flag_finished_global = 1;
 				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				return;
 			}
+
+			// Handle READY message
+			if (message_type == -99) {
+				if (sender_ID == 101) ready_from_101 = 1;
+				if (sender_ID == 102) ready_from_102 = 1;
+				if (sender_ID == 103) ready_from_103 = 1;
+				printf("Robot ID [%d]: Received READY from Robot ID [%d]\n", ID, sender_ID);
+				wb_receiver_next_packet(receiver);
+				continue;
+			}
+
+			// Handle BELIEF MAP messages
 			if (ID == 101)
 			{
 				if (sender_ID == 102) 
 				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
 					memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
+					curr_pos_102_x = *(double*)&buffer[2];
+					curr_pos_102_y = *(double*)&buffer[3];
 					received_102 = 1;
-				} 	
+				}
 				else if (sender_ID == 103)
 				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
 					memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_103 = 1;					
+					curr_pos_103_x = *(double*)&buffer[2];
+					curr_pos_103_y = *(double*)&buffer[3];	
+					received_103 = 1;
 				}
-
-				wb_receiver_next_packet(receiver);
-
-				if (received_102 && received_103) 
-				{
-					received_102 = 0;
-					received_103 = 0;
-					printed = false;
-
-					//printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-					FSM.state = STATE_MERGE_PDF;
-					FSM.hook = state_merge_pdf;
-					entered_state_receive_pdf = false;
-				}			
 			}
 			else if (ID == 102)
 			{
 				if (sender_ID == 101) 
 				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
 					memcpy(belief_map_101, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
+					curr_pos_101_x = *(double*)&buffer[2];
+					curr_pos_101_y = *(double*)&buffer[3];	
 					received_101 = 1;
 				} 	
 				else if (sender_ID == 103)
 				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
 					memcpy(belief_map_103, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_103 = 1;					
+					curr_pos_103_x = *(double*)&buffer[2];
+					curr_pos_103_y = *(double*)&buffer[3];		
+					received_103 = 1;
 				}
-
-				wb_receiver_next_packet(receiver);
-
-				if (received_101 && received_103) 
-				{
-					received_101 = 0;
-					received_103 = 0;
-					printed = false;
-
-					//printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-					FSM.state = STATE_MERGE_PDF;
-					FSM.hook = state_merge_pdf;
-					entered_state_receive_pdf = false;
-				}			
 			}
 			else if (ID == 103)
 			{
 				if (sender_ID == 101) 
 				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
 					memcpy(belief_map_101, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
+					curr_pos_101_x = *(double*)&buffer[2];
+					curr_pos_101_y = *(double*)&buffer[3];	
 					received_101 = 1;
 				} 	
 				else if (sender_ID == 102)
 				{
-					// printf("Robot ID [%d]: Received belief map from Robot ID [102]\n", ID);
 					memcpy(belief_map_102, &buffer[10], 400 * sizeof(double));
-					// for (int i = 0; i < 400; i++) {
-					// 	printf("%f ", belief_map_102[i]);
-					// }
-					// printf("\n");
-					received_102 = 1;					
+					curr_pos_102_x = *(double*)&buffer[2];
+					curr_pos_102_y = *(double*)&buffer[3];	
+					received_102 = 1;
 				}
-
-				wb_receiver_next_packet(receiver);
-
-				if (received_101 && received_102) 
-				{
-					received_101 = 0;
-					received_102 = 0;
-					printed = false;
-
-					//printf("Robot ID [%d]: All belief maps received, transitioning to STATE_MERGE_PDF.\n", ID);
-					FSM.state = STATE_MERGE_PDF;
-					FSM.hook = state_merge_pdf;
-					entered_state_receive_pdf = false;
-				}			
 			}
+
+			wb_receiver_next_packet(receiver);
+		}
+
+		// Check if all belief maps received and send READY
+		if (ID == 101 && received_102 && received_103 && !i_am_ready) {
+			double ready_msg[3] = {101, -99, 0};
+			wb_emitter_send(emitter, ready_msg, sizeof(ready_msg));
+			i_am_ready = 1;
+			printf("Robot ID [101]: Sent READY message.\n");
+		}
+		else if (ID == 102 && received_101 && received_103 && !i_am_ready) {
+			double ready_msg[3] = {102, -99, 0};
+			wb_emitter_send(emitter, ready_msg, sizeof(ready_msg));
+			i_am_ready = 1;
+			printf("Robot ID [102]: Sent READY message.\n");
+		}
+		else if (ID == 103 && received_101 && received_102 && !i_am_ready) {
+			double ready_msg[3] = {103, -99, 0};
+			wb_emitter_send(emitter, ready_msg, sizeof(ready_msg));
+			i_am_ready = 1;
+			printf("Robot ID [103]: Sent READY message.\n");
+		}
+
+		// Check if all READY messages received and transition
+		int ready_total = 0;
+		if (ID != 101 && ready_from_101) ready_total++;
+		if (ID != 102 && ready_from_102) ready_total++;
+		if (ID != 103 && ready_from_103) ready_total++;
+
+		if (i_am_ready && ready_total == 2) {
+			printf("Robot ID [%d]: All robots READY. Transitioning to STATE_MERGE_PDF.\n", ID);
+			FSM.state = STATE_MERGE_PDF;
+			FSM.hook = state_merge_pdf;
+			entered_state_receive_pdf = false;
+
+			// Reset READY flags
+			ready_from_101 = ready_from_102 = ready_from_103 = 0;
+			i_am_ready = 0;
+			received_101 = received_102 = received_103 = 0;
+			printed = false;
 		}
 	}
 }
+
+
+
 
 static double belief_map_merged[400] = {0};
 
@@ -3347,6 +3492,33 @@ void state_merge_pdf()
 	printf("\n");
 	memcpy(posterior.pdf, belief_map_merged, 400 * sizeof(double));
 
+	if (ID == 101)
+	{
+		fprintf(clustering_debugging_logfile_101,"Robot ID [%d]: Merged belief map is: \n", ID);		
+		for (int i = 0; i < 400; i++) {
+			fprintf(clustering_debugging_logfile_101,"%f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile_101,"\n");
+	}
+
+	if (ID == 102)
+	{
+		fprintf(clustering_debugging_logfile_102,"Robot ID [%d]: Merged belief map is: \n", ID);		
+		for (int i = 0; i < 400; i++) {
+			fprintf(clustering_debugging_logfile_102,"%f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile_102,"\n");
+	}
+
+	if (ID == 103)
+	{
+		fprintf(clustering_debugging_logfile_103,"Robot ID [%d]: Merged belief map is: \n", ID);		
+		for (int i = 0; i < 400; i++) {
+			fprintf(clustering_debugging_logfile_103,"%f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile_103,"\n");
+	}
+
 	if (simulation_parameters.teamStrategy == CENTRALIZED)
 	{
 		FSM.state = STATE_UPDATEGOAL_TEAM;
@@ -3380,23 +3552,23 @@ void state_share_pdf()
 	printf("Robot ID [%d]: STATE_SHARE_PDF \n", ID);
 	if (ID == 101 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_101_to_102(ID, 102, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_share_pdf_101_to_102(ID, 102, current_position, -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_101_to_102);
-		Message msg_share_pdf_101_to_103(ID, 103, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_share_pdf_101_to_103(ID, 103, current_position, -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_101_to_103);
     }
 	else if (ID == 102 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_102_to_101(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_share_pdf_102_to_101(ID, 101, current_position, -1, Position(), 1, posterior.pdf);
 		send_msg(msg_share_pdf_102_to_101);
-		Message msg_share_pdf_102_to_103(ID, 103, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_share_pdf_102_to_103(ID, 103, current_position, -1, Position(), 1, posterior.pdf);
 		send_msg(msg_share_pdf_102_to_103);
 	}
 	else if (ID == 103 && posterior.pdf != nullptr) {
 		//printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_share_pdf_103_to_101(ID, 101, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_share_pdf_103_to_101(ID, 101, current_position, -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_103_to_101);
-		Message msg_share_pdf_103_to_102(ID, 102, Position(), -1, Position(), 1, posterior.pdf);
+		Message msg_share_pdf_103_to_102(ID, 102, current_position, -1, Position(), 1, posterior.pdf);
         send_msg(msg_share_pdf_103_to_102);
     }
 
@@ -3410,8 +3582,36 @@ void state_region_allocation()
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
+		// debugging purpose
+		printf("Current positions:\nRobot 101: (%.2f, %.2f)\nRobot 102: (%.2f, %.2f)\nRobot 103: (%.2f, %.2f)\n",
+		curr_pos_101_x, curr_pos_101_y,
+		curr_pos_102_x, curr_pos_102_y,
+		curr_pos_103_x, curr_pos_103_y);
 
-		maximal_merged_belief_planning_deterministic();
+		if (ID == 101)
+		{
+			fprintf(clustering_debugging_logfile_101, "Current positions:\nRobot 101: (%.2f, %.2f)\nRobot 102: (%.2f, %.2f)\nRobot 103: (%.2f, %.2f)\n",
+			curr_pos_101_x, curr_pos_101_y,
+			curr_pos_102_x, curr_pos_102_y,
+			curr_pos_103_x, curr_pos_103_y);
+		}
+		else if (ID == 102)
+		{
+			fprintf(clustering_debugging_logfile_102, "Current positions:\nRobot 101: (%.2f, %.2f)\nRobot 102: (%.2f, %.2f)\nRobot 103: (%.2f, %.2f)\n",
+			curr_pos_101_x, curr_pos_101_y,
+			curr_pos_102_x, curr_pos_102_y,
+			curr_pos_103_x, curr_pos_103_y);
+		}
+		else if (ID == 103)
+		{
+			fprintf(clustering_debugging_logfile_103, "Current positions:\nRobot 101: (%.2f, %.2f)\nRobot 102: (%.2f, %.2f)\nRobot 103: (%.2f, %.2f)\n",
+			curr_pos_101_x, curr_pos_101_y,
+			curr_pos_102_x, curr_pos_102_y,
+			curr_pos_103_x, curr_pos_103_y);
+		}
+
+		//maximal_merged_belief_planning_deterministic();
+		centroid_currentposition_planning_deterministic();
 
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
@@ -3457,6 +3657,9 @@ int main(int argc, char **argv)
 
 	// File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");
+	clustering_debugging_logfile_101 = fopen(clustering_debugging_name_101, "a");
+	clustering_debugging_logfile_102 = fopen(clustering_debugging_name_102, "a");
+	clustering_debugging_logfile_103 = fopen(clustering_debugging_name_103, "a");
 
 	// initialize the receiver
 	init_receiver(TIME_STEP);
@@ -3504,6 +3707,9 @@ int main(int argc, char **argv)
 	}
 
 	fclose(console_logfile);
+	fclose(clustering_debugging_logfile_101);
+	fclose(clustering_debugging_logfile_102);
+	fclose(clustering_debugging_logfile_103);
 
 	// final logs
 	if (simulation_parameters.simuMode == ONLINE)

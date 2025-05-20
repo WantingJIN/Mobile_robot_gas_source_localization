@@ -8,7 +8,7 @@ map_nbr = 0
 samplingMode = CONTINOUS_SAMPLING 
 processingMode = NO_PROCESSING
 gasSensor = MOX
-planningStrategy = BELIEF_CLUSTERING 
+planningStrategy = GREEDY 
 gasFeature = ABSOLUTE_VALUE 
 visitedList = visitedList_ON
 infoFeature = VARIANCE 
@@ -26,5 +26,3 @@ sigma = 0.48
 lambda = 0.7
 teamStrategy = DISTRIBUTED
 updateGoalTime = 15
-
-
