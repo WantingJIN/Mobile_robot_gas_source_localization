@@ -33,7 +33,7 @@ Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _c
 
 
 // Cconstructor: max belief value
-Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, double _belief_map[400])
+Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, double _belief_map[MAP_SIZE])
 {
     sender_ID = _sender_ID;
     receiver_ID = _receiver_ID;
@@ -89,7 +89,7 @@ void Message::print_message()
     printf("Message from [%d] to [%d]. Position (%f,%f,%f). Concentration = %f. Goal (%f,%f,%f). Flag = %d.\n",
            sender_ID, receiver_ID, position.x, position.y, position.heading, concentration, goal.x, goal.y, goal.heading, measurement0_goal1);
     printf("Belief Map: [");
-    for (int i = 0; i < 400; i++) {
+    for (int i = 0; i < MAP_SIZE; i++) {
         printf("%f ", belief_map[i]);
     }
     printf("]\n");
