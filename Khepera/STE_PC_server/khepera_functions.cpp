@@ -121,6 +121,9 @@ void set_logfile_names(){
 	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(relative_measurements_logfile_name, "%s/relative_measurements.csv", folder_name);
+	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
+	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
+	sprintf(acc_info_map_logfile_name, "%s/acc_info_map.csv", folder_name);
 
     // Running STE offline : run STE from loaded data of physical experiment or wind tunnel scan
 	// log name of the experiment and scan

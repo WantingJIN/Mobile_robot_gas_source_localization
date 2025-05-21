@@ -10,7 +10,7 @@ end
 exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment folder
 
 % === Visualization speed settings ===
-show_cell_indices = true;
+show_cell_indices = false;
 repr_vel = 2;           % How many steps to skip per frame (for robot position update)
 video_repr_vel = 10;    % Frame rate of the output video
 

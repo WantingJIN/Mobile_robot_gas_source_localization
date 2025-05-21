@@ -3,7 +3,7 @@ DEF n101 Khepera4 {
   translation 1 1 0
   rotation -0.5773502627301778 0.5773502738035171 0.5773502710351824 4.188790199249721
   name "101"
-  controller "controller_STE_clean"
+  controller "controller_STE_multi-robot"
   turretSlot [
     GPS {
     }

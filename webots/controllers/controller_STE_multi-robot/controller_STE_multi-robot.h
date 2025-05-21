@@ -21,15 +21,10 @@
 #include "SampleBuffer.h"
 #include "Position.h"
 #include "gasMap2D.h"
-#include "Constant.h"
+#include "constant_and_helper.h"
 #include "Dbscan.h"
 #include "SimulationParameters.h"
 
-extern int nbr_obs;
-extern float margin;
-extern float **obstacles;
-extern SimulationParameters simulation_parameters;
-// extern float obstacles[][4];
 
 // states of the finite state machine
 typedef enum state
@@ -73,6 +68,7 @@ struct history
 	vector<Position> position;
 	vector<double> measurement;
 	vector<int> gas_hit_event;
+	vector<double> relative_meas;
 };
 
 // message structure
@@ -110,27 +106,17 @@ void state_updategoal_team();
 void state_share_pdf();
 void state_region_allocation();
 
-// old
-double likelihood(struct history history, double *parameters, PlumeModel *model);
-// new likelihood with precomputed gas maps
-double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
-// new likelihood for relative concentrations
-double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
-bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
-
 double randu();
 long long current_timestamp();
 double dist_to_goal(Position goal);
-void goal_outside_obstacles(Position *goal);
+bool check_stop_condition();
 
 // double target_evaluation(double position[][3]);
 // void get_gps_position(Position external_gps_position);
 int obstacle_or_not();
 void do_odometry();
 
-// calculate the Gaussian distribution of the history and the CDF of the data
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, vector<double> data_list);
-void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, vector<double> data_list);
 void information_clustering_planning();
+
+void broadcast_state_finished();
 #endif

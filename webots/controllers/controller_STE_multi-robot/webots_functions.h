@@ -23,6 +23,7 @@ extern "C"
 #include "Message.h"
 #include "SimulationParameters.h"
 
+
 #define WEBOTS 1
 #define KHEPERA 0
 
@@ -42,31 +43,8 @@ extern struct sOdometryTrack ot;
 
 // log files
 extern char folder_name[256];
-extern FILE *goalposition_logfile;
-extern FILE *measurements_logfile;
-extern FILE *posterior_logfile;
-extern FILE *posteriorpdf_logfile;
-extern FILE *expected_a_posteriori_logfile;
-extern FILE *likelihood_logfile;
-extern FILE *measurement_history_logfile;
-extern FILE *position_history_logfile;
-extern FILE *whole_position_history_logfile;
-extern FILE *max_a_posteriori_logfile;
-extern FILE *posterior_pdf_3D;
-extern FILE *posterior_pdf_3D_cluster;
-extern FILE *entropy_logfile;
-extern FILE *tmp_file;
-extern FILE *config_logfile;
-extern FILE *trajectory_logfile;
-extern FILE *gas_concentration_map_logfile;
-extern FILE *gas_information_map_logfile;
-extern FILE *gas_hit_variance_map_logfile;
-extern FILE *experiment_time_logfile;
-extern FILE *visited_list_logfile;
 extern char goalposition_logfile_name[512];
 extern char measurements_logfile_name[512];
-extern char posterior_logfile_name[512];
-extern char posteriorpdf_logfile_name[512];
 extern char expected_a_posteriori_logfile_name[512];
 extern char max_a_posteriori_logfile_name[512];
 extern char likelihood_logfile_name[512];
@@ -80,9 +58,13 @@ extern char config_logfile_name[512];
 extern char trajectory_logfile_name[512];
 extern char gas_concentration_map_logfile_name[512];
 extern char gas_information_map_logfile_name[512];
-extern char gas_hit_variance_map_logfile_name[512];
 extern char experiment_time_logfile_name[512];
 extern char visited_list_logfile_name[512];
+extern char clustering_bounding_boxes_logfile_name[512];
+extern char scores_map_logfile_name[512];
+extern char distance_map_logfile_name[512];
+extern char acc_info_map_logfile_name[512];
+
 
 // read logfile from the experiment
 extern char logfile_folder_name[256];
@@ -118,6 +100,7 @@ extern struct history history;
 
 // robot's ID
 extern int ID;
+extern int self_index;
 
 // message structure
 extern struct message message;
@@ -150,5 +133,6 @@ void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX
 double generateGaussianNoise(double mean, double variance);
 void set_logfile_names();
 void addNoise(double* sensorReading, double sigma0 , double k);
+void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading);
 
 #endif

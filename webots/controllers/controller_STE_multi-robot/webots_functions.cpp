@@ -31,6 +31,7 @@ void init()
 	khepera4_drive_init();
 	const char *ID_char = wb_robot_get_name();
 	ID = atoi(ID_char);
+	self_index = ID - 101;
 
 	// odor and wind sensors
 	char tag_name[256];
@@ -98,7 +99,7 @@ void init()
 
       // load the simulation parameters
       simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
-      simulation_parameters.rewrite_parameters_from_file();
+      simulation_parameters.read_mapID_from_file();
 
 	FILE *sim_param_file;
 	int ok = 0;
@@ -262,6 +263,38 @@ void odor_read(double *sensor_reading, double &odor_concentration)
 	}
 }
 
+void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading){
+	double Ts = TIME_STEP / 1000.0; // sampling frequency
+	double reverse_sensor_reading = 0.0;
+	double tau_r = 0, tau_d = 0;
+	if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX)
+	{
+		tau_r = 0.72; // time constant for the rise (our default sensor)
+		tau_d = 0.92; // time constant for the decay
+	}
+	if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX)
+	{
+		tau_r = 2.06; // time constant for the rise (slow sensor)
+		tau_d = 4.53; // time constant for the decay
+	}
+	if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
+	{
+		tau_r = 5.19;  // time constant for the rise (very slow MOX TGS2600)
+		tau_d = 19.74; // time constant for the decay
+	}
+	double alpha = 0.0;
+	if (sensor_reading > previous_sensor_reading) // rising phase
+		alpha = tau_r / Ts;
+	else // decaying phase
+		alpha = tau_d / Ts;
+	reverse_sensor_reading = (1 + alpha) * sensor_reading - alpha * previous_sensor_reading;
+	// printf("reverse_sensor_reading %f\n", reverse_sensor_reading);
+	// printf("sensor_reading %f\n", sensor_reading);
+	// printf("odor_concentration %f\n", odor_concentration);
+	previous_sensor_reading = sensor_reading;
+	sensor_reading = reverse_sensor_reading;
+}
+
 void linear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading)
 {
 	double a = 3.0;
@@ -324,6 +357,7 @@ void update_position()
 
 	compass_heading = wb_compass_get_values(compass);
 	current_position.heading = (-atan2(compass_heading[0], compass_heading[2]) + M_PI);
+	current_position.calculate_index();
 }
 
 int obstacle_or_not()
@@ -544,7 +578,6 @@ void set_logfile_names()
 	}
 	sprintf(measurements_logfile_name, "%s/measurements.csv", folder_name);
 	sprintf(goalposition_logfile_name, "%s/goal_position.csv", folder_name);
-	sprintf(posterior_logfile_name, "%s/posterior.csv", folder_name);
 	sprintf(expected_a_posteriori_logfile_name, "%s/expected_a_posteriori.csv", folder_name);
 	sprintf(max_a_posteriori_logfile_name, "%s/max_a_posteriori.csv", folder_name);
 	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
@@ -558,10 +591,14 @@ void set_logfile_names()
 	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
 	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
-	sprintf(gas_hit_variance_map_logfile_name, "%s/gas_hit_variance_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
-	// // to save some debugging console input
+	sprintf(clustering_bounding_boxes_logfile_name, "%s/clustering_bounding_boxes.csv", folder_name);
+	sprintf(acc_info_map_logfile_name, "%s/acc_info_map.csv", folder_name);
+	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
+	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
+
+	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 	sprintf(clustering_debugging_name_101, "%s/clustering_debugging_101.txt", folder_name);
 	sprintf(clustering_debugging_name_102, "%s/clustering_debugging_102.txt", folder_name);

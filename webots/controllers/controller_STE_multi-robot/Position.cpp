@@ -7,6 +7,10 @@ Position::Position()
 	x = 0;
 	y = 0;
 	heading = 0;
+
+	x_idx = 0;
+	y_idx = 0;
+	index = 0;
 }
 
 Position::Position(float px, float py, float ph)
@@ -14,6 +18,16 @@ Position::Position(float px, float py, float ph)
 	x = px;
 	y = py;
 	heading = ph;
+
+	position_to_indices_2D(x, y, &x_idx, &y_idx);
+	index = indices_to_index_2D(x_idx, y_idx);
+}
+
+Position::Position(int px_idx, int py_idx)
+{
+	x_idx = px_idx;
+	y_idx = py_idx;
+	index = indices_to_index_2D(x_idx, y_idx);
 }
 
 Position::Position(const Position &to_copy_from)
@@ -21,6 +35,14 @@ Position::Position(const Position &to_copy_from)
 	x = to_copy_from.x;
 	y = to_copy_from.y;
 	heading = to_copy_from.heading;
+
+	x_idx = to_copy_from.x_idx;
+	y_idx = to_copy_from.y_idx;
+	index = to_copy_from.index;
+}
+
+void Position::calculate_index(){
+	index = indices_to_index_2D(x_idx, y_idx);
 }
 
 bool Position::operator==(const Position &o)
@@ -38,6 +60,10 @@ void Position::copy_position(const Position to_copy_from)
 	x = to_copy_from.x;
 	y = to_copy_from.y;
 	heading = to_copy_from.heading;
+
+	x_idx = to_copy_from.x_idx;
+	y_idx = to_copy_from.y_idx;
+	index = to_copy_from.index;
 }
 
 void Position::set_to_zero()

@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <condition_variable>
-#include "Constant.h"
+#include "constant_and_helper.h"
 // #include "PlumeModel.h"
 using std::vector;
 
@@ -14,8 +14,8 @@ public:
     int idx_sx;
     int idx_sy;
     // source position
-    double sx;
-    double sy;
+    float sx;
+    float sy;
     double gasConcentrationMap[x_nbins][y_nbins];
     // constructor
     GasDispersionMap(int index_sx, int index_sym);

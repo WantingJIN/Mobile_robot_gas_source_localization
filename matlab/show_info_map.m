@@ -7,10 +7,6 @@ experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
 
-anim_folder=[general_folder '/info'] ;
-if(~exist(anim_folder,'dir'))
-    mkdir(anim_folder);
-end
 params = my_text2struct([experiment_file_path,'/param_log.csv']);       
 clustering = 1;
 visited_listd_true = 0;

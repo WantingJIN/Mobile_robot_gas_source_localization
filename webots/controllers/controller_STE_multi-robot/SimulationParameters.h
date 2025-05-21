@@ -51,7 +51,20 @@ typedef enum planningStrategy
 	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
 	INFO_CLUSTERING = 7,
+	WEIGHTED_CLUSTERING = 9,
+	SUM_DIJKSTRA_FIX = 10,
+	SUM_DIJKSTRA_ADP = 11,
+	MULTI_DIJKSTRA = 12,
 } ePlanningStrategy;
+
+typedef enum scoreFun
+{
+      RATIO = 0,
+	LOG = 1,
+	SIGMOID = 2,
+	SUM = 3,
+	EXP = 4,
+}eScoreFun;
 
 typedef enum gasFeature
 {
@@ -70,6 +83,7 @@ typedef enum infoFeature
 {
 	VARIANCE = 0,
 	MEAN = 1,
+	PDF = 2,
 } eInfoFeature;
 
 typedef enum relativeMethod
@@ -101,11 +115,28 @@ typedef enum gasHitMethod
 	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
+typedef enum infoSum
+{
+	LINEAR_SUM = 0,
+	EXP_SUM = 1,
+} eInfoSum;
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
 	CENTRALIZED = 2,
 } eTeamStrategy;
+
+typedef enum stopCondition{
+	ENTROPY_ONLY = 0,
+	SPREAD_ONLY = 1,
+	ENTROPY_SPREAD = 2,
+} eStopCondition;
+
+typedef enum updataGoalPolicy{
+	GOAL_REACHED = 0,
+	FIXED_FREQ = 1,
+	BELIEF_DIFF = 2,
+} eUpdateGoalPolicy;
 
 // parameters to estimate
 struct parameters_set
@@ -132,11 +163,14 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	    float sigma;
+	      float likelihoodSigma;
 		float lambda;
+		float scoreSigma;
+		int planning_step;
+		float weighting_entropy_ratio;
 		int update_goal_time;
 
-		eEvaluationMethod MCMC_or_exhaustive_eval;
+		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
 		eSamplingMode samplingMode; 
 		eProcessingMode processingMode; 
@@ -152,11 +186,17 @@ class SimulationParameters{
 		eGasHitMethod gasHitMethod;
 		eTeamStrategy teamStrategy;
 
+	      eScoreFun scoreFun;
+		eInfoSum infoSum;
+
+		eStopCondition stopCondition;
+		eUpdateGoalPolicy updateGoalPolicy;
+
 		SimulationParameters();
 		~SimulationParameters();
 
         	void load_simulation_parameters_from_config(const char *filename);
-		void rewrite_parameters_from_file();
+		void read_mapID_from_file();
 		void log_simulation_parameters(const char *filename);
 };
 

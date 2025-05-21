@@ -10,8 +10,8 @@ WorldInfo {
   physics "odor_physics"
 }
 Viewpoint {
-  orientation 0.5167747889150689 -0.5300903751647524 -0.672270787480371 1.2804887401265235
-  position -6.224250466221025 -2.0649420268861136 9.550693563384353
+  orientation -0.3720446841101894 -0.46063867277627885 -0.8058503373258943 3.7911792746910704
+  position 17.13260531646218 6.281137386472093 4.5914033058637305
 }
 Background {
   skyColor [
@@ -112,7 +112,7 @@ DEF SOURCE_ODOR_0 Solid {
   boundingObject USE CYLINDER_SOURCE_ODOR
 }
 Solid {
-  translation 8 0 1
+  translation 8 0 0.5
   rotation -0.5773509358554485 0.5773509358554485 -0.5773489358556708 2.0944
   children [
     DEF WALL_SHAPE2 Shape {
@@ -129,7 +129,7 @@ Solid {
         }
       }
       geometry Box {
-        size 0.02 2 16
+        size 0.02 1 16
       }
     }
   ]
@@ -137,7 +137,7 @@ Solid {
   boundingObject USE WALL_SHAPE2
 }
 Solid {
-  translation 8 4 1
+  translation 8 4 0.5
   rotation 0.5773509358554485 0.5773509358554485 0.5773489358556708 2.0944
   children [
     USE WALL_SHAPE2

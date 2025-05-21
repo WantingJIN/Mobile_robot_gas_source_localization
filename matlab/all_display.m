@@ -113,7 +113,7 @@ for i=1:exp_number
         set(legend1,'Position',[0.469773299748109 0.0272789076115389 0.413937271835497 0.221351976214818]);
         annotation(f2all,'textbox',[0.234287457153379 0.185796129034299 0.104365076491284 0.0473684201637904],'String',{'Concentration'},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold');
         title('Trajectory and measurements');
-        a = get(gca,'XTickLabel'); set(gca,'XTickLabel',a,'FontName','Times','fontweight','bold','fontsize',14);
+        a = get(gca,'XTickLabel'); set(gca,'XTickLabel',a,'FontName','Times','fontweight','bold');
         hold off;
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

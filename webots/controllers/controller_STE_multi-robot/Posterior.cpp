@@ -6,7 +6,13 @@
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
 #include <random>
+// for storing debugging info
+extern FILE *console_logfile;
+extern FILE *clustering_debugging_logfile_101;
+extern FILE *clustering_debugging_logfile_102;
+extern FILE *clustering_debugging_logfile_103;
 
+extern SimulationParameters simulation_parameters;
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -279,36 +285,34 @@ void Posterior::update(double value, double *sample)
 	sum += value;
 }
 
-// normalization + entropy + expected value + max a posterior (value and parameter set) using only the pdf
-void Posterior::process()
+void Posterior::normalize()
 {
-	int i = 0, j = 0;
-	int indices[nbr_dimension];
-	double bin_values[nbr_dimension];
-	max = 0;
-	entropy = 0;
-	double possible_source_x_index_min = x_nbins;
-	double possible_source_x_index_max = 0;
-	double possible_source_y_index_min = y_nbins;
-	double possible_source_y_index_max = 0;
-	for (j = 0; j < nbr_dimension; j++)
-		model->expected_value[j] = 0;
-
-	// for every value in the pdf
+	int i = 0;
+	// normalize the pdf
 	for (i = 0; i < nbr_element; i++)
 	{
-		// normalize
-		// printf("%f / %f =  %f ", pdf[i],sum, pdf[i]/sum);
 		if (sum == 0)
 		{
 			printf("!!!!!!!!!!!!!sum is equal to zero!\n");
 			fprintf(console_logfile, "!!!!!!!!!!!!!sum is equal to zero!\n");
 		}
 		pdf[i] /= sum;
+	}
+}
 
-		// entropy
-		if (pdf[i] > 0)
-			entropy += pdf[i] * log(pdf[i]);
+// normalization + expected value + max a posterior (value and parameter set) using only the pdf
+void Posterior::process()
+{
+	int i = 0, j = 0;
+	int indices[nbr_dimension];
+	double bin_values[nbr_dimension];
+	max = 0;
+	for (j = 0; j < nbr_dimension; j++)
+		model->expected_value[j] = 0;
+
+	// for every value in the pdf
+	for (i = 0; i < nbr_element; i++)
+	{
 		// find the set of param corresponding to index i
 		index_to_param_values(i, bin_values);
 		// max value and max a post value
@@ -323,7 +327,29 @@ void Posterior::process()
 			model->expected_value[j] += bin_values[j] * pdf[i];
 		// marginal
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
+	}
+	// print on screen
+	if (VERBOSE)
+		model->print_expected_val();
+	if (VERBOSE)
+		model->print_max_a_post_val();
+	
+}
+void Posterior::calculate_entropy_and_spread()
+{
+	entropy = 0;
+	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_max = 0;
+	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_max = 0;
+	int indices[nbr_dimension];
+	for (int i = 0; i < nbr_element; i++)
+	{
+		if (pdf[i] > 0)
+			entropy += pdf[i] * log(pdf[i]);
+		index_to_indices(i, indices);
 		// spatial spread
+		// FIXME: hardcoded threshold to consider a cell as a possible source
 		if (pdf[i] > 1e-3){
 			if (indices[0] > possible_source_x_index_max)
 				possible_source_x_index_max = indices[0];
@@ -336,12 +362,7 @@ void Posterior::process()
 		}
 	}
 	entropy = -1 * entropy;
-	// print on screen
-	if (VERBOSE)
-		model->print_expected_val();
-	if (VERBOSE)
-		model->print_max_a_post_val();
-	
+	// printf("entropy: %f\n", entropy);
 	x_spatial_spread = possible_source_x_index_max - possible_source_x_index_min;
 	y_spatial_spread = possible_source_y_index_max - possible_source_y_index_min;
 }
@@ -375,57 +396,10 @@ void Posterior::MCMC_evaluation(struct history history)
 		}
 	}
 
-	// //error detection
-	// double sample_likelihood = likelihood(history, sample, model);
-	// // if the expected value is not a valid sample to start with
-	// if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-	// 	// we start with the max a posteriori value
-	// 	model->get_max_a_post_value(sample);
-	// 	sample_likelihood = likelihood(history, sample, model);
-	// }
-	// // if max a post value is also not a valid sample
-	// while(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
-	// 	if(VERBOSE) printf("done ---- prior = %d, likelihood = %f, sample: %f %f %f %f %f\n",
-	// 		prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1], sample[2], sample[3], sample[4]);
-	// 	// we choose a sample randomly
-	// 	model->random_params(sample);
-	// 	sample_likelihood = likelihood(history, sample, model);
-	// 	printf("Started from random sample\n");
-	// }
-
-	// check if expected value is in obstacle and relocate if so
-	// Position tmp_p(sample[0], sample[1], 0);
-	// goal_outside_obstacles(&tmp_p);
-	// sample[0] = tmp_p.x;
-	// sample[1] = tmp_p.y;
-
-	// error detection
 	double sample_likelihood = likelihood(history, sample, model);
-	if (prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0)
-	{
-		if (VERBOSE)
-			printf("done ---- prior = %d, likelihood = %f, sample: %f %f\n",
-				 prior(sample, nbr_dimension, model), sample_likelihood, sample[0], sample[1]);
-		dirac_flag = 1;
-		return;
-	}
 
 	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 	update(posterior_value, sample);
-
-	// get model concentrations
-	//  if(history.size==1){
-	//  	vector<vector<float>> model_c_avg(history.size, vector<float> (model->param_list[0].nbins * model->param_list[1].nbins));
-	//  	model->concentration(history.position, history.size, 0, model_c_avg);
-	//  	// FILE* model_values = fopen("/data/FaezehRahbar/Projects/Data-driven_plume_model/webots/model_values.csv","w");
-	//  	// std::ofstream output_file("/data/FaezehRahbar/Projects/Data-driven_plume_model/webots/model_values.csv");
-	//  //   	std::ostream_iterator<float> output_iterator(output_file, "\n");
-	//  //   	std::copy(model_c_avg.begin(), model_c_avg.end(), output_iterator);
-	// 	for(const auto& row : model_c_avg) {
-	//    		std::copy(row.cbegin(), row.cend(), std::ostream_iterator<float>(std::cout, " "));
-	//  			std::cout << '\n';
-	//  		}
-	//    }
 
 	// copy sample and last_sample before starting
 	memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
@@ -479,30 +453,20 @@ void Posterior::exhaustive_evaluation(struct history &history)
 {
 	int i = 0;
 	double sample[nbr_dimension];
-	vector<double> relative_history_meas = history.measurement;
 	vector<double> slope_history_meas;
-	vector<double> pdf_history_meas;
-	double mean, stddev;
-
-	if (simulation_parameters.gasFeature == GASHIT)
-	{
-		//printf("Gashit Method %d\n ", simulation_parameters.gasHitMethod);
-	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
-			calculate_normalized_relative_measurements(relative_history_meas, history.measurement);
+			calculate_normalized_relative_measurements(history.relative_meas, history.measurement);
 		}
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 
 		{
-			calculate_measurements_list_empirical_CDF(relative_history_meas, slope_history_meas, history.measurement);
+			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.measurement);
 		}
-
-		log_relative_history_meas("../../../Results/current/101/relative_measurements.csv", 'a', relative_history_meas);
 	}
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -519,11 +483,11 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, relative_history_meas, sample, i, model);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model, mean, stddev);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_gas_hit(history, sample, i, model);
 		}
 		// add the new value to the sum
 		sum += pdf[i];

@@ -21,12 +21,12 @@
 #include <webots/robot.h>
 #include "../controller_STE_multi-robot/Message.h"
 
-#define MAX_NB_ROBOTS   3
+// #define MAX_NB_ROBOTS   3
 #define STEP_SIZE       64
-#define YMIN            0.0
-#define YMAX            4.0
-#define XMIN            2.75
-#define XMAX            12.75
+// #define YMIN            0.0
+// #define YMAX            4.0
+// #define XMIN            2.75
+// #define XMAX            12.75
 #define SAFETY_MARGIN   0.2
 #define VERBOSE         1
 //#define TIMEOUT         600000 // miliseconds

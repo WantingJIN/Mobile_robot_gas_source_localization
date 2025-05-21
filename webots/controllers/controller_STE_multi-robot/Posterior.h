@@ -4,12 +4,8 @@
 #include "controller_STE_multi-robot.h"
 #include "PlumeModel.h"
 #include "Position.h"
+#include "likelihood_estimator.h"
 
-// for storing debugging info
-extern FILE *console_logfile;
-extern FILE *clustering_debugging_logfile_101;
-extern FILE *clustering_debugging_logfile_102;
-extern FILE *clustering_debugging_logfile_103;
 
 class Posterior
 {
@@ -49,8 +45,12 @@ public:
 
     // update the posterior pdf with the value given by sample paramter set
     void update(double value, double *sample);
-    // normalization + entropy + expected value + max a posterior (value and parameter set)
+    //normalization
+    void normalize();
+    // normalization + max a posterior (value and parameter set)
     void process();
+    // entropy and spatial spread calculation
+    void calculate_entropy_and_spread();
 
     // efficient sampling through MCMC
     void MCMC_evaluation(struct history history);
@@ -68,6 +68,8 @@ public:
     void log_pdf_cluster(const char *file_name, char writing_mode);
     void log_marginal_pdf(const char *file_name, char writing_mode);
     void log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas);
+
+
 };
 
 #endif

@@ -51,14 +51,31 @@ typedef enum planningStrategy
 	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
 	INFO_CLUSTERING = 7,
+	SUM_DIJKSTRA_FIX = 10,
+	SUM_DIJKSTRA_ADP = 11,
 } ePlanningStrategy;
+
+
+typedef enum scoreFun
+{
+      RATIO = 0,
+	LOG = 1,
+	SIGMOID = 2,
+	SUM = 3,
+	EXP = 4,
+}eScoreFun;
+
+typedef enum infoSum
+{
+	LINEAR_SUM = 0,
+	EXP_SUM = 1,
+} eInfoSum;
 
 typedef enum gasFeature
 {
 	ABSOLUTE_VALUE = 0,
 	GASHIT = 1,
 	RELATIVE_VALUE = 2,
-	PDF = 3,
 } eGasFeature;
 
 typedef enum visitedList
@@ -71,6 +88,7 @@ typedef enum infoFeature
 {
 	VARIANCE = 0,
 	MEAN = 1,
+	PDF = 2,
 } eInfoFeature;
 
 typedef enum relativeMethod
@@ -124,6 +142,8 @@ class SimulationParameters{
 		int measurement_error;
 	      float sigma;
 		float lambda;
+		float scoreSigma;
+		float weighting_entropy_ratio;
 
 		char experimental_logname[256];
 
@@ -142,6 +162,9 @@ class SimulationParameters{
 		eGasHitMethod gasHitMethod; 
 
 		eReleaseRate releaseRate;
+
+		eScoreFun scoreFun;
+		eInfoSum infoSum;
 
 		SimulationParameters();
 		~SimulationParameters();

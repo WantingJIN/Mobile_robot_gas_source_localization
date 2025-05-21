@@ -46,8 +46,13 @@ FILE* gas_information_map_logfile;
 FILE* gas_hit_variance_map_logfile;
 FILE* experiment_time_logfile;
 FILE *visited_list_logfile;
+FILE *scores_map_logfile;
+FILE *distance_map_logfile;
+FILE *acc_info_map_logfile;
+
 // text file for storing some prints for debugging
 FILE *console_logfile;
+
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
 char posterior_logfile_name[256];
@@ -66,6 +71,9 @@ char gas_hit_variance_map_logfile_name[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
 char relative_measurements_logfile_name[512];
+char scores_map_logfile_name[512];
+char distance_map_logfile_name[512];
+char acc_info_map_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -108,6 +116,9 @@ DeepCFDPlumeModel2D plume_model;
 double gas_information_map[x_nbins*y_nbins] = {0};
 double gas_hit_variance_map[x_nbins*y_nbins] = {0};
 int cell_visited_list[x_nbins*y_nbins] = {0};
+double scores_map[x_nbins * y_nbins] = {0};
+double distance_map[x_nbins * y_nbins] = {0};
+double acc_info_map[x_nbins * y_nbins] = {0}; 
 
 // current posterior distribution 
 Posterior posterior(&plume_model);
@@ -145,11 +156,17 @@ VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 int sock = 0; 
 
 // log time
-static double start_timestamp;
-static double end_timestamp;
+double start_timestamp;
+double end_timestamp;
 double time_before_moving_and_measuring;
-double time_after_moving_and_measuring ;
+double time_after_moving_and_measuring;
 double navigation_sampling_time_sum = 0;
+double time_before_estimation;
+double time_after_estimation;
+double time_before_planning;
+double time_after_planning;
+double planning_computation_time_sum = 0;
+double estimation_computation_time_sum = 0;
 double sent_first_goal = false;
 
 // precomputed gas maps
@@ -247,6 +264,10 @@ long long current_timestamp(){
 //Euclidean distance between two points
 double pt_distance(Position p1, Position p2){
 	return sqrt(pow(p1.x-p2.x, 2) + pow(p1.y-p2.y, 2));
+}
+
+double index_distance(int x_idx_diff, int y_idx_diff){
+	return sqrt(pow(x_idx_diff * x_resol, 2) + pow(y_idx_diff * y_resol, 2));
 }
 
 //min distance between two robots position (p1 and p2) and their goals (g1 and g2)
@@ -456,10 +477,52 @@ void log_trajectory(Position p){
 
 void log_experiment_time(){
 	double experiment_time = end_timestamp - start_timestamp;
+	printf("total experiment time: %f\n", experiment_time);
 	experiment_time_logfile = fopen(experiment_time_logfile_name, "w");
 	fprintf(experiment_time_logfile, "total experiment time: %f\n", experiment_time);
 	fprintf(experiment_time_logfile, "navigation and sampling time: %f\n", navigation_sampling_time_sum);
+	fprintf(experiment_time_logfile, "planning computation time: %f\n", planning_computation_time_sum);
+	fprintf(experiment_time_logfile, "estimation computation time: %f\n", estimation_computation_time_sum);
     fclose(experiment_time_logfile);
+}
+
+void log_scores_map()
+{
+	scores_map_logfile = fopen(scores_map_logfile_name, "a");
+
+	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+		fprintf(scores_map_logfile, "%.9f, ", scores_map[i]);
+
+	// Ajoutez la dernière valeur sans virgule
+	fprintf(scores_map_logfile, "%.9f\n", scores_map[(x_nbins * y_nbins) - 1]);
+
+	fclose(scores_map_logfile);
+}
+
+void log_distance_map()
+{
+	distance_map_logfile = fopen(distance_map_logfile_name, "a");
+
+	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+		fprintf(distance_map_logfile, "%.9f, ", distance_map[i]);
+
+	// Ajoutez la dernière valeur sans virgule
+	fprintf(distance_map_logfile, "%.9f\n", distance_map[(x_nbins * y_nbins) - 1]);
+
+	fclose(distance_map_logfile);
+}
+
+void log_acc_info_map()
+{
+	acc_info_map_logfile = fopen(acc_info_map_logfile_name, "a");
+
+	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+		fprintf(acc_info_map_logfile, "%.9f, ", acc_info_map[i]);
+
+	// Ajoutez la dernière valeur sans virgule
+	fprintf(acc_info_map_logfile, "%.9f\n", acc_info_map[(x_nbins * y_nbins) - 1]);
+
+	fclose(acc_info_map_logfile);
 }
 
 // ====================== ESTIMATIOM functions ========================= //
@@ -473,8 +536,9 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	// printf("likelihood... history size %d\n", history.size);
 	vector<float> model_c_avg(history.size); 
+	vector<float> model_c_std(history.size);
 	//vector<vector<float>> true_model_c_avg(history.size, vector<float> (1)); 
-	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg);
+	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
 	//model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, true_source_location, true_model_c_avg);
 	for (int i = 0; i < history.size; i++){
 		// float sigmaD = history.measurement_std[i];
@@ -489,7 +553,7 @@ double likelihood(struct history history, double *parameters, PlumeModel *model,
 
 
 // Likelihood with concentration values from precomputed gas maps
-double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_precomp(struct history history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -510,9 +574,15 @@ double likelihood_precomp(struct history history, double *parameters, int soure_
 		py[i] = history.position[i].y;
 		idx[i] = floor((px[i] - source_x_min) / x_resol);
 		idy[i] = floor((py[i] - source_y_min) / y_resol);
+		// idx should be between 0 and x_nbins-1
+		if (idx[i] < 0) idx[i] = 0;
+		if (idx[i] >= x_nbins) idx[i] = x_nbins - 1;
+		// idy should be between 0 and y_nbins-1
+		if (idy[i] < 0) idy[i] = 0;
+		if (idy[i] >= y_nbins) idy[i] = y_nbins - 1;
 	}
 
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
 
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
@@ -869,9 +939,16 @@ void calculate_information_gain()
 	{
 		plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
 	}
-	else if (simulation_parameters.infoFeature == MEAN)
+	if (simulation_parameters.infoFeature == MEAN)
 	{
 		plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
+	}
+	if (simulation_parameters.infoFeature == PDF)
+	{
+		for (int i = 0; i < x_nbins * y_nbins; i++)
+		{
+			gas_information_map[i] = posterior.pdf[i];
+		}
 	}
 	// printf("gas information map is: \n");
 	// for (int i = 0; i < x_nbins * y_nbins; i++)
@@ -881,6 +958,14 @@ void calculate_information_gain()
 	// printf("\n");
 }
 
+void reset_metrics(){
+    for (int i = 0; i < x_nbins * y_nbins; i++)
+    {
+	  acc_info_map[i] = 0.0;
+	  distance_map[i] = 0.0;
+	  scores_map[i] = 0.0;
+    }
+}
 
 void maximal_information_planning()
 {
@@ -1169,6 +1254,250 @@ void joint_planning(){
 	}
 }
 
+// **Dijkstra’s Algorithm with Path Tracking**
+
+// Custom Comparator for Priority Queue
+struct ComparePosition {
+    bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
+        return a.first > b.first; // Min-heap: prioritize lower cost
+    }
+};
+
+std::pair<std::vector<double>, std::unordered_map<int, Position>> 
+computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions) {
+    
+    std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
+    std::priority_queue<std::pair<double, Position>, 
+                        std::vector<std::pair<double, Position>>, 
+                        ComparePosition> pq;
+
+    std::vector<double> dist_map(x_nbins * y_nbins, 1e3);
+    dist_map[start.index] = 0;
+    pq.push({0, start});
+    while (!pq.empty()) {
+        auto [currentDist, pos] = pq.top();
+        pq.pop();
+	
+        int x = static_cast<int>(pos.x_idx);
+        int y = static_cast<int>(pos.y_idx);
+        
+        // Expand neighbors
+        for (auto [dx, dy, rel_dist] : directions) {
+            int nx = x + dx, ny = y + dy;
+		Position neg(nx, ny); 
+            if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
+                double newDist = currentDist + rel_dist;
+		    if (newDist < dist_map[neg.index]) {
+                    dist_map[neg.index] = newDist;
+                    pq.push({newDist, neg});
+                    cameFrom[neg.index] = {x, y};  // Store parent
+                }
+            }
+        }
+    }
+    return {dist_map, cameFrom};
+}
+
+// **Reconstruct Path from Dijkstra Results**
+std::list<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom) {
+    std::list<Position> dij_path;
+    Position current = goal;
+    while (cameFrom.find(current.index) != cameFrom.end()) {
+        dij_path.push_back(current);
+        current = cameFrom.at(current.index);
+    }
+    dij_path.push_back(current);  // Add the starting position
+    std::reverse(dij_path.begin(), dij_path.end()); // Reverse to get the correct order
+    return dij_path;
+}
+
+void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, int *cell_visited_list)
+{
+	// Parcours des cellules dans le voisinage
+	for (int dx = -radius_neighbor; dx <= radius_neighbor; ++dx)
+	{
+		for (int dy = -radius_neighbor; dy <= radius_neighbor; ++dy)
+		{
+			int neighbor_x = x + dx;
+			int neighbor_y = y + dy;
+
+			// Vérifier si la cellule voisine est dans les limites de la grille
+			if (neighbor_x >= 0 && neighbor_x < x_nbins_ && neighbor_y >= 0 && neighbor_y < y_nbins_)
+			{
+				// Calculer l'index dans le tableau
+				int index = neighbor_y * x_nbins_ + neighbor_x;
+				// Marquer la cellule voisine comme visitée
+				cell_visited_list[index] = 1;
+			}
+		}
+	}
+}
+
+// **Main Function: Compute Accumulative Information Gain Using Dijkstra**
+void accumulative_Dijkstra() {
+     calculate_information_gain();
+     reset_metrics();
+    // Directions for a 8-connected grid
+    std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
+     {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
+     {-1, 1, index_distance(-1,1)}, {1, -1, index_distance(1,-1)}, {1, 1, index_distance(1,1)}};
+    // Compute shortest distances and paths from current position to all cells
+    auto [distanceMap, cameFrom] = computeDijkstra(current_position, directions);
+
+    double bestScore = -1000; // Initialize the best score
+    Position bestTarget;
+    std::list<Position> bestPath;
+
+    double min_acc_info = 1e9, max_acc_info = -1e9;
+    double min_dist = 1e9, max_dist = -1e9;
+
+    int radius_neighbor = 2;
+
+    for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
+        for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
+		Position cell(x_idx,y_idx);
+            if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
+
+            double pathLength = distanceMap[cell.index];
+
+            if (pathLength == 1e3) continue; // Unreachable cell
+ 
+            // **Retrieve the path to this cell**
+            std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+            if (dij_path.empty()){
+			std::cout<<"no valid path exists";
+			continue; // Skip if no path exists	
+		} 
+
+            // **Accumulate total information gain along the path**
+            double totalInfo = 0.0;
+		if (simulation_parameters.infoSum == LINEAR_SUM){
+			for (const auto& pos : dij_path) {		    
+				totalInfo += gas_information_map[pos.index]; // Sum information along the path
+			}
+		}
+		if (simulation_parameters.infoSum == EXP_SUM){
+			for (const auto& pos : dij_path) {		    
+				totalInfo += exp(3*gas_information_map[pos.index])-1; // Sum information along the path
+			}
+		}
+		
+		acc_info_map[cell.index] = totalInfo;
+		distance_map[cell.index] = pathLength;
+
+		// Update min/max values
+		min_acc_info = std::min(min_acc_info, totalInfo);
+		max_acc_info = std::max(max_acc_info, totalInfo);
+		min_dist = std::min(min_dist, pathLength);
+		max_dist = std::max(max_dist, pathLength);
+        }
+    }
+
+    for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
+        for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
+		Position cell(x_idx,y_idx);
+            if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
+
+            if (max_acc_info != min_acc_info) {
+            	acc_info_map[cell.index] = (acc_info_map[cell.index] - min_acc_info) / (max_acc_info - min_acc_info);
+        	} else {
+            	acc_info_map[cell.index] = 0; // Avoid division by zero
+       	}
+		double totalInfo = acc_info_map[cell.index];
+
+        	if (max_dist != min_dist) {
+            	distance_map[cell.index] = (distance_map[cell.index] - min_dist) / (max_dist - min_dist);
+       	} else {
+            	distance_map[cell.index] = 0; // Avoid division by zero
+        	}
+		double pathLength = distance_map[cell.index];
+            
+            if (totalInfo < 1e-2) continue; // Skip no information gain cells
+		// skip visited cells
+		if (simulation_parameters.visitedList == visitedList_ON){
+			if (cell_visited_list[cell.index] == 1)
+				continue;
+		}
+
+		// **Compute the score based on information-to-distance trade-off**
+            double score;
+            if (simulation_parameters.scoreFun == RATIO)
+		{
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(0.0, pathLength);
+		}
+		if (simulation_parameters.scoreFun == LOG)
+		{
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(0.0, pathLength) + 1);
+		}
+		if (simulation_parameters.scoreFun == SIGMOID)
+		{
+			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(0.0, pathLength)));
+		}
+		if (simulation_parameters.scoreFun == SUM)
+		{
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_FIX)
+			{
+				score = simulation_parameters.scoreSigma * totalInfo - (1.0 - simulation_parameters.scoreSigma) * pathLength;
+			}
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
+				// in the beginning, when the uncertainty is high, the dynamic weight is smaller
+				double dynamic_weight = 1.0 - posterior.entropy / simulation_parameters.weighting_entropy_ratio;
+				if (dynamic_weight < 0.0)
+					dynamic_weight = 0.0;
+				score = dynamic_weight * totalInfo - (1.0 - dynamic_weight) * pathLength;
+			}
+		}
+		if (simulation_parameters.scoreFun == EXP)
+		{
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_FIX)
+			{
+				score = simulation_parameters.scoreSigma * (exp(totalInfo) - 1.0) - (1.0 - simulation_parameters.scoreSigma) * pathLength;
+			}
+			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
+				// in the beginning, when the uncertainty is high, the dynamic weight is smaller
+				double dynamic_weight = 1.0 - posterior.entropy / simulation_parameters.weighting_entropy_ratio;
+				if (dynamic_weight < 0.0)
+					dynamic_weight = 0.0;
+				score = dynamic_weight * (exp(totalInfo) - 1.0) - (1.0 - dynamic_weight) * pathLength;
+			}
+		}
+
+            scores_map[cell.index] = score;
+
+            if (score > bestScore) {
+		    std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+		    if (dij_path.empty()){
+				std::cout<<"no valid path exists";
+				continue; // Skip if no path exists	
+		    } 
+                bestScore = score;
+                bestTarget.copy_position(cell);
+                bestPath = dij_path;
+            }
+	  }
+    }
+
+    log_scores_map();
+    log_distance_map();
+    log_acc_info_map();
+
+    if (bestScore > -1e3) {
+        std::cout << "Best cell: (" << bestTarget.x_idx << ", " << bestTarget.y_idx << ") with score: " << bestScore << std::endl;
+        std::cout << "Optimal Path: ";
+        for (const auto& pos : bestPath) {
+            std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
+        }
+        std::cout << "Goal\n";
+	  goal_position.x = bestTarget.x;
+	  goal_position.y = bestTarget.y;
+	  cell_visited_list[bestTarget.index] = 1;
+	  markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, x_nbins, y_nbins, radius_neighbor, cell_visited_list);
+    } else {
+        std::cout << "No valid path found.\n";
+    }
+}
+
+
 void KLD_MAP_distance(float global_local_search_ratio){
 	double best_point[2]={0};
 	posterior.XYmarginal_distance_combined(current_position, global_local_search_ratio, best_point);
@@ -1394,6 +1723,7 @@ void state_waiting(){
 
 void state_estimating(){
 	if(VERBOSE) printf("[%d] estimating...\n", ID);
+	time_before_estimation = get_exp_time();
 	//reinitialize
 	posterior.pdf_reset();
 	//estimation
@@ -1423,19 +1753,30 @@ void state_estimating(){
 	if(VERBOSE) printf("[%d] entropy : %f\n", ID, posterior.entropy);
 	
 	//check if time is up
-	//if(FSM.n_cycles == simulation_parameters.max_iter || posterior.entropy < 0.1){
-	if(FSM.n_cycles == simulation_parameters.max_iter || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
-		//the end
-		FSM.state = STATE_FINISHED;
-		end_timestamp = get_exp_time();
-	} else {
+	//if(FSM.n_cycles == simulation_parameters.max_iter || posterior.entropy < 0.1){  
+	if (simulation_parameters.workingMode == VIDEO) {
+		
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
-		printf("go to update goal\n");
+	} else {
+	
+		if(FSM.n_cycles == simulation_parameters.max_iter || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+			//the end
+			FSM.state = STATE_FINISHED;
+			end_timestamp = get_exp_time();
+		} else {
+			FSM.state = STATE_UPDATEGOAL;
+			FSM.hook = state_updategoal;
+			printf("go to update goal\n");
+		}
+		time_after_estimation = get_exp_time();
+		estimation_computation_time_sum += time_after_estimation - time_before_estimation;
+		printf("estimation time: %f\n", time_after_estimation - time_before_estimation);
 	}
 }
 
 void state_updategoal(){
+	time_before_planning = get_exp_time();
 	if(VERBOSE) printf("[%d] updating the goal\n", ID);
       
       switch (simulation_parameters.planningStrategy)
@@ -1452,6 +1793,12 @@ void state_updategoal(){
 	case INFORMATIVE_KLD:
 		information_gain_navigation_approx();
 	      KLD_MAP_distance(1.0);
+		break;
+    case SUM_DIJKSTRA_FIX:
+	      accumulative_Dijkstra();
+		break;
+    case SUM_DIJKSTRA_ADP:
+	      accumulative_Dijkstra();
 		break;
 	default:
 		break;
@@ -1485,7 +1832,10 @@ void state_updategoal(){
 
 			//send the message
 			send_goal_to_robot(goal_position.x, goal_position.y);
-			time_before_moving_and_measuring = get_exp_time();
+			time_after_planning = get_exp_time();
+			printf("planning time: %f\n", time_after_planning - time_before_planning);
+			planning_computation_time_sum += time_after_planning - time_before_planning;
+		
 			sent_first_goal = true;
 
 			//move to listen
@@ -1496,6 +1846,8 @@ void state_updategoal(){
 		}
 		case VIDEO:
 		{
+			if (FSM.state == STATE_FINISHED)
+				break;
 			//send the goal to the supervisor
 			Message msg(ID, 0, goal_position, -1, goal_position, 0);
 			send_msg(msg);
@@ -1531,6 +1883,7 @@ void state_updategoal(){
 
 
 void state_listen(){
+	time_before_moving_and_measuring = get_exp_time();
 	int success_recv_meas = -1;
 	int success_recv_size = -1;
       double buffer[5] = {0};
@@ -1549,12 +1902,10 @@ void state_listen(){
 			if(success_recv_meas > 0){
 				printf("received Gas value %f: (%f, %f) %f +- %f\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]); 
 				// save in history
-				if (!position_outside_arena({float(buffer[1]), float(buffer[2]), 0})){
-					history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
-					history.measurement_avg.push_back(buffer[3]);
-					history.measurement_std.push_back(buffer[4]);
-					history.size++;
-				}
+				history.position.push_back({float(buffer[1]), float(buffer[2]), 0});
+				history.measurement_avg.push_back(buffer[3]);
+				history.measurement_std.push_back(buffer[4]);
+				history.size++;
 				
 				// check if all was received so far
 				if(history.size != buffer[0] + 1){
@@ -1566,13 +1917,15 @@ void state_listen(){
 			current_position.x = buffer[1];
 			current_position.y = buffer[2];
 			current_position.heading = 0;
-	    } 
+	      } 
+		current_position.calculate_index();
 		//move to estimating
 		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
 		time_after_moving_and_measuring = get_exp_time();
-        if (sent_first_goal) {
+            if (sent_first_goal) {
+			printf("navigation sampling time: %f\n", time_after_moving_and_measuring - time_before_moving_and_measuring);
 			navigation_sampling_time_sum += time_after_moving_and_measuring - time_before_moving_and_measuring;
 		}
 	}
@@ -1589,8 +1942,7 @@ void state_read_goal_measurement(){
 	char line[256];
 
     // Read the goal position
-	if (!feof(experiment_goalposition_logfile)){
-		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
+	if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5){
 		goal_position.x = f1;
 		goal_position.y = f2;
 		goal_position.heading = 0;
@@ -1635,26 +1987,22 @@ void state_read_goal_measurement(){
 
 }
 
-void state_read_goal(){
-	printf("Enter state read goal and measurment\n");
-	int d;
-	float f1, f2, f3; 
-	double t;
-	char line[256];
+void state_read_goal() {
+    printf("Enter state read goal\n");
+    int d;
+    float f1, f2, f3;
+    double t;
 
-    	// Read the goal position
-	if (!feof(experiment_goalposition_logfile)){
-		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
-		goal_position.x = f1;
-		goal_position.y = f2;
-		goal_position.heading = 0;
-		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
-	} else{
-		printf("End of experiment measurements file\n");
-		FSM.state = STATE_FINISHED;
-
-	}
-
+    // Attempt to read the goal position
+    if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5) {
+        goal_position.x = f1;
+        goal_position.y = f2;
+        goal_position.heading = 0;
+        printf("Goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+    } else {
+        printf("End of experiment goal position file or read error\n");
+        FSM.state = STATE_FINISHED;
+    }
 }
 
 
@@ -1701,8 +2049,8 @@ int main(int argc, char **argv){
 	console_logfile = fopen(console_logfile_name, "a");
 
 	// main loop
+	start_timestamp = get_exp_time();
 	while (FSM.state != STATE_FINISHED){
-		start_timestamp = get_exp_time();
 	   	//change state
 		//printf("state %d\n", FSM.state);
 		FSM.hook();

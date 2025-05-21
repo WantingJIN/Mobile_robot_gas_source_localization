@@ -1,9 +1,11 @@
 #include "Dbscan.h"
 #include <stack>
-#include "Constant.h"
+#include "constant_and_helper.h"
 #include <cstring>
 
 using namespace std;
+extern char clustering_bounding_boxes_logfile_name[512];
+FILE *clustering_bounding_boxes_logfile;
 DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
 {
 	x_epsilon = x_eps;
@@ -93,7 +95,7 @@ void DBSCAN::run(double information[])
 {
 	double max_info = 0;
 	double min_info = 100000;
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		if (information[i] > max_info)
 		{
@@ -112,8 +114,7 @@ void DBSCAN::run(double information[])
 			if (information[j * y_nbins + i] > ratio * (max_info - min_info) + min_info)
 			{
 				CellPoint cell;
-				cell.x = i * x_resol + source_x_min + x_resol / 2;
-				cell.y = j * y_resol + source_y_min + y_resol / 2;
+				indices_to_position_2D(i, j, &cell.x, &cell.y);
 				cell.cluster_id = UNCLASSIFIED;
 				cell_list.push_back(cell);
 			}
@@ -201,11 +202,8 @@ void DBSCAN::calculateBoundingBoxes()
 
 void DBSCAN::logBoundingBoxes()
 {
-	char clustering_bounding_boxes_logfile_name[512];
-	strcpy(clustering_bounding_boxes_logfile_name, "/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/current/101/clustering_bounding_boxes.csv");
-	FILE *clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
-	fprintf(clustering_bounding_boxes_logfile, "%d, ", cluster_num);
-	fprintf(clustering_bounding_boxes_logfile, "%f, ", ratio);
+	clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
+
 	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++)
 	{
 		fprintf(clustering_bounding_boxes_logfile, "%f, %f, %f, %f, ", iter->first.x, iter->first.y, iter->second.x, iter->second.y);

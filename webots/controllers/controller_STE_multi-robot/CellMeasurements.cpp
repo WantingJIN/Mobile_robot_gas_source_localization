@@ -2,7 +2,7 @@
 //#include "nvwa/debug_new.h"
 #include "CellMeasurements.h"
 #include <fstream>
-#include "Constant.h"
+#include "constant_and_helper.h"
 
 CellMeasurements::CellMeasurements(){
 	idx_x = 0;
@@ -15,8 +15,7 @@ CellMeasurements::CellMeasurements(){
 CellMeasurements::CellMeasurements(int idx, int idy){
 	idx_x = idx;
 	idx_y = idy;
-	px = source_x_min + idx_x * x_resol + x_resol / 2.0;
-	py = source_y_min + idx_y * y_resol + y_resol / 2.0;
+	indices_to_position_2D(idx_x, idx_y, &px, &py);
 	meas_std = 0.0;
 	meas_mean = 0.0;
 	meas_num = 0;
@@ -39,7 +38,7 @@ void CellMeasurements::add_gas_hit(float meas){
 	hit_sum += gas_hit;
 }
 
-void CellMeasurements::calculate_weighted_variance(double *pdf){
+void CellMeasurements::calculate_con_weighted_mean_variance(double *pdf){
 	int i;
 	float sum = 0.0;
 	meas_mean = 0.0;
@@ -53,7 +52,7 @@ void CellMeasurements::calculate_weighted_variance(double *pdf){
 	meas_std = sqrt(sum);
 }
 
-void CellMeasurements::calculate_hit_weighted_variance(double *pdf){
+void CellMeasurements::calculate_hit_weighted_mean_variance(double *pdf){
 	int i;
 	float sum = 0.0;
 	for(i = 0; i < meas_num; i++){
