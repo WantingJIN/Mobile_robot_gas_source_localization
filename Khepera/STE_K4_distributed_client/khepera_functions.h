@@ -26,7 +26,7 @@ extern "C" {
 #include "cortex.h"
 #include "CortexHandler.h"
 #include "visilibity.hpp"
-#include "Constant.h"
+#include "constant_and_helper.h"
 
 #define WEBOTS 0
 #define KHEPERA 1
@@ -44,22 +44,7 @@ extern struct sOdometryTrack ot;
 
 // log files
 extern char folder_name[256];
-extern FILE* goalposition_logfile;
-extern FILE* measurements_logfile;
-extern FILE* posterior_logfile;
-extern FILE* posteriorpdf_logfile;
-extern FILE* expected_a_posteriori_logfile;
-extern FILE* likelihood_logfile;
-extern FILE* measurement_history_logfile;
-extern FILE* position_history_logfile;
-extern FILE* max_a_posteriori_logfile;
-extern FILE* posterior_pdf_3D;
-extern FILE* entropy_logfile;
-extern FILE* tmp_file;
-extern FILE* config_logfile;
-extern FILE* trajectory_logfile;
 extern FILE* baseline_measurements_logfile;
-extern FILE* visited_list_logfile;
 
 extern char goalposition_logfile_name[256];
 extern char measurements_logfile_name[256];
@@ -76,6 +61,16 @@ extern char config_logfile_name[256];
 extern char trajectory_logfile_name[256];
 extern char baseline_measurements_logfile_name[256];
 extern char visited_list_logfile_name[256];
+
+extern char clustering_bounding_boxes_logfile_name[512];
+extern char scores_map_logfile_name[512];
+extern char distance_map_logfile_name[512];
+extern char acc_info_map_logfile_name[512];
+extern char console_logfile_name[512];
+extern char gas_information_map_logfile_name[512];
+extern char gas_concentration_map_logfile_name[512];
+extern char experiment_time_logfile_name[512];
+
 
 // finite state machine
 extern struct FSM FSM;

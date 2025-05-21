@@ -23,6 +23,7 @@
 #include "visilibity.hpp"
 #include "gasMap2D.h"
 #include "SimulationParameters.h"
+#include "Dbscan.h"
 
 
 //states of the finite state machine
@@ -53,7 +54,8 @@ struct history{
 	vector<Position> position;
 	vector<double> measurement;
 	vector<double> measurement_std;
-	vector<int> relative_meas;
+	vector<double> relative_meas;
+	vector<int> gas_hit_event;
 };
 
 

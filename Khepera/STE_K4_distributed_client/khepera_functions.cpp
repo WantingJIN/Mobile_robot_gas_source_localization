@@ -127,6 +127,18 @@ void set_logfile_names(){
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
     sprintf(baseline_measurements_logfile_name, "%s/baseline_measurements.csv", folder_name);
+
+    sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
+	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
+	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
+	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
+	sprintf(clustering_bounding_boxes_logfile_name, "%s/clustering_bounding_boxes.csv", folder_name);
+	sprintf(acc_info_map_logfile_name, "%s/acc_info_map.csv", folder_name);
+	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
+	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
+
+	// to save some debugging console input
+	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 }
 
 int initCortexComm(){
@@ -548,7 +560,7 @@ void obstacle_avoidance(double speed[2]){
 		for (int j = 0; j < SENSOR_NUMBER; j++){
 			//printf("j = %d\n", j);
 			speed[i] += (khepera4_matrix[j][i] * khepera4.infrared_proximity.sensor[j]/20.0);//(1.0 - (sensors_value[j] / range));
-            speed[i] = BOUND(speed[i],-300, 300); 
+            speed[i] = bound(speed[i],-300.0, 300.0); 
 			//printf("speed[%d] = %f\n", i, speed[i]);
 		}
 		//printf("works until here\n");

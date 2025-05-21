@@ -9,8 +9,9 @@
 //custom libraries
 #include <fstream>
 #include "controller_STE_distributed.h"
+#include "Posterior.h"
 #include "khepera_functions.h"
-#include "Constant.h"
+#include "constant_and_helper.h"
 #include "SimulationParameters.h"
 
 #include "Position.h"
@@ -44,6 +45,9 @@ FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* baseline_measurements_logfile;
 
+// text file for storing some prints for debugging
+FILE *console_logfile;
+
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
 char posterior_logfile_name[256];
@@ -59,6 +63,16 @@ char config_logfile_name[256];
 char trajectory_logfile_name[256];
 char baseline_measurements_logfile_name[256];
 char visited_list_logfile_name[256];
+char clustering_bounding_boxes_logfile_name[512];
+char gas_information_map_logfile_name[512];
+char scores_map_logfile_name[512];
+char distance_map_logfile_name[512];
+char acc_info_map_logfile_name[512];
+// text file for storing some prints for debugging
+char console_logfile_name[512];
+char gas_concentration_map_logfile_name[512];
+char experiment_time_logfile_name[512];
+
 
 // finite state machine
 struct FSM FSM;
@@ -66,6 +80,7 @@ struct FSM FSM;
 SampleBuffer sampleBuffer(ODOR_FILTER_LENGTH);
 
 Position goal_position;
+Position goal_position_team[3];
 Position current_position;
 double speed[2] = {0};
 // robot's position and measurement history
@@ -96,7 +111,7 @@ int n_time_step = 0;
 
 SimulationParameters simulation_parameters;
 
-int cell_visited_list[x_nbins * y_nbins] = {0};
+int cell_visited_list[MAP_SIZE] = {0};
 
 int msg_counter = 0;
 
@@ -324,7 +339,7 @@ void log_visited_list()
 {
 	visited_list_logfile = fopen(visited_list_logfile_name, "a");
 
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
 
 	fprintf(visited_list_logfile, "\n");
@@ -379,8 +394,7 @@ void state_measuring(){
 			if (simulation_parameters.visitedList == visitedList_ON)
 			{
 				int pos_coord[2];
-				pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
-				pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
+				position_to_indices_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y, &pos_coord[0], &pos_coord[1]);
 				// FIXME - comment this out to include posterior later
 				// int idx = posterior.indices_to_index(pos_coord);
 				// cell_visited_list[idx] = 1;
@@ -427,8 +441,7 @@ void state_measuring(){
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
 		int pos_coord[2];
-		pos_coord[0] = floor((current_position.x - source_x_min) / x_resol);
-		pos_coord[1] = floor((current_position.y - source_y_min) / y_resol);
+		position_to_indices_2D(current_position.x, current_position.y, &pos_coord[0], &pos_coord[1]);
 		// FIXME - comment this out to include posterior later
 		// int idx = posterior.indices_to_index(pos_coord);
 		// cell_visited_list[idx] = 1;

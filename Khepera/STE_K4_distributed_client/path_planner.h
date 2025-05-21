@@ -2,9 +2,11 @@
 
 #ifndef PATH_PLANNER_H
 #define PATH_PLANNER_H
-#include "controller_STE_multi-robot.h"
+#include "controller_STE_distributed.h"
+#include <unordered_map>
 #include "Posterior.h"
 #include "PlumeModel.h"
+#include <unordered_set>
 
 
 struct ComparePosition {
@@ -25,10 +27,10 @@ private:
     PlumeModel *plume_model;
     struct history *history;
 
-    double gas_information_map[x_nbins * y_nbins] = {0};
-    double scores_map[x_nbins * y_nbins] = {0};
-    double distance_map[x_nbins * y_nbins] = {0};
-    double acc_info_map[x_nbins * y_nbins] = {0}; 
+    double gas_information_map[MAP_SIZE] = {0};
+    double scores_map[MAP_SIZE] = {0};
+    double distance_map[MAP_SIZE] = {0};
+    double acc_info_map[MAP_SIZE] = {0}; 
 
     // helper functions
     void reset_metrics();

@@ -1,7 +1,7 @@
 #CC			:= arm-angstrom-linux-gnueabi-g++
 #CC			:= arm-angstrom-linux-gnueabi-g++-4.6
 
-CFLAGS_ADD := -std=c++0x -pthread
+CFLAGS_ADD := -std=c++14 -pthread
 #-std=c++11
 
 #

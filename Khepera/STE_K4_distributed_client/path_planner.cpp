@@ -9,14 +9,16 @@ extern Position goal_position;
 extern Position goal_position_team[3];
 extern Position current_position;
 extern SimulationParameters simulation_parameters;
-extern int cell_visited_list[x_nbins * y_nbins];
+extern int cell_visited_list[MAP_SIZE];
 
 extern char gas_information_map_logfile_name[512];
 extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
 extern int ID;
-
+extern int nbr_obs;
+extern float margin;
+extern float **obstacles;
 
 
 // text file for storing some prints for debugging
@@ -40,8 +42,7 @@ void PathPlanner::maximal_belief_planning()
 	// find the maximal variance in gas variance map
 	double max_pdf = 0;
 	int max_pdf_index = 0;
-	int sum = 0;
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
@@ -98,7 +99,7 @@ bool PathPlanner::position_outside_arena(Position p)
 void PathPlanner::KLD_informative_goal_selection()
 {
 	float p0 = 0.5; // 50 cm
-	double KLD = 0, max_KLD = -100, max_meas = -100;
+	double KLD = 0, max_KLD = -100;
 	// double position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
@@ -208,7 +209,7 @@ void PathPlanner::calculate_information_gain()
 		plume_model->calculate_weighted_gas_con_mean_map(gas_information_map, posterior->pdf);
 	}
       if (simulation_parameters.infoFeature == PDF){
-		for (int i = 0; i < x_nbins * y_nbins; i++)
+		for (int i = 0; i < MAP_SIZE; i++)
 		{
 			gas_information_map[i] = posterior->pdf[i];
 		}
@@ -231,8 +232,7 @@ void PathPlanner::maximal_information_planning()
 	// find the maximal variance in gas variance map
 	double max_info = 0;
 	int max_info_index = 0;
-	int sum = 0;
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
@@ -300,7 +300,7 @@ void PathPlanner::belief_clustering_planning()
 		double max_dist_to_robot;
 		int max_dist_to_robot_index;
 		vector<Position> candidate_goal;
-		for (int i = 0; i < clusters_bounding_box.size(); i++)
+		for (size_t i = 0; i < clusters_bounding_box.size(); i++)
 		{
 			max_dist_to_robot = 0;
 			max_dist_to_robot_index = 0;
@@ -324,7 +324,7 @@ void PathPlanner::belief_clustering_planning()
 		double min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
-		for (int j = 0; j < candidate_goal.size(); j++)
+		for (size_t j = 0; j < candidate_goal.size(); j++)
 		{
 			double dist = dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
@@ -332,8 +332,7 @@ void PathPlanner::belief_clustering_planning()
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
 					int pos_coord[2];
-					pos_coord[0] = floor((candidate_goal[j].x - source_x_min) / x_resol);
-					pos_coord[1] = floor((candidate_goal[j].y - source_y_min) / y_resol);
+                              position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
 					int idx = posterior->indices_to_index(pos_coord);
 					if (cell_visited_list[idx] == 0)
 					{
@@ -389,7 +388,7 @@ void PathPlanner::informative_clustering_planning()
 		double max_dist_to_robot;
 		int max_dist_to_robot_index;
 		vector<Position> candidate_goal;
-		for (int i = 0; i < clusters_bounding_box.size(); i++)
+		for (size_t i = 0; i < clusters_bounding_box.size(); i++)
 		{
 			max_dist_to_robot = 0;
 			max_dist_to_robot_index = 0;
@@ -413,7 +412,7 @@ void PathPlanner::informative_clustering_planning()
 		double min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
-		for (int j = 0; j < candidate_goal.size(); j++)
+		for (size_t j = 0; j < candidate_goal.size(); j++)
 		{
 			double dist = dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
@@ -421,8 +420,7 @@ void PathPlanner::informative_clustering_planning()
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
 					int pos_coord[2];
-					pos_coord[0] = floor((candidate_goal[j].x - source_x_min) / x_resol);
-					pos_coord[1] = floor((candidate_goal[j].y - source_y_min) / y_resol);
+					position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
 					int idx = posterior->indices_to_index(pos_coord);
 					if (cell_visited_list[idx] == 0)
 					{
@@ -468,18 +466,27 @@ PathPlanner::computeDijkstra(Position start, std::vector<std::tuple<int, int, do
                         std::vector<std::pair<double, Position>>, 
                         ComparePosition> pq;
 
-    std::vector<double> dist_map(x_nbins * y_nbins, 1e3);
+    std::vector<double> dist_map(MAP_SIZE, 1e3);
     dist_map[start.index] = 0;
     pq.push({0, start});
     while (!pq.empty()) {
-        auto [currentDist, pos] = pq.top();
+        //auto [currentDist, pos] = pq.top();
+	  // make it to work with c++14
+	  auto top = pq.top();
+	  double currentDist = top.first;
+        Position pos = top.second;
         pq.pop();
 	
         int x = static_cast<int>(pos.x_idx);
         int y = static_cast<int>(pos.y_idx);
         
         // Expand neighbors
-        for (auto [dx, dy, rel_dist] : directions) {
+        //for (auto [dx, dy, rel_dist] : directions) {
+	  // make it to work with c++14
+	  for (size_t i = 0; i < directions.size(); i++) {
+		int dx = std::get<0>(directions[i]);
+		int dy = std::get<1>(directions[i]);
+		double rel_dist = std::get<2>(directions[i]);
             int nx = x + dx, ny = y + dy;
 		Position neg(nx, ny); 
             if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
@@ -506,14 +513,18 @@ PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, in
     double start_dist = 0.0;
     double start_info = gas_information_map[start.index];
     double start_obj = simulation_parameters.scoreSigma * start_info - (1 - simulation_parameters.scoreSigma) * start_dist;
-    std::vector<double> obj_map(x_nbins * y_nbins, -1e3);
+    std::vector<double> obj_map(MAP_SIZE, -1e3);
     obj_map[start.index] = start_obj;
     pq.push({start_obj, start});
     int step_counter = 0;
     while (!pq.empty() && step_counter < simulation_parameters.planning_step) {
     //while (!pq.empty()) {
 	  step_counter++;
-        auto [currentObj, pos] = pq.top();
+        //auto [currentObj, pos] = pq.top();
+	  // make it to work with c++14
+	  auto top = pq.top();
+	  double currentObj = top.first;
+        Position pos = top.second;
         pq.pop();
 	   
         int x = static_cast<int>(pos.x_idx);
@@ -521,7 +532,12 @@ PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, in
       //   printf("Current cell is : %d, %d, obj value is: %f \n", x, y, currentObj);
 	//   printf("Current cell's parents is : %d, %d \n", cameFrom[pos.index].x_idx, cameFrom[pos.index].y_idx);
         // Expand neighbors
-        for (auto [dx, dy, rel_dist] : directions) {
+        //for (auto [dx, dy, rel_dist] : directions) {
+	  // make it to work with c++14
+	  for (size_t i = 0; i < directions.size(); i++) {
+		int dx = std::get<0>(directions[i]);
+		int dy = std::get<1>(directions[i]);
+		double rel_dist = std::get<2>(directions[i]);
             int nx = x + dx, ny = y + dy;
 		Position neg(nx, ny); 
 		// when the neg is already in the path, skip it
@@ -577,7 +593,7 @@ std::list<Position> PathPlanner::reconstructPath(Position goal, const std::unord
 }
 
 void PathPlanner::reset_metrics(){
-    for (int i = 0; i < x_nbins * y_nbins; i++)
+    for (int i = 0; i < MAP_SIZE; i++)
     {
 	  acc_info_map[i] = 0.0;
 	  distance_map[i] = 0.0;
@@ -613,11 +629,22 @@ void PathPlanner::accumulative_Dijkstra() {
      calculate_information_gain();
      reset_metrics();
     // Directions for a 8-connected grid
-    std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
-     {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
-     {-1, 1, index_distance(-1,1)}, {1, -1, index_distance(1,-1)}, {1, 1, index_distance(1,1)}};
+    std::vector<std::tuple<int, int, double>> directions = {
+	std::make_tuple(-1, 0, index_distance(-1, 0)),
+	std::make_tuple(1, 0, index_distance(1, 0)),
+	std::make_tuple(0, -1, index_distance(0, -1)),
+	std::make_tuple(0, 1, index_distance(0, 1)),
+	std::make_tuple(-1, -1, index_distance(-1, -1)),
+	std::make_tuple(-1, 1, index_distance(-1, 1)),
+	std::make_tuple(1, -1, index_distance(1, -1)),
+	std::make_tuple(1, 1, index_distance(1, 1))
+	};
     // Compute shortest distances and paths from current position to all cells
-    auto [distanceMap, cameFrom] = computeDijkstra(current_position, directions);
+    //auto [distanceMap, cameFrom] = computeDijkstra(current_position, directions);
+    // make it to work with c++14
+    auto result = computeMultiDijkstra(current_position, directions);
+    std::vector<double> distanceMap = result.first;
+    std::unordered_map<int, Position> cameFrom = result.second;
 
     double bestScore = -1000; // Initialize the best score
     Position bestTarget;
@@ -774,18 +801,29 @@ void PathPlanner::accumulative_Dijkstra() {
 
 
 std::list<Position> PathPlanner::multi_objective_Dijkstra() {
-	printf("Enter multi_objective_Dijkstra \n");
+     printf("Enter multi_objective_Dijkstra \n");
      double bestScore = -1e2; // Initialize the best score
      Position bestTarget;
      std::list<Position> bestPath;
      calculate_information_gain();
      
-     std::vector<std::tuple<int, int, double>> directions = {{-1, 0, index_distance(-1,0)}, {1, 0, index_distance(1,0)},
-     {0, -1, index_distance(0,-1)}, {0, 1, index_distance(0,1)}, {-1, -1, index_distance(-1,-1)},
-     {-1, 1, index_distance(-1,1)}, {1, -1, index_distance(1,-1)}, {1, 1, index_distance(1,1)}};
+      std::vector<std::tuple<int, int, double>> directions = {
+		std::make_tuple(-1, 0, index_distance(-1, 0)),
+		std::make_tuple(1, 0, index_distance(1, 0)),
+		std::make_tuple(0, -1, index_distance(0, -1)),
+		std::make_tuple(0, 1, index_distance(0, 1)),
+		std::make_tuple(-1, -1, index_distance(-1, -1)),
+		std::make_tuple(-1, 1, index_distance(-1, 1)),
+		std::make_tuple(1, -1, index_distance(1, -1)),
+		std::make_tuple(1, 1, index_distance(1, 1))
+	};
      
      // Compute shortest distances and paths from current position to all cells
-     auto [costMap, cameFrom] = computeMultiDijkstra(current_position, directions);
+     //auto [costMap, cameFrom] = computeMultiDijkstra(current_position, directions);
+     // make it to work with c++14
+     auto result = computeMultiDijkstra(current_position, directions);
+     std::vector<double> costMap = result.first;
+     std::unordered_map<int, Position> cameFrom = result.second;
      
 	for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
 		for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
@@ -854,7 +892,7 @@ void PathPlanner::calculate_mean_value_within_cluster(const pair<CellPoint, Cell
 			bin_values[0] = x; // coordonnée x
 			bin_values[1] = y; // coordonnée y
 
-			index_mean = y * x_nbins + x;
+			index_mean = indices_to_index_2D(x,y);
 			value = gas_information_map[index_mean];
 			total_value += value;
 			count++;
@@ -881,18 +919,13 @@ double PathPlanner::evaluate_cluster(const pair<CellPoint, CellPoint> &cluster)
 	calculate_mean_value_within_cluster(cluster, mean_value, mean_value_min, mean_value_max);
 	double mean_value_normed = (mean_value - mean_value_min) / (mean_value_max - mean_value_min);
 	// Calculate the centroid of the cluster for distance measurement
-	double centroid_x = (cluster.first.x + cluster.second.x) / 2.0;
-	double centroid_y = (cluster.first.y + cluster.second.y) / 2.0;
+	double centroid_idx_x = (cluster.first.x + cluster.second.x) / 2.0;
+	double centroid_idx_y = (cluster.first.y + cluster.second.y) / 2.0;
 
-	Position centroid(centroid_x, centroid_y, 0);
-
-	double centroid_x_in_m = centroid.x * x_resol + source_x_min;
-	double centroid_y_in_m = centroid.y * y_resol + source_y_min;
-
-	Position centroid_in_m(centroid_x_in_m, centroid_y_in_m, 0);
+	Position centroid(centroid_idx_x, centroid_idx_y, 0);
 
 	// Calculate the traveling distance to the centroid
-	double TD = dist_to_goal(centroid_in_m); // en m
+	double TD = dist_to_goal(centroid); // en m
       double TD_min = 0;
       double TD_max = sqrt((source_y_max - source_y_min) * (source_y_max - source_y_min) + (source_x_max - source_x_min) * (source_x_max - source_x_min));
 	double TD_normed = 1 - (TD - TD_min) / (TD_max - TD_min); // en m
@@ -921,7 +954,7 @@ void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &clu
 		for (int y = cluster_first_y_index; y <= cluster_second_y_index; ++y)
 		{
 
-			int index = y * x_nbins + x;
+			int index = indices_to_index_2D(x, y);
 			double value = information_map[index];
 
 			// Accumulate total coordinates weighted by value
@@ -934,18 +967,16 @@ void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &clu
 	// Calculate the weighted centroid if total_value is not zero
 	if (total_value > 0)
 	{
-		goal_position.x = total_x / total_value; // Weighted average x
-		goal_position.x = goal_position.x * x_resol + source_x_min;
-		goal_position.y = total_y / total_value; // Weighted average y
-		goal_position.y = goal_position.y * y_resol + source_y_min;
+		goal_position.x_idx = total_x / total_value; // Weighted average x
+		goal_position.y_idx = total_y / total_value; // Weighted average y
+		indices_to_position_2D(goal_position.x_idx, goal_position.y_idx, &goal_position.x, &goal_position.y);
 	}
 	else
 	{
 		// Handle the case where there are no valid points
-		goal_position.x = (cluster.first.x + cluster.second.x) / 2.0; // Fallback to centroid of the bounding box
-		goal_position.x = goal_position.x * x_resol + source_x_min;
-		goal_position.y = (cluster.first.y + cluster.second.y) / 2.0;
-		goal_position.y = goal_position.y * y_resol + source_y_min;
+		goal_position.x_idx = (cluster.first.x + cluster.second.x) / 2.0; // Fallback to centroid of the bounding box
+		goal_position.y_idx = (cluster.first.y + cluster.second.y) / 2.0;
+		indices_to_position_2D(goal_position.x_idx, goal_position.y_idx, &goal_position.x, &goal_position.y);
 	}
 	goal_position.heading = 0; // Set heading as needed
 	printf("Cluster Center: (%f, %f)\n", (cluster.first.x + cluster.second.x) / 2.0, (cluster.first.y + cluster.second.y) / 2.0);
@@ -955,7 +986,7 @@ void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &clu
 void PathPlanner::weighted_belief_clustering()
 {
 
-	for (int i = 0; i < x_nbins * y_nbins; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		gas_information_map[i] = posterior->pdf[i];
 	}
@@ -976,7 +1007,7 @@ void PathPlanner::weighted_belief_clustering()
 		double max_score = -1; // Assuming scores are non-negative
 		int best_cluster_index = -1;
 		// Evaluate each cluster using the scoring function
-		for (int i = 0; i < clusters_bounding_box.size(); i++)
+		for (size_t i = 0; i < clusters_bounding_box.size(); i++)
 		{
 			double score = evaluate_cluster(clusters_bounding_box[i]); // Scoring function
 			if (score > max_score)
@@ -1151,17 +1182,13 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		// mark the cell as visited so that never plans to go there again
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
-			int pos_coord[2];
-			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
-			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
-			int idx = posterior->indices_to_index(pos_coord);
+			int idx = position_to_index_2D(goal->x, goal->y);
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		fprintf(console_logfile, ">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
-		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
 		Position nearest_unvisited_position(*goal); // for testing priority to unvisited cells
 		Position candidates[4] = {Position(obstacles[idx][0], goal->y, 0),
@@ -1169,7 +1196,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 						  Position(goal->x, obstacles[idx][1], 0),
 						  Position(goal->x, obstacles[idx][3], 0)};
 
-		int unvisited = 0;
 
 		// for each candidate position
 		for (int i = 0; i < 4; i++)
@@ -1189,10 +1215,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 					if (simulation_parameters.visitedList == visitedList_ON)
 					{
 						// mark the cell as visited so that never plans to go there again
-						int pos_coord[2];
-						pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
-						pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-						int idx = posterior->indices_to_index(pos_coord);
+						int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
 						cell_visited_list[idx] = 1;
 					}
 				}
@@ -1211,17 +1234,13 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
 			// mark the cell as visited so that never plans to go there again
-			int pos_coord[2];
-			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
-			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
-			int idx = posterior->indices_to_index(pos_coord);
+			int idx = position_to_index_2D(goal->x, goal->y);
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		fprintf(console_logfile, ">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 8 different candidates
 		float min_dist = 10000.0;
-		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
 		Position nearest_unvisited_position(*goal); // to give priority to unvisited cells
 		Position candidates[8] = {Position(float(XMIN + SAFETY_MARGIN), goal->y, 0),
@@ -1239,10 +1258,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 			// give priority to unvisited cells but was much slower
 			/*
 			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
-				int pos_coord[2];
-				pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
-				pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
-				int idx = posterior.indices_to_index(pos_coord);
+                        int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
 				if (cell_visited_list[idx] == 0){
 					//if so, then this is the nearest position
 					nearest_unvisited_position.copy_position(candidates[i]);
@@ -1262,10 +1278,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 				{
 					if (simulation_parameters.visitedList == visitedList_ON)
 					{
-						int pos_coord[2];
-						pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
-						pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-						int idx = posterior->indices_to_index(pos_coord);
+						int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
 						cell_visited_list[idx] = 1;
 					}
 				}
@@ -1275,16 +1288,12 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		goal->copy_position(nearest_position);
 	}
 	// make sure that the chosen goal is not too close from the robot current position so that it will not instantaneously be reached
-	double dist_candidate_goal = goal->distance_from(current_position);
 	if (goal->distance_from(current_position) < min_dist_to_current)
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
 			// mark the cell as visited so that never plans to go there again
-			int pos_coord[2];
-			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
-			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
-			int idx = posterior->indices_to_index(pos_coord);
+			int idx = position_to_index_2D(goal->x, goal->y);
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
@@ -1306,10 +1315,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 			{
 				// Take the first candidate that satisfies the condition
 				nearest_position.copy_position(candidates[i]);
-				int pos_coord[2];
-				pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
-				pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-				int idx = posterior->indices_to_index(pos_coord);
+				int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
 				if (cell_visited_list[idx] == 0)
 				{
 					break; // give priority to unvisited cell
@@ -1320,10 +1326,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
-					int pos_coord[2];
-					pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
-					pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-					int idx = posterior->indices_to_index(pos_coord);
+					int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
 					cell_visited_list[idx] = 1;
 				}
 			}
@@ -1344,11 +1347,11 @@ void PathPlanner::log_scores_map()
 {
 	scores_map_logfile = fopen(scores_map_logfile_name, "a");
 
-	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+	for (int i = 0; i < (MAP_SIZE) - 1; i++) // Jusqu'à l'avant-dernière valeur
 		fprintf(scores_map_logfile, "%.9f, ", scores_map[i]);
 
 	// Ajoutez la dernière valeur sans virgule
-	fprintf(scores_map_logfile, "%.9f\n", scores_map[(x_nbins * y_nbins) - 1]);
+	fprintf(scores_map_logfile, "%.9f\n", scores_map[(MAP_SIZE) - 1]);
 
 	fclose(scores_map_logfile);
 }
@@ -1357,11 +1360,11 @@ void PathPlanner::log_distance_map()
 {
 	distance_map_logfile = fopen(distance_map_logfile_name, "a");
 
-	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+	for (int i = 0; i < (MAP_SIZE) - 1; i++) // Jusqu'à l'avant-dernière valeur
 		fprintf(distance_map_logfile, "%.9f, ", distance_map[i]);
 
 	// Ajoutez la dernière valeur sans virgule
-	fprintf(distance_map_logfile, "%.9f\n", distance_map[(x_nbins * y_nbins) - 1]);
+	fprintf(distance_map_logfile, "%.9f\n", distance_map[(MAP_SIZE) - 1]);
 
 	fclose(distance_map_logfile);
 }
@@ -1370,11 +1373,11 @@ void PathPlanner::log_acc_info_map()
 {
 	acc_info_map_logfile = fopen(acc_info_map_logfile_name, "a");
 
-	for (int i = 0; i < (x_nbins * y_nbins) - 1; i++) // Jusqu'à l'avant-dernière valeur
+	for (int i = 0; i < (MAP_SIZE) - 1; i++) // Jusqu'à l'avant-dernière valeur
 		fprintf(acc_info_map_logfile, "%.9f, ", acc_info_map[i]);
 
 	// Ajoutez la dernière valeur sans virgule
-	fprintf(acc_info_map_logfile, "%.9f\n", acc_info_map[(x_nbins * y_nbins) - 1]);
+	fprintf(acc_info_map_logfile, "%.9f\n", acc_info_map[(MAP_SIZE) - 1]);
 
 	fclose(acc_info_map_logfile);
 }
@@ -1384,11 +1387,11 @@ void PathPlanner::log_gas_information_map()
 	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "a");
 
 	// Parcourez jusqu'à l'avant-dernière valeur
-	for (int i = 0; i < (x_nbins * y_nbins - 1); i++)
+	for (int i = 0; i < (MAP_SIZE - 1); i++)
 		fprintf(gas_information_map_logfile, "%.9f, ", gas_information_map[i]);
 
 	// Ajoutez la dernière valeur sans virgule
-	fprintf(gas_information_map_logfile, "%.9f\n", gas_information_map[x_nbins * y_nbins - 1]);
+	fprintf(gas_information_map_logfile, "%.9f\n", gas_information_map[MAP_SIZE - 1]);
 
 	fclose(gas_information_map_logfile);
 }
@@ -1400,7 +1403,7 @@ void PathPlanner:: maximal_merged_belief_planning()
 	double top1 = -1, top2 = -1, top3 = -1;
 	double epsilon = 1e-6;
 
-	for (int i = 0; i < x_nbins * y_nbins; i++) {
+	for (int i = 0; i < MAP_SIZE; i++) {
 
 		if (simulation_parameters.visitedList == visitedList_ON && cell_visited_list[i] != 0)
 			continue;
