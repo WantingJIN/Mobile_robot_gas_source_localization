@@ -182,6 +182,9 @@ static double belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
 static int received_flags[MAX_NB_ROBOTS] = {0};
 static double belief_map_merged[MAP_SIZE] = {0};
 static int belief_clusters[x_nbins*y_nbins] = {0};
+static float received_current_pos[MAX_NB_ROBOTS][2] = {0};
+static int ready_from[MAX_NB_ROBOTS] = {0};
+static int i_am_ready = 0;
 
 // print variables
 bool printed = false;
@@ -1219,7 +1222,7 @@ void state_receive_pdf()
 	bool is_centralized = (simulation_parameters.teamStrategy == CENTRALIZED && ID == CENTRAL_MASTER_ID);
 	bool is_distributed = simulation_parameters.teamStrategy == DISTRIBUTED;
 
-	if (is_centralized || is_distributed)
+	if (is_centralized)
 	{
 		if (!printed && posterior.pdf != nullptr)
 		{
@@ -1240,25 +1243,6 @@ void state_receive_pdf()
 			int flag_finished = (int)buffer[9];
 
 			printf("Robot ID [%d]: Received message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
-
-			// // check if state_finished
-			// if (flag_finished == -1)
-			// {
-			// 	// printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-			// 	FSM.state = STATE_FINISHED;
-			// 	printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-			// 	return;
-			// }
-
-			// check if state_finished
-			// if (flag_finished == -1)
-			// {
-			// 	finished_info[self_index] = 1;
-			// 	// printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-			// 	//FSM.state = STATE_FINISHED;
-			// 	printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-			// 	return;
-			// }
 
 			int sender_index = sender_ID - 101;
 
@@ -1300,6 +1284,120 @@ void state_receive_pdf()
 			entered_state_receive_pdf = false;
 		}
 	}
+
+	if (is_distributed)
+	{
+		if (!printed && posterior.pdf != nullptr)
+		{
+			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(double));
+			printed = true;
+		}
+
+		while (wb_receiver_get_queue_length(receiver) > 0)
+		{
+			const void *data = wb_receiver_get_data(receiver);
+			const double *buffer = (const double *)data;
+
+			int sender_ID = (int)buffer[0];
+			int message_type = (int)buffer[1]; // -99 means READY
+			float received_current_pos_x = buffer[2];
+			float received_current_pos_y = buffer[3];
+			int flag_finished = (int)buffer[9];
+
+			int sender_index = sender_ID - 101;
+
+			if (message_type == -99)
+			{
+				ready_from[sender_index] = 1;
+				printf("Robot ID [%d]: Received READY from Robot ID [%d]\n", ID, sender_ID);
+				wb_receiver_next_packet(receiver);
+				continue;
+			}
+
+			if (sender_ID != ID && sender_index >= 0 && sender_index < MAX_NB_ROBOTS)
+			{
+				memcpy(belief_maps[sender_index], &buffer[10], MAP_SIZE * sizeof(double));
+				received_current_pos[sender_index][0] = received_current_pos_x;
+				received_current_pos[sender_index][1] = received_current_pos_y;
+				received_flags[sender_index] = 1;
+			}
+
+			wb_receiver_next_packet(receiver);
+		}
+
+		// Send READY message if received all maps
+		int all_received = 1;
+		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+		{
+			if (i == self_index) continue;
+			if (!received_flags[i])
+			{
+				all_received = 0;
+				break;
+			}
+		}
+
+		if (all_received && !i_am_ready)
+		{	
+			Message msg(ID, -99, Position(), -1, Position(), 1);
+            send_msg(msg);
+			i_am_ready = 1;
+
+			if (ID == 101) {
+				fprintf(clustering_debugging_logfile_101, "received_pos_101: (%.2f, %.2f)\n",
+						received_current_pos[0][0], received_current_pos[0][1]);
+				fprintf(clustering_debugging_logfile_101, "received_pos_102: (%.2f, %.2f)\n",
+						received_current_pos[1][0], received_current_pos[1][1]);
+				fprintf(clustering_debugging_logfile_101, "received_pos_103: (%.2f, %.2f)\n",
+						received_current_pos[2][0], received_current_pos[2][1]);
+			}
+
+			if (ID == 102) {
+				fprintf(clustering_debugging_logfile_102, "received_pos_101: (%.2f, %.2f)\n",
+						received_current_pos[0][0], received_current_pos[0][1]);
+				fprintf(clustering_debugging_logfile_102, "received_pos_102: (%.2f, %.2f)\n",
+						received_current_pos[1][0], received_current_pos[1][1]);
+				fprintf(clustering_debugging_logfile_102, "received_pos_103: (%.2f, %.2f)\n",
+						received_current_pos[2][0], received_current_pos[2][1]);
+			}
+
+			if (ID == 103) {
+				fprintf(clustering_debugging_logfile_103, "received_pos_101: (%.2f, %.2f)\n",
+						received_current_pos[0][0], received_current_pos[0][1]);
+				fprintf(clustering_debugging_logfile_103, "received_pos_102: (%.2f, %.2f)\n",
+						received_current_pos[1][0], received_current_pos[1][1]);
+				fprintf(clustering_debugging_logfile_103, "received_pos_103: (%.2f, %.2f)\n",
+						received_current_pos[2][0], received_current_pos[2][1]);
+			}
+
+			printf("Robot ID [%d]: Sent READY message.\n", ID);
+		}
+
+		// Check if all READY received
+		int ready_count = 0;
+		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+		{
+			if (i == self_index) continue;
+			if (ready_from[i]) ready_count++;
+		}
+
+		if (i_am_ready && ready_count == simulation_parameters.number_of_robots - 1)
+		{
+			printf("Robot ID [%d]: All robots READY. Transitioning to STATE_MERGE_PDF.\n", ID);
+			FSM.state = STATE_MERGE_PDF;
+			FSM.hook = state_merge_pdf;
+			entered_state_receive_pdf = false;
+			printed = false;
+			i_am_ready = 0;
+
+			// Reset flags
+			for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+			{
+				received_flags[i] = 0;
+				ready_from[i] = 0;
+			}
+		}
+	}
 }
 
 void state_merge_pdf()
@@ -1311,16 +1409,94 @@ void state_merge_pdf()
 		belief_map_merged[i] = 1.0;
 	}
 
-	// Multiply belief maps from other robots (excluding self)
+	// // Multiply belief maps from other robots (excluding self)
+	// for (int r = 0; r < simulation_parameters.number_of_robots; r++)
+	// {
+	// 	if (r == self_index)
+	// 		continue; // Skip self
+
+	// 	for (int i = 0; i < MAP_SIZE; i++)
+	// 	{
+	// 		belief_map_merged[i] *= belief_maps[r][i];
+	// 	}
+	// }
+
 	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
 	{
-		if (r == self_index)
-			continue; // Skip self
-
 		for (int i = 0; i < MAP_SIZE; i++)
 		{
 			belief_map_merged[i] *= belief_maps[r][i];
 		}
+	}
+
+	// debugging purpose
+	if (ID == 101) {
+		fprintf(clustering_debugging_logfile_101, "\n[Robot 101] Belief Maps (cycle %d):\n", FSM.n_cycles);
+		fprintf(clustering_debugging_logfile_101, "Robot 101 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_101, "%.8f ", belief_maps[0][i]);
+		fprintf(clustering_debugging_logfile_101, "\nRobot 102 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_101, "%.8f ", belief_maps[1][i]);
+		fprintf(clustering_debugging_logfile_101, "\nRobot 103 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_101, "%.8f ", belief_maps[2][i]);
+		fprintf(clustering_debugging_logfile_101, "\n");
+	}
+	if (ID == 102) {
+		fprintf(clustering_debugging_logfile_102, "\n[Robot 101] Belief Maps (cycle %d):\n", FSM.n_cycles);
+		fprintf(clustering_debugging_logfile_102, "Robot 101 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_102, "%.8f ", belief_maps[0][i]);
+		fprintf(clustering_debugging_logfile_102, "\nRobot 102 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_102, "%.8f ", belief_maps[1][i]);
+		fprintf(clustering_debugging_logfile_102, "\nRobot 103 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_102, "%.8f ", belief_maps[2][i]);
+		fprintf(clustering_debugging_logfile_102, "\n");
+	}
+	if (ID == 103) {
+		fprintf(clustering_debugging_logfile_103, "\n[Robot 101] Belief Maps (cycle %d):\n", FSM.n_cycles);
+		fprintf(clustering_debugging_logfile_103, "Robot 101 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_103, "%.8f ", belief_maps[0][i]);
+		fprintf(clustering_debugging_logfile_103, "\nRobot 102 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_103, "%.8f ", belief_maps[1][i]);
+		fprintf(clustering_debugging_logfile_103, "\nRobot 103 belief map:\n");
+		for (int i = 0; i < MAP_SIZE; i++)
+			fprintf(clustering_debugging_logfile_103, "%.8f ", belief_maps[2][i]);
+		fprintf(clustering_debugging_logfile_103, "\n");
+	}
+
+
+	// debugging purpose
+	if (ID == 101) {
+		fprintf(clustering_debugging_logfile_101, "FSM iter: %d \n", FSM.n_cycles);
+		fprintf(clustering_debugging_logfile_101, "belief_map_merged: \n");
+		for (int i = 0; i < MAP_SIZE; i++) {
+			fprintf(clustering_debugging_logfile_101, "%.8f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile_101, "\n");
+	}
+
+	if (ID == 102) {
+		fprintf(clustering_debugging_logfile_102, "FSM iter: %d \n", FSM.n_cycles);
+		fprintf(clustering_debugging_logfile_102, "belief_map_merged: \n");
+		for (int i = 0; i < MAP_SIZE; i++) {
+			fprintf(clustering_debugging_logfile_102, "%.8f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile_102, "\n");
+	}
+
+	if (ID == 103) {
+		fprintf(clustering_debugging_logfile_103, "FSM iter: %d \n", FSM.n_cycles);
+		fprintf(clustering_debugging_logfile_103, "belief_map_merged: \n");
+		for (int i = 0; i < MAP_SIZE; i++) {
+			fprintf(clustering_debugging_logfile_103, "%.8f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile_103, "\n");
 	}
 
 	// normalize belief map
@@ -1337,6 +1513,7 @@ void state_merge_pdf()
 			belief_map_merged[i] /= sum;
 		}
 	}
+
 
 	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
 	printf("Robot ID [%d]: Merged belief map is: \n", ID);
@@ -1403,8 +1580,13 @@ void state_share_pdf()
         for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
             int target_ID = 101 + i;
             if (target_ID == ID) continue; // skip self
+			
+			// save my current position
+			received_current_pos[self_index][0] = current_position.x;
+			received_current_pos[self_index][1] = current_position.y;
 
-            Message msg(ID, target_ID, Position(), -1, Position(), 0, posterior.pdf);
+			// share my current position & belief map with teammates
+            Message msg(ID, target_ID, current_position, -1, Position(), 0, posterior.pdf);
             send_msg(msg);
 
             printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
