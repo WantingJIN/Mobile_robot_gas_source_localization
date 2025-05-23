@@ -33,6 +33,7 @@ extern "C" {
 #define PUMP_SPEED        0     //1024=stop, 0=max
 #define COMPUTERID  30
 #define SLEEP_PERIOD      50
+#define CONTROLLER_TIMESTAMP SLEEP_PERIOD*200
 
 
 extern struct sKhepera4 khepera4;
@@ -85,6 +86,7 @@ extern sVector3d wind_vect;
 
 //robot's ID
 extern int ID;
+extern int self_index;
 
 extern int msg_counter;
 
@@ -166,5 +168,7 @@ double calibrate_sensor_reading (double raw_reading);
 void braitenberg_run(sBraitenberg *braitenberg);
 void braitenberg_set_obstacle_avoidance(sBraitenberg *braitenberg, int aggressivity);
 void braitenberg_init(sBraitenberg *braitenberg);
+
+void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading);
 
 #endif

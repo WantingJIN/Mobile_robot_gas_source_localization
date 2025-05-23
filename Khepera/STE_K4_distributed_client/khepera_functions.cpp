@@ -29,6 +29,7 @@ void init(){
 		if(ok) printf("My ID is %d\n", ID);
 		fclose(ID_file);
 	}
+    self_index = ID - 101;
  	//printf("My ID is %d\n", ID);
 
     msg_counter = ID*100000;
@@ -613,7 +614,7 @@ void cleaning_up(){
 }
 
 void next_iteration_time(){
-	usleep(SLEEP_PERIOD * 200);
+	usleep(CONTROLLER_TIMESTAMP);
 }
 
 void log_baseline(double min_c, double max_c, double baseline_c){
@@ -713,4 +714,36 @@ void braitenberg_init(struct sBraitenberg *braitenberg) {
     braitenberg->speed.right =  speed;
     braitenberg->repeat =  0;
     braitenberg->wait_us =  5000;
+}
+
+void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading){
+	double Ts = TIME_STEP / 1000.0; // sampling frequency
+	double reverse_sensor_reading = 0.0;
+	double tau_r = 0, tau_d = 0;
+	if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX)
+	{
+		tau_r = 0.72; // time constant for the rise (our default sensor)
+		tau_d = 0.92; // time constant for the decay
+	}
+	if (simulation_parameters.gasSensor == SLOW_MOX || simulation_parameters.gasSensor == NOISY_SLOW_MOX)
+	{
+		tau_r = 2.06; // time constant for the rise (slow sensor)
+		tau_d = 4.53; // time constant for the decay
+	}
+	if (simulation_parameters.gasSensor == VERY_SLOW_MOX || simulation_parameters.gasSensor == NOISY_VERY_SLOW_MOX)
+	{
+		tau_r = 5.19;  // time constant for the rise (very slow MOX TGS2600)
+		tau_d = 19.74; // time constant for the decay
+	}
+	double alpha = 0.0;
+	if (sensor_reading > previous_sensor_reading) // rising phase
+		alpha = tau_r / Ts;
+	else // decaying phase
+		alpha = tau_d / Ts;
+	reverse_sensor_reading = (1 + alpha) * sensor_reading - alpha * previous_sensor_reading;
+	// printf("reverse_sensor_reading %f\n", reverse_sensor_reading);
+	// printf("sensor_reading %f\n", sensor_reading);
+	// printf("odor_concentration %f\n", odor_concentration);
+	previous_sensor_reading = sensor_reading;
+	sensor_reading = reverse_sensor_reading;
 }

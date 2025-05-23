@@ -149,9 +149,6 @@ double navigation_sampling_time_sum = 0;
 long long estimating_time_sum = 0; // computation time of the estimation part
 long long planning_time_sum = 0;   // computation time of the planning part
 
-// precomputed gas maps
-double c_avg[MAP_SIZE][MAP_SIZE]; // left: source position, right: estimated cell position
-
 // store last position for minimum distance threshold in measurement update
 Position last_measurement_pos;
 
