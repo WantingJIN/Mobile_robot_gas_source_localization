@@ -132,6 +132,11 @@ typedef enum stopCondition{
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
 
+typedef enum entropyCriteria{
+	LOCAL = 0,
+	GLOBAL = 1,
+} eEntropyCriteria;
+
 typedef enum updataGoalPolicy{
 	GOAL_REACHED = 0,
 	FIXED_FREQ = 1,
@@ -169,6 +174,7 @@ class SimulationParameters{
 		int planning_step;
 		float weighting_entropy_ratio;
 		int update_goal_time;
+		int regionAllocApproach;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
@@ -190,6 +196,7 @@ class SimulationParameters{
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
+		eEntropyCriteria entropyCriteria;
 		eUpdateGoalPolicy updateGoalPolicy;
 
 		SimulationParameters();

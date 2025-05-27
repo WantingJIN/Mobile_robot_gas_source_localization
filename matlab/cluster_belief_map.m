@@ -58,7 +58,7 @@ wall_thickness = 0.1;
 axis([-wall_thickness 16 + wall_thickness -wall_thickness 4 + wall_thickness]);
 xlabel('X (m)');
 ylabel('Y (m)');
-title('Animated Belief Maps');
+title('FSM cycle: 1');
 
 % Add key press callback for pausing
 set(gcf, 'KeyPressFcn', @keypress_callback);
@@ -155,7 +155,7 @@ for frame_t = 1:10000
                 gx = goal_positions{r}(goal_idx(r), 1);
                 gy = goal_positions{r}(goal_idx(r), 2);
 
-                if isequal(round(curr_pos,1), [gx, gy])
+                if isequal(round(curr_pos, 1), [gx, gy])
                     waiting(r) = true;
                 else
                     waiting(r) = false;
@@ -172,7 +172,7 @@ for frame_t = 1:10000
                     done(r) = true;
                 end
             else
-                set(robot_markers(r), 'XData', last_pos(r,1), 'YData', last_pos(r,2));
+                set(robot_markers(r), 'XData', last_pos(r, 1), 'YData', last_pos(r, 2));
             end
 
             if goal_idx(r) <= size(goal_positions{r}, 1)
@@ -192,11 +192,11 @@ for frame_t = 1:10000
     end
 
     % Update belief map (only for robot 101)
-    rx = last_pos(1,1);
-    ry = last_pos(1,2);
+    rx = last_pos(1, 1);
+    ry = last_pos(1, 2);
     idx = find(belief_x == rx & belief_y == ry, 1);
     if ~isempty(idx)
-        delete(findall(gca, 'Tag', 'belief_text'));
+        delete(findall(gca, 'Type', 'text'));
         belief_map = belief_maps(idx, :);
         for col = 1:cols
             for row = 1:rows
@@ -211,6 +211,9 @@ for frame_t = 1:10000
                 set(cell_handles(row, col), 'FaceColor', color);
             end
         end
+
+        % === Update title with the current FSM cycle ===
+        title(sprintf('FSM cycle: %d', idx), 'FontSize', 14, 'FontWeight', 'bold');
     end
 
     % === Pause mechanism ===
@@ -228,8 +231,9 @@ for frame_t = 1:10000
     end
 end
 
+
 % === Plot estimated source position ===
-expected_path = fullfile(exp_folder, '102', 'expected_a_posteriori.csv');
+expected_path = fullfile(exp_folder, '103', 'expected_a_posteriori.csv');
 expected_data = readmatrix(expected_path);
 estimated_x = expected_data(end, 2);
 estimated_y = expected_data(end, 3);

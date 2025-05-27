@@ -21,12 +21,12 @@
 #include <webots/robot.h>
 #include "../controller_STE_multi-robot/Message.h"
 
-// #define MAX_NB_ROBOTS   3
+//#define MAX_NB_ROBOTS   3
 #define STEP_SIZE       64
-// #define YMIN            0.0
-// #define YMAX            4.0
-// #define XMIN            2.75
-// #define XMAX            12.75
+//#define YMIN            0.0
+//#define YMAX            4.0
+//#define XMIN            2.75
+//#define XMAX            12.75
 #define SAFETY_MARGIN   0.2
 #define VERBOSE         1
 //#define TIMEOUT         600000 // miliseconds
@@ -210,7 +210,7 @@ int main(void){
                     // wb_supervisor_node_remove(wb_supervisor_node_get_from_def(strcat_robot_ID("goal_",msg.sender_ID)));
                     printf("robot ID %s removed\n", strcat_robot_ID("n",msg.sender_ID));
                     //Wait for all the robots to be finished before reverting the simulation 
-                    if(++termination_flag_counter == MAX_NB_ROBOTS) 
+                    if(++termination_flag_counter == number_of_robots) 
                         break;
                 }else{
                     // move the target point for each robot

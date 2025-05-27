@@ -14,23 +14,36 @@ exp_number = length(folder_list);
 %% Despachar resultados
 for i = 1:exp_number
     folder_name = fullfile(folder_list(i).folder, folder_list(i).name);
-    robot_list = dir(folder_name);
-    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}));
-    robot_list = robot_list([robot_list.isdir]);
-    ID = arrayfun(@(s) str2double(s.name), robot_list);
+    
+    % Obtener subcarpeta válida
+    subfolders = dir(folder_name);
+    subfolders = subfolders([subfolders.isdir]); % Solo carpetas
+    subfolders = subfolders(~ismember({subfolders.name}, {'.', '..'})); % Excluir '.' y '..'
+    
+    if isempty(subfolders)
+        continue; % Ignorar si no hay subcarpetas
+    end
+    
+    if length(subfolders) > 1
+        warning('Más de una subcarpeta encontrada en "%s". Usando la primera.', folder_name);
+    end
+    
+    % Seleccionar la primera subcarpeta
+    selected_subfolder = fullfile(subfolders(1).folder, subfolders(1).name);
+    
+    if ~exist(fullfile(selected_subfolder, 'param_log.csv'), 'file')
+        continue; % Ignorar si no existe el archivo param_log.csv
+    end
 
-    if ~exist(fullfile(folder_name, num2str(ID(1)), 'param_log.csv'), 'file')
+    params = my_text2struct(fullfile(selected_subfolder, 'param_log.csv'));
+    
+    file_list = dir([folder_name '/**']);
+    if ~any(ismember({file_list.name}, {'position_history.csv'}))
+        rmdir(folder_name, 's'); 
         continue;
     end
 
-    params = my_text2struct(fullfile(folder_name, num2str(ID(1)), 'param_log.csv'));
-
-    file_list = dir([folder_name '/**']);
-    if ~any(ismember({file_list.name}, {'position_history.csv'}))
-        rmdir(folder_name, 's'); continue;
-    end
-
-    entropy = dlmread(fullfile(folder_name, num2str(ID(1)), 'entropy.csv'));
+    entropy = dlmread(fullfile(selected_subfolder, 'entropy.csv'));
     
     new_path = fullfile(dispatched_folder, num2str(params.map_nbr));
     if ~exist(new_path, 'dir')
@@ -41,32 +54,42 @@ end
 
 %% Obtener data
 folder_list = dir([dispatched_folder '/**']);
-folder_list = folder_list(~ismember({folder_list.name},{'.','..','101','102','103'}));
-folder_list = folder_list(~ismember({folder_list.folder}, dispatched_folder));
+folder_list = folder_list(~ismember({folder_list.name},{'.','..'}));
 folder_list = folder_list([folder_list.isdir]);
 numExperiments = length(folder_list);
 
 for i = 1:numExperiments
     folder_name = fullfile(folder_list(i).folder, folder_list(i).name);
-    robot_list = dir(folder_name);
-    robot_list = robot_list(~ismember({robot_list.name},{'.','..'}));
-    robot_list = robot_list([robot_list.isdir]);
-    ID = arrayfun(@(s) str2double(s.name), robot_list);
-
-    file_list = dir([folder_name '/**']);
-    if ~any(ismember({file_list.name}, {'position_history.csv'}))
-        rmdir(folder_name,'s'); continue;
+    
+    % Obtener subcarpeta válida
+    subfolders = dir(folder_name);
+    subfolders = subfolders([subfolders.isdir]); % Solo carpetas
+    subfolders = subfolders(~ismember({subfolders.name}, {'.', '..'})); % Excluir '.' y '..'
+    
+    if isempty(subfolders)
+        continue; % Ignorar si no hay subcarpetas
+    end
+    
+    if length(subfolders) > 1
+        warning('Más de una subcarpeta encontrada en "%s". Usando la primera.', folder_name);
+    end
+    
+    % Seleccionar la primera subcarpeta
+    selected_subfolder = fullfile(subfolders(1).folder, subfolders(1).name);
+    
+    if ~exist(fullfile(selected_subfolder, 'param_log.csv'), 'file')
+        continue; % Ignorar si no existe el archivo param_log.csv
     end
 
-    entropy = dlmread(fullfile(folder_name, num2str(ID(1)), 'entropy.csv'));
-    params = my_text2struct(fullfile(folder_name, num2str(ID(1)), 'param_log.csv'));
+    entropy = dlmread(fullfile(selected_subfolder, 'entropy.csv'));
+    params = my_text2struct(fullfile(selected_subfolder, 'param_log.csv'));
 
     map_nbr = params.map_nbr;
-    expected_a_posteriori_file = dlmread(fullfile(folder_name, num2str(ID(1)), 'expected_a_posteriori.csv'));
+    expected_a_posteriori_file = dlmread(fullfile(selected_subfolder, 'expected_a_posteriori.csv'));
     iteration_nbr = size(expected_a_posteriori_file, 1);
     expected_a_posteriori = expected_a_posteriori_file(end,2:3);
     
-    max_a_post_file = dlmread(fullfile(folder_name, num2str(ID(1)), 'max_a_posteriori.csv'));
+    max_a_post_file = dlmread(fullfile(selected_subfolder, 'max_a_posteriori.csv'));
     max_a_post = max_a_post_file(end,2:3);
 
     expected_a_posteriori(isnan(expected_a_posteriori)) = max_a_post(isnan(expected_a_posteriori));
@@ -75,10 +98,10 @@ for i = 1:numExperiments
     entropy_val = entropy(end,1);
     convergence_list = sqrt(sum((max_a_post - expected_a_posteriori).^2));
     
-    measurements = dlmread(fullfile(folder_name, num2str(ID(1)), 'measurements.csv'));
+    measurements = dlmread(fullfile(selected_subfolder, 'measurements.csv'));
     exp_time = measurements(end,4);
 
-    trajectory = dlmread(fullfile(folder_name, num2str(ID(1)), 'trajectory.csv'));
+    trajectory = dlmread(fullfile(selected_subfolder, 'trajectory.csv'));
     traj_length = sum(sqrt(sum(diff(trajectory(:,2:3)).^2, 2)));
 
     % Estrategias
@@ -137,13 +160,13 @@ sgtitle('Comparación de resultados por mapa', 'FontSize', 16, 'FontWeight', 'bo
 success_case = sum(abs(dataTable.x_error) < 1 & abs(dataTable.y_error) < 0.5);
 success_rate = success_case / height(dataTable);
 
-annotation(f,'textbox',...
-    [0.25 0.01 0.504 0.05],...
-    'String',{sprintf('Tasa de éxito: %.2f%%', success_rate*100)},...
-    'LineStyle','none',...
-    'HorizontalAlignment','center',...
-    'FontWeight','bold',...
-    'FontSize',14,...
+annotation(f,'textbox', ...
+    [0.25 0.01 0.504 0.05], ...
+    'String',{sprintf('Tasa de éxito: %.2f%%', success_rate*100)}, ...
+    'LineStyle','none', ...
+    'HorizontalAlignment','center', ...
+    'FontWeight','bold', ...
+    'FontSize',14, ...
     'Color', green);
 
 % Guardar figura

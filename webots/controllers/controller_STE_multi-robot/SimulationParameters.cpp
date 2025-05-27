@@ -201,6 +201,13 @@ eStopCondition parse_stop_condition(const char* str) {
 	exit(1);
 }
 
+eEntropyCriteria parse_entropy_criteria(const char* str) {
+	if (strcmp(str, "LOCAL") == 0) return LOCAL;
+	if (strcmp(str, "GLOBAL") == 0) return GLOBAL;
+	fprintf(stderr, "Unknown stop condition: %s\n", str);
+	exit(1);
+}
+
 eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
 	if (strcmp(str, "GOAL_REACHED") == 0) return GOAL_REACHED;
 	if (strcmp(str, "FIXED_FREQ") == 0) return FIXED_FREQ;
@@ -256,6 +263,9 @@ SimulationParameters::SimulationParameters()
 	teamStrategy = CENTRALIZED;
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
+	entropyCriteria = LOCAL;
+	regionAllocApproach = 1;
+
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -404,8 +414,14 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "stopCondition") == 0) {
 			stopCondition = parse_stop_condition(value);
 		}
+		else if (strcmp(key, "entropyCriteria") == 0) {
+			entropyCriteria = parse_entropy_criteria(value);
+		}
 		else if (strcmp(key, "updateGoalPolicy") == 0) {
 			updateGoalPolicy = parse_update_goal_policy(value);
+		}
+		else if (strcmp(key, "regionAllocApproach") == 0) {
+			regionAllocApproach = atoi(value);
 		}
 		else
 		{
@@ -469,6 +485,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
+	fprintf(sim_param_file, "region_alloc_approach %d\n", regionAllocApproach);
 	fclose(sim_param_file);
 }
 

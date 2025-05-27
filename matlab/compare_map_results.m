@@ -2,7 +2,7 @@ clear all; clc; close all;
 dataTable = table();
 %% dispatch the result to target folder
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
+general_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/';
 dispatched_folder = [general_folder,'algo_test'];
 folder_list = dir(general_folder);
 disp(folder_list)
