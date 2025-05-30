@@ -450,9 +450,8 @@ void state_measuring(){
 			{
 				int pos_coord[2];
 				position_to_indices_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y, &pos_coord[0], &pos_coord[1]);
-				// FIXME - comment this out to include posterior later
-				// int idx = posterior.indices_to_index(pos_coord);
-				// cell_visited_list[idx] = 1;
+				int idx = posterior.indices_to_index(pos_coord);
+				cell_visited_list[idx] = 1;
 			}
 		}
 		sample_in_motion.position.clear();
@@ -496,9 +495,8 @@ void state_measuring(){
 	{
 		int pos_coord[2];
 		position_to_indices_2D(current_position.x, current_position.y, &pos_coord[0], &pos_coord[1]);
-		// FIXME - comment this out to include posterior later
-		// int idx = posterior.indices_to_index(pos_coord);
-		// cell_visited_list[idx] = 1;
+		int idx = posterior.indices_to_index(pos_coord);
+		cell_visited_list[idx] = 1;
 	}
 
 	// send the measurement to the server
@@ -929,7 +927,7 @@ void state_receive_goal()
 	}
 
 	bool goal_received = false;
-      // TODO: Implement the logic to receive goal position from other robots\
+      // TODO: Implement the logic to receive goal position from other robots
 
 	// in case no goals received yet, remain in this state
 	if (!goal_received)
