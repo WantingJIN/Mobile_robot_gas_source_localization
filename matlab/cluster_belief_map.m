@@ -11,8 +11,8 @@ exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment 
 
 % === Visualization speed settings ===
 show_cell_indices = false;
-repr_vel = 2;           % How many steps to skip per frame (for robot position update)
-video_repr_vel = 10;    % Frame rate of the output video
+repr_vel = 3;           % How many steps to skip per frame (for robot position update)
+video_repr_vel = repr_vel*10;    % Frame rate of the output video
 
 % === Robot IDs and corresponding colors ===
 robot_ids = [101, 102, 103];
@@ -33,9 +33,16 @@ belief_x = round(belief_data(:, 1), 1);
 belief_y = round(belief_data(:, 2), 1);
 belief_maps = belief_data(:, 3:end);  % columns containing map values
 
+% === Load intensity map (direct, no need to skip columns) ===
+intensity_path = fullfile(exp_folder, '101', 'posterior_pdf_3D.csv');
+intensity_data = readmatrix(intensity_path);
+intensity_maps = intensity_data;  % todos los valores son intensidades
+
+
 % === Load goal positions for each robot ===
 goal_positions = cell(1,3);
-goal_idx = ones(1,3);  % keep track of which goal each robot is targeting
+reached_goals = zeros(1,3); 
+
 goal_update_count = 0;
 for r = 1:3
     goal_path = fullfile(exp_folder, num2str(robot_ids(r)), 'goal_position.csv');
@@ -67,14 +74,17 @@ is_paused = false;
 
 % === Cell grid setup (20x20 grid) with adjusted physical coordinates ===
 cols = 20; rows = 20;
-x_edges = linspace(3, 12.75, cols + 1);  % 21 edges → 20 cells
-y_edges = linspace(0, 4, rows + 1);
+x_edges = linspace(3, 12.5, cols + 1);  % 21 edges → 20 cells
+y_edges = linspace(0.16, 3.8, rows + 1);
 cell_widths = diff(x_edges);   % width of each cell (uniform)
 cell_heights = diff(y_edges);  % height of each cell (uniform)
 
 % === Draw grid cells ===
 cell_handles = gobjects(rows, cols);
-text_handles = gobjects(rows, cols);  % para mostrar índices
+if show_cell_indices
+    text_handles = gobjects(rows, cols);
+end
+
 for i = 1:cols
     for j = 1:rows
         x = x_edges(i);
@@ -82,7 +92,7 @@ for i = 1:cols
         w = cell_widths(i);
         h = cell_heights(j);
         cell_handles(j, i) = rectangle('Position', [x, y, w, h], ...
-            'FaceColor', [1 1 1], 'EdgeColor', [0.85 0.85 0.85]);
+            'FaceColor', [1 1 1], 'EdgeColor', white);
 
         % === Mostramos los índices si está activado ===
         if show_cell_indices
@@ -97,10 +107,34 @@ for i = 1:cols
 end
 
 
-% === Define soft colors for class coloring ===
-green_soft = [0.75 0.95 0.75];
-blue_soft  = [0.75 0.75 0.95];
-red_soft   = [0.95 0.75 0.75];
+% === Create colored cells objects ===
+edge_lines = gobjects(rows, cols, 4);  % 4 bordes por celda
+
+for col = 1:cols
+    for row = 1:rows
+        x = x_edges(col);
+        y = y_edges(row);
+        w = cell_widths(col);
+        h = cell_heights(row);
+
+        edge_lines(row, col, 1) = line([x, x + w], [y, y], 'LineWidth', 1.5, 'Color', 'none');         % inferior
+        edge_lines(row, col, 2) = line([x, x + w], [y + h, y + h], 'LineWidth', 1.5, 'Color', 'none'); % superior
+        edge_lines(row, col, 3) = line([x, x], [y, y + h], 'LineWidth', 1.5, 'Color', 'none');         % izquierdo
+        edge_lines(row, col, 4) = line([x + w, x + w], [y, y + h], 'LineWidth', 1.5, 'Color', 'none'); % derecho
+    end
+end
+
+% === Define soft colors for class coloring (border cell) ===
+green_edge = [0.88, 0.95, 0.88];  % verde pastel más suave
+blue_edge  = [0.88, 0.88, 0.95];  % azul pastel más suave
+red_edge   = [0.95, 0.88, 0.88];  % rojo pastel más suave
+
+
+% === Define soft colors for class coloring (inside cell) ===
+white = [1, 1, 1];
+green_soft = [0.45 0.85 0.45];
+blue_soft  = [0.45 0.45 0.85];
+red_soft   = [0.85 0.45 0.45];
 yellow = [1, 0.75, 0.1];  % used for estimated source
 dark_gray  = [0.3 0.3 0.3];  % used for walls and obstacles
 
@@ -125,7 +159,7 @@ for r = 1:3
     robot_markers(r) = plot(NaN, NaN, 'o', 'MarkerSize', 8, ...
         'MarkerFaceColor', robot_colors{r}, 'MarkerEdgeColor', 'k');
     goal_markers(r) = plot(NaN, NaN, 'x', 'MarkerSize', 10, ...
-        'LineWidth', 2, 'Color', robot_colors{r});
+        'LineWidth', 2, 'Color', 'k');
 end
 
 % === Create video writer object ===
@@ -144,26 +178,92 @@ done = false(1, 3);
 
 % === Animation loop ===
 for frame_t = 1:10000
-    all_reached = true;
+    % --- Actualizar belief map si corresponde ---
+    if all(reached_goals)
+        for r = 1:3
+            goal_idx(r) = goal_idx(r) + 1;
+            waiting(r) = false;
+        end
+        reached_goals = zeros(1,3);
+        goal_update_count = goal_update_count + 1;
 
+        if goal_update_count <= size(belief_maps, 1)
+            idx = goal_update_count;
+            belief_map = belief_maps(idx, :);
+            intensity_map = intensity_maps(idx, :);
+
+            % Normalizar intensidad
+            min_int = min(intensity_map);
+            max_int = max(intensity_map);
+            if max_int > min_int
+                intensity_map = (intensity_map - min_int) / (max_int - min_int);
+            else
+                intensity_map = zeros(size(intensity_map));
+            end
+
+            % === Actualizar color de celdas Y bordes ===
+            for col = 1:cols
+                for row = 1:rows
+                    map_idx = (row - 1) * cols + col;
+                    value = belief_map(map_idx);
+                    intensity = max(0, min(1, intensity_map(map_idx)));
+
+                    % Color base
+                    switch value
+                        case 0, base_color = white;
+                        case 1, base_color = red_soft;
+                        case 2, base_color = blue_soft;
+                        case 3, base_color = green_soft;
+                        otherwise, base_color = white;
+                    end
+
+                    % Mezclar con blanco según intensidad
+                    blended_color = base_color * intensity + white * (1 - intensity);
+
+                    % Actualizar color de fondo de celda
+                    set(cell_handles(row, col), ...
+                        'FaceColor', blended_color);
+
+                    % Actualizar color bordes
+                    if value ~= 0
+                        switch value
+                            case 1, edge_col = red_edge;
+                            case 2, edge_col = blue_edge;
+                            case 3, edge_col = green_edge;
+                            otherwise, edge_col = white;
+                        end
+                        for k = 1:4
+                            set(edge_lines(row, col, k), 'Color', edge_col);
+                        end
+                    else
+                        % Sin cluster, bordes invisibles
+                        for k = 1:4
+                            set(edge_lines(row, col, k), 'Color', 'none');
+                        end
+                    end
+                end
+            end
+
+            title(sprintf('FSM cycle: %d', idx), 'FontSize', 14, 'FontWeight', 'bold');
+        end
+    end
+
+    % --- Mover robots y goals DESPUÉS de pintar celdas ---
     for r = 1:3
         if ~done(r) && t_idx(r) <= size(positions{r}, 1)
             curr_pos = positions{r}(t_idx(r), :);
 
-            % Check if robot has reached its current goal
             if goal_idx(r) <= size(goal_positions{r}, 1)
                 gx = goal_positions{r}(goal_idx(r), 1);
                 gy = goal_positions{r}(goal_idx(r), 2);
+                dist = norm(curr_pos - [gx, gy]);
 
-                if isequal(round(curr_pos, 1), [gx, gy])
-                    waiting(r) = true;
-                else
-                    waiting(r) = false;
-                    all_reached = false;
-                end
+                reached_goals(r) = dist < 0.15;
+                set(goal_markers(r), 'XData', gx, 'YData', gy);
+
             end
 
-            if ~waiting(r)
+            if ~reached_goals(r)
                 set(robot_markers(r), 'XData', curr_pos(1), 'YData', curr_pos(2));
                 last_pos(r, :) = curr_pos;
                 t_idx(r) = t_idx(r) + repr_vel;
@@ -175,51 +275,15 @@ for frame_t = 1:10000
                 set(robot_markers(r), 'XData', last_pos(r, 1), 'YData', last_pos(r, 2));
             end
 
-            if goal_idx(r) <= size(goal_positions{r}, 1)
-                set(goal_markers(r), 'XData', gx, 'YData', gy);
-            end
         else
             done(r) = true;
         end
     end
 
-    if all_reached
-        for r = 1:3
-            goal_idx(r) = goal_idx(r) + 1;
-            waiting(r) = false;
-        end
-        goal_update_count = goal_update_count + 1;
-    end
-
-    % Update belief map (only for robot 101)
-    rx = last_pos(1, 1);
-    ry = last_pos(1, 2);
-    idx = find(belief_x == rx & belief_y == ry, 1);
-    if ~isempty(idx)
-        delete(findall(gca, 'Type', 'text'));
-        belief_map = belief_maps(idx, :);
-        for col = 1:cols
-            for row = 1:rows
-                map_idx = (row - 1) * cols + col;
-                value = belief_map(map_idx);
-                switch value
-                    case 1, color = red_soft;
-                    case 2, color = blue_soft;
-                    case 3, color = green_soft;
-                    otherwise, color = [1 1 1];
-                end
-                set(cell_handles(row, col), 'FaceColor', color);
-            end
-        end
-
-        % === Update title with the current FSM cycle ===
-        title(sprintf('FSM cycle: %d', idx), 'FontSize', 14, 'FontWeight', 'bold');
-    end
-
-    % === Pause mechanism ===
+    % --- Pausar si se requiere ---
     drawnow;
     while is_paused
-        pause(0.1);  % wait while paused
+        pause(0.1);
     end
 
     pause(0.00001);
@@ -230,6 +294,8 @@ for frame_t = 1:10000
         break;
     end
 end
+
+
 
 
 % === Plot estimated source position ===

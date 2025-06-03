@@ -8,9 +8,7 @@
 #include <random>
 // for storing debugging info
 extern FILE *console_logfile;
-extern FILE *clustering_debugging_logfile_101;
-extern FILE *clustering_debugging_logfile_102;
-extern FILE *clustering_debugging_logfile_103;
+extern FILE *clustering_debugging_logfile;
 
 extern SimulationParameters simulation_parameters;
 struct normal_random_variable

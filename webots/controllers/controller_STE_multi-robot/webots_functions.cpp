@@ -587,6 +587,7 @@ void set_logfile_names()
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
+	sprintf(entropy_individual_logfile_name, "%s/entropy_individual.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
 	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
@@ -600,9 +601,7 @@ void set_logfile_names()
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
-	sprintf(clustering_debugging_name_101, "%s/clustering_debugging_101.txt", folder_name);
-	sprintf(clustering_debugging_name_102, "%s/clustering_debugging_102.txt", folder_name);
-	sprintf(clustering_debugging_name_103, "%s/clustering_debugging_103.txt", folder_name);
+	sprintf(clustering_debugging_name, "%s/console_multirobot.txt", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment and scan

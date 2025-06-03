@@ -1,130 +1,116 @@
 clear all; clc; close all;
+
+%% Inicialización
 dataTable = table();
 
-%% Rutas de carpetas
+% Rutas
 general_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/';
-dispatched_folder = [general_folder, 'test'];
+dispatched_folder = fullfile(general_folder, 'test');
 folder_list = dir(general_folder);
+folder_list = folder_list([folder_list.isdir]); % Solo carpetas
 
-% Filtrar carpetas válidas
-folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'}));
-folder_list = folder_list([folder_list.isdir]);
+% Filtrar carpetas no deseadas
+excluded = {'.','..','current','101','102','103'};
+folder_list = folder_list(~ismember({folder_list.name}, excluded));
 exp_number = length(folder_list);
 
-%% Despachar resultados
+%% Despachar resultados por mapa
 for i = 1:exp_number
     folder_name = fullfile(folder_list(i).folder, folder_list(i).name);
     
-    % Obtener subcarpeta válida
+    % Buscar subcarpeta válida
     subfolders = dir(folder_name);
-    subfolders = subfolders([subfolders.isdir]); % Solo carpetas
-    subfolders = subfolders(~ismember({subfolders.name}, {'.', '..'})); % Excluir '.' y '..'
-    
-    if isempty(subfolders)
-        continue; % Ignorar si no hay subcarpetas
-    end
-    
+    subfolders = subfolders([subfolders.isdir] & ~ismember({subfolders.name}, {'.','..'}));
+    if isempty(subfolders), continue; end
     if length(subfolders) > 1
-        warning('Más de una subcarpeta encontrada en "%s". Usando la primera.', folder_name);
+        warning('Más de una subcarpeta en "%s". Usando la primera.', folder_name);
     end
     
-    % Seleccionar la primera subcarpeta
     selected_subfolder = fullfile(subfolders(1).folder, subfolders(1).name);
-    
-    if ~exist(fullfile(selected_subfolder, 'param_log.csv'), 'file')
-        continue; % Ignorar si no existe el archivo param_log.csv
-    end
+    if ~exist(fullfile(selected_subfolder, 'param_log.csv'), 'file'), continue; end
 
+    % Cargar parámetros
     params = my_text2struct(fullfile(selected_subfolder, 'param_log.csv'));
-    
+
+    % Verificar existencia de datos
     file_list = dir([folder_name '/**']);
     if ~any(ismember({file_list.name}, {'position_history.csv'}))
         rmdir(folder_name, 's'); 
         continue;
     end
-
-    entropy = dlmread(fullfile(selected_subfolder, 'entropy.csv'));
     
+    % Mover carpeta a la ruta organizada
     new_path = fullfile(dispatched_folder, num2str(params.map_nbr));
-    if ~exist(new_path, 'dir')
-        mkdir(new_path);
-    end
+    if ~exist(new_path, 'dir'), mkdir(new_path); end
     movefile(folder_name, new_path);
 end
 
-%% Obtener data
+%% Extraer información y crear tabla
 folder_list = dir([dispatched_folder '/**']);
-folder_list = folder_list(~ismember({folder_list.name},{'.','..'}));
-folder_list = folder_list([folder_list.isdir]);
+folder_list = folder_list([folder_list.isdir] & ~ismember({folder_list.name}, {'.','..'}));
 numExperiments = length(folder_list);
 
 for i = 1:numExperiments
     folder_name = fullfile(folder_list(i).folder, folder_list(i).name);
-    
-    % Obtener subcarpeta válida
     subfolders = dir(folder_name);
-    subfolders = subfolders([subfolders.isdir]); % Solo carpetas
-    subfolders = subfolders(~ismember({subfolders.name}, {'.', '..'})); % Excluir '.' y '..'
-    
-    if isempty(subfolders)
-        continue; % Ignorar si no hay subcarpetas
-    end
-    
+    subfolders = subfolders([subfolders.isdir] & ~ismember({subfolders.name}, {'.','..'}));
+    if isempty(subfolders), continue; end
     if length(subfolders) > 1
-        warning('Más de una subcarpeta encontrada en "%s". Usando la primera.', folder_name);
+        warning('Más de una subcarpeta en "%s". Usando la primera.', folder_name);
     end
-    
-    % Seleccionar la primera subcarpeta
+
+    % Carpeta principal para obtener métricas principales
     selected_subfolder = fullfile(subfolders(1).folder, subfolders(1).name);
-    
-    if ~exist(fullfile(selected_subfolder, 'param_log.csv'), 'file')
-        continue; % Ignorar si no existe el archivo param_log.csv
-    end
+    if ~exist(fullfile(selected_subfolder, 'param_log.csv'), 'file'), continue; end
 
-    entropy = dlmread(fullfile(selected_subfolder, 'entropy.csv'));
+    % Cargar datos principales
     params = my_text2struct(fullfile(selected_subfolder, 'param_log.csv'));
-
-    map_nbr = params.map_nbr;
+    entropy = dlmread(fullfile(selected_subfolder, 'entropy.csv'));
     expected_a_posteriori_file = dlmread(fullfile(selected_subfolder, 'expected_a_posteriori.csv'));
+    max_a_post_file = dlmread(fullfile(selected_subfolder, 'max_a_posteriori.csv'));
+    measurements = dlmread(fullfile(selected_subfolder, 'measurements.csv'));
+
+    % Cálculos principales
     iteration_nbr = size(expected_a_posteriori_file, 1);
     expected_a_posteriori = expected_a_posteriori_file(end,2:3);
-    
-    max_a_post_file = dlmread(fullfile(selected_subfolder, 'max_a_posteriori.csv'));
     max_a_post = max_a_post_file(end,2:3);
-
     expected_a_posteriori(isnan(expected_a_posteriori)) = max_a_post(isnan(expected_a_posteriori));
-    
     error = params.source_position(1:2) - expected_a_posteriori;
+    estimate_error = norm(error);
     entropy_val = entropy(end,1);
-    convergence_list = sqrt(sum((max_a_post - expected_a_posteriori).^2));
-    
-    measurements = dlmread(fullfile(selected_subfolder, 'measurements.csv'));
     exp_time = measurements(end,4);
 
-    trajectory = dlmread(fullfile(selected_subfolder, 'trajectory.csv'));
-    traj_length = sum(sqrt(sum(diff(trajectory(:,2:3)).^2, 2)));
+    % Calcular distancia total usando todas las subcarpetas (101, 102, 103)
+    traj_length = 0;
+    for robot_id = [101, 102, 103]
+        robot_folder = fullfile(folder_name, num2str(robot_id));
+        if exist(fullfile(robot_folder, 'trajectory.csv'), 'file')
+            trajectory = dlmread(fullfile(robot_folder, 'trajectory.csv'));
+            traj_length = traj_length + sum(sqrt(sum(diff(trajectory(:,2:3)).^2, 2)));
+        end
+    end
 
-    % Estrategias
+    % Etiquetas
     sampling_modes = ["sense in motion", "stop sense go", "visit sense go"];
     planning_modes = ["greedy", "", "", "", "", "belief clustering", "informative kld"];
     sensor_modes = ["PID", "MOX"];
-
+    
     sampling_mode = sampling_modes(params.sampling_mode + 1);
     planning_mode = planning_modes(params.planning_strategy + 1);
     sensor_mode = sensor_modes(params.gas_sensor_type + 1);
 
-    estimate_error = norm(error);
-
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error);
+    % Guardar fila de resultados
+    tempTable = table(params.map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error);
     tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error'};
     dataTable = [dataTable; tempTable];
 end
 
-writetable(dataTable, [dispatched_folder '/experiment_data.csv']);
+% Guardar CSV
+csv_path = fullfile(dispatched_folder, 'experiment_data.csv');
+writetable(dataTable, csv_path);
+disp(['Datos exportados a: ', csv_path]);
 
-disp('Experiment data saved.');
-
-%% Gráfica de resultados
+%% Gráfica de comparación
 f = figure('Position',[100 100 1800 600]);
 
 % Paleta de colores
@@ -160,8 +146,7 @@ sgtitle('Comparación de resultados por mapa', 'FontSize', 16, 'FontWeight', 'bo
 success_case = sum(abs(dataTable.x_error) < 1 & abs(dataTable.y_error) < 0.5);
 success_rate = success_case / height(dataTable);
 
-annotation(f,'textbox', ...
-    [0.25 0.01 0.504 0.05], ...
+annotation(f,'textbox', [0.25 0.01 0.504 0.05], ...
     'String',{sprintf('Tasa de éxito: %.2f%%', success_rate*100)}, ...
     'LineStyle','none', ...
     'HorizontalAlignment','center', ...
@@ -170,4 +155,4 @@ annotation(f,'textbox', ...
     'Color', green);
 
 % Guardar figura
-exportgraphics(f, [dispatched_folder '/test_maps_results_comparison.png'], 'Resolution', 300);
+exportgraphics(f, fullfile(dispatched_folder, 'test_maps_results_comparison.png'), 'Resolution', 300);

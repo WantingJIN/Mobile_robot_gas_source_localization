@@ -38,6 +38,7 @@ FILE *max_a_posteriori_logfile;
 FILE *posterior_pdf_3D;
 FILE *posterior_pdf_3D_cluster; //new: for MATLAB Distributed clustering visualization
 FILE *entropy_logfile;
+FILE *entropy_individual_logfile;
 FILE *config_logfile;
 FILE *trajectory_logfile;
 FILE *gas_concentration_map_logfile;
@@ -47,9 +48,8 @@ FILE *visited_list_logfile;
 // text file for storing some prints for debugging
 // debugging purpose
 FILE *console_logfile;
-FILE *clustering_debugging_logfile_101; //new: for debugging purpose (Distributed architecture)
-FILE *clustering_debugging_logfile_102; //new: for debugging purpose (Distributed architecture)
-FILE *clustering_debugging_logfile_103; //new: for debugging purpose (Distributed architecture)
+FILE *clustering_debugging_logfile; //new: for debugging purpose (Distributed architecture)
+
 
 char goalposition_logfile_name[512];
 char measurements_logfile_name[512];
@@ -62,6 +62,7 @@ char whole_position_history_logfile_name[512];
 char posterior_pdf_3D_name[512];
 char posterior_pdf_3D_cluster_name[512];
 char entropy_logfile_name[512];
+char entropy_individual_logfile_name[512];
 char config_logfile_name[512];
 char trajectory_logfile_name[512];
 char gas_concentration_map_logfile_name[512];
@@ -76,9 +77,7 @@ char acc_info_map_logfile_name[512];
 // text file for storing some prints for debugging
 char console_logfile_name[512];
 char clustering_debugging_names[MAX_NB_ROBOTS][512]; 
-char clustering_debugging_name_101[512];
-char clustering_debugging_name_102[512];
-char clustering_debugging_name_103[512];
+char clustering_debugging_name[512];
 
 
 // read data from file
@@ -181,7 +180,6 @@ bool use_visibility_path = true;
 
 // store the belief maps of the whole team
 static double belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
-static double self_entropy = 0;
 static int received_flags[MAX_NB_ROBOTS] = {0};
 static double belief_map_merged[MAP_SIZE] = {0};
 static int belief_clusters[x_nbins*y_nbins] = {0};
@@ -520,6 +518,9 @@ int xy_to_index(double x, double y) {
 }
 
 void clusterize_belief_map(const std::vector<int>& selected_indices) {
+
+	double epsilon_clusterize = 1e-15;
+
     // Binary masks for cutting regions from individual pdfs
     std::vector<std::vector<int>> pdf_masks(simulation_parameters.number_of_robots, 
                                             std::vector<int>(x_nbins * y_nbins, 0));
@@ -539,6 +540,7 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
 
     // Compute distances from each cell to each centroid
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
+		if (posterior.pdf[i] <= epsilon_clusterize) continue;
         int x, y;
         index_to_xy(i, x, y);
         for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
@@ -550,9 +552,10 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
 
     // Assign cells to the nearest centroid
     std::vector<int> cluster_sizes(simulation_parameters.number_of_robots, 0);
-    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, -1); // Inicializar
+    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0); // Inicializar
 
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
+		if (posterior.pdf[i] <= epsilon_clusterize) continue;
         double min_dist = dist_map[0][i];
         int min_k = 0;
         for (int k = 1; k < simulation_parameters.number_of_robots; ++k) {
@@ -569,6 +572,7 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
     
     // Fill binary masks
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
+		if (posterior.pdf[i] <= epsilon_clusterize) continue;
         for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
             pdf_masks[k][i] = (belief_clusters[i] == k + 1) ? 1 : 0;
         }
@@ -576,12 +580,32 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
 
     // Apply each binary mask to the merged pdf, to obtain individual pdf corresponding to the cutted region
     for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
-        if (ID == 101 + k) { // ID dinámico
+        if (ID == 101 + k) 
+		{ 
             for (int i = 0; i < x_nbins * y_nbins; ++i) {
                 posterior.pdf[i] *= pdf_masks[k][i];
             }
+
+			// debugging purpose
+			// fprintf(clustering_debugging_logfile, "Robot ID [%d]: Individual pdf after mask:\n", ID);
+			// for (int y = 0; y < y_nbins; ++y) {
+			// 	for (int x = 0; x < x_nbins; ++x) {
+			// 		int idx = y * x_nbins + x;
+			// 		fprintf(clustering_debugging_logfile, "%.9f ", posterior.pdf[idx]);
+			// 	}
+			// 	fprintf(clustering_debugging_logfile, "\n");
+			// }
         }
     }
+
+	fprintf(clustering_debugging_logfile, "Robot ID [%d]: NO Normalized Individual pdf after mask:\n", ID);
+	for (int y = 0; y < y_nbins; ++y) {
+		for (int x = 0; x < x_nbins; ++x) {
+			int idx = y * x_nbins + x;
+			fprintf(clustering_debugging_logfile, "%.9f ", posterior.pdf[idx]);
+		}
+		fprintf(clustering_debugging_logfile, "\n");
+	}
 
     // Normalize individual pdf
     double sum = 0.0;
@@ -602,29 +626,58 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
 
     // debugging purpose
     for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
-        if (ID == 101 + k) {
-            FILE* logfile = (k == 0) ? clustering_debugging_logfile_101 :
-                            (k == 1) ? clustering_debugging_logfile_102 :
-                                       clustering_debugging_logfile_103;
-            fprintf(logfile, "\nBalanced Clusterized Belief Map (1, 2, 3):\n");
-            for (int y = 0; y < y_nbins; ++y) {
-                for (int x = 0; x < x_nbins; ++x) {
-                    int idx = y * x_nbins + x;
-                    fprintf(logfile, "%d ", belief_clusters[idx]);
-                }
-                fprintf(logfile, "\n");
-            }
-            fprintf(logfile, "\nRobot ID [%d]: Cluster binary mask:\n", ID);
-            for (int y = 0; y < y_nbins; ++y) {
-                for (int x = 0; x < x_nbins; ++x) {
-                    int idx = y * x_nbins + x;
-                    fprintf(logfile, "%d ", pdf_masks[k][idx]);
-                }
-                fprintf(logfile, "\n");
-            }
-        }
+        int self_index = 101 + k;
+		if (ID == self_index)
+		{
+			fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (1, 2, 3):\n");
+			for (int y = 0; y < y_nbins; ++y) {
+				for (int x = 0; x < x_nbins; ++x) {
+					int idx = y * x_nbins + x;
+					fprintf(clustering_debugging_logfile, "%d ", belief_clusters[idx]);
+				}
+				fprintf(clustering_debugging_logfile, "\n");
+			}
+			fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Cluster binary mask:\n", ID);
+			for (int y = 0; y < y_nbins; ++y) {
+				for (int x = 0; x < x_nbins; ++x) {
+					int idx = y * x_nbins + x;
+					fprintf(clustering_debugging_logfile, "%d ", pdf_masks[k][idx]);
+				}
+				fprintf(clustering_debugging_logfile, "\n");
+			}
+			// debugging purpose
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Normalized Individual pdf after mask:\n", ID);
+			for (int y = 0; y < y_nbins; ++y) {
+				for (int x = 0; x < x_nbins; ++x) {
+					int idx = y * x_nbins + x;
+					fprintf(clustering_debugging_logfile, "%.9f ", posterior.pdf[idx]);
+				}
+				fprintf(clustering_debugging_logfile, "\n");
+			}
+			fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Bins:\n", ID);
+			for (int y = 0; y < y_nbins; ++y) {
+				for (int x = 0; x < x_nbins; ++x) {
+					int idx = y * x_nbins + x;
+					if ((idx+1)<10)
+					{
+						fprintf(clustering_debugging_logfile, "00%i ", idx+1);
+					}
+					else if ((idx+1)>=10 && (idx+1)<100)
+					{
+						fprintf(clustering_debugging_logfile, "0%i ", idx+1);
+					}
+					else{
+						fprintf(clustering_debugging_logfile, "%i ", idx+1);
+					}
+
+				}
+				fprintf(clustering_debugging_logfile, "\n");
+			}
+		}
     }
 }
+
+
 
 void approach1_centroid_max_pdf()
 {
@@ -671,26 +724,10 @@ void approach1_centroid_max_pdf()
 
     int self_index = ID - 101;
     if (self_index >= 0 && self_index < simulation_parameters.number_of_robots) {
-        FILE* logfile = nullptr;
-        switch (ID) {
-            case 101: logfile = clustering_debugging_logfile_101; break;
-            case 102: logfile = clustering_debugging_logfile_102; break;
-            case 103: logfile = clustering_debugging_logfile_103; break;
-            default: 
-                char filename[256];
-                sprintf(filename, "clustering_debugging_logfile_%d.txt", ID);
-                logfile = fopen(filename, "a");
-                break;
-        }
-
-        if (logfile) {
-            fprintf(logfile, "Robot ID [%d]: Top %d maximal merged belief map values:\n", ID, n);
-            for (int j = 0; j < n; j++) {
-                fprintf(logfile, "%d) Value: %f at index %d\n", j + 1, top_values[j], selected_indices[j]);
-            }
-
-            if (ID > 103) fclose(logfile);
-        }
+		fprintf(clustering_debugging_logfile, "Robot ID [%d]: Top %d maximal merged belief map values:\n", ID, n);
+		for (int j = 0; j < n; j++) {
+			fprintf(clustering_debugging_logfile, "%d) Value: %f at index %d\n", j + 1, top_values[j], selected_indices[j]);
+		}
     }
 
     for (int j = 0; j < n; j++) {
@@ -703,7 +740,8 @@ void approach1_centroid_max_pdf()
 }
 
 
-void approach2_centroid_curr_pos() {
+void approach2_centroid_curr_pos() 
+{
     std::vector<int> selected_indices(simulation_parameters.number_of_robots);
 
     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
@@ -723,6 +761,7 @@ void approach2_centroid_curr_pos() {
 
     clusterize_belief_map(selected_indices);
 }
+
 
 
 
@@ -962,25 +1001,21 @@ void state_estimating()
 
 	// printf("sum posterior : %f \n", posterior.sum);
 	posterior.normalize();
-	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
-	posterior.process();
-	posterior.calculate_entropy_and_spread();
-	self_entropy = posterior.entropy;
-
-	if (simulation_parameters.entropyCriteria == LOCAL)
-	{
-		log_expected_a_posteriori();
-		log_entropy();
-	} 
-	
 	FSM.n_cycles++;
 	fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 
 	// debugging purpose
-	if (ID == 101) fprintf(clustering_debugging_logfile_101, "FSM iter: %d \n", FSM.n_cycles);
-	if (ID == 102) fprintf(clustering_debugging_logfile_102, "FSM iter: %d \n", FSM.n_cycles);
-	if (ID == 103) fprintf(clustering_debugging_logfile_103, "FSM iter: %d \n", FSM.n_cycles);
+	fprintf(clustering_debugging_logfile, "Robot ID [%d]: FSM iter number %d \n", ID, FSM.n_cycles);
+
+	// debugging purpose
+	fprintf(clustering_debugging_logfile, "Individual original pdf: \n");
+	for (int i = 0; i < MAP_SIZE; i++) {
+		fprintf(clustering_debugging_logfile, "%.8f ", posterior.pdf[i]);
+	}
+	fprintf(clustering_debugging_logfile, "\n");
+	
 
 	if (VERBOSE)
 		printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
@@ -1044,101 +1079,120 @@ void state_estimating()
 
 void state_updategoal()
 {
-	// computation time of path planning
-	long long time_before_path_planning = current_timestamp();
-	printf("Robot ID [%d]: STATE_UPDATEGOAL \n", ID);
-	if (VERBOSE)
-		printf("[%d] updating the goal\n", ID);
-	switch (simulation_parameters.planningStrategy)
+    
+	double sum = 0.0;
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        sum += posterior.pdf[i];
+    }
+	if (sum < 0.1)
 	{
-	case GREEDY:
-		path_planner.maximal_belief_planning();
-		break;
-	case BALANCE_MAXIMAL_EXPECTED:
-		path_planner.balance_expected_maximal_pdf();
-		break;
-	case RANDOM:
-		path_planner.random_planning();
-		break;
-	case LAWNMOWER:
-		path_planner.lawnmower_planning();
-		break;
-	case BELIEF_CLUSTERING:
-		path_planner.belief_clustering_planning();
-		break;
-	case WEIGHTED_CLUSTERING:
-		path_planner.weighted_belief_clustering();
-		break;
-	case INFO_CLUSTERING:
-		path_planner.informative_clustering_planning();
-		break;
-	case INFORMATIVE_KLD:
-		path_planner.KLD_informative_goal_selection();
-		path_planner.KLD_distance_balance();
-		break;
-	case SUM_DIJKSTRA_FIX:
-		path_planner.accumulative_Dijkstra();
-		break;
-	case SUM_DIJKSTRA_ADP:
-		path_planner.accumulative_Dijkstra();
-		break;
-	case MULTI_DIJKSTRA:
-		path = path_planner.multi_objective_Dijkstra();
-		use_visibility_path = false;
-		break;
-	default:
-		break;
+		goal_position.x = current_position.x;
+		goal_position.y = current_position.y;
+
+		FSM.state = STATE_MOVING;
+		FSM.hook = state_moving;
 	}
-	if (FSM.state != STATE_FINISHED)
-	{
-		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-		// {
-		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		// 	random_planning();
-		// }
-		if (use_visibility_path)
+	else{
+		// computation time of path planning
+		long long time_before_path_planning = current_timestamp();
+		printf("Robot ID [%d]: STATE_UPDATEGOAL \n", ID);
+		if (VERBOSE)
+			printf("[%d] updating the goal\n", ID);
+		switch (simulation_parameters.planningStrategy)
 		{
-
-			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-			path_planner.goal_outside_obstacles(&goal_position);
-			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-			// find the path using visibility graph
-			VisiLibity::Point start(current_position.x, current_position.y);
-			VisiLibity::Point finish(goal_position.x, goal_position.y);
-			VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-			// copy the path in another variable
-			for (unsigned k = 0; k < Polyline_path.size(); k++)
+		case GREEDY:
+			path_planner.maximal_belief_planning();
+			break;
+		case INFO_CENTER:
+			path_planner.information_center_planning();
+			break;
+		case BALANCE_MAXIMAL_EXPECTED:
+			path_planner.balance_expected_maximal_pdf();
+			break;
+		case RANDOM:
+			path_planner.random_planning();
+			break;
+		case LAWNMOWER:
+			path_planner.lawnmower_planning();
+			break;
+		case BELIEF_CLUSTERING:
+			path_planner.belief_clustering_planning();
+			break;
+		case WEIGHTED_CLUSTERING:
+			path_planner.weighted_belief_clustering();
+			break;
+		case INFO_CLUSTERING:
+			path_planner.informative_clustering_planning();
+			break;
+		case INFORMATIVE_KLD:
+			path_planner.KLD_informative_goal_selection();
+			path_planner.KLD_distance_balance();
+			break;
+		case SUM_DIJKSTRA_FIX:
+			path_planner.accumulative_Dijkstra();
+			break;
+		case SUM_DIJKSTRA_ADP:
+			path_planner.accumulative_Dijkstra();
+			break;
+		case MULTI_DIJKSTRA:
+			path = path_planner.multi_objective_Dijkstra();
+			use_visibility_path = false;
+			break;
+		default:
+			break;
+		}
+		if (FSM.state != STATE_FINISHED)
+		{
+			// The goal position is very close to current postion, swith to random planning
+			// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+			// {
+			// 	printf("The goal position is very close to current postion, switch to random planning \n");
+			// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+			// 	random_planning();
+			// }
+			if (use_visibility_path)
 			{
-				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-				path.push_back(p);
-				log_trajectory(p);
+
+				printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+				path_planner.goal_outside_obstacles(&goal_position);
+				printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+
+				// find the path using visibility graph
+				VisiLibity::Point start(current_position.x, current_position.y);
+				VisiLibity::Point finish(goal_position.x, goal_position.y);
+				VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+				// copy the path in another variable
+				for (unsigned k = 0; k < Polyline_path.size(); k++)
+				{
+					Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+					path.push_back(p);
+					log_trajectory(p);
+				}
+			}
+			i = path.begin();
+			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			// send the goal to the supervisor
+			Message msg(ID, 0, goal_position, -1, goal_position, 0);
+			send_msg(msg);
+			// if online simulation: move to the goal position
+			// if offline simulation: read the next goal position and measurements from the file
+			if (simulation_parameters.simuMode == ONLINE)
+			{
+				// update goal
+				FSM.state = STATE_MOVING;
+				FSM.hook = state_moving;
+				time_before_moving = wb_robot_get_time();
+				long long current_path_planning_time = current_timestamp() - time_before_path_planning;
+				planning_time_sum += current_path_planning_time;
+			}
+			else
+			{
+				FSM.state = STATE_READ_ALL;
+				FSM.hook = state_read_positions_measurements;
 			}
 		}
-		i = path.begin();
-		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-		// send the goal to the supervisor
-		Message msg(ID, 0, goal_position, -1, goal_position, 0);
-		send_msg(msg);
-		// if online simulation: move to the goal position
-		// if offline simulation: read the next goal position and measurements from the file
-		if (simulation_parameters.simuMode == ONLINE)
-		{
-			// update goal
-			FSM.state = STATE_MOVING;
-			FSM.hook = state_moving;
-			time_before_moving = wb_robot_get_time();
-			long long current_path_planning_time = current_timestamp() - time_before_path_planning;
-			planning_time_sum += current_path_planning_time;
-		}
-		else
-		{
-			FSM.state = STATE_READ_ALL;
-			FSM.hook = state_read_positions_measurements;
-		}
 	}
+	
 }
 
 void state_moving()
@@ -1615,23 +1669,12 @@ void state_receive_pdf()
 void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
-	// Initialize to 1.0 for multiplicative identity
+	
+	// Original merge without weights
 	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		belief_map_merged[i] = 1.0;
 	}
-
-	// // Multiply belief maps from other robots (excluding self)
-	// for (int r = 0; r < simulation_parameters.number_of_robots; r++)
-	// {
-	// 	if (r == self_index)
-	// 		continue; // Skip self
-
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 	{
-	// 		belief_map_merged[i] *= belief_maps[r][i];
-	// 	}
-	// }
 
 	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
 	{
@@ -1641,46 +1684,27 @@ void state_merge_pdf()
 		}
 	}
 
+
 	// // debugging purpose
-	// if (ID == 101) {
-	// 	fprintf(clustering_debugging_logfile_101, "\n[Robot 101] Belief Maps (cycle %d):\n", FSM.n_cycles);
-	// 	fprintf(clustering_debugging_logfile_101, "Robot 101 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_101, "%.8f ", belief_maps[0][i]);
-	// 	fprintf(clustering_debugging_logfile_101, "\nRobot 102 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_101, "%.8f ", belief_maps[1][i]);
-	// 	fprintf(clustering_debugging_logfile_101, "\nRobot 103 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_101, "%.8f ", belief_maps[2][i]);
-	// 	fprintf(clustering_debugging_logfile_101, "\n");
-	// }
-	// if (ID == 102) {
-	// 	fprintf(clustering_debugging_logfile_102, "\n[Robot 101] Belief Maps (cycle %d):\n", FSM.n_cycles);
-	// 	fprintf(clustering_debugging_logfile_102, "Robot 101 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_102, "%.8f ", belief_maps[0][i]);
-	// 	fprintf(clustering_debugging_logfile_102, "\nRobot 102 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_102, "%.8f ", belief_maps[1][i]);
-	// 	fprintf(clustering_debugging_logfile_102, "\nRobot 103 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_102, "%.8f ", belief_maps[2][i]);
-	// 	fprintf(clustering_debugging_logfile_102, "\n");
-	// }
-	// if (ID == 103) {
-	// 	fprintf(clustering_debugging_logfile_103, "\n[Robot 101] Belief Maps (cycle %d):\n", FSM.n_cycles);
-	// 	fprintf(clustering_debugging_logfile_103, "Robot 101 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_103, "%.8f ", belief_maps[0][i]);
-	// 	fprintf(clustering_debugging_logfile_103, "\nRobot 102 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_103, "%.8f ", belief_maps[1][i]);
-	// 	fprintf(clustering_debugging_logfile_103, "\nRobot 103 belief map:\n");
-	// 	for (int i = 0; i < MAP_SIZE; i++)
-	// 		fprintf(clustering_debugging_logfile_103, "%.8f ", belief_maps[2][i]);
-	// 	fprintf(clustering_debugging_logfile_103, "\n");
-	// }
+// 	fprintf(clustering_debugging_logfile, "\nRobot ID [%d] Belief Maps (cycle %d):\n", ID, FSM.n_cycles);
+// 	fprintf(clustering_debugging_logfile, "Robot 101 belief map:\n");
+// 	for (int i = 0; i < MAP_SIZE; i++)
+// 		fprintf(clustering_debugging_logfile, "%.8f ", belief_maps[0][i]);
+// 	fprintf(clustering_debugging_logfile, "\nRobot 102 belief map:\n");
+// 	for (int i = 0; i < MAP_SIZE; i++)
+// 		fprintf(clustering_debugging_logfile, "%.8f ", belief_maps[1][i]);
+// 	fprintf(clustering_debugging_logfile, "\nRobot 103 belief map:\n");
+// 	for (int i = 0; i < MAP_SIZE; i++)
+// 		fprintf(clustering_debugging_logfile, "%.8f ", belief_maps[2][i]);
+// 	fprintf(clustering_debugging_logfile, "\n");
+
+	//debugging purpose
+	//fprintf(clustering_debugging_logfile, "FSM iter: %d \n", FSM.n_cycles);
+	fprintf(clustering_debugging_logfile, "NO Normalized Full Merged BM: \n");
+	for (int i = 0; i < MAP_SIZE; i++) {
+		fprintf(clustering_debugging_logfile, "%.8f ", belief_map_merged[i]);
+	}
+	fprintf(clustering_debugging_logfile, "\n");
 
 	// normalize belief map
 	double sum = 0.0;
@@ -1698,32 +1722,14 @@ void state_merge_pdf()
 	}
 
 	// debugging purpose
-	if (ID == 101) {
-		//fprintf(clustering_debugging_logfile_101, "FSM iter: %d \n", FSM.n_cycles);
-		fprintf(clustering_debugging_logfile_101, "belief_map_merged_normalized: \n");
-		for (int i = 0; i < MAP_SIZE; i++) {
-			fprintf(clustering_debugging_logfile_101, "%.8f ", belief_map_merged[i]);
-		}
-		fprintf(clustering_debugging_logfile_101, "\n");
+	//fprintf(clustering_debugging_logfile, "FSM iter: %d \n", FSM.n_cycles);
+	fprintf(clustering_debugging_logfile, "Normalized Full Merged BM: \n");
+	for (int i = 0; i < MAP_SIZE; i++) {
+		fprintf(clustering_debugging_logfile, "%.8f ", belief_map_merged[i]);
 	}
+	fprintf(clustering_debugging_logfile, "\n");
+	
 
-	if (ID == 102) {
-		//fprintf(clustering_debugging_logfile_102, "FSM iter: %d \n", FSM.n_cycles);
-		fprintf(clustering_debugging_logfile_102, "belief_map_merged_normalized: \n");
-		for (int i = 0; i < MAP_SIZE; i++) {
-			fprintf(clustering_debugging_logfile_102, "%.8f ", belief_map_merged[i]);
-		}
-		fprintf(clustering_debugging_logfile_102, "\n");
-	}
-
-	if (ID == 103) {
-		//fprintf(clustering_debugging_logfile_103, "FSM iter: %d \n", FSM.n_cycles);
-		fprintf(clustering_debugging_logfile_103, "belief_map_merged_normalized: \n");
-		for (int i = 0; i < MAP_SIZE; i++) {
-			fprintf(clustering_debugging_logfile_103, "%.8f ", belief_map_merged[i]);
-		}
-		fprintf(clustering_debugging_logfile_103, "\n");
-	}
 	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
 	printf("Robot ID [%d]: Merged belief map is: \n", ID);
 	for (int i = 0; i < MAP_SIZE; i++)
@@ -1732,28 +1738,45 @@ void state_merge_pdf()
 	}
 	printf("\n");
 	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
+
+	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+
       // Check the stopping condition after merging
 	posterior.process();
     posterior.calculate_entropy_and_spread();
-	//log_expected_a_posteriori();
+	log_expected_a_posteriori();
 	log_max_a_posteriori();
-	//log_entropy();
-	
-	if (simulation_parameters.entropyCriteria == GLOBAL)
-	{
-		log_expected_a_posteriori();
-		log_entropy();
-	} 
+	log_entropy();
+
+	// Check if Merged Belief Map equal 0
+	double sum_merged_pdf = 0.0;
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        sum_merged_pdf += posterior.pdf[i];
+    }
 
 	bool is_stop_condition_reached = check_stop_condition();
 	if (is_stop_condition_reached)
+	{	
+		// Avoid STATE_FINISHED if Merged Belief Map equal 0
+		if (sum_merged_pdf > 0)
+		{
+			broadcast_state_finished();
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+			fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+			return;
+		} 
+		else
+		{
+			printf("Robot ID [%d]: Avoided STATE_FINISHED because Merged Belief Map = 0\n", ID);
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Avoided STATE_FINISHED because Merged Belief Map = 0\n", ID);			
+			FSM.state = STATE_MEASURING;
+			FSM.hook = state_measuring;
+			return;
+		}
+	} 
+	else 
 	{
-		broadcast_state_finished();
-		FSM.state = STATE_FINISHED;
-		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-		fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-		return;
-	} else {
 		if (simulation_parameters.teamStrategy == CENTRALIZED)
 		{
 				FSM.state = STATE_UPDATEGOAL_TEAM;
@@ -1817,62 +1840,22 @@ void state_region_allocation()
 {
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
 
-	// check if state_finished
-	if (simulation_parameters.teamStrategy == DISTRIBUTED && simulation_parameters.entropyCriteria == LOCAL)
-	{
-		while (wb_receiver_get_queue_length(receiver) > 0)
-		{
-			const void *data = wb_receiver_get_data(receiver);
-			const double *buffer = (const double *)data;
-
-			int sender_ID = (int)buffer[0];
-			int flag_finished = (int)buffer[9];
-			
-			if (flag_finished == -1)
-			{
-				printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				return;
-			}
-		}
-	}
-
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 
 		// debugging purpose
-		if (ID == 101) {
-			fprintf(clustering_debugging_logfile_101, "received_pos_101: (%.2f, %.2f)\n",
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Received positions \n", ID);
+			fprintf(clustering_debugging_logfile, "received_pos_101: (%.2f, %.2f)\n",
 					received_current_pos[0][0], received_current_pos[0][1]);
-			fprintf(clustering_debugging_logfile_101, "received_pos_102: (%.2f, %.2f)\n",
+			fprintf(clustering_debugging_logfile, "received_pos_102: (%.2f, %.2f)\n",
 					received_current_pos[1][0], received_current_pos[1][1]);
-			fprintf(clustering_debugging_logfile_101, "received_pos_103: (%.2f, %.2f)\n",
+			fprintf(clustering_debugging_logfile, "received_pos_103: (%.2f, %.2f)\n",
 					received_current_pos[2][0], received_current_pos[2][1]);
-		}
-
-		if (ID == 102) {
-			fprintf(clustering_debugging_logfile_102, "received_pos_101: (%.2f, %.2f)\n",
-					received_current_pos[0][0], received_current_pos[0][1]);
-			fprintf(clustering_debugging_logfile_102, "received_pos_102: (%.2f, %.2f)\n",
-					received_current_pos[1][0], received_current_pos[1][1]);
-			fprintf(clustering_debugging_logfile_102, "received_pos_103: (%.2f, %.2f)\n",
-					received_current_pos[2][0], received_current_pos[2][1]);
-		}
-
-		if (ID == 103) {
-			fprintf(clustering_debugging_logfile_103, "received_pos_101: (%.2f, %.2f)\n",
-					received_current_pos[0][0], received_current_pos[0][1]);
-			fprintf(clustering_debugging_logfile_103, "received_pos_102: (%.2f, %.2f)\n",
-					received_current_pos[1][0], received_current_pos[1][1]);
-			fprintf(clustering_debugging_logfile_103, "received_pos_103: (%.2f, %.2f)\n",
-					received_current_pos[2][0], received_current_pos[2][1]);
-		}
+		
 
 		if (simulation_parameters.regionAllocApproach == 1) approach1_centroid_max_pdf();
 		if (simulation_parameters.regionAllocApproach == 2) approach2_centroid_curr_pos();
 				
-
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
 	}
@@ -1923,9 +1906,7 @@ int main(int argc, char **argv)
 	console_logfile = fopen(console_logfile_name, "a");
 
 	// debugging purpose
-	clustering_debugging_logfile_101 = fopen(clustering_debugging_name_101, "a");
-	clustering_debugging_logfile_102 = fopen(clustering_debugging_name_102, "a");
-	clustering_debugging_logfile_103 = fopen(clustering_debugging_name_103, "a");
+	clustering_debugging_logfile = fopen(clustering_debugging_name, "a");
 
 	// initialize the receiver
 	init_receiver(TIME_STEP);
@@ -1975,9 +1956,7 @@ int main(int argc, char **argv)
 	fclose(console_logfile);
 
 	// debugging purpose
-	fclose(clustering_debugging_logfile_101);
-	fclose(clustering_debugging_logfile_102);
-	fclose(clustering_debugging_logfile_103);
+	fclose(clustering_debugging_logfile);
 
 	// final logs
 	if (simulation_parameters.simuMode == ONLINE)
@@ -2023,32 +2002,16 @@ void broadcast_state_finished()
 bool check_stop_condition()
 {
 	bool is_stop_condition_reached = false;
-	if (simulation_parameters.stopCondition == ENTROPY_ONLY)
-	{
-		if (simulation_parameters.entropyCriteria == GLOBAL)
-		{
-			if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
-			{
-				is_stop_condition_reached = true;		
-			}
-		}
-		else if (simulation_parameters.entropyCriteria == LOCAL)
-		{
-			if (FSM.n_cycles == MAX_ITER || self_entropy < 0.1 )
-			{
-				is_stop_condition_reached = true;	
-			}
-		}
-	} else if (simulation_parameters.stopCondition == SPREAD_ONLY)
-	{
-		if (FSM.n_cycles == MAX_ITER || (posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2))
-		{
+	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
+		if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 ){
 			is_stop_condition_reached = true;
 		}
-	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD)
-	{
-		if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2))
-		{
+	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
+		if (FSM.n_cycles == MAX_ITER || (posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
+		if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
 			is_stop_condition_reached = true;
 		}
 	}

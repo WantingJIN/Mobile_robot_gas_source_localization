@@ -55,6 +55,7 @@ typedef enum planningStrategy
 	SUM_DIJKSTRA_FIX = 10,
 	SUM_DIJKSTRA_ADP = 11,
 	MULTI_DIJKSTRA = 12,
+	INFO_CENTER = 13,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -132,11 +133,6 @@ typedef enum stopCondition{
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
 
-typedef enum entropyCriteria{
-	LOCAL = 0,
-	GLOBAL = 1,
-} eEntropyCriteria;
-
 typedef enum updataGoalPolicy{
 	GOAL_REACHED = 0,
 	FIXED_FREQ = 1,
@@ -196,7 +192,6 @@ class SimulationParameters{
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
-		eEntropyCriteria entropyCriteria;
 		eUpdateGoalPolicy updateGoalPolicy;
 
 		SimulationParameters();

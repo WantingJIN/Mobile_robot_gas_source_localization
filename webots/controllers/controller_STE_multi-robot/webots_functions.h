@@ -54,6 +54,7 @@ extern char whole_position_history_logfile_name[512];
 extern char posterior_pdf_3D_name[512];
 extern char posterior_pdf_3D_cluster_name[512];
 extern char entropy_logfile_name[512];
+extern char entropy_individual_logfile_name[512];
 extern char config_logfile_name[512];
 extern char trajectory_logfile_name[512];
 extern char gas_concentration_map_logfile_name[512];
@@ -77,13 +78,9 @@ extern char experiment_position_logfile_name[512];
 
 // for storing debugging info
 extern FILE *console_logfile;
-extern FILE *clustering_debugging_logfile_101;
-extern FILE *clustering_debugging_logfile_102;
-extern FILE *clustering_debugging_logfile_103;
+extern FILE *clustering_debugging_logfile;
 extern char console_logfile_name[512];
-extern char clustering_debugging_name_101[512];
-extern char clustering_debugging_name_102[512];
-extern char clustering_debugging_name_103[512];
+extern char clustering_debugging_name[512];
 
 // finite state machine
 extern struct FSM FSM;

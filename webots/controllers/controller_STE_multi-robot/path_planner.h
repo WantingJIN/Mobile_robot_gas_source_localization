@@ -55,6 +55,7 @@ public:
     ~PathPlanner();
 
     void maximal_belief_planning();
+    void information_center_planning();
     void random_navigation();
     bool position_outside_arena(Position p);
     void KLD_informative_goal_selection();
