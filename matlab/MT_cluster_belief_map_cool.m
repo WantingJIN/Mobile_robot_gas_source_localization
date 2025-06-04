@@ -94,6 +94,20 @@ for i = 1:cols
 
         % Crear patch sin borde
         cell_patches(j, i) = patch(xv, yv, [1 1 1], 'EdgeColor', 'none');
+
+        % Mostrar índices si se activa la opción
+        if show_cell_indices
+            % Calcular el centro de la celda
+            cx = x + w / 2;
+            cy = y + h / 2;
+
+            % Calcular el índice lineal como en belief_map: (row - 1) * cols + col
+            index = (j - 1) * cols + i;
+
+            % Mostrar el índice
+            text(cx, cy, num2str(index), 'FontSize', 8, 'HorizontalAlignment', 'center', 'Color', [0.3 0.3 0.3]);
+        end
+
     end
 end
 
@@ -199,7 +213,10 @@ for frame_t = 1:10000
                     end
 
                     % Mezclar con blanco según intensidad
-                    blended_color = base_color * intensity + white * (1 - intensity);
+                    min_visible_intensity = 0.2;  % cambia esto si quieres más o menos tinte mínimo
+                    adjusted_intensity = min_visible_intensity + (1 - min_visible_intensity) * intensity;
+                    blended_color = base_color * adjusted_intensity + white * (1 - adjusted_intensity);
+
 
                     % Aplicar color al patch
                     set(cell_patches(row, col), 'FaceColor', blended_color);
@@ -271,11 +288,23 @@ estimated_y = expected_data(end, 3);
 plot(estimated_x, estimated_y, 'p', 'MarkerSize', 16, ...
     'MarkerEdgeColor', 'k', 'MarkerFaceColor', yellow);
 
-% Save final frame and close
-frame = getframe(gcf);
-writeVideo(v, frame);
-close(v);
-disp(['Video saved to: ', output_video_path]);
+%=== Success rate === 
+x_error = abs(estimated_x - source_x);
+y_error = abs(estimated_y - source_y);
+
+if x_error < 1 && y_error < 0.5
+    msg = 'SOURCE FOUND ✅';
+    color = [0.1 0.6 0.1];  
+else
+    msg = 'SOURCE NOT FOUND ❌';
+    color = [0.8 0.1 0.1];  
+end
+
+% Display msg in figure
+text(9.5, -1, msg, 'FontSize', 14, 'FontWeight', 'bold', ...
+    'Color', color, 'Units', 'data');
+ 
+
 
 % === Callback function for spacebar press ===
 function keypress_callback(~, event)

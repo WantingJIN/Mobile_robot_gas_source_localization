@@ -33,4 +33,4 @@ teamStrategy = DISTRIBUTED
 stopCondition = ENTROPY_ONLY
 updateGoalPolicy = FIXED_FREQ
 updateGoalTime = 2000
-regionAllocApproach = 2
+regionAllocApproach = 3

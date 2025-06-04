@@ -193,6 +193,29 @@ bool entered_state_receive_pdf = false;
 bool entered_state_moving = false;
 bool entered_state_receive_goal = false;
 
+// obstacle map
+std::vector<int> obstacle_map = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
 
 
 
@@ -519,7 +542,7 @@ int xy_to_index(double x, double y) {
 
 void clusterize_belief_map(const std::vector<int>& selected_indices) {
 
-	double epsilon_clusterize = 1e-15;
+	double epsilon_clusterize = 0;
 
     // Binary masks for cutting regions from individual pdfs
     std::vector<std::vector<int>> pdf_masks(simulation_parameters.number_of_robots, 
@@ -602,7 +625,7 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
 	for (int y = 0; y < y_nbins; ++y) {
 		for (int x = 0; x < x_nbins; ++x) {
 			int idx = y * x_nbins + x;
-			fprintf(clustering_debugging_logfile, "%.9f ", posterior.pdf[idx]);
+			fprintf(clustering_debugging_logfile, "%.8f ", posterior.pdf[idx]);
 		}
 		fprintf(clustering_debugging_logfile, "\n");
 	}
@@ -677,6 +700,166 @@ void clusterize_belief_map(const std::vector<int>& selected_indices) {
     }
 }
 
+void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indices) {
+    double epsilon_clusterize = 0;
+
+    std::vector<std::vector<int>> pdf_masks(simulation_parameters.number_of_robots, std::vector<int>(x_nbins * y_nbins, 0));
+    std::vector<int> seeds_x(simulation_parameters.number_of_robots), seeds_y(simulation_parameters.number_of_robots);
+    std::vector<std::vector<double>> dist_map(simulation_parameters.number_of_robots, std::vector<double>(x_nbins * y_nbins, std::numeric_limits<double>::max()));
+
+    // Convert bins to (x,y)
+    for (int i = 0; i < simulation_parameters.number_of_robots; ++i)
+        index_to_xy(selected_indices[i], seeds_x[i], seeds_y[i]);
+
+    // Convert flat obstacle map to 2D
+    std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
+    for (int y = 0; y < y_nbins; ++y)
+        for (int x = 0; x < x_nbins; ++x)
+            obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
+
+    // --- BFS Distance Map (Obstacle-aware)
+    // const std::vector<std::pair<int, int>> directions = {{1,0},{-1,0},{0,1},{0,-1}}; // Von Neumann (4 neighbors)
+	const std::vector<std::pair<int, int>> directions = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}}; // Moore (9 neighbors)
+
+    for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
+        std::vector<std::vector<double>> local_dist(y_nbins, std::vector<double>(x_nbins, std::numeric_limits<double>::max()));
+        std::queue<std::pair<int, int>> q;
+
+        int sx = seeds_x[k], sy = seeds_y[k];
+        //if (obstacle_map_2d[sy][sx] == 1) continue;
+
+        local_dist[sy][sx] = 0.0;
+        q.push({sx, sy});
+
+        while (!q.empty()) {
+            auto [x, y] = q.front(); q.pop();
+            double d = local_dist[y][x];
+
+            for (const auto& [dx, dy] : directions) {
+                int nx = x + dx, ny = y + dy;
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                if (obstacle_map_2d[ny][nx] == 1) continue;
+                if (local_dist[ny][nx] > d + 1.0) {
+                    local_dist[ny][nx] = d + 1.0;
+                    q.push({nx, ny});
+                }
+            }
+        }
+
+        for (int y = 0; y < y_nbins; ++y)
+            for (int x = 0; x < x_nbins; ++x)
+                dist_map[k][y * x_nbins + x] = local_dist[y][x];
+
+		fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Distances map (for Robot ID [%d])\n", ID, k+101);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				double val = dist_map[k][idx];
+				if (val == std::numeric_limits<double>::max())
+					fprintf(clustering_debugging_logfile, "      ");
+				else
+					fprintf(clustering_debugging_logfile, "%5.2f ", val);
+			}
+			fprintf(clustering_debugging_logfile, "\n");
+		}
+
+    }
+
+
+
+
+    // --- Asignación a clusters
+    std::vector<int> cluster_sizes(simulation_parameters.number_of_robots, 0);
+    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
+
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (posterior.pdf[i] <= epsilon_clusterize) continue;
+        double min_dist = dist_map[0][i];
+        int min_k = 0;
+        for (int k = 1; k < simulation_parameters.number_of_robots; ++k) {
+            if (dist_map[k][i] < min_dist) {
+                min_dist = dist_map[k][i];
+                min_k = k;
+            }
+        }
+        belief_clusters[i] = min_k + 1;
+        cluster_sizes[min_k]++;
+    }
+
+    log_posterior_pdf_3d_cluster(belief_clusters);
+
+    // --- Máscaras binarias y recorte del pdf
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (posterior.pdf[i] <= epsilon_clusterize) continue;
+        for (int k = 0; k < simulation_parameters.number_of_robots; ++k)
+            pdf_masks[k][i] = (belief_clusters[i] == k + 1) ? 1 : 0;
+    }
+
+    for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
+        if (ID == 101 + k) {
+            for (int i = 0; i < x_nbins * y_nbins; ++i)
+                posterior.pdf[i] *= pdf_masks[k][i];
+        }
+    }
+
+    fprintf(clustering_debugging_logfile, "Robot ID [%d]: NO Normalized Individual pdf after mask:\n", ID);
+    for (int y = 0; y < y_nbins; ++y) {
+        for (int x = 0; x < x_nbins; ++x) {
+            int idx = y * x_nbins + x;
+            fprintf(clustering_debugging_logfile, "%.9f ", posterior.pdf[idx]);
+        }
+        fprintf(clustering_debugging_logfile, "\n");
+    }
+
+    double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+    if (sum > 0)
+        for (int i = 0; i < x_nbins * y_nbins; ++i)
+            posterior.pdf[i] /= sum;
+
+    double sum_def = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+    printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum_def);
+
+    // --- Logs de depuración
+    for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
+        if (ID == 101 + k) {
+            fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (1, 2, 3):\n");
+            for (int y = 0; y < y_nbins; ++y) {
+                for (int x = 0; x < x_nbins; ++x) {
+                    int idx = y * x_nbins + x;
+                    fprintf(clustering_debugging_logfile, "%d ", belief_clusters[idx]);
+                }
+                fprintf(clustering_debugging_logfile, "\n");
+            }
+
+            fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Cluster binary mask:\n", ID);
+            for (int y = 0; y < y_nbins; ++y) {
+                for (int x = 0; x < x_nbins; ++x) {
+                    int idx = y * x_nbins + x;
+                    fprintf(clustering_debugging_logfile, "%d ", pdf_masks[k][idx]);
+                }
+                fprintf(clustering_debugging_logfile, "\n");
+            }
+
+            fprintf(clustering_debugging_logfile, "Robot ID [%d]: Normalized Individual pdf after mask:\n", ID);
+            for (int y = 0; y < y_nbins; ++y) {
+                for (int x = 0; x < x_nbins; ++x) {
+                    int idx = y * x_nbins + x;
+                    fprintf(clustering_debugging_logfile, "%.9f ", posterior.pdf[idx]);
+                }
+                fprintf(clustering_debugging_logfile, "\n");
+            }
+
+            fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Bins:\n", ID);
+            for (int y = 0; y < y_nbins; ++y) {
+                for (int x = 0; x < x_nbins; ++x) {
+                    int idx = y * x_nbins + x;
+                    fprintf(clustering_debugging_logfile, "%03d ", idx + 1);
+                }
+                fprintf(clustering_debugging_logfile, "\n");
+            }
+        }
+    }
+}
 
 
 void approach1_centroid_max_pdf()
@@ -763,7 +946,27 @@ void approach2_centroid_curr_pos()
 }
 
 
+void approach3_centroid_curr_pos_obstacle_dist() 
+{
+    std::vector<int> selected_indices(simulation_parameters.number_of_robots);
 
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        double x = received_current_pos[i][0];
+        double y = received_current_pos[i][1];
+        selected_indices[i] = xy_to_index(x, y);
+    }
+
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        cell_visited_list[selected_indices[i]] = 1;
+    }
+
+    printf("Robot positions and bins:\n");
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
+    }
+
+    clusterize_belief_map_obstacle_dist(selected_indices);
+}
 
 
 
@@ -1855,6 +2058,8 @@ void state_region_allocation()
 
 		if (simulation_parameters.regionAllocApproach == 1) approach1_centroid_max_pdf();
 		if (simulation_parameters.regionAllocApproach == 2) approach2_centroid_curr_pos();
+		if (simulation_parameters.regionAllocApproach == 3) approach3_centroid_curr_pos_obstacle_dist();
+		
 				
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
