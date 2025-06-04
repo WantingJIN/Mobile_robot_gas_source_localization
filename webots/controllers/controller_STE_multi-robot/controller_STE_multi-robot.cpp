@@ -717,38 +717,52 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
         for (int x = 0; x < x_nbins; ++x)
             obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
 
-    // --- BFS Distance Map (Obstacle-aware)
-    // const std::vector<std::pair<int, int>> directions = {{1,0},{-1,0},{0,1},{0,-1}}; // Von Neumann (4 neighbors)
-	const std::vector<std::pair<int, int>> directions = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}}; // Moore (9 neighbors)
+    // --- BFS Distance Map (Obstacle aware)
+	// Know cell dimensions
+	double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);  
+	double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);  
 
-    for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
-        std::vector<std::vector<double>> local_dist(y_nbins, std::vector<double>(x_nbins, std::numeric_limits<double>::max()));
-        std::queue<std::pair<int, int>> q;
+	// Von Neumann (4 directions)
+	// const std::vector<std::pair<int, int>> directions = {{1,0},{-1,0},{0,1},{0,-1}};
 
-        int sx = seeds_x[k], sy = seeds_y[k];
-        //if (obstacle_map_2d[sy][sx] == 1) continue;
+	// Moore (8 directions)
+	const std::vector<std::pair<int, int>> directions = {
+		{1, 0}, {-1, 0}, {0, 1}, {0, -1},
+		{1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+	};
 
-        local_dist[sy][sx] = 0.0;
-        q.push({sx, sy});
+	for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
+		std::vector<std::vector<double>> local_dist(y_nbins, std::vector<double>(x_nbins, std::numeric_limits<double>::max()));
+		std::queue<std::pair<int, int>> q;
 
-        while (!q.empty()) {
-            auto [x, y] = q.front(); q.pop();
-            double d = local_dist[y][x];
+		int sx = seeds_x[k], sy = seeds_y[k];
 
-            for (const auto& [dx, dy] : directions) {
-                int nx = x + dx, ny = y + dy;
-                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
-                if (obstacle_map_2d[ny][nx] == 1) continue;
-                if (local_dist[ny][nx] > d + 1.0) {
-                    local_dist[ny][nx] = d + 1.0;
-                    q.push({nx, ny});
-                }
-            }
-        }
+		local_dist[sy][sx] = 0.0;
+		q.push({sx, sy});
 
-        for (int y = 0; y < y_nbins; ++y)
-            for (int x = 0; x < x_nbins; ++x)
-                dist_map[k][y * x_nbins + x] = local_dist[y][x];
+		while (!q.empty()) {
+			auto [x, y] = q.front(); q.pop();
+			double d = local_dist[y][x];
+
+			for (const auto& [dx, dy] : directions) {
+				int nx = x + dx, ny = y + dy;
+				if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+				if (obstacle_map_2d[ny][nx] == 1) continue;
+
+				// Real cost of moving on each direction (meters)
+				double cost = std::sqrt(std::pow(dx * cell_size_x, 2) + std::pow(dy * cell_size_y, 2));
+				
+				if (local_dist[ny][nx] > d + cost) {
+					local_dist[ny][nx] = d + cost;
+					q.push({nx, ny});
+				}
+			}
+		}
+
+		// Flatten map from 2D to 1D
+		for (int y = 0; y < y_nbins; ++y)
+			for (int x = 0; x < x_nbins; ++x)
+				dist_map[k][y * x_nbins + x] = local_dist[y][x];
 
 		fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Distances map (for Robot ID [%d])\n", ID, k+101);
 		for (int y = 0; y < y_nbins; ++y) {
@@ -768,7 +782,7 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
 
 
 
-    // --- Asignación a clusters
+    // Clusters assignation
     std::vector<int> cluster_sizes(simulation_parameters.number_of_robots, 0);
     std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
 
@@ -788,7 +802,7 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
 
     log_posterior_pdf_3d_cluster(belief_clusters);
 
-    // --- Máscaras binarias y recorte del pdf
+    // Binary masks and cutting merged pdf for each robot
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
         if (posterior.pdf[i] <= epsilon_clusterize) continue;
         for (int k = 0; k < simulation_parameters.number_of_robots; ++k)
@@ -819,7 +833,7 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
     double sum_def = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
     printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum_def);
 
-    // --- Logs de depuración
+    // debugging purpose
     for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
         if (ID == 101 + k) {
             fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (1, 2, 3):\n");
