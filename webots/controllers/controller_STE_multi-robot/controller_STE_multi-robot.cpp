@@ -189,6 +189,12 @@ static float received_current_pos[MAX_NB_ROBOTS][2] = {0};
 static int ready_from[MAX_NB_ROBOTS] = {0};
 static int i_am_ready = 0;
 
+// KLD applied on consecutive Belief Maps
+static double previous_belief_map[MAP_SIZE] = {0};
+bool kld_subloop = false;
+static int n_meas;
+static double previous_sum = 0.0;
+
 // print variables
 bool printed = false;
 bool entered_state_receive_pdf = false;
@@ -1621,7 +1627,7 @@ void state_estimating()
 	posterior.normalize();
 	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
-	FSM.n_cycles++;
+	if (!kld_subloop) FSM.n_cycles++;
 	fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 
 	// debugging purpose
@@ -1655,6 +1661,9 @@ void state_estimating()
 
 	estimating_time_sum += current_estimation_time;
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
+
+	// Check if it is KLD subloop, if true we avoid navigating on the FSM
+	if (kld_subloop) return;
 
 	// check if stopping condition is reached
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
@@ -1832,6 +1841,7 @@ void state_moving()
 	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
 		sample_counter++;
+		n_meas++;
 		// sample and run kernel
 		double sensor_reading = 0.0;
 		double odor_concentration = 0.0;
@@ -1858,6 +1868,45 @@ void state_moving()
 			sample_counter = 0;
 		}
 	}
+
+	// Check Kullback-Leibler divergence (KLD) for possible replan
+	// if (!kld_subloop && n_meas % 5 == 0 && n_meas != 0)
+	// {
+	// 	fprintf(clustering_debugging_logfile, "Robot [%d]: Entered KLD Check for possible replan!\n", ID);
+
+	// 	double KLD;		
+
+	// 	n_meas = 0;
+	// 	kld_subloop = true;
+
+	// 	// Compute the new Merged Belief Map
+	// 	state_estimating();
+	// 	state_share_pdf();
+	// 	state_receive_pdf();
+	// 	state_merge_pdf();
+
+	// 	kld_subloop = false;
+
+	// 	double KLD = posterior.KLD_BM_Update(previous_belief_map, previous_sum);
+
+	// 	fprintf(clustering_debugging_logfile, "Robot [%d]: KLD Value: %f\n", ID, KLD);
+
+	// 	// Keep the current BM
+	// 	std::memcpy(previous_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
+	// 	previous_sum = 0.0;
+	// 	for (int i = 0; i < MAP_SIZE; ++i)
+	// 		previous_sum += previous_belief_map[i];
+
+	// 	// if (KLD > 0.6)
+	// 	// {
+	// 	// 	fprintf(clustering_debugging_logfile, "Robot [%d]: REPLANNING TRAJECTORY DUE TO SIGNIFICANT DIFFERENCES IN MERGED BM\n", ID);
+	// 	// 	FSM.state = STATE_REGION_ALLOCATION;
+	// 	// 	FSM.hook = state_region_allocation;
+	// 	// }
+	// }
+
+
+
 	// verify if arrived to the goal if applicable
 	// fprintf(console_logfile, "check dist to end goal \n");
 	// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
@@ -1915,6 +1964,7 @@ void state_moving()
 		printf("Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
 		fprintf(console_logfile, "Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
 		set_wheels_speed(0, 0);
+		
 		sampleBuffer.reset_all();
 		path.clear();
 		// back to measuring
@@ -2267,9 +2317,7 @@ void state_receive_pdf()
 
 		if (i_am_ready && ready_count == simulation_parameters.number_of_robots - 1)
 		{
-			printf("Robot ID [%d]: All robots READY. Transitioning to STATE_MERGE_PDF.\n", ID);
-			FSM.state = STATE_MERGE_PDF;
-			FSM.hook = state_merge_pdf;
+
 			entered_state_receive_pdf = false;
 			printed = false;
 			i_am_ready = 0;
@@ -2280,6 +2328,14 @@ void state_receive_pdf()
 				received_flags[i] = 0;
 				ready_from[i] = 0;
 			}
+
+			// Check if it is KLD subloop, if true we avoid navigating on the FSM
+			if (kld_subloop) return;
+			
+			printf("Robot ID [%d]: All robots READY. Transitioning to STATE_MERGE_PDF.\n", ID);
+			FSM.state = STATE_MERGE_PDF;
+			FSM.hook = state_merge_pdf;
+
 		}
 	}
 }
@@ -2357,6 +2413,16 @@ void state_merge_pdf()
 	printf("\n");
 	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
 
+	if (FSM.n_cycles == 1)
+	{
+		memcpy(previous_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
+		for (int i = 0; i < MAP_SIZE; ++i)
+			previous_sum += previous_belief_map[i];
+	}
+
+	// Check if it is KLD subloop, if true we avoid navigating on the FSM
+	if (kld_subloop) return;
+
 	posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
       // Check the stopping condition after merging
@@ -2365,6 +2431,7 @@ void state_merge_pdf()
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
+
 
 	// Check if Merged Belief Map equal 0
 	double sum_merged_pdf = 0.0;
@@ -2449,6 +2516,9 @@ void state_share_pdf()
             printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
         }
     }
+
+	// Check if it is KLD subloop, if true we avoid navigating on the FSM
+	if (kld_subloop) return;
 
     FSM.state = STATE_RECEIVE_PDF;
     FSM.hook = state_receive_pdf;

@@ -59,6 +59,7 @@ public:
 
     // relative entropy calculation between one posterior pdf and another P
     double Kullback_Leibler_divergence(Posterior P);
+    double KLD_BM_Update(double* previous_pdf, double previous_sum);
     // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf
     // and then generates the best goal point based on the two pdfs
     void XYmarginal_distance_combined(Position current_position, double ratio, double *best_point);

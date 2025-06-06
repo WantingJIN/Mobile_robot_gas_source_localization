@@ -510,6 +510,24 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 	return KLD;
 }
 
+double Posterior::KLD_BM_Update(double* previous_pdf, double previous_sum)
+{
+    double KLD = 0.0;
+
+    for (int i = 0; i < MAP_SIZE; i++)
+    {
+        double p = previous_pdf[i] / previous_sum;  // P: referencia (anterior)
+        double q = pdf[i];                          // Q: actual
+
+        if (p > 0 && q > 0)
+        {
+            KLD += p * log(p / q);
+        }
+    }
+
+    return KLD;
+}
+
 // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf
 // and then generates the best goal point based on the two pdfs
 void Posterior::XYmarginal_distance_combined(Position current_position, double ratio, double *best_point)
