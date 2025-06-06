@@ -53,6 +53,7 @@ extern char position_history_logfile_name[512];
 extern char whole_position_history_logfile_name[512];
 extern char posterior_pdf_3D_name[512];
 extern char posterior_pdf_3D_cluster_name[512];
+extern char posterior_pdf_3D_cluster_lloyd_name[512];
 extern char entropy_logfile_name[512];
 extern char entropy_individual_logfile_name[512];
 extern char config_logfile_name[512];

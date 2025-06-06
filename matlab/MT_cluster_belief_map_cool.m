@@ -272,7 +272,38 @@ for frame_t = 1:10000
     frame = getframe(gcf);
     writeVideo(v, frame);
 
+
     if all(done)
+ 
+        % === Plot estimated source position ===
+        expected_path = fullfile(exp_folder, '103', 'expected_a_posteriori.csv');
+        expected_data = readmatrix(expected_path);
+        estimated_x = expected_data(end, 2);
+        estimated_y = expected_data(end, 3);
+        plot(estimated_x, estimated_y, 'p', 'MarkerSize', 16, ...
+            'MarkerEdgeColor', 'k', 'MarkerFaceColor', yellow);
+
+        %=== Success rate === 
+        x_error = abs(estimated_x - source_x);
+        y_error = abs(estimated_y - source_y);
+
+        if x_error < 1 && y_error < 0.5
+            msg = 'SOURCE FOUND ✅';
+            color = [0.1 0.6 0.1];  
+        else
+            msg = 'SOURCE NOT FOUND ❌';
+            color = [0.8 0.1 0.1];  
+        end
+
+        % Display msg in figure
+        text(9.5, -1, msg, 'FontSize', 14, 'FontWeight', 'bold', ...
+            'Color', color, 'Units', 'data');
+        
+        for i=1:20
+            frame = getframe(gcf);
+            writeVideo(v, frame);
+        end
+        close(v);
         break;
     end
 end

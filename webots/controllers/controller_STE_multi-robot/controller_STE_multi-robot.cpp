@@ -37,6 +37,7 @@ FILE *whole_position_history_logfile; //new: for MATLAB Distributed clustering v
 FILE *max_a_posteriori_logfile;
 FILE *posterior_pdf_3D;
 FILE *posterior_pdf_3D_cluster; //new: for MATLAB Distributed clustering visualization
+FILE *posterior_pdf_3D_cluster_lloyd;
 FILE *entropy_logfile;
 FILE *entropy_individual_logfile;
 FILE *config_logfile;
@@ -61,6 +62,7 @@ char position_history_logfile_name[512];
 char whole_position_history_logfile_name[512];
 char posterior_pdf_3D_name[512];
 char posterior_pdf_3D_cluster_name[512];
+char posterior_pdf_3D_cluster_lloyd_name[512];
 char entropy_logfile_name[512];
 char entropy_individual_logfile_name[512];
 char config_logfile_name[512];
@@ -519,7 +521,27 @@ void log_posterior_pdf_3d_cluster(const int* belief_clusters)
 	fclose(posterior_pdf_3D_cluster);
 }
 
+void log_posterior_pdf_3d_cluster_lloyd(const int* belief_clusters)
+{
+	posterior_pdf_3D_cluster_lloyd = fopen(posterior_pdf_3D_cluster_lloyd_name, "a"); // append mode, to add new rows without removing the previous ones
 
+	// Save current position of the robot
+	fprintf(posterior_pdf_3D_cluster_lloyd, "%f,%f,", current_position.x, current_position.y);
+
+	// Save clusterized belief map in one row of the .csv
+	for (int y = 0; y < y_nbins; ++y) {
+		for (int x = 0; x < x_nbins; ++x) {
+			int idx = y * x_nbins + x;
+			fprintf(posterior_pdf_3D_cluster_lloyd, "%d", belief_clusters[idx]);
+
+			if (x != x_nbins - 1 || y != y_nbins - 1) // no coma at the end
+				fprintf(posterior_pdf_3D_cluster_lloyd, ",");
+		}
+	}
+
+	fprintf(posterior_pdf_3D_cluster_lloyd, "\n");
+	fclose(posterior_pdf_3D_cluster_lloyd);
+}
 
 
 
@@ -718,7 +740,6 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
             obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
 
     // --- BFS Distance Map (Obstacle aware)
-	// Know cell dimensions
 	double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);  
 	double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);  
 
@@ -764,6 +785,8 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
 			for (int x = 0; x < x_nbins; ++x)
 				dist_map[k][y * x_nbins + x] = local_dist[y][x];
 
+
+		// debugging purpose
 		fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Distances map (for Robot ID [%d])\n", ID, k+101);
 		for (int y = 0; y < y_nbins; ++y) {
 			for (int x = 0; x < x_nbins; ++x) {
@@ -788,7 +811,9 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
 
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
         if (posterior.pdf[i] <= epsilon_clusterize) continue;
-        double min_dist = dist_map[0][i];
+        
+		// No weighted
+		double min_dist = dist_map[0][i];
         int min_k = 0;
         for (int k = 1; k < simulation_parameters.number_of_robots; ++k) {
             if (dist_map[k][i] < min_dist) {
@@ -796,6 +821,8 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
                 min_k = k;
             }
         }
+
+
         belief_clusters[i] = min_k + 1;
         cluster_sizes[min_k]++;
     }
@@ -874,6 +901,338 @@ void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indice
         }
     }
 }
+
+void clusterize_belief_map_lloyd(const std::vector<int>& selected_indices) {
+    const int K = simulation_parameters.number_of_robots;
+    const int max_iterations = 10;
+    double epsilon_clusterize = 0.0;
+
+    std::vector<std::pair<double, double>> centroids(K);
+    std::vector<int> seeds_x(K), seeds_y(K);
+    for (int i = 0; i < K; ++i) {
+        index_to_xy(selected_indices[i], seeds_x[i], seeds_y[i]);
+        centroids[i] = { static_cast<double>(seeds_x[i]), static_cast<double>(seeds_y[i]) };
+    }
+
+    std::vector<int> cluster_assignments(x_nbins * y_nbins, -1);
+
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        // STEP 1: Assign each cell to the nearest cluster (without considering obstacles)
+        std::vector<int> temp_cluster_sizes(K, 0);
+
+        for (int i = 0; i < x_nbins * y_nbins; ++i) {
+            if (posterior.pdf[i] <= epsilon_clusterize) continue;
+            int x, y;
+            index_to_xy(i, x, y);
+
+            double min_dist = std::numeric_limits<double>::max();
+            int best_k = -1;
+            for (int k = 0; k < K; ++k) {
+                double dx = x - centroids[k].first;
+                double dy = y - centroids[k].second;
+                double dist = dx * dx + dy * dy;
+                if (dist < min_dist || (dist == min_dist && temp_cluster_sizes[k] < temp_cluster_sizes[best_k])) {
+                    min_dist = dist;
+                    best_k = k;
+                }
+            }
+            cluster_assignments[i] = best_k;
+            temp_cluster_sizes[best_k]++;
+        }
+
+        // STEP 2: Recompute GEOMETRICAL centroids
+        // std::vector<double> sum_x(K, 0.0), sum_y(K, 0.0);
+        // std::vector<int> count(K, 0);
+
+        // for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        //     int cluster = cluster_assignments[i];
+        //     if (cluster < 0) continue;
+        //     int x, y;
+        //     index_to_xy(i, x, y);
+        //     sum_x[cluster] += x;
+        //     sum_y[cluster] += y;
+        //     count[cluster]++;
+        // }
+
+        // for (int k = 0; k < K; ++k) {
+        //     if (count[k] > 0) {
+        //         centroids[k].first  = sum_x[k] / count[k];
+        //         centroids[k].second = sum_y[k] / count[k];
+        //     }
+        // }
+
+		// STEP 2: Recompute INFORMATIVE centroids
+		std::vector<double> weighted_sum_x(K, 0.0), weighted_sum_y(K, 0.0), total_weight(K, 0.0);
+		for (int i = 0; i < x_nbins * y_nbins; ++i) {
+			int cluster = cluster_assignments[i];
+			if (cluster < 0) continue;
+			double weight = posterior.pdf[i];
+			if (weight < 1e-9) continue;
+
+			int x, y;
+			index_to_xy(i, x, y);
+			weighted_sum_x[cluster] += x * weight;
+			weighted_sum_y[cluster] += y * weight;
+			total_weight[cluster] += weight;
+		}
+
+		for (int k = 0; k < K; ++k) {
+			if (total_weight[k] > 1e-9) {
+				centroids[k].first  = static_cast<int>(weighted_sum_x[k] / total_weight[k]);
+				centroids[k].second = static_cast<int>(weighted_sum_y[k] / total_weight[k]);
+			}
+		}
+
+        // If we want to visualize the evolution of the BM along the 10 iterations refining
+        for (int i = 0; i < x_nbins * y_nbins; ++i) {
+            if (posterior.pdf[i] <= epsilon_clusterize) continue;
+            belief_clusters[i] = cluster_assignments[i] + 1;
+        }
+        log_posterior_pdf_3d_cluster_lloyd(belief_clusters);
+
+    }
+
+    // Assign cluster labels
+    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
+    std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(x_nbins * y_nbins, 0));
+
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (posterior.pdf[i] <= epsilon_clusterize) continue;
+        int cluster = cluster_assignments[i];
+        belief_clusters[i] = cluster + 1;
+        for (int k = 0; k < K; ++k) {
+            pdf_masks[k][i] = (cluster == k) ? 1 : 0;
+        }
+    }
+
+    log_posterior_pdf_3d_cluster(belief_clusters);
+
+    for (int k = 0; k < K; ++k) {
+        if (ID == 101 + k) {
+            for (int i = 0; i < x_nbins * y_nbins; ++i)
+                posterior.pdf[i] *= pdf_masks[k][i];
+
+            double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+            if (sum > 0.0) {
+                for (int i = 0; i < x_nbins * y_nbins; ++i)
+                    posterior.pdf[i] /= sum;
+            }
+
+            double sum_def = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+            printf("Robot ID [%d]: Sum of Lloyd-clustered pdf is %f \n", ID, sum_def);
+        }
+    }
+}
+
+void clusterize_belief_map_obstacle_dist_lloyd(const std::vector<int>& selected_indices)
+{
+    const int K = simulation_parameters.number_of_robots;
+    const int max_iterations = 10;
+    double epsilon_clusterize = 0.0;
+
+    std::vector<std::pair<int, int>> seeds(K);
+    for (int i = 0; i < K; ++i)
+        index_to_xy(selected_indices[i], seeds[i].first, seeds[i].second);
+
+    // Distance maps (considering obstacles)
+    std::vector<std::vector<double>> dist_map(K, std::vector<double>(x_nbins * y_nbins, std::numeric_limits<double>::max()));
+
+    // Convert flat map to 2D
+    std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
+    for (int y = 0; y < y_nbins; ++y)
+        for (int x = 0; x < x_nbins; ++x)
+            obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
+
+    // BFS Distance Map (Obstacle aware)
+    double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);  
+    double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);  
+
+	// Moore
+    const std::vector<std::pair<int, int>> directions = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    };
+
+    for (int k = 0; k < K; ++k) {
+        std::vector<std::vector<double>> local_dist(y_nbins, std::vector<double>(x_nbins, std::numeric_limits<double>::max()));
+        std::queue<std::pair<int, int>> q;
+
+        int sx = seeds[k].first, sy = seeds[k].second;
+        local_dist[sy][sx] = 0.0;
+        q.push({sx, sy});
+
+        while (!q.empty()) {
+            auto [x, y] = q.front(); q.pop();
+            double d = local_dist[y][x];
+
+            for (const auto& [dx, dy] : directions) {
+                int nx = x + dx, ny = y + dy;
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                if (obstacle_map_2d[ny][nx] == 1) continue;
+
+                double cost = std::sqrt(std::pow(dx * cell_size_x, 2) + std::pow(dy * cell_size_y, 2));
+                if (local_dist[ny][nx] > d + cost) {
+                    local_dist[ny][nx] = d + cost;
+                    q.push({nx, ny});
+                }
+            }
+        }
+
+        for (int y = 0; y < y_nbins; ++y)
+            for (int x = 0; x < x_nbins; ++x)
+                dist_map[k][y * x_nbins + x] = local_dist[y][x];
+
+		// debugging purpose
+		fprintf(clustering_debugging_logfile, "\nRobot ID [%d]: Distances map (for Robot ID [%d])\n", ID, k+101);
+		for (int y = 0; y < y_nbins; ++y) {
+			for (int x = 0; x < x_nbins; ++x) {
+				int idx = y * x_nbins + x;
+				double val = dist_map[k][idx];
+				if (val == std::numeric_limits<double>::max())
+					fprintf(clustering_debugging_logfile, "      ");
+				else
+					fprintf(clustering_debugging_logfile, "%5.2f ", val);
+			}
+			fprintf(clustering_debugging_logfile, "\n");
+		}
+    }
+
+    // Lloyd refining algorithm (considering obstacles in distances matrix)
+    std::vector<int> cluster_assignments(x_nbins * y_nbins, -1);
+
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        std::vector<int> temp_cluster_sizes(K, 0);
+
+        // STEP 1: Assign each cell to the nearest cluster (considering obstacles)
+		for (int i = 0; i < x_nbins * y_nbins; ++i) {
+			if (posterior.pdf[i] <= epsilon_clusterize) continue;
+
+			double min_dist = dist_map[0][i];
+			int best_k = 0;
+
+			for (int k = 1; k < K; ++k) {
+				double dist = dist_map[k][i];
+				if (dist < min_dist || (dist == min_dist && temp_cluster_sizes[k] < temp_cluster_sizes[best_k])) {
+					min_dist = dist;
+					best_k = k;
+				}
+			}
+
+			cluster_assignments[i] = best_k;
+			temp_cluster_sizes[best_k]++;
+		}
+
+        // STEP 2: Recompute GEOMETRICAL centroids
+        // std::vector<double> sum_x(K, 0.0), sum_y(K, 0.0);
+        // std::vector<int> count(K, 0);
+        // for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        //     int cluster = cluster_assignments[i];
+        //     if (cluster < 0) continue;
+        //     int x, y;
+        //     index_to_xy(i, x, y);
+        //     sum_x[cluster] += x;
+        //     sum_y[cluster] += y;
+        //     count[cluster]++;
+        // }
+
+        // for (int k = 0; k < K; ++k) {
+        //     if (count[k] > 0) {
+        //         seeds[k].first  = static_cast<int>(sum_x[k] / count[k]);
+        //         seeds[k].second = static_cast<int>(sum_y[k] / count[k]);
+        //     }
+        // }
+
+		// STEP 2: Recompute INFORMATIVE centroids
+		std::vector<double> weighted_sum_x(K, 0.0), weighted_sum_y(K, 0.0), total_weight(K, 0.0);
+		for (int i = 0; i < x_nbins * y_nbins; ++i) {
+			int cluster = cluster_assignments[i];
+			if (cluster < 0) continue;
+			double weight = posterior.pdf[i];
+			if (weight < 1e-9) continue;
+
+			int x, y;
+			index_to_xy(i, x, y);
+			weighted_sum_x[cluster] += x * weight;
+			weighted_sum_y[cluster] += y * weight;
+			total_weight[cluster] += weight;
+		}
+
+		for (int k = 0; k < K; ++k) {
+			if (total_weight[k] > 1e-9) {
+				seeds[k].first  = static_cast<int>(weighted_sum_x[k] / total_weight[k]);
+				seeds[k].second = static_cast<int>(weighted_sum_y[k] / total_weight[k]);
+			}
+		}
+
+        // Generate again distances maps with the new centroids 
+        for (int k = 0; k < K; ++k) {
+            std::vector<std::vector<double>> local_dist(y_nbins, std::vector<double>(x_nbins, std::numeric_limits<double>::max()));
+            std::queue<std::pair<int, int>> q;
+
+            int sx = seeds[k].first, sy = seeds[k].second;
+            local_dist[sy][sx] = 0.0;
+            q.push({sx, sy});
+
+            while (!q.empty()) {
+                auto [x, y] = q.front(); q.pop();
+                double d = local_dist[y][x];
+
+                for (const auto& [dx, dy] : directions) {
+                    int nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                    if (obstacle_map_2d[ny][nx] == 1) continue;
+
+                    double cost = std::sqrt(std::pow(dx * cell_size_x, 2) + std::pow(dy * cell_size_y, 2));
+                    if (local_dist[ny][nx] > d + cost) {
+                        local_dist[ny][nx] = d + cost;
+                        q.push({nx, ny});
+                    }
+                }
+            }
+
+            for (int y = 0; y < y_nbins; ++y)
+                for (int x = 0; x < x_nbins; ++x)
+                    dist_map[k][y * x_nbins + x] = local_dist[y][x];
+        }
+
+        // debugging purpose
+        for (int i = 0; i < x_nbins * y_nbins; ++i)
+            belief_clusters[i] = (posterior.pdf[i] > epsilon_clusterize) ? cluster_assignments[i] + 1 : 0;
+
+        log_posterior_pdf_3d_cluster_lloyd(belief_clusters);
+    }
+
+    // Cut Belief Map according to the assigned cluster
+	// Assign labels to the cells (clustering)
+    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
+    std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(x_nbins * y_nbins, 0));
+
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (posterior.pdf[i] <= epsilon_clusterize) continue;
+        int cluster = cluster_assignments[i];
+        belief_clusters[i] = cluster + 1;
+        pdf_masks[cluster][i] = 1;
+    }
+
+    log_posterior_pdf_3d_cluster(belief_clusters);
+
+    for (int k = 0; k < K; ++k) {
+        if (ID == 101 + k) {
+            for (int i = 0; i < x_nbins * y_nbins; ++i)
+                posterior.pdf[i] *= pdf_masks[k][i];
+
+            double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+            if (sum > 0.0) {
+                for (int i = 0; i < x_nbins * y_nbins; ++i)
+                    posterior.pdf[i] /= sum;
+            }
+
+            printf("Robot ID [%d]: Sum of Lloyd-obstacle-aware pdf is %f \n", ID, sum);
+        }
+    }
+
+}
+
 
 
 void approach1_centroid_max_pdf()
@@ -982,7 +1341,49 @@ void approach3_centroid_curr_pos_obstacle_dist()
     clusterize_belief_map_obstacle_dist(selected_indices);
 }
 
+void approach4_centroid_curr_pos_lloyd() 
+{
+    std::vector<int> selected_indices(simulation_parameters.number_of_robots);
 
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        double x = received_current_pos[i][0];
+        double y = received_current_pos[i][1];
+        selected_indices[i] = xy_to_index(x, y);
+    }
+
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        cell_visited_list[selected_indices[i]] = 1;
+    }
+
+    printf("Robot positions and bins:\n");
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
+    }
+
+    clusterize_belief_map_lloyd(selected_indices);
+}
+
+void approach5_centroid_curr_pos_obstacle_dist_lloyd()
+{
+    std::vector<int> selected_indices(simulation_parameters.number_of_robots);
+
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        double x = received_current_pos[i][0];
+        double y = received_current_pos[i][1];
+        selected_indices[i] = xy_to_index(x, y);
+    }
+
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        cell_visited_list[selected_indices[i]] = 1;
+    }
+
+    printf("Robot positions and bins:\n");
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
+    }
+
+    clusterize_belief_map_obstacle_dist_lloyd(selected_indices);
+}
 
 // ============================== STATES ================================= //
 void state_waiting()
@@ -2073,7 +2474,8 @@ void state_region_allocation()
 		if (simulation_parameters.regionAllocApproach == 1) approach1_centroid_max_pdf();
 		if (simulation_parameters.regionAllocApproach == 2) approach2_centroid_curr_pos();
 		if (simulation_parameters.regionAllocApproach == 3) approach3_centroid_curr_pos_obstacle_dist();
-		
+		if (simulation_parameters.regionAllocApproach == 4) approach4_centroid_curr_pos_lloyd();
+		if (simulation_parameters.regionAllocApproach == 5) approach5_centroid_curr_pos_obstacle_dist_lloyd();
 				
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;

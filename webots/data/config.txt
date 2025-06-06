@@ -32,5 +32,5 @@ weighting_entropy_ratio = 10
 teamStrategy = DISTRIBUTED
 stopCondition = ENTROPY_ONLY
 updateGoalPolicy = FIXED_FREQ
-updateGoalTime = 2000
-regionAllocApproach = 3
+updateGoalTime = 200
+regionAllocApproach = 5
