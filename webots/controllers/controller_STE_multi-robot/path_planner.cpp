@@ -24,6 +24,7 @@ extern float **obstacles;
 // text file for storing some prints for debugging
 extern FILE *console_logfile;
 extern FILE *clustering_debugging_logfile;
+extern FILE *KLD_debugging_logfile;
 
 PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history)
 {

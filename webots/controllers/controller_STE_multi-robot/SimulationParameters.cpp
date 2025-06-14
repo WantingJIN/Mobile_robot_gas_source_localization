@@ -187,11 +187,18 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
-eTeamStrategy parse_team_strategy(const char* str) {
+eControlArchitecture parse_control_architecture(const char* str) {
 	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
 	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
 	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
-	fprintf(stderr, "Unknown team strategy: %s\n", str);
+	fprintf(stderr, "Unknown controll architecture: %s\n", str);
+	exit(1);
+}
+
+eClusterMethod parse_cluster_method(const char* str) {
+	if (strcmp(str, "VORONOI") == 0) return VORONOI;
+	if (strcmp(str, "VORONOI_LLOYD") == 0) return VORONOI_LLOYD;
+	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }
 
@@ -211,6 +218,12 @@ eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
 	exit(1);
 }
 
+eEstimateWhileMoving parse_estimate_while_moving(const char* str) {
+	if (strcmp(str, "YES") == 0) return YES;
+	if (strcmp(str, "NO") == 0) return NO;
+	fprintf(stderr, "Unknown estimate while moving: %s\n", str);
+	exit(1);
+}
 eScoreFun parse_score_fun(const char *str)
 {
 	if (strcmp(str, "RATIO") == 0)
@@ -255,10 +268,12 @@ SimulationParameters::SimulationParameters()
 	simuMode = ONLINE;
 	R0 = 100;
 	weighting_entropy_ratio = 6;
-	teamStrategy = CENTRALIZED;
+	controlArchitecture = CENTRALIZED;
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
 	regionAllocApproach = 1;
+	clusterMethod = VORONOI_LLOYD;
+	estimateWhileMoving = NO;
 
 }
 
@@ -399,8 +414,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			weighting_entropy_ratio = atof(value);
 		}
-		else if (strcmp(key, "teamStrategy") == 0) {
-			teamStrategy = parse_team_strategy(value);
+		else if (strcmp(key, "controlArchitecture") == 0) {
+			controlArchitecture = parse_control_architecture(value);
+		} 
+		else if (strcmp(key, "clusterMethod") == 0) {
+			clusterMethod = parse_cluster_method(value);
 		} 
 		else if (strcmp(key, "updateGoalTime") == 0) {
 			update_goal_time = atoi(value);
@@ -410,6 +428,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		}
 		else if (strcmp(key, "updateGoalPolicy") == 0) {
 			updateGoalPolicy = parse_update_goal_policy(value);
+		}
+		else if (strcmp(key, "estimateWhileMoving") == 0) {
+			estimateWhileMoving = parse_estimate_while_moving(value);
 		}
 		else if (strcmp(key, "regionAllocApproach") == 0) {
 			regionAllocApproach = atoi(value);
@@ -474,7 +495,8 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "info_sum %d\n", infoSum);
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
-	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
+	fprintf(sim_param_file, "control_architecture %d\n", controlArchitecture);
+	fprintf(sim_param_file, "cluster_method %d\n", clusterMethod);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "region_alloc_approach %d\n", regionAllocApproach);
 	fclose(sim_param_file);

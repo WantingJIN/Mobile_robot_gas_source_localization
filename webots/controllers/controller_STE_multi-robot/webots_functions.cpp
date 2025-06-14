@@ -397,8 +397,10 @@ void obstacle_avoidance_k4()
 		// wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0, 0);
 		// back to moving
+
 		FSM.state = STATE_MOVING;
 		FSM.hook = state_moving;
+
 		return;
 	}
 
@@ -603,6 +605,7 @@ void set_logfile_names()
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 	sprintf(clustering_debugging_name, "%s/console_multirobot.txt", folder_name);
+	sprintf(KLD_debugging_name, "%s/console_KLD.txt", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment and scan

@@ -121,11 +121,16 @@ typedef enum infoSum
 	LINEAR_SUM = 0,
 	EXP_SUM = 1,
 } eInfoSum;
-typedef enum teamStrategy{
+typedef enum controlArchitecture{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
 	CENTRALIZED = 2,
-} eTeamStrategy;
+} eControlArchitecture;
+
+typedef enum clusterMethod{
+	VORONOI = 0,
+	VORONOI_LLOYD = 1,
+} eClusterMethod;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
@@ -133,11 +138,16 @@ typedef enum stopCondition{
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
 
-typedef enum updataGoalPolicy{
+typedef enum updateGoalPolicy{
 	GOAL_REACHED = 0,
 	FIXED_FREQ = 1,
 	BELIEF_DIFF = 2,
 } eUpdateGoalPolicy;
+
+typedef enum estimateWhileMoving{
+	YES = 0,
+	NO = 1,
+} eEstimateWhileMoving;
 
 // parameters to estimate
 struct parameters_set
@@ -186,13 +196,15 @@ class SimulationParameters{
 		eSimuMode simuMode; 
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod;
-		eTeamStrategy teamStrategy;
+		eControlArchitecture controlArchitecture;
+		eClusterMethod clusterMethod;
 
 	      eScoreFun scoreFun;
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
 		eUpdateGoalPolicy updateGoalPolicy;
+		eEstimateWhileMoving estimateWhileMoving;
 
 		SimulationParameters();
 		~SimulationParameters();

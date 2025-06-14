@@ -47,6 +47,16 @@ typedef enum state
 	STATE_UPDATEGOAL_TEAM = 14,
 	STATE_SHARE_PDF = 15,
 	STATE_REGION_ALLOCATION = 16,
+	STATE_SHARE_DIST = 17,
+	STATE_RECEIVE_DIST = 18,
+	STATE_MOVESTING = 19,
+	SUBSTATE_ESTIMATING = 20,
+	SUBSTATE_SHARE_PDF = 21,
+	SUBSTATE_RECEIVE_PDF = 22,
+	SUBSTATE_MERGE_PDF = 23,
+	SUBSTATE_COMPARE_PDF = 24,
+	SUBSTATE_SHARE_KLD = 25,
+	SUBSTATE_RECEIVE_KLD = 26,
 } eState;
 
 // finite state machine
@@ -105,6 +115,16 @@ void state_merge_pdf();
 void state_updategoal_team();
 void state_share_pdf();
 void state_region_allocation();
+void state_share_dist();
+void state_receive_dist();
+void state_movesting();
+void substate_estimating();
+void substate_share_pdf();
+void substate_receive_pdf();
+void substate_merge_pdf();
+void substate_compare_pdf();
+void substate_share_kld();
+void substate_receive_kld();
 
 double randu();
 long long current_timestamp();

@@ -9,6 +9,7 @@
 // for storing debugging info
 extern FILE *console_logfile;
 extern FILE *clustering_debugging_logfile;
+extern FILE *KLD_debugging_logfile;
 
 extern SimulationParameters simulation_parameters;
 struct normal_random_variable
@@ -516,8 +517,8 @@ double Posterior::KLD_BM_Update(double* previous_pdf, double previous_sum)
 
     for (int i = 0; i < MAP_SIZE; i++)
     {
-        double p = previous_pdf[i] / previous_sum;  // P: referencia (anterior)
-        double q = pdf[i];                          // Q: actual
+        double q = previous_pdf[i] / previous_sum;  // P: referencia (anterior)
+        double p = pdf[i];                          // Q: actual
 
         if (p > 0 && q > 0)
         {

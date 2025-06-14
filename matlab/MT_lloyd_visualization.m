@@ -106,7 +106,7 @@ for idx = 1:num_frames
     drawnow;
     
     if mod(idx, 10) == 0
-        pause(5);
+        pause(3);
     else
         pause(0.3);
     end
