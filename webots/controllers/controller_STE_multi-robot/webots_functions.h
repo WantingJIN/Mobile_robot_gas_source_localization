@@ -51,6 +51,8 @@ extern char likelihood_logfile_name[512];
 extern char measurement_history_logfile_name[512];
 extern char position_history_logfile_name[512];
 extern char whole_position_history_logfile_name[512];
+extern char kld_value_logfile_name[512];
+extern char time_logfile_name[512];
 extern char posterior_pdf_3D_name[512];
 extern char posterior_pdf_3D_cluster_name[512];
 extern char posterior_pdf_3D_cluster_lloyd_name[512];

@@ -26,6 +26,8 @@
 #define MSG_SUBSTATE_SHARE_PDF -97
 #define MSG_SUBSTATE_SHARE_KLD -96
 
+#define KLD_THRESHOLD 0.1
+
 
 using namespace std;
 
@@ -40,6 +42,8 @@ FILE *likelihood_logfile;
 FILE *measurement_history_logfile;
 FILE *position_history_logfile;
 FILE *whole_position_history_logfile; //new: for MATLAB Distributed clustering visualization
+FILE *kld_value_logfile;
+FILE *time_logfile;
 FILE *max_a_posteriori_logfile;
 FILE *posterior_pdf_3D;
 FILE *posterior_pdf_3D_cluster; //new: for MATLAB Distributed clustering visualization
@@ -67,6 +71,8 @@ char likelihood_logfile_name[512];
 char measurement_history_logfile_name[512];
 char position_history_logfile_name[512];
 char whole_position_history_logfile_name[512];
+char kld_value_logfile_name[512];
+char time_logfile_name[512];
 char posterior_pdf_3D_name[512];
 char posterior_pdf_3D_cluster_name[512];
 char posterior_pdf_3D_cluster_lloyd_name[512];
@@ -176,6 +182,9 @@ double navigation_sampling_time_sum = 0;
 long long estimating_time_sum = 0; // computation time of the estimation part
 long long planning_time_sum = 0;   // computation time of the planning part
 
+double initial_time_results;  // Variable global
+
+
 // precomputed gas maps
 double c_avg[MAP_SIZE][MAP_SIZE]; // left: source position, right: estimated cell position
 
@@ -197,16 +206,17 @@ static double received_current_dist[MAX_NB_ROBOTS] = {0};
 static double received_current_kld[MAX_NB_ROBOTS] = {0};
 static int ready_from[MAX_NB_ROBOTS] = {0};
 static int i_am_ready = 0;
-static double epsilon_clusterize = 0;
+static double epsilon_clusterize = 1e-12;
 double start_substates;
 
 // KLD applied on consecutive Belief Maps
-static double previous_belief_map[MAP_SIZE] = {0};
+static double actual_belief_map[MAP_SIZE] = {0};
 static int n_meas = 0;
-static double previous_sum = 0.0;
+static double actual_sum = 0.0;
 static double distance_to_goal = 0;
 double KLD = 0;
 int n_kld = 0;
+int kld_replan = 0;
 
 // print variables
 bool printed = false;
@@ -216,6 +226,9 @@ bool entered_state_receive_kld = false;
 bool entered_substate_receive_pdf = false;
 bool entered_state_moving = false;
 bool entered_state_receive_goal = false;
+bool kld_subloop_upd = false;
+
+bool include_region_allocation = true;
 
 // obstacle map
 std::vector<int> obstacle_map = {
@@ -481,6 +494,27 @@ void log_whole_position_history(bool real_position)
 
     fprintf(whole_position_history_logfile, "\n");
     fclose(whole_position_history_logfile);
+}
+
+void log_kld_value()
+{
+    kld_value_logfile = fopen(kld_value_logfile_name, "a"); // append mode, to add new rows without removing the previous ones
+
+    fprintf(kld_value_logfile, "%i,%f,%i,%f,%f,", FSM.n_cycles, KLD, kld_replan, current_position.x, current_position.y);
+
+    fprintf(kld_value_logfile, "\n");
+    fclose(kld_value_logfile);
+}
+
+void log_time(double simulation_time_results) {
+    time_logfile = fopen(time_logfile_name, "a"); // modo 'w' para sobrescribir (1x1 casilla)
+
+
+
+    fprintf(time_logfile, "%f\n", simulation_time_results);  // una sola fila, una sola columna
+    fprintf(time_logfile, "\n");
+
+    fclose(time_logfile);
 }
 
 
@@ -1517,6 +1551,12 @@ void state_read_positions_measurements()
 
 void state_measuring()
 {
+	
+	if (FSM.n_cycles == 0)
+	{
+		initial_time_results = wb_robot_get_time();
+	}
+
 	printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	// printf("measuring sample number %d\n", measurements.n_samples);
 	vector<double> sample_from_map;
@@ -1609,7 +1649,7 @@ void state_measuring()
 	// log and save
 	if (VERBOSE)
 		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
-	log_position();
+	//log_position();
 	log_measurements();
 
 
@@ -1662,7 +1702,11 @@ void state_estimating()
 	posterior.normalize();
 	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
-	FSM.n_cycles++;
+	if (include_region_allocation)
+	{
+		FSM.n_cycles++;
+	}
+
 	fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 
 	// debugging purpose
@@ -1738,7 +1782,17 @@ void state_estimating()
 
 void state_updategoal()
 {
+	if (!include_region_allocation)
+	{
+		log_position();
+		log_kld_value();
+		log_whole_position_history(true);
+		posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
+		FSM.n_cycles++;
+	}
+
+	
 	double sum = 0.0;
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
         sum += posterior.pdf[i];
@@ -1760,7 +1814,14 @@ void state_updategoal()
 		switch (simulation_parameters.planningStrategy)
 		{
 		case GREEDY:
-			path_planner.maximal_belief_planning();
+			if (!include_region_allocation)
+			{
+				path_planner.debug_relative_value_maximal_merged_belief_planning();
+			}
+			else
+			{
+				path_planner.maximal_belief_planning();
+			}			
 			break;
 		case INFO_CENTER:
 			path_planner.information_center_planning();
@@ -1831,6 +1892,10 @@ void state_updategoal()
 			i = path.begin();
 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			// send the goal to the supervisor
+			//if (kld_subloop_upd) log_position();
+			//if (kld_subloop_upd) posterior.log_pdf(posterior_pdf_3D_name, 'a');
+			//if (kld_subloop_upd) log_posterior_pdf_3d_cluster();
+			
 			Message msg(ID, 0, goal_position, -1, goal_position, 0);
 			send_msg(msg);
 			// if online simulation: move to the goal position
@@ -1856,10 +1921,13 @@ void state_updategoal()
 
 void state_moving()
 {
-	double start_state_moving = wb_robot_get_time();
+	//double start_state_moving = wb_robot_get_time();
 
-	double substates_time = start_state_moving - start_substates;
-	fprintf(KLD_debugging_logfile, "Time in SUBSTATES was %f seconds \n", substates_time);
+	//double substates_time = start_state_moving - start_substates;
+	//fprintf(KLD_debugging_logfile, "Time in SUBSTATES was %f seconds \n", substates_time);
+	kld_subloop_upd = false;
+	kld_replan = 0;
+
 	if (!entered_state_moving)
 	{
 		printf("Robot ID [%d]: STATE_MOVING \n", ID);
@@ -1872,109 +1940,229 @@ void state_moving()
 		entered_state_moving = true;
 	}
 
-	// ====== SAMPLING ======
-	// printf("moving toward the goal\n");
-	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
+
+	bool is_centralized = (simulation_parameters.controlArchitecture == CENTRALIZED && ID == CENTRAL_MASTER_ID);
+	bool is_distributed = simulation_parameters.controlArchitecture == DISTRIBUTED;
+
+	if (is_distributed && simulation_parameters.estimateWhileMoving == NO)
 	{
-		sample_counter++;
-		n_meas++;
-		// sample and run kernel
-		double sensor_reading = 0.0;
-		double odor_concentration = 0.0;
-		odor_read(&sensor_reading, odor_concentration);
-		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+		// printf("moving toward the goal\n");
+		if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 		{
-			reverse_sensor_model(sensor_reading, previous_sensor_reading);
+			sample_counter++;
+			// sample and run kernel
+			double sensor_reading = 0.0;
+			double odor_concentration = 0.0;
+			odor_read(&sensor_reading, odor_concentration);
+			if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				reverse_sensor_model(sensor_reading, previous_sensor_reading);
+			}
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				gas_map.runKernelAlgorithm(current_position, sensor_reading);
+			}
+			if (sample_counter > simulation_parameters.sampling_period)
+			{
+				// Sampling distance threshold
+				// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				//{
+				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+				sample_in_motion.measurement.push_back(sensor_reading);
+				sample_in_motion.size++;
+				last_measurement_pos.x = current_position.x;
+				last_measurement_pos.y = current_position.y;
+				sample_counter = 0;
+			}
 		}
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+		// verify if arrived to the goal if applicable
+		// fprintf(console_logfile, "check dist to end goal \n");
+		// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+		double dist_threshold = 0.1;
+		if (dist_to_goal(goal_position) > dist_threshold)
 		{
-			gas_map.runKernelAlgorithm(current_position, sensor_reading);
+			if (i == path.end())
+			{
+				fprintf(console_logfile, "path end goal reached \n");
+			}
+
+			// move
+			if (dist_to_goal(*i) <= dist_threshold && i != path.end())
+			{
+				fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+				i++;
+				// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			}
+			go_to_goal(*i);
+			// obstacle avoidance if necessary
+			if (obstacle_or_not() == 1)
+			{
+				FSM.state = STATE_OBSTACLE_AVOIDANCE;
+				FSM.hook = state_obstacle_avoidance;
+				return;
+			}
+			set_wheels_speed(speed[0], speed[1]);
+
+			// save the current position in logfile
+			log_whole_position_history(true);
+
+			// int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
+
+			// if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
+			// 	if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
+			// 		{
+			// 		double time_now_time_step_far = wb_robot_get_time();
+			// 		double time_between_movements_time_step_far = time_now_time_step_far - time_after_moving;
+			// 		printf("Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
+			// 		fprintf(console_logfile, "Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
+			// 		// set_wheels_speed(0, 0);
+			// 		sampleBuffer.reset_all();
+			// 		path.clear();
+			// 		// printf("Robot ID [%d]. Number of iteration is %d\n", ID, n_time_step);
+			// 		FSM.state = STATE_MEASURING;
+			// 		FSM.hook = state_measuring;
+			// 		time_after_moving = wb_robot_get_time();
+			// 		entered_state_moving = false;
+			// 		return;
+			// 	}
+			// }
 		}
-		if (sample_counter > simulation_parameters.sampling_period)
+		else 
 		{
-			// Sampling distance threshold
-			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-			//{
-			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-			sample_in_motion.measurement.push_back(sensor_reading);
-			sample_in_motion.size++;
-			last_measurement_pos.x = current_position.x;
-			last_measurement_pos.y = current_position.y;
-			sample_counter = 0;
+			double time_now_time_step_near = wb_robot_get_time();
+			double time_between_movements_time_step_near = time_now_time_step_near - time_after_moving;
+			printf("Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
+			fprintf(console_logfile, "Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
+			set_wheels_speed(0, 0);
+			sampleBuffer.reset_all();
+			path.clear();
+			// back to measuring
+			FSM.state = STATE_MEASURING;
+			FSM.hook = state_measuring;
+			time_after_moving = wb_robot_get_time();
+			navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			time_before_measuring = wb_robot_get_time();
+			printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
+			entered_state_moving = false;
 		}
+
 	}
-
-	// verify if arrived to the goal if applicable
-	// fprintf(console_logfile, "check dist to end goal \n");
-	// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-	distance_to_goal = dist_to_goal(goal_position);
-	if (dist_to_goal(goal_position) > 0.05)
+	else if (is_distributed && simulation_parameters.estimateWhileMoving == YES)
 	{
-		if (i == path.end())
+		// ====== SAMPLING ======
+		// printf("moving toward the goal\n");
+		if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 		{
-			fprintf(console_logfile, "path end goal reached \n");
+			sample_counter++;
+			n_meas++;
+			// sample and run kernel
+			double sensor_reading = 0.0;
+			double odor_concentration = 0.0;
+			odor_read(&sensor_reading, odor_concentration);
+			if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				reverse_sensor_model(sensor_reading, previous_sensor_reading);
+			}
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				gas_map.runKernelAlgorithm(current_position, sensor_reading);
+			}
+			if (sample_counter > simulation_parameters.sampling_period)
+			{
+				// Sampling distance threshold
+				// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				//{
+				sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+				sample_in_motion.measurement.push_back(sensor_reading);
+				sample_in_motion.size++;
+				last_measurement_pos.x = current_position.x;
+				last_measurement_pos.y = current_position.y;
+				sample_counter = 0;
+			}
 		}
 
-		// move
-		if (dist_to_goal(*i) <= 0.05 && i != path.end())
+		// verify if arrived to the goal if applicable
+		// fprintf(console_logfile, "check dist to end goal \n");
+		// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+		int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
+		double dist_threshold_movesting = 0.05;
+		distance_to_goal = dist_to_goal(goal_position);
+		if (dist_to_goal(goal_position) > dist_threshold_movesting)
 		{
-			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-			i++;
-			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			if (i == path.end())
+			{
+				fprintf(console_logfile, "path end goal reached \n");
+			}
+
+			// move
+			if (dist_to_goal(*i) <= dist_threshold_movesting && i != path.end())
+			{
+				fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+				i++;
+				// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			}
+			go_to_goal(*i);
+			// obstacle avoidance if necessary
+			if (obstacle_or_not() == 1)
+			{
+				FSM.state = STATE_OBSTACLE_AVOIDANCE;
+				FSM.hook = state_obstacle_avoidance;
+				return;
+			}
+			set_wheels_speed(speed[0], speed[1]);
+
+			// save the current position in logfile
+			log_whole_position_history(true);
 		}
-		go_to_goal(*i);
-		// obstacle avoidance if necessary
-		if (obstacle_or_not() == 1)
+		else
 		{
-			FSM.state = STATE_OBSTACLE_AVOIDANCE;
-			FSM.hook = state_obstacle_avoidance;
+			// double time_now_time_step_near = wb_robot_get_time();
+			// double time_between_movements_time_step_near = time_now_time_step_near - time_after_moving;
+			// printf("Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
+			// fprintf(console_logfile, "Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
+			set_wheels_speed(0, 0);
+
+			sampleBuffer.reset_all();
+			path.clear();
+			// back to measuring
+			// FSM.state = STATE_MEASURING;
+			// FSM.hook = state_measuring;
+			// time_after_moving = wb_robot_get_time();
+			// navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			// time_before_measuring = wb_robot_get_time();
+			// printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
+			// entered_state_moving = false;
+			FSM.state = STATE_SHARE_DIST;
+			FSM.hook = state_share_dist;
 			return;
 		}
-		set_wheels_speed(speed[0], speed[1]);
+		
+		// Kullback–Leibler Divergence (KLD) comparison between PDFs
+		
+		// || n_meas >= 5
+		if ((n_time_step % compare_pdf_iterations == 0 && n_time_step != 0))
+		{
+			//start_substates = wb_robot_get_time();
+			printf("Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
 
-		// save the current position in logfile
-		log_whole_position_history(true);
+			printf("Robot ID [%d]: STATE_MOVESTING \n", ID);
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
+
+			fprintf(KLD_debugging_logfile, "FSM cycle: %i\n", FSM.n_cycles);
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
+
+
+			FSM.state = STATE_SHARE_DIST;
+			FSM.hook = state_share_dist;
+			return;
+		}
 	}
-	else
-	{
-		// double time_now_time_step_near = wb_robot_get_time();
-		// double time_between_movements_time_step_near = time_now_time_step_near - time_after_moving;
-		// printf("Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
-		// fprintf(console_logfile, "Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
-		set_wheels_speed(0, 0);
-
-		// sampleBuffer.reset_all();
-		// path.clear();
-		// back to measuring
-		// FSM.state = STATE_MEASURING;
-		// FSM.hook = state_measuring;
-		// time_after_moving = wb_robot_get_time();
-		// navigation_sampling_time_sum += time_after_moving - time_before_moving;
-		// time_before_measuring = wb_robot_get_time();
-		// printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
-		// entered_state_moving = false;
-	}
-	
-	// Kullback–Leibler Divergence (KLD) comparison between PDFs
-	int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
-	if (n_time_step % compare_pdf_iterations == 0 && n_time_step != 0)
-	{
-		start_substates = wb_robot_get_time();
-		printf("Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
-		fprintf(clustering_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
-
-		printf("Robot ID [%d]: STATE_MOVESTING \n", ID);
-		fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
-
-		fprintf(KLD_debugging_logfile, "FSM cycle: %i\n", FSM.n_cycles);
-		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
-		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
 
 
-		FSM.state = STATE_SHARE_DIST;
-		FSM.hook = state_share_dist;
-	}
 }
 
 void state_share_dist()
@@ -2335,8 +2523,49 @@ void substate_merge_pdf()
     posterior.calculate_entropy_and_spread();
 
 
-	FSM.state = SUBSTATE_COMPARE_PDF;
-	FSM.hook = substate_compare_pdf;
+	// Check if Merged Belief Map equal 0
+	double sum_merged_pdf_substate = 0.0;
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        sum_merged_pdf_substate += posterior.pdf[i];
+    }
+
+	bool is_stop_condition_reached = check_stop_condition();
+	if (is_stop_condition_reached)
+	{
+		// Avoid STATE_FINISHED if Merged Belief Map equal 0
+		if (sum_merged_pdf_substate > 0)
+		{
+			log_position();
+			log_kld_value();
+			log_whole_position_history(true);
+
+			double end_time_results = wb_robot_get_time();
+			double simulation_time_results = end_time_results - initial_time_results;
+			log_time(simulation_time_results);
+
+			broadcast_state_finished();
+
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED inside of KLD_SUBLOOP\n", ID);
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: STATE_FINISHED inside of KLD_SUBLOOP\n", ID);
+			return;
+		}
+		else
+		{
+			printf("Robot ID [%d]: Avoided STATE_FINISHED inside of KLD_SUBLOOP because Merged Belief Map = 0\n", ID);
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Avoided STATE_FINISHED  inside of KLD_SUBLOOP because Merged Belief Map = 0\n", ID);
+			FSM.state = STATE_MOVING;
+			FSM.hook = state_moving;
+			return;
+		}
+	}
+	else
+	{
+		FSM.state = SUBSTATE_COMPARE_PDF;
+		FSM.hook = substate_compare_pdf;
+	}
+
+
 }
 
 void substate_compare_pdf()
@@ -2350,23 +2579,16 @@ void substate_compare_pdf()
 	n_meas = 0;
 
 	n_kld++;
-	KLD = posterior.KLD_BM_Update(previous_belief_map, previous_sum);
+	KLD = abs(posterior.KLD_BM_Update(actual_belief_map, actual_sum));
 	fprintf(KLD_debugging_logfile, "Robot [%d]: KLD #: %i\n", ID, n_kld);
 	fprintf(KLD_debugging_logfile, "Robot [%d]: KLD Value: %f\n", ID, KLD);
 
 	// Keep the current BM
-	std::memcpy(previous_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
-	previous_sum = 0.0;
+	std::memcpy(actual_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
+	actual_sum = 0.0;
 	for (int i = 0; i < MAP_SIZE; ++i)
-		previous_sum += previous_belief_map[i];
+		actual_sum += actual_belief_map[i];
 
-	// // if (KLD > 0.6)
-	// // {
-	// // 	fprintf(clustering_debugging_logfile, "Robot [%d]: REPLANNING TRAJECTORY DUE TO SIGNIFICANT DIFFERENCES IN MERGED BM\n", ID);
-	// // 	FSM.state = STATE_REGION_ALLOCATION;
-	// // 	FSM.hook = state_region_allocation;
-	// // }
-	// //}
 
 	FSM.state = SUBSTATE_SHARE_KLD;
 	FSM.hook = substate_share_kld;
@@ -2487,12 +2709,30 @@ void substate_receive_kld()
 			ready_from[i] = 0;
 		}
 
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
 		entered_state_moving = false;
+
+		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Received KLDs: %f %f %f\n", ID, received_current_kld[0], received_current_kld[1], received_current_kld[2]);
+		if (abs(received_current_kld[self_index]) > KLD_THRESHOLD)
+		{
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Forcing transition to REGION_ALLOCATION since KLD > 0.1\n",ID);
+
+			set_wheels_speed(0, 0);
+			sampleBuffer.reset_all();
+			path.clear();
+
+			//FSM.n_cycles++;
+			kld_subloop_upd = true;
+			kld_replan = 1;
+
+			FSM.state = STATE_REGION_ALLOCATION;
+			FSM.hook = state_region_allocation;
+		} 
+		else
+		{
+			FSM.state = STATE_MOVING;
+			FSM.hook = state_moving;
+		}	
 	}
-
-
 }
 
 void state_obstacle_avoidance()
@@ -2929,15 +3169,15 @@ void state_merge_pdf()
 
 	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
 
-	if (FSM.n_cycles == 1 && simulation_parameters.estimateWhileMoving == YES && simulation_parameters.controlArchitecture == DISTRIBUTED)
+	if (FSM.n_cycles == 0 && simulation_parameters.estimateWhileMoving == YES && simulation_parameters.controlArchitecture == DISTRIBUTED)
 	{
-		memcpy(previous_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
+		memcpy(actual_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
 		for (int i = 0; i < MAP_SIZE; ++i)
-			previous_sum += previous_belief_map[i];
+			actual_sum += actual_belief_map[i];
 	}
 
 
-	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
       // Check the stopping condition after merging
 	posterior.process();
@@ -2959,7 +3199,17 @@ void state_merge_pdf()
 		// Avoid STATE_FINISHED if Merged Belief Map equal 0
 		if (sum_merged_pdf > 0)
 		{
+			log_position();
+			log_kld_value();
+			log_whole_position_history(true);
+			posterior.log_pdf(posterior_pdf_3D_name, 'a');
+
+			double end_time_results = wb_robot_get_time();
+			double simulation_time_results = end_time_results - initial_time_results;
+			log_time(simulation_time_results);
+
 			broadcast_state_finished();
+
 			FSM.state = STATE_FINISHED;
 			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
 			fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
@@ -2982,10 +3232,15 @@ void state_merge_pdf()
 				FSM.hook = state_updategoal_team;
 
 		}
-		else if (simulation_parameters.controlArchitecture == DISTRIBUTED)
+		else if (simulation_parameters.controlArchitecture == DISTRIBUTED && include_region_allocation)
 		{
 			FSM.state = STATE_REGION_ALLOCATION;
 			FSM.hook = state_region_allocation;
+		}
+		else if (simulation_parameters.controlArchitecture == DISTRIBUTED && !include_region_allocation)
+		{
+			FSM.state = STATE_UPDATEGOAL;
+			FSM.hook = state_updategoal;
 		}
 	}
 
@@ -3059,7 +3314,14 @@ void state_region_allocation()
 		// if (simulation_parameters.regionAllocApproach == 4) approach4_centroid_curr_pos_lloyd();
 		// if (simulation_parameters.regionAllocApproach == 5) approach5_centroid_curr_pos_obstacle_dist_lloyd();
 
+		log_position();
+		log_kld_value();
+		log_whole_position_history(true);
+		posterior.log_pdf(posterior_pdf_3D_name, 'a');
+
 		cluster_algorithm();
+
+		//FSM.n_cycles++;
 
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;

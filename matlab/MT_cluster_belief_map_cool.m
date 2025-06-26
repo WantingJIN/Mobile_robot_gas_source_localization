@@ -11,7 +11,7 @@ exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment 
 
 % === Visualization speed settings ===
 show_cell_indices = false;
-repr_vel = 3;           % How many steps to skip per frame (for robot position update)
+repr_vel = 1;           % How many steps to skip per frame (for robot position update)
 video_repr_vel = repr_vel*10;    % Frame rate of the output video
 
 % === Robot IDs and corresponding colors ===

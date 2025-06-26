@@ -511,14 +511,15 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 	return KLD;
 }
 
-double Posterior::KLD_BM_Update(double* previous_pdf, double previous_sum)
+double Posterior::KLD_BM_Update(double* actual_pdf, double actual_sum)
 {
     double KLD = 0.0;
-
+	//static double future_pdf[MAP_SIZE] = {0};
+	//memcpy(future_pdf, posterior.pdf, MAP_SIZE * sizeof(double));
     for (int i = 0; i < MAP_SIZE; i++)
     {
-        double q = previous_pdf[i] / previous_sum;  // P: referencia (anterior)
-        double p = pdf[i];                          // Q: actual
+        double q = actual_pdf[i] / actual_sum;  // P: referencia (current actual BM)
+        double p = pdf[i];                      // Q: (next))
 
         if (p > 0 && q > 0)
         {

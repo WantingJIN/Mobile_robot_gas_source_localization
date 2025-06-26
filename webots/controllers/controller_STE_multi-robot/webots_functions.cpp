@@ -586,6 +586,8 @@ void set_logfile_names()
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
 	sprintf(whole_position_history_logfile_name, "%s/whole_position_history.csv", folder_name);
+	sprintf(kld_value_logfile_name, "%s/kld_value.csv", folder_name);
+	sprintf(time_logfile_name, "%s/simulation_time.csv", folder_name);
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_lloyd_name, "%s/posterior_pdf_3D_cluster_lloyd.csv", folder_name);

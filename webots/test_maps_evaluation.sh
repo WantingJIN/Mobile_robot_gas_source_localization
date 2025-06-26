@@ -15,7 +15,7 @@ config_file="../webots/data/config.txt"
 s=0
 echo $s > $MCMC_exhaustive_filename
 
-nbr_source_pos=50
+nbr_source_pos=30
 # source_pos_x=12.7   # default: 12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
