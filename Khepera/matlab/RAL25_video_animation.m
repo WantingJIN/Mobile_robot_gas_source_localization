@@ -1,8 +1,8 @@
 %% load data
 clear all; close all; clc;
 
-root_folder='/home/wjin/Workspace/continuous_STE/Khepera/RAL_2025_Results/Results_RAL_BoardD/2/19-00';
-anim_folder='/home/wjin/Workspace/continuous_STE/Khepera/RAL_2025_Results/plot/animation';
+root_folder='/home/wjin/Workspace/continuous_STE/Khepera/RAL_2025_Results/Results_RAL_BoardF/2/15-10';
+anim_folder='/home/wjin/Workspace/continuous_STE/Khepera/RAL_2025_Results/plot/paper_estimation_process';
 
 pc_folder=[root_folder '/pc'];
 k4_folder=[root_folder '/k4'];
@@ -28,7 +28,7 @@ for k=1:length(C{1,1})
 end
 
 entropy = dlmread([pc_folder, '/entropy.csv']);
-real_source_position = [12.7, 1];
+real_source_position = [12.7, 2];
 
 x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
@@ -83,7 +83,7 @@ k = 1;
 %     saveas(f, [anim_folder,'/0.png']);
 
 %% plot for each iteration
-for i=13%1:size(pdf,1)
+for i=1:size(pdf,1)
     f =figure('Position',[601.0000  111.4000  1297.6000  1650.6000]);
     ax1 = axes;
     imagesc(ax1,y,x,reshape(pdf(i,:),20,20))
@@ -92,8 +92,8 @@ for i=13%1:size(pdf,1)
     axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
 %     colormap winter; colorbar;
     hold on
-    plot(goal_positions(i,3),goal_positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');hold on
-    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
+    plot(goal_positions(i,3),goal_positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');hold on
+    plot(real_source_position(2),real_source_position(1),'p','MarkerSize',35,'MarkerEdgeColor','blue','MarkerFaceColor','white');
     % if i<size(pdf,1)
     %    if params.planning_strategy == 5
     %     cluster_num = cluster_bounding_boxes(i,1);
@@ -118,7 +118,7 @@ for i=13%1:size(pdf,1)
     current_relative_measurements = str2double(split_values);
     meas_num = size(current_relative_measurements,2);
     ax2 = axes; 
-    scatter(ax2,positions_his(1:meas_num,3),positions_his(1:meas_num,2),80,current_relative_measurements,'MarkerFaceColor','flat','MarkerEdgeColor','k');
+    scatter(ax2,positions_his(1:meas_num,3),positions_his(1:meas_num,2),60,current_relative_measurements,'MarkerFaceColor','flat','MarkerEdgeColor','k');
     clim([0, 1]);
   
     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
@@ -131,7 +131,7 @@ for i=13%1:size(pdf,1)
     axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
     xlabel('Y(m)'); ylabel('X(m)');
     load MyColormap2; 
-    colormap(ax2, mymap) 
+    colormap(ax2, cool) 
     colormap(ax1, mymap) 
 
     set([ax1,ax2],'Position', [.17 .11 .685 .815]); 
@@ -142,14 +142,14 @@ for i=13%1:size(pdf,1)
     annotation(f,'textbox',[0.18287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'PDF'},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',20);
     annotation(f,'textbox',[0.75287457153379 0.025796129034299 0.104365076491284 0.0473684201637904],'String',{'Measurement Rank'},'LineStyle','none','HorizontalAlignment','center','FontWeight','bold','FontSize',20);
     hold on
-    if (i<size(pdf,1))
-        plot(goal_positions(i+1,3),goal_positions(i+1,2),"diamond",'MarkerSize',20,'MarkerFaceColor',"#EDB120");
-    end
+    % if (i<size(pdf,1))
+    %     plot(goal_positions(i+1,3),goal_positions(i+1,2),"diamond",'MarkerSize',20,'MarkerFaceColor',"#EDB120");
+    % end
     hold off;
     xlim([0 4])
     ylim([2 13])
  
     pause;
     drawnow
-    saveas(f, [anim_folder,'/',num2str(i),'.png']);
+    saveas(f, [anim_folder,'/',num2str(i),'.eps'], 'epsc');
 end
