@@ -11,9 +11,9 @@ public:
     Position position;
     double concentration;
     Position goal;
-    int measurement0_goal1; // binary flag that shows what values we are sharing
-    double belief_map[MAP_SIZE]; // new atribute to store the max belief value
-    double buffer[MAP_SIZE+10]; // augmented buffer size for the max belief value
+    int finish_flag; // binary flag for finished state
+    double belief_map[MAP_SIZE]; // new atribute to store the belief map value
+    double buffer[MAP_SIZE+10]; // augmented buffer size for the belief map value
     int buffer_size;
 
     // constructor : everithing set to 0
@@ -22,7 +22,7 @@ public:
     // constructor : standard
     Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag);
     
-    // constructor : max belief value
+    // constructor : with belief map value
     Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, double _belief_map[MAP_SIZE]);
     Message(const void *m_buffer);
 
