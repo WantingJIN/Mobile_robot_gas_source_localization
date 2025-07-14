@@ -1,5 +1,6 @@
 #ifndef SIMULATION_PARAMETER_H
 #define SIMULATION_PARAMETER_H
+#include <vector>
 
 
 typedef enum scenario{
@@ -169,6 +170,7 @@ class SimulationParameters{
 		float weighting_entropy_ratio;
 		int update_goal_time;
 		int wheel_speed;
+		std::vector<int> ID_list; // IDs of the robots
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 

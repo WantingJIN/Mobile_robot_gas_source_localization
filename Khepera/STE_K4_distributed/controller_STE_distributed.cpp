@@ -24,8 +24,6 @@
 //Global Variables
 struct sOdometryTrack ot;
 
-int sock = 0; 
-
 // log files
 char folder_name[256];
 FILE* goalposition_logfile;
@@ -105,12 +103,14 @@ int self_index;
 //message structure
 struct message message;
 
+SimulationParameters simulation_parameters;
+
 //list of other robots
 struct friends friends[MAX_NB_ROBOTS];
-
+// pair of friends ID and socket
+vector<pair<int, int>> sock_list;
+int message_counter = 0;
 int n_time_step = 0;
-
-SimulationParameters simulation_parameters;
 
 double previous_sensor_reading = 0.0;
 
@@ -124,8 +124,6 @@ Posterior posterior(&plume_model);
 
 // path planner
 PathPlanner path_planner(&plume_model, &posterior, &history);
-
-int msg_counter = 0;
 
 double sample_counter = 0;
 
@@ -253,75 +251,80 @@ void read_obstacle_list(){
 }
 
 // add a message to ack required msgs or remove one from the list
-void ack_msg(Message msg){
-    //check if it's an ack or a new message
-    if(msg.ack_flag == 2){
-        //i'ts an ack => find the corresponding msg in the vector and remove it
-        //for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
-        //    if(it->msg_ID == msg.msg_ID){
-        //        //remove the acked message
-        //        printf("%d acked and removed\n", (int)(it->concentration));
-        //        ack_msg_vec.erase(it);
-        //   }
-        //} // --> makes seg fault because of erase
-        std::vector<Message>::iterator it = ack_msg_vec.begin();
-        while(it != ack_msg_vec.end()){
-    		if(it->msg_ID == msg.msg_ID && it->receiver_ID == msg.sender_ID){
-      			//remove the acked message
-                //printf("[%lld] %d acked by %d and removed\n", current_timestamp(), (int)(it->msg_ID), msg.sender_ID);
-                ack_msg_vec.erase(it);
-    		}else
-      			it++;
-  		}
-    }else{
-        //it has to be added to the table with all IP addresses
-        if(msg.receiver_ID == 1){
-            for(int i=0; i<nb_robots; i++){
-                if(robots_ID_list[i] == ID) continue;
-                Message tmp(msg.msg_ID, ID, robots_ID_list[i], msg.position, msg.concentration, msg.goal, msg.measurement0_goal1, msg.ack_flag);
-                //msg.receiver_ID = robots_ID_list[i];
-                //printf("[%lld] %d waiting for ack by %d\n", current_timestamp(),(int)(msg.msg_ID), tmp.receiver_ID);
-                ack_msg_vec.push_back(tmp);
-            }
-        }else{
-        	ack_msg_vec.push_back(msg);
-        }
-    }
-    //send all the messages in the table
-    printf("----> waiting for ack: ");
-    for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
-        printf("%d(%d) ", (int)(it->msg_ID), (int)(it->receiver_ID));
+// void ack_msg(Message msg){
+//     //check if it's an ack or a new message
+//     if(msg.ack_flag == 2){
+//         //i'ts an ack => find the corresponding msg in the vector and remove it
+//         //for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
+//         //    if(it->msg_ID == msg.msg_ID){
+//         //        //remove the acked message
+//         //        printf("%d acked and removed\n", (int)(it->concentration));
+//         //        ack_msg_vec.erase(it);
+//         //   }
+//         //} // --> makes seg fault because of erase
+//         std::vector<Message>::iterator it = ack_msg_vec.begin();
+//         while(it != ack_msg_vec.end()){
+//     		if(it->msg_ID == msg.msg_ID && it->receiver_ID == msg.sender_ID){
+//       			//remove the acked message
+//                 //printf("[%lld] %d acked by %d and removed\n", current_timestamp(), (int)(it->msg_ID), msg.sender_ID);
+//                 ack_msg_vec.erase(it);
+//     		}else
+//       			it++;
+//   		}
+//     }else{
+//         //it has to be added to the table with all IP addresses
+//         if(msg.receiver_ID == 1){
+//             for(int i=0; i<nb_robots; i++){
+//                 if(robots_ID_list[i] == ID) continue;
+//                 Message tmp(msg.msg_ID, ID, robots_ID_list[i], msg.position, msg.concentration, msg.goal, msg.measurement0_goal1, msg.ack_flag);
+//                 //msg.receiver_ID = robots_ID_list[i];
+//                 //printf("[%lld] %d waiting for ack by %d\n", current_timestamp(),(int)(msg.msg_ID), tmp.receiver_ID);
+//                 ack_msg_vec.push_back(tmp);
+//             }
+//         }else{
+//         	ack_msg_vec.push_back(msg);
+//         }
+//     }
+//     //send all the messages in the table
+//     printf("----> waiting for ack: ");
+//     for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
+//         printf("%d(%d) ", (int)(it->msg_ID), (int)(it->receiver_ID));
 
-    }
-    printf("\n");
-}
+//     }
+//     printf("\n");
+// }
 
 int init_TCP_socket(){
 	struct sockaddr_in address; 
 	struct sockaddr_in serv_addr; 
+      int sock = 0;
+	for (int i = 0; i < simulation_parameters.ID_list.size(); i++) {
+		// skip itself
+		if (i == self_index) continue;
+		// Creating socket file descriptor 
+		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
+			printf("\n Socket creation error \n"); 
+			return -1; 
+		} 
 
-	// Creating socket file descriptor 
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
-		printf("\n Socket creation error \n"); 
-		return -1; 
-	} 
+		memset(&serv_addr, '0', sizeof(serv_addr)); 
 
-	memset(&serv_addr, '0', sizeof(serv_addr)); 
-
-	serv_addr.sin_family = AF_INET; 
-	serv_addr.sin_port = htons(PORT); 
-	//serv_addr.sin_addr.s_addr = INADDR_ANY; 
-	
-	// Convert IPv4 and IPv6 addresses from text to binary form 
-	if(inet_pton(AF_INET, "192.168.1.247", &serv_addr.sin_addr)<=0) { //Server's IP
-		printf("\nInvalid address/ Address not supported \n"); 
-		return -1; 
-	} 
-
-	// connect
-	if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
-		printf("\nConnection Failed \n"); 
-		return -1; 
+		serv_addr.sin_family = AF_INET; 
+		serv_addr.sin_port = htons(PORT); 
+		//serv_addr.sin_addr.s_addr = INADDR_ANY; 
+		
+		// Convert IPv4 and IPv6 addresses from text to binary form
+		string IP_address = "192.168.1." + std::to_string(simulation_parameters.ID_list[i]); 
+		if(inet_pton(AF_INET, IP_address.c_str(), &serv_addr.sin_addr)<=0) { //Server's IP
+			printf("\nInvalid address/ Address not supported \n"); 
+			return -1; 
+		} 
+		// connect
+		if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
+			printf("\nConnection Failed \n"); 
+			return -1; 
+		}
+      	sock_list.push_back(make_pair(simulation_parameters.ID_list[i], sock));
 	}
 }
 
@@ -610,19 +613,6 @@ void state_estimating(){
 			FSM.hook = state_updategoal;
 		}
 	}
-	else if (simulation_parameters.teamStrategy == CENTRALIZED)
-	{
-		if (ID == CENTRAL_MASTER_ID)
-		{
-			FSM.state = STATE_RECEIVE_PDF;
-			FSM.hook = state_receive_pdf;
-		}
-		else
-		{
-			FSM.state = STATE_SEND_PDF;
-			FSM.hook = state_send_pdf;
-		}
-	}
 	else if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 		FSM.state = STATE_SHARE_PDF;
@@ -719,39 +709,39 @@ void state_updategoal()
 }
 
 void state_listen(){
-	int result;
-	double g_buffer[2] = {0}; 
+	// int result;
+	// double g_buffer[2] = {0}; 
 
-	//wait for new orders
-	result = read(sock, g_buffer, sizeof(g_buffer));
-	if(result > 0){
-		printf("received a goal position : (%f, %f)\n", g_buffer[0], g_buffer[1]);
-		// check if it was a termination message
-		if(g_buffer[0] == -1 && g_buffer[1] == -1){
-			goal_position.x = 3;
-    		goal_position.y = float(ID-100)/2.0;
-    		finished = 1;
-		}else{
-			//set the goal position
-			goal_position.x = g_buffer[0];
-			goal_position.y = g_buffer[1];
-		}
-		//find the path using visibility graph
-		VisiLibity::Point start(current_position.x, current_position.y);
-		VisiLibity::Point finish(goal_position.x, goal_position.y);
-		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-		// copy the path in another variable
-		for(unsigned k=0; k<Polyline_path.size(); k++){
-			Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-			path.push_back(p);
-			log_trajectory(p);
-		}
-		i = path.begin();
+	// //wait for new orders
+	// result = read(sock, g_buffer, sizeof(g_buffer));
+	// if(result > 0){
+	// 	printf("received a goal position : (%f, %f)\n", g_buffer[0], g_buffer[1]);
+	// 	// check if it was a termination message
+	// 	if(g_buffer[0] == -1 && g_buffer[1] == -1){
+	// 		goal_position.x = 3;
+    	// 	goal_position.y = float(ID-100)/2.0;
+    	// 	finished = 1;
+	// 	}else{
+	// 		//set the goal position
+	// 		goal_position.x = g_buffer[0];
+	// 		goal_position.y = g_buffer[1];
+	// 	}
+	// 	//find the path using visibility graph
+	// 	VisiLibity::Point start(current_position.x, current_position.y);
+	// 	VisiLibity::Point finish(goal_position.x, goal_position.y);
+	// 	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+	// 	// copy the path in another variable
+	// 	for(unsigned k=0; k<Polyline_path.size(); k++){
+	// 		Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
+	// 		path.push_back(p);
+	// 		log_trajectory(p);
+	// 	}
+	// 	i = path.begin();
 
-		//move to the goal position
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-	}
+	// 	//move to the goal position
+	// 	FSM.state = STATE_MOVING;
+	// 	FSM.hook = state_moving;
+	// }
 }
 
 bool entered_state_moving = false;
@@ -904,7 +894,7 @@ void state_send_goal()
 			if (target_ID == ID) continue;  // Skip self
 	    
 			// Message msg(ID, target_ID, goal_position_team[i], -1, goal_position_team[i], 0); // -1 for STATE_FINISHED flag
-			// send_msg(msg);
+			// send_udp_msg(msg);
 			// TODO: Implement the logic to send goal position to other robots
 		}
 
@@ -960,23 +950,6 @@ void state_receive_goal()
 	time_before_moving = current_timestamp();
 }
 
-void state_send_pdf()
-{
-	printf("Robot ID [%d]: STATE_SEND_PDF \n", ID);
-
-	if (posterior.pdf != nullptr)
-	{
-		// TODO: Implement the logic to send belief map to the central master
-		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		// Message msg_send(ID, CENTRAL_MASTER_ID, Position(), -1, Position(), 0, posterior.pdf);
-		// send_msg(msg_send);
-		// printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
-
-		FSM.state = STATE_RECEIVE_GOAL;
-		FSM.hook = state_receive_goal;
-	}
-}
-
 void state_receive_pdf()
 {
 	if (!entered_state_receive_pdf)
@@ -985,12 +958,7 @@ void state_receive_pdf()
 		entered_state_receive_pdf = true;
 	}
 
-	// if the team strategy is centralized, then the robot 101 receives the belief maps from the other robots
-	// if the team strategy is distributed, then all robots receive the belief maps from each other
-	bool is_centralized = (simulation_parameters.teamStrategy == CENTRALIZED && ID == CENTRAL_MASTER_ID);
-	bool is_distributed = simulation_parameters.teamStrategy == DISTRIBUTED;
-
-	if (is_centralized || is_distributed)
+	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 		if (!printed && posterior.pdf != nullptr)
 		{
@@ -998,7 +966,22 @@ void state_receive_pdf()
 			printed = true;
 		}
 
-		// TODO: Implement the logic to receive belief maps from other robots
+		Message msg;
+		for (int i = 0; i < sock_list.size(); i++)
+		{
+			receive_tcp_msg(sock_list[i].second, &msg);		
+		}
+		if (msg.finish_flag == -1) {
+			// finish the task
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+			return;
+		} else {
+			int sender_index = find_index_in_ID_list(msg.sender_ID, simulation_parameters.ID_list);
+			memcpy(belief_maps[sender_index], msg.belief_map, sizeof(double)*MAP_SIZE);
+			received_flags[sender_index] = 1;
+		}
+		
 		// Check if all others have sent their belief maps
 		int all_received = 1;
 		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
@@ -1022,7 +1005,6 @@ void state_receive_pdf()
 				received_flags[i] = 0;
 			}
 			printed = false;
-
 			FSM.state = STATE_MERGE_PDF;
 			FSM.hook = state_merge_pdf;
 			entered_state_receive_pdf = false;
@@ -1129,12 +1111,19 @@ void state_share_pdf()
         printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
     } else {
         for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-            int target_ID = 101 + i;
-            if (target_ID == ID) continue; // skip self
-            // TODO: Implement the logic to send belief map to other robots
-            // Message msg(ID, target_ID, Position(), -1, Position(), 0, posterior.pdf);
-            // send_msg(msg);
-
+		if (i == self_index) continue; // Skip self
+            int target_ID = simulation_parameters.ID_list[i];
+		int message_ID = ID + message_counter++;
+		int finish_flag = 0; // -1 indicates that this is not a finish message
+            Message msg(message_ID, ID, target_ID, current_position, finish_flag, posterior.pdf);
+		int target_sock = -1;
+		for(int i=0; i<sock_list.size(); i++){
+			if(sock_list[i].first == target_ID){
+				target_sock = sock_list[i].second;
+				break;
+			}
+		}
+            if (target_sock != -1) send_tcp_msg(target_sock, msg);
             printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
         }
     }
@@ -1161,12 +1150,17 @@ void broadcast_state_finished()
     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
         int target_ID = 101 + i;
         if (target_ID == ID) continue;  // Skip self
-
-	  //TODO: Implement the logic to send STATE_FINISHED message to other robots
-
-      //   Message msg(ID, target_ID, Position(), -1, Position(), -1); // -1 for STATE_FINISHED flag
-      //   send_msg(msg);
-
+        int message_ID = ID + message_counter++;
+	  //send STATE_FINISHED message to other robots
+        Message msg(message_ID, ID, target_ID, current_position, -1, nullptr); // -1 for STATE_FINISHED flag
+	  int target_sock = -1;
+	  for(int j=0; j<sock_list.size(); j++){
+		if(sock_list[j].first == target_ID){
+		    target_sock = sock_list[j].second;
+		    break;
+		}
+	  }
+        if (target_sock != -1) send_tcp_msg(target_sock, msg);
         printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
     }
 }
@@ -1208,8 +1202,7 @@ int main(int argc, char **argv){
 	init_TCP_socket();
 	establish_baseline();
 	read_obstacle_list();
-	//odor_baseline_value = 30000;
-
+	//odor_baseline_value = 30000
 	// visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
   	if(  my_environment.is_valid( epsilon )  )
@@ -1229,7 +1222,6 @@ int main(int argc, char **argv){
     	exit(1);
   	}
   	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
-  	
 	// main loop
 	while (FSM.state != STATE_FINISHED){
 		update_position();

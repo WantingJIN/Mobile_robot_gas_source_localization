@@ -29,10 +29,7 @@ void init(){
 		if(ok) printf("My ID is %d\n", ID);
 		fclose(ID_file);
 	}
-    self_index = ID - 101;
- 	//printf("My ID is %d\n", ID);
-
-    msg_counter = ID*100000;
+     	//printf("My ID is %d\n", ID);
 
 	// Initialise motors
     khepera4_drive_start();
@@ -111,6 +108,9 @@ void init(){
     fclose(sim_param_file);
 
     simulation_parameters.log_simulation_parameters(config_logfile_name);
+    
+    self_index = find_index_in_ID_list(ID, simulation_parameters.ID_list);
+    
 }
 
 void set_logfile_names(){
@@ -194,34 +194,34 @@ int initCortexComm(){
 }
 
 void initCommRobot(){
-  	udp_msgR.myID = ID;
-  	udp_msgR.len = sizeof(double)*12;
+//   	udp_msgR.myID = ID;
+//   	udp_msgR.len = sizeof(double)*12;
 
-  	//initialize receiver
-  	memset(&udp_msgR.rcv.address, 0, sizeof (udp_msgR.rcv.address));
-  	udp_msgR.rcv.address.sin_family = AF_INET;
-  	udp_msgR.rcv.address.sin_port = htons(3010);
-  	udp_msgR.rcv.address.sin_addr.s_addr = htonl(INADDR_ANY);
+//   	//initialize receiver
+//   	memset(&udp_msgR.rcv.address, 0, sizeof (udp_msgR.rcv.address));
+//   	udp_msgR.rcv.address.sin_family = AF_INET;
+//   	udp_msgR.rcv.address.sin_port = htons(3010);
+//   	udp_msgR.rcv.address.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  	//create and bind to socket
-  	udp_msgR.rcv.sock = socket(AF_INET, SOCK_DGRAM, 0);
-	//if (setsockopt(udp_msgR.rcv.sock, SOL_SOCKET, SO_REUSEADDR, (void*) &broadcastR, sizeof (broadcastR)) <0)
-   		//fail_with_error("no reuse \n");
-  	if (udp_msgR.rcv.sock < 0)
-    	fail_with_error("Unable to create receiver socket");
-  	fcntl(udp_msgR.rcv.sock, F_SETFL, O_NONBLOCK);
-  	if (bind(udp_msgR.rcv.sock, (struct sockaddr*) &udp_msgR.rcv.address, sizeof (udp_msgR.rcv.address)))
-    	fail_with_error("Bind failed robot");
+//   	//create and bind to socket
+//   	udp_msgR.rcv.sock = socket(AF_INET, SOCK_DGRAM, 0);
+// 	//if (setsockopt(udp_msgR.rcv.sock, SOL_SOCKET, SO_REUSEADDR, (void*) &broadcastR, sizeof (broadcastR)) <0)
+//    		//fail_with_error("no reuse \n");
+//   	if (udp_msgR.rcv.sock < 0)
+//     	fail_with_error("Unable to create receiver socket");
+//   	fcntl(udp_msgR.rcv.sock, F_SETFL, O_NONBLOCK);
+//   	if (bind(udp_msgR.rcv.sock, (struct sockaddr*) &udp_msgR.rcv.address, sizeof (udp_msgR.rcv.address)))
+//     	fail_with_error("Bind failed robot");
 
-  	//initialize sender
-  	memset(&udp_msgR.snd.address, 0, sizeof (udp_msgR.snd.address));
-  	udp_msgR.snd.address.sin_family = AF_INET;
-  	udp_msgR.snd.address.sin_port = htons(3010);
-  	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
-  	udp_msgR.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
+//   	//initialize sender
+//   	memset(&udp_msgR.snd.address, 0, sizeof (udp_msgR.snd.address));
+//   	udp_msgR.snd.address.sin_family = AF_INET;
+//   	udp_msgR.snd.address.sin_port = htons(3010);
+//   	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
+//   	udp_msgR.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
 
-  	if (setsockopt(udp_msgR.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcastR, sizeof (broadcastR)) < 0)
-    	fail_with_error("Unable to set broadcast option");
+//   	if (setsockopt(udp_msgR.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcastR, sizeof (broadcastR)) < 0)
+//     	fail_with_error("Unable to set broadcast option");
 }
 
 void establish_baseline(){
@@ -285,15 +285,15 @@ void establish_baseline(){
     printf("find the path using visibility graph \n");
     printf("[%d] Current posotion : %f, %f\n",ID, current_position.x, current_position.y);    
     //find the path using visibility graph
-        VisiLibity::Point start(current_position.x, current_position.y);
-        VisiLibity::Point finish(goal_position.x, goal_position.y);
-        VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-        // copy the path in another variable
-        for(unsigned k=0; k<Polyline_path.size(); k++){
-            Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-            path.push_back(p);
-        }
-        i = path.begin();
+    VisiLibity::Point start(current_position.x, current_position.y);
+    VisiLibity::Point finish(goal_position.x, goal_position.y);
+    VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+    // copy the path in another variable
+    for(unsigned k=0; k<Polyline_path.size(); k++){
+        Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
+        path.push_back(p);
+    }
+    i = path.begin();
      printf("[%d] Goal posotiom : %f, %f\n",ID, i->x, i->y);
     //keep receiving the position until you reach the starting point
     // while (dist_to_goal()>0.05){
@@ -400,74 +400,74 @@ int obstacle_or_not(){
 	return 0;
 }
 
-void receive_from_friends(){
-	//printf("I am receiving\n");
-	Message msg;
-	//get all the messages in the queue
-	while(receive_msg(&msg)){
-		//got a message
-        //printf("I am receiving\n");
-        // if it's my own broadcasted msg, forget about it
-        if(msg.sender_ID == ID) continue;
-        // if it's addressed to another robot, forget about it
-        if(!(msg.receiver_ID == 1 || msg.receiver_ID == ID)) continue;
-        // if I already received this msg, then ignore it
-        if (std::find(received_msgs.begin(), received_msgs.end(), msg.msg_ID) != received_msgs.end()) continue;
-        //if the message is an ack, we remove it from the list and done
+// void receive_from_friends(){
+// 	//printf("I am receiving\n");
+// 	Message msg;
+// 	//get all the messages in the queue
+// 	while(receive_msg(&msg)){
+// 		//got a message
+//         //printf("I am receiving\n");
+//         // if it's my own broadcasted msg, forget about it
+//         if(msg.sender_ID == ID) continue;
+//         // if it's addressed to another robot, forget about it
+//         if(!(msg.receiver_ID == 1 || msg.receiver_ID == ID)) continue;
+//         // if I already received this msg, then ignore it
+//         if (std::find(received_msgs.begin(), received_msgs.end(), msg.msg_ID) != received_msgs.end()) continue;
+//         //if the message is an ack, we remove it from the list and done
 
-        if(msg.ack_flag == 2){
-            //printf("[%lld] ack received for %d by \n", current_timestamp(), (int)(msg.msg_ID), msg.sender_ID);
-            //msg.print_message();
-            ack_msg(msg);
-            continue;
-        }
-        //if it's a msg that requires an ack, send ack
-        if(msg.ack_flag == 1){
-            //printf("[%lld] sending ack for %d\n", current_timestamp(),(int)msg.msg_ID);
-            Message ack(msg.msg_ID, ID, msg.sender_ID, msg.position, msg.msg_ID, msg.goal, 15000, 2);
-            //msg.print_message();
-            send_msg(ack);
-            // add the msg to received_msgs list so I don't receive it again
-            received_msgs.push_back(msg.msg_ID);
-        }else{
-            //printf("0000000000000000000000000000000000000000000000000 received a NOACK msg from\n", current_timestamp(),(int)msg.sender_ID);
-        }
-		//if the message contains a measurement value -> put it in history
-		if(msg.measurement0_goal1 == 0){
-			//std::cout << "COMMUNICATION++++++++++++++++++" << std::endl;
-			//put the relelvant values in history
-			history.measurement[history.size] = msg.concentration;
-			history.position[history.size].copy_position(msg.position);
-			printf("[%d] received concentration %f at (%f,%f,%f) from robot %d - ack flag %d\n", ID, history.measurement[history.size], history.position[history.size].x, history.position[history.size].y, history.position[history.size].heading, msg.sender_ID, msg.ack_flag);
-			history.size++;
-			printf("my history size is now %d \n", history.size);
-		}else{ //if the message contains the current position and goal of another robot -> update the friends list
-			//std::cout << "JOINT PLANNING****************" << std::endl;
-			//if the message is sent to my ID specifically, then it's a new goal for me!
-			if(msg.receiver_ID == ID){
-				//std::cout << "JOINT PLANNING****************" << std::endl;
-				//std::cout << "Someone swapped with me" << std::endl;
-				goal_position.copy_position(msg.goal);
-				printf("[%d] my goal has changed to %f %f %f by %d\n", ID, goal_position.x, goal_position.y, goal_position.heading, msg.sender_ID);
-			}else {
-				for(int i=0; i<simulation_parameters.number_of_robots; i++){
-					//std::cout << "received news from friends" << std::endl;
-					if(friends[i].ID == 0) friends[i].ID = msg.sender_ID;
-					if(friends[i].ID == msg.sender_ID){
-						//printf("message goal %f %f %f\n", msg.goal[0], msg.goal[1], msg.goal[2]);
-						//memcpy(friends[i].position, msg.position, sizeof(double)*3);
-                        friends[i].position.copy_position(msg.position);
-                        //memcpy(friends[i].goal, msg.goal, sizeof(double)*3);
-                        friends[i].goal.copy_position(msg.goal);
-						//printf("[%d] : robot %d is at %f %f %f and goes to %f %f %f\n", ID, friends[i].ID, friends[i].position[0],friends[i].position[1],friends[i].position[2],friends[i].goal[0],friends[i].goal[1],friends[i].goal[2]);
-						break;
-					}
-					//printf("[%d] : robot %d is at %f %f %f and goes to %f %f %f\n", ID, friends[i].ID, friends[i].position[0],friends[i].position[1],friends[i].position[2],friends[i].goal[0],friends[i].goal[1],friends[i].goal[2]);
-				}
-			}
-		}
-	}
-}
+//         if(msg.ack_flag == 2){
+//             //printf("[%lld] ack received for %d by \n", current_timestamp(), (int)(msg.msg_ID), msg.sender_ID);
+//             //msg.print_message();
+//             ack_msg(msg);
+//             continue;
+//         }
+//         //if it's a msg that requires an ack, send ack
+//         if(msg.ack_flag == 1){
+//             //printf("[%lld] sending ack for %d\n", current_timestamp(),(int)msg.msg_ID);
+//             Message ack(msg.msg_ID, ID, msg.sender_ID, msg.position, msg.msg_ID, msg.goal, 15000, 2);
+//             //msg.print_message();
+//             send_msg(ack);
+//             // add the msg to received_msgs list so I don't receive it again
+//             received_msgs.push_back(msg.msg_ID);
+//         }else{
+//             //printf("0000000000000000000000000000000000000000000000000 received a NOACK msg from\n", current_timestamp(),(int)msg.sender_ID);
+//         }
+// 		//if the message contains a measurement value -> put it in history
+// 		if(msg.measurement0_goal1 == 0){
+// 			//std::cout << "COMMUNICATION++++++++++++++++++" << std::endl;
+// 			//put the relelvant values in history
+// 			history.measurement[history.size] = msg.concentration;
+// 			history.position[history.size].copy_position(msg.position);
+// 			printf("[%d] received concentration %f at (%f,%f,%f) from robot %d - ack flag %d\n", ID, history.measurement[history.size], history.position[history.size].x, history.position[history.size].y, history.position[history.size].heading, msg.sender_ID, msg.ack_flag);
+// 			history.size++;
+// 			printf("my history size is now %d \n", history.size);
+// 		}else{ //if the message contains the current position and goal of another robot -> update the friends list
+// 			//std::cout << "JOINT PLANNING****************" << std::endl;
+// 			//if the message is sent to my ID specifically, then it's a new goal for me!
+// 			if(msg.receiver_ID == ID){
+// 				//std::cout << "JOINT PLANNING****************" << std::endl;
+// 				//std::cout << "Someone swapped with me" << std::endl;
+// 				goal_position.copy_position(msg.goal);
+// 				printf("[%d] my goal has changed to %f %f %f by %d\n", ID, goal_position.x, goal_position.y, goal_position.heading, msg.sender_ID);
+// 			}else {
+// 				for(int i=0; i<simulation_parameters.number_of_robots; i++){
+// 					//std::cout << "received news from friends" << std::endl;
+// 					if(friends[i].ID == 0) friends[i].ID = msg.sender_ID;
+// 					if(friends[i].ID == msg.sender_ID){
+// 						//printf("message goal %f %f %f\n", msg.goal[0], msg.goal[1], msg.goal[2]);
+// 						//memcpy(friends[i].position, msg.position, sizeof(double)*3);
+//                         friends[i].position.copy_position(msg.position);
+//                         //memcpy(friends[i].goal, msg.goal, sizeof(double)*3);
+//                         friends[i].goal.copy_position(msg.goal);
+// 						//printf("[%d] : robot %d is at %f %f %f and goes to %f %f %f\n", ID, friends[i].ID, friends[i].position[0],friends[i].position[1],friends[i].position[2],friends[i].goal[0],friends[i].goal[1],friends[i].goal[2]);
+// 						break;
+// 					}
+// 					//printf("[%d] : robot %d is at %f %f %f and goes to %f %f %f\n", ID, friends[i].ID, friends[i].position[0],friends[i].position[1],friends[i].position[2],friends[i].goal[0],friends[i].goal[1],friends[i].goal[2]);
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 double get_exp_time(){
 	struct timeval te; 
@@ -477,7 +477,7 @@ double get_exp_time(){
     return milliseconds;
 }
 
-void send_msg(Message msg){
+void send_udp_msg(Message msg){
 	if(msg.receiver_ID != 0){ //if msg is not meant for supervisor
         //printf("sending a msg for %d\n", msg.receiver_ID);
   		int len = sendto(udp_msgR.snd.sock, msg.buffer, msg.buffer_size, 0, (struct sockaddr*) &udp_msgR.snd.address, sizeof (udp_msgR.snd.address));
@@ -486,7 +486,7 @@ void send_msg(Message msg){
     }
 }
 
-int receive_msg(Message * msg){
+int receive_udp_msg(Message * msg){
     int result;
     struct sockaddr_in sender;
     socklen_t sender_len;
@@ -502,6 +502,37 @@ int receive_msg(Message * msg){
     }else{
     	memset((char *) (*msg).buffer, '\0', sizeof(double)*12);
     	return 0;
+    }
+}
+
+void send_tcp_msg(int dest_sock,Message msg){
+    int timeout = 10;
+	int success = -1;
+    
+    do{
+		success = send(dest_sock, msg.buffer, msg.buffer_size, 0);
+		--timeout;
+	} while(success == -1 && timeout > 0);
+	if(success > 0){
+		printf("Robot %d sent the belief map with msg %d\n", ID, msg.msg_ID);
+		timeout = 10;
+	}
+	else
+		printf("failed to send belief map %d \n", ID);
+
+}
+
+int receive_tcp_msg(int sock, Message * msg){
+    int success = -1;
+    success = read(sock, (*msg).buffer, (*msg).buffer_size);
+    if(success > 0){
+        (*msg).buffer_to_params();
+        printf("RECEIVED msg %d from %d for %d \n", (*msg).msg_ID, (*msg).sender_ID, (*msg).receiver_ID);
+        return 1;
+    }else{
+        memset((char *) (*msg).buffer, '\0', sizeof(double)*(MAP_SIZE+7));
+        //printf("Robot %d failed to receive a message\n", ID);
+        return 0;   
     }
 }
 
@@ -746,4 +777,13 @@ void reverse_sensor_model(double &sensor_reading, double &previous_sensor_readin
 	// printf("odor_concentration %f\n", odor_concentration);
 	previous_sensor_reading = sensor_reading;
 	sensor_reading = reverse_sensor_reading;
+}
+
+int find_index_in_ID_list(int ID, std::vector<int> &ID_list){
+    for (size_t i = 0; i < ID_list.size(); ++i) {
+        if (ID_list[i] == ID) {
+            return i;
+        }
+    }
+    return -1; // not found
 }

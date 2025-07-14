@@ -34,3 +34,4 @@ stopCondition = ENTROPY_ONLY
 updateGoalPolicy = FIXED_FREQ
 updateGoalTime = 5
 wheel_speed = 400
+ID_list = 101,102,103

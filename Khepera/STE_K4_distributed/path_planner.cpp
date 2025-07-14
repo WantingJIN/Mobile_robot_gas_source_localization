@@ -1050,7 +1050,7 @@ void PathPlanner::balance_expected_maximal_pdf()
 // 			// wb_emitter_set_channel(emitter, 10);
 // 			Message msg(ID, friends[0].ID, current_position, -1, goal_position, 1);
 // 			// wb_emitter_send(emitter, msg.buffer, msg.buffer_size);
-// 			send_msg(msg);
+// 			send_udp_msg(msg);
 // 			// change mine as well
 // 			goal_position.copy_position(friends[0].goal);
 // 			// printf("my new goal %f %f %f , my friend's new goal \n", goal_position[0], goal_position[1], goal_position[2]);
@@ -1129,12 +1129,12 @@ void PathPlanner::balance_expected_maximal_pdf()
 // 		if (friend_1_new_goal.x != friends[0].goal.x || friend_1_new_goal.y != friends[0].goal.y)
 // 		{
 // 			Message msg1(ID, friends[0].ID, current_position, -1, friend_1_new_goal, 1);
-// 			send_msg(msg1);
+// 			send_udp_msg(msg1);
 // 		} // else printf("no change for friend %d\n", friends[0].ID);
 // 		if (friend_2_new_goal.x != friends[1].goal.x || friend_2_new_goal.y != friends[1].goal.y)
 // 		{
 // 			Message msg2(ID, friends[1].ID, current_position, -1, friend_2_new_goal, 1);
-// 			send_msg(msg2);
+// 			send_udp_msg(msg2);
 // 		} // else printf("no change for friend %d\n", friends[1].ID);
 
 // 		// change mine as well

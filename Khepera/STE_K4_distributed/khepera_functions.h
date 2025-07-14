@@ -88,13 +88,12 @@ extern sVector3d wind_vect;
 extern int ID;
 extern int self_index;
 
-extern int msg_counter;
-
 //message structure
 extern struct message message;
 
 //list of other robots
 extern struct friends friends[MAX_NB_ROBOTS];
+extern vector<int> ID_list; // IDs of the robots
 
 extern int n_time_step;
 
@@ -154,8 +153,12 @@ void updateCortexPos(Position *position);
 int obstacle_or_not();
 void receive_from_friends();
 double get_exp_time();
-void send_msg(Message msg); 
-int receive_msg(Message * msg);
+void send_udp_msg(Message msg); 
+int receive_udp_msg(Message * msg);
+void send_tcp_msg(int dest_sock,Message msg);
+int receive_tcp_msg(int sock, Message * msg);
+int find_index_in_ID_list(int ID, std::vector<int> &ID_list);
+
 void go_to_goal(Position goal);
 void obstacle_avoidance(double speed[2]);
 void set_wheels_speed(double speed1, double speed2);

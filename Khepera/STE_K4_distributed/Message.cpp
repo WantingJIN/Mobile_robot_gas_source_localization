@@ -5,33 +5,30 @@ using namespace std;
 
 //constructor : everithing set to 0
 Message::Message(){
-	msg_ID = 0;
+    msg_ID = 0;
     sender_ID = 0; 
     receiver_ID = 0; 
     position.set_to_zero();
-    concentration = 0;
-    goal.set_to_zero();
-    measurement0_goal1 = 0;
-    ack_flag = 0;
+    finish_flag = 0; // not finished
+    memset(belief_map, 0, sizeof(belief_map)); // Inicializar belief map
     params_to_buffer();
-    buffer_size = 0;
+    buffer_size = sizeof(double)*(MAP_SIZE + 7); 
+
 }
 
-Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, int _ack){
+Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _position, int _flag, double *_belief_map){
     msg_ID = _msg_ID;
     sender_ID = _sender_ID; 
     receiver_ID = _receiver_ID; 
     position.copy_position(_position);
-    concentration = _concentration;
-    goal.copy_position(_goal);
-    measurement0_goal1 = _flag;
-    ack_flag = _ack;
+    finish_flag = _flag;
+    memcpy(belief_map, _belief_map, sizeof(belief_map));
     params_to_buffer();
-    buffer_size = sizeof(double)*12;
+    buffer_size = sizeof(double)*(MAP_SIZE + 7); // belief map + 4 additional values for msg_ID, sender_ID, receiver_ID, position
 }
 
 Message::Message(const void * m_buffer){
-	buffer_size = sizeof(double)*12;
+    buffer_size = sizeof(double)*(MAP_SIZE + 7);
     memcpy(buffer, m_buffer, buffer_size);
     buffer_to_params();
 }
@@ -43,12 +40,8 @@ void Message::params_to_buffer(){
 	buffer[3] = position.x;
 	buffer[4] = position.y;
 	buffer[5] = position.heading;
-	buffer[6] = concentration;
-	buffer[7] = goal.x;
-	buffer[8] = goal.y;
-	buffer[9] = goal.heading;
-	buffer[10] = measurement0_goal1;
-	buffer[11] = ack_flag;
+	buffer[6] = finish_flag; // finish flag
+	memcpy(&buffer[7], belief_map, sizeof(belief_map));
 }
 
 void Message::buffer_to_params(){
@@ -58,20 +51,17 @@ void Message::buffer_to_params(){
 	position.x = buffer[3];
 	position.y = buffer[4];
 	position.heading = buffer[5];
-	concentration = buffer[6];
-	goal.x = buffer[7];
-	goal.y = buffer[8];
-	goal.heading = buffer[9];
-	measurement0_goal1 = (int)buffer[10];
-	ack_flag = (int)buffer[11];
+	finish_flag = (int)buffer[6]; // finish flag
+	// copy belief map from buffer
+	memcpy(belief_map, &buffer[7], sizeof(belief_map));
 }
 
 void Message::print_message(){
 	printf("____msg %d from %d to %d _____: \n", msg_ID, sender_ID, receiver_ID);
 	printf("position: %f %f %f \n", position.x, position.y, position.heading);
-	printf("concentration: %f\n", concentration);
-	printf("goal: %f %f %f \n", goal.x, goal.y, goal.heading);
-	printf("measurement0_goal1: %d\n", measurement0_goal1);
-	printf("ack flag: %d\n", ack_flag);
-	printf("______________________________\n");
+	printf("Belief Map: [");
+    	for (int i = 0; i < MAP_SIZE; i++) {
+		printf("%f ", belief_map[i]);
+    	}
+    	printf("]\n");
 }

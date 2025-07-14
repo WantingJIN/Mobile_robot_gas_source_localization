@@ -4,6 +4,8 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
+#include <vector>
+using std::vector;
 
 #include <unistd.h>
 
@@ -223,6 +225,22 @@ eScoreFun parse_score_fun(const char *str)
 	exit(1);
 }
 
+
+vector<int> parse_ID_list(const char *str)
+{
+	vector<int> id_list;
+	char buf[1024];
+	strncpy(buf, str, sizeof(buf));
+	buf[sizeof(buf)-1] = '\0';
+	char *token = strtok(buf, ",");
+	while (token != NULL)
+	{
+		id_list.push_back(atoi(token));
+		token = strtok(NULL, ",");
+	}
+	return id_list;
+}
+
 SimulationParameters::SimulationParameters()
 {
 	// default values
@@ -255,6 +273,7 @@ SimulationParameters::SimulationParameters()
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
 	wheel_speed = 400;
+	ID_list= {101, 102, 103, 104, 105, 106, 107, 108, 109, 110}; 
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -406,6 +425,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "updateGoalPolicy") == 0) {
 			updateGoalPolicy = parse_update_goal_policy(value);
 		}
+		else if (strcmp(key, "ID_list") == 0) {
+			ID_list = parse_ID_list(value);
+		}
 		else
 		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
@@ -471,6 +493,14 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);
 	fprintf(sim_param_file, "wheel_speed %d\n", wheel_speed);
+	fprintf(sim_param_file, "ID_list ");
+	for (size_t i = 0; i < ID_list.size(); i++) {
+		fprintf(sim_param_file, "%d", ID_list[i]);
+		if (i < ID_list.size() - 1) {
+			fprintf(sim_param_file, ",");
+		}
+	}
+	fprintf(sim_param_file, "\n");
 	fclose(sim_param_file);
 }
 
