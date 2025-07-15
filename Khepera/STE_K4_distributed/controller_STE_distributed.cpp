@@ -298,7 +298,7 @@ int init_TCP_socket(){
 	struct sockaddr_in address; 
 	struct sockaddr_in serv_addr; 
       int sock = 0;
-	for (int i = 0; i < simulation_parameters.ID_list.size(); i++) {
+	for (size_t i = 0; i < simulation_parameters.ID_list.size(); i++) {
 		// skip itself
 		if (i == self_index) continue;
 		// Creating socket file descriptor 
@@ -689,7 +689,7 @@ void state_updategoal()
 			VisiLibity::Point finish(goal_position.x, goal_position.y);
 			VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
 			// copy the path in another variable
-			for (unsigned k = 0; k < Polyline_path.size(); k++)
+			for (size_t k = 0; k < Polyline_path.size(); k++)
 			{
 				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
 				path.push_back(p);
@@ -731,7 +731,7 @@ void state_listen(){
 	// 	VisiLibity::Point finish(goal_position.x, goal_position.y);
 	// 	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
 	// 	// copy the path in another variable
-	// 	for(unsigned k=0; k<Polyline_path.size(); k++){
+	// 	for(size_t k=0; k<Polyline_path.size(); k++){
 	// 		Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
 	// 		path.push_back(p);
 	// 		log_trajectory(p);
@@ -881,7 +881,7 @@ void state_send_goal()
 		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
 
 		// copy the path in another variable
-		for (unsigned k = 0; k < Polyline_path.size(); k++)
+		for (size_t k = 0; k < Polyline_path.size(); k++)
 		{
 			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
 			path.push_back(p);
@@ -935,7 +935,7 @@ void state_receive_goal()
 	VisiLibity::Point finish(goal_position.x, goal_position.y);
 	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
 
-	for (unsigned k = 0; k < Polyline_path.size(); k++)
+	for (size_t k = 0; k < Polyline_path.size(); k++)
 	{
 		Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
 		path.push_back(p);
@@ -967,7 +967,7 @@ void state_receive_pdf()
 		}
 
 		Message msg;
-		for (int i = 0; i < sock_list.size(); i++)
+		for (size_t i = 0; i < sock_list.size(); i++)
 		{
 			receive_tcp_msg(sock_list[i].second, &msg);		
 		}
@@ -1117,7 +1117,7 @@ void state_share_pdf()
 		int finish_flag = 0; // -1 indicates that this is not a finish message
             Message msg(message_ID, ID, target_ID, current_position, finish_flag, posterior.pdf);
 		int target_sock = -1;
-		for(int i=0; i<sock_list.size(); i++){
+		for(size_t i=0; i<sock_list.size(); i++){
 			if(sock_list[i].first == target_ID){
 				target_sock = sock_list[i].second;
 				break;
@@ -1154,7 +1154,7 @@ void broadcast_state_finished()
 	  //send STATE_FINISHED message to other robots
         Message msg(message_ID, ID, target_ID, current_position, -1, nullptr); // -1 for STATE_FINISHED flag
 	  int target_sock = -1;
-	  for(int j=0; j<sock_list.size(); j++){
+	  for(size_t j=0; j<sock_list.size(); j++){
 		if(sock_list[j].first == target_ID){
 		    target_sock = sock_list[j].second;
 		    break;

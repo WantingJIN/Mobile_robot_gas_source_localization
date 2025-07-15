@@ -57,14 +57,14 @@ public:
 
 
 	// function that returns concentration using parameters
-	virtual double concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
-	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<double> &c_avg, vector<double> &c_std) = 0;
+	virtual float concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
+	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 	// read from precomputed maps
-	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) = 0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg) = 0;
 
-	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
+	virtual float approx_concentration(Position robot_position, double wind_intensity) = 0;
 
 	// print expected and max a posteriori values on screen
 	virtual void print_expected_val() = 0;
@@ -102,11 +102,11 @@ public:
 	~GaussianPlumeModel2D();
 
 	// returns concentration for a set of parameters and a position
-	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<double> &c_avg);
+	float concentration(Position robot_position, double wind_intensity, double param_list[]);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
-	double approx_concentration(Position robot_position, double wind_intensity);
+	float approx_concentration(Position robot_position, double wind_intensity);
 
 	// print expected and max a posteriori values on screen
 	void print_expected_val();
@@ -151,14 +151,14 @@ public:
 	void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 
-	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<double> &c_avg, vector<double> &c_std);
+	float concentration(Position robot_position, double wind_intensity, double param_list[]);
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
 
 	// read from precomputed maps
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg);
 
-	double approx_concentration(Position robot_position, double wind_intensity);
+	float approx_concentration(Position robot_position, double wind_intensity);
 
 	// print expected and max a posteriori values on screen
 	void print_expected_val();

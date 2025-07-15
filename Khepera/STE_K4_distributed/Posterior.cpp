@@ -480,7 +480,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 {
 	int i = 0;
 	double sample[nbr_dimension];
-	vector<double> slope_history_meas;
+	vector<float> slope_history_meas;
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
@@ -621,7 +621,7 @@ void Posterior::log_relative_history_meas(const char *file_name, const char writ
 {
 	FILE *log_relative_history_meas_file = fopen(file_name, &writing_mode);
 
-	for (int i = 0; i < rel_history_meas.size() - 1; i++)
+	for (size_t i = 0; i < rel_history_meas.size() - 1; i++)
 	{
 		fprintf(log_relative_history_meas_file, "%.9f, ", rel_history_meas[i]);
 	}

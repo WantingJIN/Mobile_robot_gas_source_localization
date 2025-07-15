@@ -15,7 +15,7 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
-	vector<double> model_c_avg(history.size);
+	vector<float> model_c_avg(history.size);
 
 	int nbr = history.size;
 	float px[nbr], py[nbr];
@@ -59,7 +59,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
-	vector<double> model_c_avg(history.size);
+	vector<float> model_c_avg(history.size);
 
 	int nbr = history.size;
 	float px[nbr], py[nbr];
@@ -75,10 +75,10 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
-	vector<double> rel_model_list;
-	vector<double> pdf_model_list;
-	vector<double> slope_model_list;
-	double rel_model_val, rel_hist_val;
+	vector<float> rel_model_list;
+	vector<float> pdf_model_list;
+	vector<float> slope_model_list;
+	float rel_model_val, rel_hist_val;
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
@@ -150,7 +150,7 @@ double likelihood(struct history &history, double *parameters, PlumeModel *model
 	return (exp(-0.5 * sum_tmp));
 }
 
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> data_list)
+void calculate_measurements_list_empirical_CDF(vector<float> &rel_meas_list, vector<float> &slope_list, const vector<float> data_list)
 {
 	rel_meas_list.resize(data_list.size());
 	slope_list.resize(data_list.size());
@@ -160,7 +160,7 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
 		slope_list[0] = 0.0;
 		return;
 	}
-	vector<double> sortedData = data_list;
+	vector<float> sortedData = data_list;
 	sort(sortedData.begin(), sortedData.end());
 
 	// Calculate ECDF
@@ -168,23 +168,23 @@ void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, ve
 	{
 		// Count the number of observations less than or equal to the current value
 		size_t count = count_if(sortedData.begin(), sortedData.end(),
-						[&](double x)
+						[&](float x)
 						{ return data_list[i] - x > 0.1; });
 		// Calculate proportion
-		rel_meas_list[i] = static_cast<double>(count) / data_list.size();
+		rel_meas_list[i] = static_cast<float>(count) / data_list.size();
 	}
 	// Calculate Normalized Slope of ECDF
-	double data_range = sortedData.back() - sortedData.front();
+	float data_range = sortedData.back() - sortedData.front();
 	for (size_t i = 1; i < sortedData.size(); ++i)
 	{
-		double delta_x = (sortedData[i] - sortedData[i - 1]) / data_range;
+		float delta_x = (sortedData[i] - sortedData[i - 1]) / data_range;
 		slope_list[i] = (delta_x > 0) ? (delta_x / data_list.size()) : 0.0;
 	}
 	// Handle the first slope value
 	slope_list[0] = slope_list[1];
 }
 
-void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> data_list)
+void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, const vector<float> data_list)
 {
       rel_meas_list.resize(data_list.size());
 	if (data_list.size() == 1)
@@ -197,7 +197,7 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 	double min_val = *min_element(data_list.begin(), data_list.end());
 	// printf("max: %f, min: %f\n", max_val, min_val);
 
-	for (int i = 0; i < data_list.size(); i++)
+	for (size_t i = 0; i < data_list.size(); i++)
 	{
 		if (abs(max_val - min_val) < 0.1)
 		{
@@ -217,7 +217,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
-	vector<double> model_c_avg(history.size);
+	vector<float> model_c_avg(history.size);
 
 	int nbr = history.size;
 	float px[nbr], py[nbr];

@@ -14,9 +14,9 @@ public:
     int idx_sx;
     int idx_sy;
     // source position
-    double sx;
-    double sy;
-    double gasConcentrationMap[x_nbins][y_nbins];
+    float sx;
+    float sy;
+    float gasConcentrationMap[x_nbins][y_nbins];
     // constructor
     GasDispersionMap(int index_sx, int index_sy);
     GasDispersionMap(double source_x, double source_y);

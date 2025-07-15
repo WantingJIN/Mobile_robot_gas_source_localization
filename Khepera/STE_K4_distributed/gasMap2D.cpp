@@ -43,7 +43,6 @@ void GasMap2D::runKernelAlgorithm(Position current_position, float current_odor)
 
   double x_dist = 0, y_dist = 0; //distance from sampled point from center of cells
   //normalize received odor sample
-  int close_coord[3]= {0};
   int idx_x = round((current_position.x - x_min) / x_resol);
   int idx_y = round((current_position.y - y_min) / y_resol);
   int idx_x_start = (idx_x - x_update_range > 0) ? (idx_x - x_update_range) : 0;
@@ -100,7 +99,7 @@ float GasMap2D::compute_gaussian(const double x_dist, const double y_dist){
 }
 
 void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_position, vector<double> &concentrations_from_map){
-  for(int i=0; i<history_position.size(); i++){
+  for(size_t i=0; i<history_position.size(); i++){
     int idx_x = round((history_position[i].x - x_min) / x_resol);
     int idx_y = round((history_position[i].y - y_min) / y_resol);
     concentrations_from_map.push_back(gasAverConMap[idx_x][idx_y]);

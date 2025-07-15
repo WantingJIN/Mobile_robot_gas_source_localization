@@ -17,8 +17,8 @@ class CellMeasurements{
         int idx_x;
         int idx_y;
         // position of the cell center
-        double px;
-        double py;
+        float px;
+        float py;
         vector<float> measurements;
         vector<int> gas_hits;
         // gas concentration features

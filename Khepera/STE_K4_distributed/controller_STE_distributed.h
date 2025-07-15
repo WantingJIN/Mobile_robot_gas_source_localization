@@ -60,9 +60,9 @@ struct history{
 	int size;
 	vector<int> FSM_iter;
 	vector<Position> position;
-	vector<double> measurement;
-	vector<double> measurement_std;
-	vector<double> relative_meas;
+	vector<float> measurement;
+	vector<float> measurement_std;
+	vector<float> relative_meas;
 	vector<int> gas_hit_event;
 };
 
