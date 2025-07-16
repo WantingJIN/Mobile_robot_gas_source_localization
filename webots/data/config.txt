@@ -1,5 +1,5 @@
 likelihood_error = 2000
-global_local_search_ratio = 0.3
+global_local_search_ratio = 0.5
 MCMC_iteration_num = 1000
 BayesianModelingMethod = EXHAUSTIVE 
 number_of_robots = 3
@@ -9,9 +9,9 @@ samplingMode = CONTINOUS_SAMPLING
 processingMode = NO_PROCESSING
 gasSensor = MOX
 planningStrategy = BELIEF_CLUSTERING
-gasFeature = ABSOLUTE_VALUE 
+gasFeature = ABSOLUTE_VALUE
 visitedList = visitedList_OFF
-infoFeature = VARIANCE
+infoFeature = PDF
 sampling_period = 10 
 cluster_entropy_ratio = 10
 vel_factor = 1 
@@ -32,7 +32,9 @@ weighting_entropy_ratio = 10
 controlArchitecture = DISTRIBUTED
 stopCondition = ENTROPY_ONLY
 updateGoalPolicy = FIXED_FREQ
-updateGoalTime = 10000
-regionAllocApproach = -1
-clusterMethod = VORONOI
-estimateWhileMoving = NO
+
+
+mapCoverageStrategy = VORONOI
+increaseFreqBM = YES
+update_time = 4
+KLD_thresh = 1

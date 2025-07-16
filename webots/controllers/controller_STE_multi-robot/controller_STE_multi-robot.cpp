@@ -26,8 +26,6 @@
 #define MSG_SUBSTATE_SHARE_PDF -97
 #define MSG_SUBSTATE_SHARE_KLD -96
 
-#define KLD_THRESHOLD 0.1
-
 
 using namespace std;
 
@@ -61,6 +59,7 @@ FILE *visited_list_logfile;
 FILE *console_logfile;
 FILE *clustering_debugging_logfile; //new: for debugging purpose (Distributed architecture)
 FILE *KLD_debugging_logfile; //new: for debugging purpose (KLD)
+FILE *cumulative_path_logfile;
 
 
 char goalposition_logfile_name[512];
@@ -93,7 +92,7 @@ char acc_info_map_logfile_name[512];
 char console_logfile_name[512];
 char clustering_debugging_name[512];
 char KLD_debugging_name[512];
-
+char cumulative_path_logfile_name[512];
 
 // read data from file
 char logfile_folder_name[256];
@@ -206,7 +205,7 @@ static double received_current_dist[MAX_NB_ROBOTS] = {0};
 static double received_current_kld[MAX_NB_ROBOTS] = {0};
 static int ready_from[MAX_NB_ROBOTS] = {0};
 static int i_am_ready = 0;
-static double epsilon_clusterize = 1e-12;
+static double epsilon_clusterize = 0;
 double start_substates;
 
 // KLD applied on consecutive Belief Maps
@@ -227,8 +226,6 @@ bool entered_substate_receive_pdf = false;
 bool entered_state_moving = false;
 bool entered_state_receive_goal = false;
 bool kld_subloop_upd = false;
-
-bool include_region_allocation = true;
 
 // obstacle map
 std::vector<int> obstacle_map = {
@@ -254,10 +251,46 @@ std::vector<int> obstacle_map = {
     0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-
-
+int n_combine_pathplanning = 0;
+int n_movesting = 0;
 
 // =========================== FUNCTIONS ================================ //
+// debugging function
+const int MAP_WIDTHX = 20;
+const int MAP_HEIGHTY = 20;
+const int MAP_SIZEXY = MAP_WIDTHX * MAP_HEIGHTY;
+
+std::vector<std::pair<int, int>> find_top_3(const double* map) {
+    double top_vals[3] = {-1.0, -1.0, -1.0};
+    int top_idxs[3] = {-1, -1, -1};
+
+    for (int i = 0; i < MAP_SIZEXY; ++i) {
+        double val = map[i];
+
+        if (val > top_vals[0]) {
+            top_vals[2] = top_vals[1]; top_idxs[2] = top_idxs[1];
+            top_vals[1] = top_vals[0]; top_idxs[1] = top_idxs[0];
+            top_vals[0] = val;         top_idxs[0] = i;
+        } else if (val > top_vals[1]) {
+            top_vals[2] = top_vals[1]; top_idxs[2] = top_idxs[1];
+            top_vals[1] = val;         top_idxs[1] = i;
+        } else if (val > top_vals[2]) {
+            top_vals[2] = val;         top_idxs[2] = i;
+        }
+    }
+
+    std::vector<std::pair<int, int>> result;
+
+    for (int i = 0; i < 3; ++i) {
+        int row = top_idxs[i] / MAP_WIDTHX;
+        int col = top_idxs[i] % MAP_WIDTHX;
+        result.emplace_back(row, col);
+    }
+
+    return result;
+}
+
+
 // random value sampled from a normal distribution
 double randn(double mu, double sigma)
 {
@@ -498,9 +531,10 @@ void log_whole_position_history(bool real_position)
 
 void log_kld_value()
 {
+	double time = wb_robot_get_time();
     kld_value_logfile = fopen(kld_value_logfile_name, "a"); // append mode, to add new rows without removing the previous ones
 
-    fprintf(kld_value_logfile, "%i,%f,%i,%f,%f,", FSM.n_cycles, KLD, kld_replan, current_position.x, current_position.y);
+    fprintf(kld_value_logfile, "%i,%i,%f,%i,%f,%f,%f,", n_movesting, FSM.n_cycles, KLD, kld_replan, current_position.x, current_position.y, time);
 
     fprintf(kld_value_logfile, "\n");
     fclose(kld_value_logfile);
@@ -516,7 +550,6 @@ void log_time(double simulation_time_results) {
 
     fclose(time_logfile);
 }
-
 
 void log_visited_list()
 {
@@ -776,6 +809,129 @@ int xy_to_index(double x, double y) {
 // 		}
 //     }
 // }
+void prova_3maxcells_clustering_continuo(const std::vector<int>& selected_indices) {
+
+    std::vector<std::vector<int>> pdf_masks(simulation_parameters.number_of_robots, std::vector<int>(x_nbins * y_nbins, 0));
+    std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
+
+    for (int y = 0; y < y_nbins; ++y)
+        for (int x = 0; x < x_nbins; ++x)
+            obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
+
+    // Buscar las 3 celdas de mayor peso
+    std::vector<std::pair<double, int>> top_cells;
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (posterior.pdf[i] > epsilon_clusterize)
+            top_cells.push_back({posterior.pdf[i], i});
+    }
+    std::sort(top_cells.begin(), top_cells.end(), std::greater<>());
+
+    std::vector<int> seeds_x(3), seeds_y(3);
+    for (int i = 0; i < 3 && i < top_cells.size(); ++i)
+        index_to_xy(top_cells[i].second, seeds_x[i], seeds_y[i]);
+
+    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
+
+    // Region Growing alternado y balanceado
+    const std::vector<std::pair<int, int>> directions = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    };
+
+    std::vector<std::vector<bool>> visited(y_nbins, std::vector<bool>(x_nbins, false));
+    std::queue<std::pair<int, int>> queues[3];
+    int cluster_sizes[3] = {0, 0, 0};
+
+    int total_active_cells = 0;
+    for (int i = 0; i < x_nbins * y_nbins; ++i)
+        if (posterior.pdf[i] > epsilon_clusterize && obstacle_map[i] == 0)
+            total_active_cells++;
+
+    int target_size = total_active_cells / 3;
+    int max_size_margin = target_size * 1.2; // Permite un 20% de margen
+
+    for (int k = 0; k < 3; ++k) {
+        queues[k].push({seeds_x[k], seeds_y[k]});
+        visited[seeds_y[k]][seeds_x[k]] = true;
+        belief_clusters[seeds_y[k] * x_nbins + seeds_x[k]] = k + 1;
+        cluster_sizes[k]++;
+    }
+
+    bool growing = true;
+    while (growing) {
+        growing = false;
+        for (int k = 0; k < 3; ++k) {
+            if (cluster_sizes[k] >= max_size_margin) continue;
+
+            int q_size = queues[k].size();
+            for (int step = 0; step < q_size; ++step) {
+                auto [x, y] = queues[k].front(); queues[k].pop();
+
+                for (const auto& [dx, dy] : directions) {
+                    int nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                    if (obstacle_map_2d[ny][nx] == 1) continue;
+                    if (visited[ny][nx]) continue;
+                    int idx = ny * x_nbins + nx;
+                    if (posterior.pdf[idx] <= epsilon_clusterize) continue;
+
+                    visited[ny][nx] = true;
+                    belief_clusters[idx] = k + 1;
+                    queues[k].push({nx, ny});
+                    cluster_sizes[k]++;
+                    growing = true;
+
+                    if (cluster_sizes[k] >= max_size_margin)
+                        break;
+                }
+                if (cluster_sizes[k] >= max_size_margin)
+                    break;
+            }
+        }
+    }
+
+    log_posterior_pdf_3d_cluster(belief_clusters);
+
+    // Asignar pdf_masks
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        if (posterior.pdf[i] <= epsilon_clusterize) continue;
+        for (int k = 0; k < 3; ++k)
+            pdf_masks[k][i] = (belief_clusters[i] == k + 1) ? 1 : 0;
+    }
+
+    // Modificar posterior para el robot correspondiente
+    for (int k = 0; k < 3; ++k) {
+        if (ID == 101 + k) {
+            for (int i = 0; i < x_nbins * y_nbins; ++i)
+                posterior.pdf[i] *= pdf_masks[k][i];
+        }
+    }
+
+    double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+    if (sum > 0)
+        for (int i = 0; i < x_nbins * y_nbins; ++i)
+            posterior.pdf[i] /= sum;
+
+    double sum_def = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+    printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum_def);
+
+    // Debug opcional
+    for (int k = 0; k < 3; ++k) {
+        if (ID == 101 + k) {
+            fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (balanceado):\n");
+            for (int y = 0; y < y_nbins; ++y) {
+                for (int x = 0; x < x_nbins; ++x) {
+                    int idx = y * x_nbins + x;
+                    fprintf(clustering_debugging_logfile, "%d ", belief_clusters[idx]);
+                }
+                fprintf(clustering_debugging_logfile, "\n");
+            }
+        }
+    }
+}
+
+
+
 
 void clusterize_belief_map_obstacle_dist(const std::vector<int>& selected_indices) {
 
@@ -1019,8 +1175,19 @@ void clusterize_belief_map_lloyd(const std::vector<int>& selected_indices) {
 		for (int i = 0; i < x_nbins * y_nbins; ++i) {
 			int cluster = cluster_assignments[i];
 			if (cluster < 0) continue;
-			double weight = posterior.pdf[i];
-			if (weight < 1e-9) continue;
+
+			double weight;
+
+			if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_DIST) 
+			{
+				weight = 1;
+			}
+			else if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_PROB)
+			{
+				weight = posterior.pdf[i];
+			}		
+
+			if (weight < epsilon_clusterize) continue;
 
 			int x, y;
 			index_to_xy(i, x, y);
@@ -1030,7 +1197,7 @@ void clusterize_belief_map_lloyd(const std::vector<int>& selected_indices) {
 		}
 
 		for (int k = 0; k < K; ++k) {
-			if (total_weight[k] > 1e-9) {
+			if (total_weight[k] > epsilon_clusterize) {
 				centroids[k].first  = static_cast<int>(weighted_sum_x[k] / total_weight[k]);
 				centroids[k].second = static_cast<int>(weighted_sum_y[k] / total_weight[k]);
 			}
@@ -1095,7 +1262,7 @@ void clusterize_belief_map_obstacle_dist_lloyd(const std::vector<int>& selected_
         for (int x = 0; x < x_nbins; ++x)
             obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
 
-    // BFS Distance Map (Obstacle aware)
+    // Distance Map (Obstacle aware)
     double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);
     double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);
 
@@ -1199,8 +1366,19 @@ void clusterize_belief_map_obstacle_dist_lloyd(const std::vector<int>& selected_
 		for (int i = 0; i < x_nbins * y_nbins; ++i) {
 			int cluster = cluster_assignments[i];
 			if (cluster < 0) continue;
-			double weight = posterior.pdf[i];
-			if (weight < 1e-9) continue;
+			
+			double weight;
+
+			if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_DIST) 
+			{
+				weight = 1;
+			}
+			else if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_PROB)
+			{
+				weight = posterior.pdf[i];
+			}					
+
+			if (weight < epsilon_clusterize) continue;
 
 			int x, y;
 			index_to_xy(i, x, y);
@@ -1210,7 +1388,7 @@ void clusterize_belief_map_obstacle_dist_lloyd(const std::vector<int>& selected_
 		}
 
 		for (int k = 0; k < K; ++k) {
-			if (total_weight[k] > 1e-9) {
+			if (total_weight[k] > epsilon_clusterize) {
 				seeds[k].first  = static_cast<int>(weighted_sum_x[k] / total_weight[k]);
 				seeds[k].second = static_cast<int>(weighted_sum_y[k] / total_weight[k]);
 			}
@@ -1456,8 +1634,11 @@ void cluster_algorithm()
         printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
     }
 
-	if (simulation_parameters.clusterMethod == VORONOI) clusterize_belief_map_obstacle_dist(selected_indices);
-	if (simulation_parameters.clusterMethod == VORONOI_LLOYD) clusterize_belief_map_obstacle_dist_lloyd(selected_indices);
+	if (simulation_parameters.mapCoverageStrategy == PROVA) prova_3maxcells_clustering_continuo(selected_indices);
+	if (simulation_parameters.mapCoverageStrategy == VORONOI) clusterize_belief_map_obstacle_dist(selected_indices);
+	if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_DIST) clusterize_belief_map_obstacle_dist_lloyd(selected_indices);
+	if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_PROB) clusterize_belief_map_obstacle_dist_lloyd(selected_indices);
+	//if (simulation_parameters.mapCoverageStrategy == VORONOI_LLOYD_DIST) clusterize_belief_map_lloyd(selected_indices);
 }
 
 // ============================== STATES ================================= //
@@ -1702,7 +1883,7 @@ void state_estimating()
 	posterior.normalize();
 	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
-	if (include_region_allocation)
+	if (simulation_parameters.mapCoverageStrategy != NONE)
 	{
 		FSM.n_cycles++;
 	}
@@ -1742,17 +1923,22 @@ void state_estimating()
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
 	// check if stopping condition is reached
-	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.controlArchitecture == INDIVIDUAL))
+	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.number_of_robots == 1))
 	{
 		// calculate entropy and spread
 		posterior.process();
       	posterior.calculate_entropy_and_spread();
 		log_expected_a_posteriori();
 		log_max_a_posteriori();
+		log_entropy();
 
 		bool is_stop_condition_reached = check_stop_condition();
 		if (is_stop_condition_reached)
 		{
+			double end_time_results = wb_robot_get_time();
+			double simulation_time_results = end_time_results - initial_time_results;
+			log_time(simulation_time_results);
+
 			FSM.state = STATE_FINISHED;
 			return;
 		} else {
@@ -1782,7 +1968,7 @@ void state_estimating()
 
 void state_updategoal()
 {
-	if (!include_region_allocation)
+	if (simulation_parameters.mapCoverageStrategy == NONE && simulation_parameters.number_of_robots > 1)
 	{
 		log_position();
 		log_kld_value();
@@ -1813,19 +1999,48 @@ void state_updategoal()
 			printf("[%d] updating the goal\n", ID);
 		switch (simulation_parameters.planningStrategy)
 		{
-		case GREEDY:
-			if (!include_region_allocation)
+		case COMBINED:
+			// Cicla entre 1, 2, 3
+			n_combine_pathplanning++;
+
+			// if (n_combine_pathplanning % 2 == 0)
+			// {
+			// 	path_planner.information_center_planning();
+			// }
+			// else
+			// {
+			// 	path_planner.accumulative_Dijkstra();
+					
+			// }	
+			if (FSM.n_cycles == 1)
 			{
-				path_planner.debug_relative_value_maximal_merged_belief_planning();
+				path_planner.farthest_belief_point_planning();
+			}
+			else if (n_combine_pathplanning % 2 == 0)
+			{
+				path_planner.belief_clustering_planning();
 			}
 			else
 			{
+				path_planner.information_center_planning();
+			}
+			break;	
+		case GREEDY:
+			if (simulation_parameters.mapCoverageStrategy == NONE && simulation_parameters.number_of_robots > 1)
+			{
+				path_planner.debug_relative_value_maximal_merged_belief_planning();
+			}
+			else if (simulation_parameters.mapCoverageStrategy != NONE || simulation_parameters.number_of_robots == 1)
+			{
 				path_planner.maximal_belief_planning();
-			}			
+			}		
 			break;
 		case INFO_CENTER:
 			path_planner.information_center_planning();
 			break;
+		case FARTHEST_CELL:
+			path_planner.farthest_belief_point_planning();
+			break;			
 		case BALANCE_MAXIMAL_EXPECTED:
 			path_planner.balance_expected_maximal_pdf();
 			break;
@@ -1849,10 +2064,12 @@ void state_updategoal()
 			path_planner.KLD_distance_balance();
 			break;
 		case SUM_DIJKSTRA_FIX:
-			path_planner.accumulative_Dijkstra();
+			path=path_planner.accumulative_Dijkstra();
+			use_visibility_path = false;
 			break;
 		case SUM_DIJKSTRA_ADP:
-			path_planner.accumulative_Dijkstra();
+			path=path_planner.accumulative_Dijkstra();
+			use_visibility_path = false;
 			break;
 		case MULTI_DIJKSTRA:
 			path = path_planner.multi_objective_Dijkstra();
@@ -1944,7 +2161,7 @@ void state_moving()
 	bool is_centralized = (simulation_parameters.controlArchitecture == CENTRALIZED && ID == CENTRAL_MASTER_ID);
 	bool is_distributed = simulation_parameters.controlArchitecture == DISTRIBUTED;
 
-	if (is_distributed && simulation_parameters.estimateWhileMoving == NO)
+	if ((is_distributed && simulation_parameters.increaseFreqBM == NO) || simulation_parameters.number_of_robots == 1)
 	{
 		// printf("moving toward the goal\n");
 		if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
@@ -2007,7 +2224,7 @@ void state_moving()
 			// save the current position in logfile
 			log_whole_position_history(true);
 
-			// int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
+			// int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_time * 1000.0 / TIME_STEP));
 
 			// if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
 			// 	if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
@@ -2048,7 +2265,7 @@ void state_moving()
 		}
 
 	}
-	else if (is_distributed && simulation_parameters.estimateWhileMoving == YES)
+	else if (is_distributed && simulation_parameters.increaseFreqBM == YES)
 	{
 		// ====== SAMPLING ======
 		// printf("moving toward the goal\n");
@@ -2086,7 +2303,7 @@ void state_moving()
 		// verify if arrived to the goal if applicable
 		// fprintf(console_logfile, "check dist to end goal \n");
 		// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-		int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
+		int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_time * 1000.0 / TIME_STEP));
 		double dist_threshold_movesting = 0.05;
 		distance_to_goal = dist_to_goal(goal_position);
 		if (dist_to_goal(goal_position) > dist_threshold_movesting)
@@ -2145,14 +2362,14 @@ void state_moving()
 		if ((n_time_step % compare_pdf_iterations == 0 && n_time_step != 0))
 		{
 			//start_substates = wb_robot_get_time();
-			printf("Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
-			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
+			printf("Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, n_meas);
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, n_meas);
 
 			printf("Robot ID [%d]: STATE_MOVESTING \n", ID);
 			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
 
 			fprintf(KLD_debugging_logfile, "FSM cycle: %i\n", FSM.n_cycles);
-			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_goal_time, compare_pdf_iterations, n_meas);
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, n_meas);
 			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
 
 
@@ -2304,6 +2521,7 @@ void state_receive_dist()
 
 void state_movesting()
 {
+	n_movesting++;
 	printf("Robot ID [%d]: STATE_MOVESTING\n", ID);
 	fprintf(clustering_debugging_logfile,"Robot ID [%d]: STATE_MOVESTING\n", ID);
 	fprintf(KLD_debugging_logfile,"Robot ID [%d]: STATE_MOVESTING\n", ID);
@@ -2536,7 +2754,7 @@ void substate_merge_pdf()
 		if (sum_merged_pdf_substate > 0)
 		{
 			log_position();
-			log_kld_value();
+			//log_kld_value();
 			log_whole_position_history(true);
 
 			double end_time_results = wb_robot_get_time();
@@ -2574,8 +2792,6 @@ void substate_compare_pdf()
 	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_COMPARE_PDF\n", ID);
 	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_COMPARE_PDF\n", ID);
 
-
-
 	n_meas = 0;
 
 	n_kld++;
@@ -2583,12 +2799,27 @@ void substate_compare_pdf()
 	fprintf(KLD_debugging_logfile, "Robot [%d]: KLD #: %i\n", ID, n_kld);
 	fprintf(KLD_debugging_logfile, "Robot [%d]: KLD Value: %f\n", ID, KLD);
 
-	// Keep the current BM
-	std::memcpy(actual_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
-	actual_sum = 0.0;
-	for (int i = 0; i < MAP_SIZE; ++i)
-		actual_sum += actual_belief_map[i];
+	std::vector<std::pair<int, int>> maximum_values_actual_belief = find_top_3(actual_belief_map);
+	std::vector<std::pair<int, int>> maximum_values_proposed_pdf = find_top_3(posterior.pdf);
 
+	if (ID==101)
+	{
+		printf("Robot ID [%d]: KLD COMPARISON Between belief maps corresponding to:\n", ID);
+		printf("Robot ID [%d]: ACTUAL BELIEF MAP:\n", ID);
+		for (int i = 0; i < maximum_values_actual_belief.size(); ++i) {
+			int row = maximum_values_actual_belief[i].first;
+			int col = maximum_values_actual_belief[i].second;
+			printf("Top %d: fila = %d, columna = %d\n", i + 1, row, col);
+		}
+		printf("Robot ID [%d]: PROPOSED PDF:\n", ID);
+		for (int i = 0; i < maximum_values_proposed_pdf.size(); ++i) {
+			int row = maximum_values_proposed_pdf[i].first;
+			int col = maximum_values_proposed_pdf[i].second;
+			printf("Top %d: fila = %d, columna = %d\n", i + 1, row, col);
+		}
+	}
+
+	//log_kld_value();
 
 	FSM.state = SUBSTATE_SHARE_KLD;
 	FSM.hook = substate_share_kld;
@@ -2712,9 +2943,17 @@ void substate_receive_kld()
 		entered_state_moving = false;
 
 		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Received KLDs: %f %f %f\n", ID, received_current_kld[0], received_current_kld[1], received_current_kld[2]);
-		if (abs(received_current_kld[self_index]) > KLD_THRESHOLD)
+		if (abs(received_current_kld[self_index]) > simulation_parameters.KLD_thresh)
 		{
 			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Forcing transition to REGION_ALLOCATION since KLD > 0.1\n",ID);
+
+
+			// Keep the current BM
+			std::memcpy(actual_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
+			actual_sum = 0.0;
+			for (int i = 0; i < MAP_SIZE; ++i)
+			actual_sum += actual_belief_map[i];
+
 
 			set_wheels_speed(0, 0);
 			sampleBuffer.reset_all();
@@ -2722,13 +2961,18 @@ void substate_receive_kld()
 
 			//FSM.n_cycles++;
 			kld_subloop_upd = true;
+
 			kld_replan = 1;
+			log_kld_value();
 
 			FSM.state = STATE_REGION_ALLOCATION;
 			FSM.hook = state_region_allocation;
 		} 
 		else
 		{
+			kld_replan = 0;
+			log_kld_value();
+
 			FSM.state = STATE_MOVING;
 			FSM.hook = state_moving;
 		}	
@@ -3169,13 +3413,12 @@ void state_merge_pdf()
 
 	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
 
-	if (FSM.n_cycles == 0 && simulation_parameters.estimateWhileMoving == YES && simulation_parameters.controlArchitecture == DISTRIBUTED)
+	if (FSM.n_cycles == 1 && simulation_parameters.increaseFreqBM == YES && simulation_parameters.controlArchitecture == DISTRIBUTED)
 	{
-		memcpy(actual_belief_map, posterior.pdf, MAP_SIZE * sizeof(double));
+		memcpy(actual_belief_map, belief_map_merged, MAP_SIZE * sizeof(double));
 		for (int i = 0; i < MAP_SIZE; ++i)
 			actual_sum += actual_belief_map[i];
 	}
-
 
 	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
@@ -3232,12 +3475,12 @@ void state_merge_pdf()
 				FSM.hook = state_updategoal_team;
 
 		}
-		else if (simulation_parameters.controlArchitecture == DISTRIBUTED && include_region_allocation)
+		else if (simulation_parameters.controlArchitecture == DISTRIBUTED && simulation_parameters.mapCoverageStrategy != NONE)
 		{
 			FSM.state = STATE_REGION_ALLOCATION;
 			FSM.hook = state_region_allocation;
 		}
-		else if (simulation_parameters.controlArchitecture == DISTRIBUTED && !include_region_allocation)
+		else if (simulation_parameters.controlArchitecture == DISTRIBUTED && simulation_parameters.mapCoverageStrategy == NONE)
 		{
 			FSM.state = STATE_UPDATEGOAL;
 			FSM.hook = state_updategoal;
@@ -3307,15 +3550,8 @@ void state_region_allocation()
 			fprintf(clustering_debugging_logfile, "received_pos_103: (%.2f, %.2f)\n",
 					received_current_pos[2][0], received_current_pos[2][1]);
 
-
-		// if (simulation_parameters.regionAllocApproach == 1) approach1_centroid_max_pdf();
-		// if (simulation_parameters.regionAllocApproach == 2) approach2_centroid_curr_pos();
-		// if (simulation_parameters.regionAllocApproach == 3) approach3_centroid_curr_pos_obstacle_dist();
-		// if (simulation_parameters.regionAllocApproach == 4) approach4_centroid_curr_pos_lloyd();
-		// if (simulation_parameters.regionAllocApproach == 5) approach5_centroid_curr_pos_obstacle_dist_lloyd();
-
 		log_position();
-		log_kld_value();
+		//log_kld_value();
 		log_whole_position_history(true);
 		posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
@@ -3375,6 +3611,7 @@ int main(int argc, char **argv)
 	// debugging purpose
 	clustering_debugging_logfile = fopen(clustering_debugging_name, "a");
 	KLD_debugging_logfile = fopen(KLD_debugging_name, "a");
+	cumulative_path_logfile = fopen(cumulative_path_logfile_name, "a");
 
 
 	// initialize the receiver
@@ -3428,6 +3665,7 @@ int main(int argc, char **argv)
 	fclose(clustering_debugging_logfile);
 
 	fclose(KLD_debugging_logfile);
+	fclose(cumulative_path_logfile);
 
 	// final logs
 	if (simulation_parameters.simuMode == ONLINE)

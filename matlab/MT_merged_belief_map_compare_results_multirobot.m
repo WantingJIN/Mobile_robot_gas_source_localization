@@ -85,9 +85,16 @@ for i = 1:numExperiments
     traj_length = 0;
     for robot_id = [101, 102, 103]
         robot_folder = fullfile(folder_name, num2str(robot_id));
-        if exist(fullfile(robot_folder, 'trajectory.csv'), 'file')
-            trajectory = dlmread(fullfile(robot_folder, 'trajectory.csv'));
-            traj_length = traj_length + sum(sqrt(sum(diff(trajectory(:,2:3)).^2, 2)));
+%         if exist(fullfile(robot_folder, 'trajectory.csv'), 'file')
+%         %if exist(fullfile(robot_folder, 'cumulative_path.csv'), 'file')
+%             trajectory = dlmread(fullfile(robot_folder, 'trajectory.csv'));
+%             %trajectory = dlmread(fullfile(robot_folder, 'cumulative_path.csv'));
+%             traj_length = traj_length + sum(sqrt(sum(diff(trajectory(:,2:3)).^2, 2)));
+%         end
+        position_file = fullfile(robot_folder, 'whole_position_history.csv');
+        if exist(position_file, 'file')
+            positions = dlmread(position_file); % columnas: [x, y]
+            traj_length = traj_length + sum(sqrt(sum(diff(positions).^2, 2)));
         end
     end
 

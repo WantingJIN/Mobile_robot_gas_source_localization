@@ -608,6 +608,7 @@ void set_logfile_names()
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 	sprintf(clustering_debugging_name, "%s/console_multirobot.txt", folder_name);
 	sprintf(KLD_debugging_name, "%s/console_KLD.txt", folder_name);
+	sprintf(cumulative_path_logfile_name, "%s/cumulative_path.csv", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment and scan

@@ -52,7 +52,7 @@ source_x = tokens(1);
 source_y = tokens(2);
 
 % === Setup figure ===
-figure('Position', [100, 100, 1200, 400]);
+figure('Position', [100, 100, 1200, 400], 'Color', [1 1 1]);
 axis equal;
 hold on;
 wall_thickness = 0.1;
@@ -135,6 +135,17 @@ rectangle('Position', [4.5, 2.0, 0.5, 2.0], 'FaceColor', dark_gray);
 % === Plot ground truth gas source (black star) ===
 plot(source_x, source_y, 'p', 'MarkerSize', 16, ...
     'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'r');
+
+traj_line = gobjects(1, 3);
+traj_dots = gobjects(1, 3);
+
+colors = {white, white, white};
+
+for r = 1:3
+    traj_line(r) = plot(NaN, NaN, '-', 'Color', colors{r}, 'LineWidth', 2);
+    traj_dots(r) = plot(NaN, NaN, '.', 'Color', colors{r}, 'MarkerSize', 10);
+end
+
 
 % === Initialize robot and goal markers ===
 robot_markers = gobjects(1,3);

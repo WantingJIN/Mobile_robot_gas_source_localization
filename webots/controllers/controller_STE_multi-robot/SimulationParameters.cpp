@@ -72,10 +72,14 @@ eProcessingMode parse_processing_mode(const char *str)
 }
 ePlanningStrategy parse_planning_strategy(const char *str)
 {
+	if (strcmp(str, "COMBINED") == 0)
+		return COMBINED;
 	if (strcmp(str, "GREEDY") == 0)
 		return GREEDY;
 	if (strcmp(str, "INFO_CENTER") == 0)
 		return INFO_CENTER;
+	if (strcmp(str, "FARTHEST_CELL") == 0)
+		return FARTHEST_CELL;
 	if (strcmp(str, "BALANCE_MAXIMAL_EXPECTED") == 0)
 		return BALANCE_MAXIMAL_EXPECTED;
 	if (strcmp(str, "RANDOM") == 0)
@@ -195,9 +199,13 @@ eControlArchitecture parse_control_architecture(const char* str) {
 	exit(1);
 }
 
-eClusterMethod parse_cluster_method(const char* str) {
+eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
 	if (strcmp(str, "VORONOI") == 0) return VORONOI;
-	if (strcmp(str, "VORONOI_LLOYD") == 0) return VORONOI_LLOYD;
+	if (strcmp(str, "VORONOI_LLOYD_DIST") == 0) return VORONOI_LLOYD_DIST;
+	if (strcmp(str, "VORONOI_LLOYD_PROB") == 0) return VORONOI_LLOYD_PROB;
+	if (strcmp(str, "MAXCELL") == 0) return MAXCELL;
+	if (strcmp(str, "PROVA") == 0) return PROVA;
+	if (strcmp(str, "NONE") == 0) return NONE;
 	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }
@@ -218,12 +226,13 @@ eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
 	exit(1);
 }
 
-eEstimateWhileMoving parse_estimate_while_moving(const char* str) {
+eIncreaseFreqBM parse_increase_freq_BM(const char* str) {
 	if (strcmp(str, "YES") == 0) return YES;
 	if (strcmp(str, "NO") == 0) return NO;
 	fprintf(stderr, "Unknown estimate while moving: %s\n", str);
 	exit(1);
 }
+
 eScoreFun parse_score_fun(const char *str)
 {
 	if (strcmp(str, "RATIO") == 0)
@@ -269,11 +278,11 @@ SimulationParameters::SimulationParameters()
 	R0 = 100;
 	weighting_entropy_ratio = 6;
 	controlArchitecture = CENTRALIZED;
-	update_goal_time = 10;
+	update_time = 10;
+	KLD_thresh = 0.1;
 	stopCondition = ENTROPY_ONLY;
-	regionAllocApproach = 1;
-	clusterMethod = VORONOI_LLOYD;
-	estimateWhileMoving = NO;
+	mapCoverageStrategy = VORONOI_LLOYD_PROB;
+	increaseFreqBM = NO;
 
 }
 
@@ -417,11 +426,14 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "controlArchitecture") == 0) {
 			controlArchitecture = parse_control_architecture(value);
 		} 
-		else if (strcmp(key, "clusterMethod") == 0) {
-			clusterMethod = parse_cluster_method(value);
+		else if (strcmp(key, "mapCoverageStrategy") == 0) {
+			mapCoverageStrategy = parse_map_coverage_strategy(value);
 		} 
-		else if (strcmp(key, "updateGoalTime") == 0) {
-			update_goal_time = atoi(value);
+		else if (strcmp(key, "update_time") == 0) {
+			update_time = atoi(value);
+		}
+		else if (strcmp(key, "KLD_thresh") == 0) {
+			KLD_thresh = atoi(value);
 		}
 		else if (strcmp(key, "stopCondition") == 0) {
 			stopCondition = parse_stop_condition(value);
@@ -429,11 +441,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "updateGoalPolicy") == 0) {
 			updateGoalPolicy = parse_update_goal_policy(value);
 		}
-		else if (strcmp(key, "estimateWhileMoving") == 0) {
-			estimateWhileMoving = parse_estimate_while_moving(value);
-		}
-		else if (strcmp(key, "regionAllocApproach") == 0) {
-			regionAllocApproach = atoi(value);
+		else if (strcmp(key, "increaseFreqBM") == 0) {
+			increaseFreqBM = parse_increase_freq_BM(value);
 		}
 		else
 		{
@@ -496,9 +505,9 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "control_architecture %d\n", controlArchitecture);
-	fprintf(sim_param_file, "cluster_method %d\n", clusterMethod);
-	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
-	fprintf(sim_param_file, "region_alloc_approach %d\n", regionAllocApproach);
+	fprintf(sim_param_file, "cluster_method %d\n", mapCoverageStrategy);
+	fprintf(sim_param_file, "update_time %d\n", update_time);
+	fprintf(sim_param_file, "KLD_thresh %f\n", KLD_thresh);
 	fclose(sim_param_file);
 }
 

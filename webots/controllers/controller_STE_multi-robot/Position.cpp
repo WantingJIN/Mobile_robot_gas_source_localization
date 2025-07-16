@@ -23,12 +23,28 @@ Position::Position(float px, float py, float ph)
 	index = indices_to_index_2D(x_idx, y_idx);
 }
 
+// Position::Position(int px_idx, int py_idx)
+// {
+// 	x_idx = px_idx;
+// 	y_idx = py_idx;
+// 	index = indices_to_index_2D(x_idx, y_idx);
+// }
+
 Position::Position(int px_idx, int py_idx)
 {
-	x_idx = px_idx;
-	y_idx = py_idx;
-	index = indices_to_index_2D(x_idx, y_idx);
+    x_idx = px_idx;
+    y_idx = py_idx;
+    index = y_idx * x_nbins + x_idx;
+
+    float dx = (XMAX - XMIN) / x_nbins;
+    float dy = (YMAX - YMIN) / y_nbins;
+
+    x = XMIN + x_idx * dx + dx / 2.0f;  
+    y = YMIN + y_idx * dy + dy / 2.0f;
+    heading = 0;
 }
+
+
 
 Position::Position(const Position &to_copy_from)
 {

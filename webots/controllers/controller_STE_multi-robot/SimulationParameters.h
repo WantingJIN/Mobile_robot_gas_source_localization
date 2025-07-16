@@ -56,6 +56,8 @@ typedef enum planningStrategy
 	SUM_DIJKSTRA_ADP = 11,
 	MULTI_DIJKSTRA = 12,
 	INFO_CENTER = 13,
+	FARTHEST_CELL = 14,
+	COMBINED = 15,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -127,10 +129,14 @@ typedef enum controlArchitecture{
 	CENTRALIZED = 2,
 } eControlArchitecture;
 
-typedef enum clusterMethod{
+typedef enum mapCoverageStrategy{
 	VORONOI = 0,
-	VORONOI_LLOYD = 1,
-} eClusterMethod;
+	VORONOI_LLOYD_DIST = 1,
+	VORONOI_LLOYD_PROB = 2,
+	MAXCELL = 3,
+	PROVA =4,
+	NONE = 5,
+} eMapCoverageStrategy;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
@@ -144,10 +150,10 @@ typedef enum updateGoalPolicy{
 	BELIEF_DIFF = 2,
 } eUpdateGoalPolicy;
 
-typedef enum estimateWhileMoving{
+typedef enum increaseFreqBM{
 	YES = 0,
 	NO = 1,
-} eEstimateWhileMoving;
+} eIncreaseFreqBM;
 
 // parameters to estimate
 struct parameters_set
@@ -179,8 +185,8 @@ class SimulationParameters{
 		float scoreSigma;
 		int planning_step;
 		float weighting_entropy_ratio;
-		int update_goal_time;
-		int regionAllocApproach;
+		int update_time;
+		double KLD_thresh;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
@@ -197,14 +203,14 @@ class SimulationParameters{
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod;
 		eControlArchitecture controlArchitecture;
-		eClusterMethod clusterMethod;
+		eMapCoverageStrategy mapCoverageStrategy;
 
 	      eScoreFun scoreFun;
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
 		eUpdateGoalPolicy updateGoalPolicy;
-		eEstimateWhileMoving estimateWhileMoving;
+		eIncreaseFreqBM increaseFreqBM;
 
 		SimulationParameters();
 		~SimulationParameters();

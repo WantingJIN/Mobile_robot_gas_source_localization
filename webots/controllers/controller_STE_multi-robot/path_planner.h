@@ -56,6 +56,7 @@ public:
 
     void maximal_belief_planning();
     void information_center_planning();
+    void farthest_belief_point_planning();
     void random_navigation();
     bool position_outside_arena(Position p);
     void KLD_informative_goal_selection();
@@ -65,7 +66,8 @@ public:
     void maximal_information_planning();
     void informative_clustering_planning();
     void belief_clustering_planning();
-    void accumulative_Dijkstra();
+    //void accumulative_Dijkstra();
+    std::list<Position> accumulative_Dijkstra();
     std::list<Position> multi_objective_Dijkstra();
     void maximal_merged_belief_planning();
     void debug_relative_value_maximal_merged_belief_planning();

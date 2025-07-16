@@ -83,9 +83,11 @@ extern char experiment_position_logfile_name[512];
 extern FILE *console_logfile;
 extern FILE *clustering_debugging_logfile;
 extern FILE *KLD_debugging_logfile;
+extern FILE *cumulative_path_logfile;
 extern char console_logfile_name[512];
 extern char clustering_debugging_name[512];
 extern char KLD_debugging_name[512];
+extern char cumulative_path_logfile_name[512];
 
 // finite state machine
 extern struct FSM FSM;

@@ -11,7 +11,7 @@ exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment 
 
 % === Visualization speed settings ===
 show_cell_indices = false;
-repr_vel = 1;           % How many steps to skip per frame (for robot position update)
+repr_vel = 3;           % How many steps to skip per frame (for robot position update)
 video_repr_vel = repr_vel*10;    % Frame rate of the output video
 
 % === Robot IDs and corresponding colors ===
@@ -57,8 +57,9 @@ tokens = sscanf(source_text, 'source_position %f %f %f');
 source_x = tokens(1);
 source_y = tokens(2);
 
+
 % === Setup figure ===
-figure('Position', [100, 100, 1200, 400]);
+figure('Position', [100, 100, 1200, 400], 'Color', [1 1 1]);
 axis equal;
 hold on;
 wall_thickness = 0.1;
@@ -142,6 +143,16 @@ rectangle('Position', [4.5, 2.0, 0.5, 2.0], 'FaceColor', dark_gray);
 plot(source_x, source_y, 'p', 'MarkerSize', 16, ...
     'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'k');
 
+traj_line = gobjects(1, 3);
+traj_dots = gobjects(1, 3);
+
+colors = {[0.8 0.3 0.1], [0 0.4 0.8], [0.2 0.6 0.2]};  % azul, verde, rojo
+
+for r = 1:3
+    traj_line(r) = plot(NaN, NaN, '-', 'Color', colors{r}, 'LineWidth', 2);
+    traj_dots(r) = plot(NaN, NaN, '.', 'Color', colors{r}, 'MarkerSize', 10);
+end
+
 % === Initialize robot and goal markers ===
 robot_markers = gobjects(1,3);
 goal_markers = gobjects(1,3);
@@ -205,7 +216,7 @@ for frame_t = 1:10000
                         case 1
                             base_color = red_soft;
                         case 2
-                            base_color = blue_soft;
+                            base_color = blue_soft; 
                         case 3
                             base_color = green_soft;
                         otherwise
@@ -217,6 +228,11 @@ for frame_t = 1:10000
                     adjusted_intensity = min_visible_intensity + (1 - min_visible_intensity) * intensity;
                     blended_color = base_color * adjusted_intensity + white * (1 - adjusted_intensity);
 
+                    fprintf('White cells (value=0): %d\n', sum(belief_map == 0));
+                    fprintf('Red cells   (value=1): %d\n', sum(belief_map == 1));
+                    fprintf('Blue cells  (value=2): %d\n', sum(belief_map == 2));
+                    fprintf('Green cells (value=3): %d\n', sum(belief_map == 3));
+
 
                     % Aplicar color al patch
                     set(cell_patches(row, col), 'FaceColor', blended_color);
@@ -227,6 +243,9 @@ for frame_t = 1:10000
 
 
             title(sprintf('FSM cycle: %d', idx), 'FontSize', 14, 'FontWeight', 'bold');
+            
+ 
+            
         end
     end
 

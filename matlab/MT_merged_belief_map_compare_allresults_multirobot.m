@@ -1,12 +1,23 @@
 clear; clc; close all;
 
+%% Parameters
+divide = 0;
+color_divide = [0.85, 0.85, 0.85];
+
 %% Configuración
 % parent_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/Week18/Exp4/';
 % folder_names = {'No','2','4','6','8','10','12','14','16'};
-parent_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/Week18/Exp6/';
+parent_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/Week21/B/';
 %folder_names = {'AVS_G', 'AVS_B', 'RVS_G', 'RVS_B','AV_G','AV_B', 'RV_G', 'RV_B'};
 %folder_names = {'AVS', 'RVS', 'AV', 'RV'};
-folder_names = {'AV_G_V', 'AV_B_V', 'AV_G_VL', 'AV_B_VL'};
+%folder_names = {'AVS_G','AVS_B','AVS_DF','AVS_DA','AV_G','AV_B','AV_DF','AV_DA','AV_I'};
+%folder_names = {'4KAV_I','8KAV_I','10KAV_I','12KAV_I','14KAV_I','16KAV_I','18KAV_I','NOKAV_I'};
+%folder_names = {'RVS_G','RVS_B','RVS_DF','RVS_DA','RV_G','RV_B','RV_DF','RV_DA','RV_I'};
+%folder_names = {'AV_DA_V','AV_DA_M','AV_DA_P','AV_DF_V','AV_DF_M','AV_DF_P'};
+%folder_names = {'Explore','Balance','Exploit','Dynamic'};
+%folder_names = {'A','B','C','D','E','F','G','H','I','J','K'};
+%folder_names = {'M','N','O','P','B','C','D','E','G','I','J','K','L'};
+folder_names = {'RV_IC_V','RV_IC_VLD','RV_IC_VLP','RV_IC_RG'};
 combinedTable = table();
 
 %% Colores y nombres
@@ -51,13 +62,13 @@ ylims = {[-1,10], [-3,4], [0,40], [0,300], [0,150]};
 
 %% Subplot 1: Success rate por experimento
 subplot(1,6,1);
-% ordered_experiments = {'No','2','4','6','8','10','12','14','16'};
-%ordered_experiments = {'AV','RV'};
-%ordered_experiments = {'AVS_G', 'AVS_B', 'RVS_G', 'RVS_B','AV_G','AV_B', 'RV_G', 'RV_B'};
-%ordered_experiments = {'AVS', 'RVS', 'AV', 'RV'}
-ordered_experiments = {'AV_G_V', 'AV_B_V', 'AV_G_VL', 'AV_B_VL'};
+hold on;
+
+% Experimentos ordenados
+ordered_experiments =   {'RV_IC_V','RV_IC_VLD','RV_IC_VLP','RV_IC_RG'};
 success_rates = zeros(length(ordered_experiments), 1);
 
+% Calcular tasas de éxito
 for i = 1:length(ordered_experiments)
     exp_data = combinedTable(strcmp(combinedTable.Experiment, ordered_experiments{i}), :);
     if ~isempty(exp_data)
@@ -67,21 +78,52 @@ for i = 1:length(ordered_experiments)
     end
 end
 
-bar(categorical(ordered_experiments, ordered_experiments, 'Ordinal', true), success_rates*100, 'FaceColor', green);
-ylim([0, 100]);
+% === Fondo gris en las primeras columnas ===
+ylim_success = [0, 100];
+for j = 1:divide
+    x0 = j - 0.5;
+    x1 = j + 0.5;
+    patch([x0 x1 x1 x0], [ylim_success(1) ylim_success(1) ylim_success(2) ylim_success(2)], ...
+          color_divide, 'EdgeColor', 'none');
+end
+
+% === Gráfico de barras con índice numérico ===
+bar(1:length(success_rates), success_rates * 100, 'FaceColor', green);
+
+% Ajustes de ejes y etiquetas
+ylim(ylim_success);
 ylabel('Success rate (%)', 'FontWeight', 'bold');
 xlabel('Experiment', 'FontWeight', 'bold');
 title('Success rate', 'FontWeight', 'bold');
+xticks(1:length(ordered_experiments));
+xticklabels(ordered_experiments);
+set(gca, 'TickLabelInterpreter', 'none');  % <<--- Desactiva LaTeX
+xtickangle(90);
 grid on;
 set(gca, 'FontSize', 11, 'FontWeight', 'bold');
-xtickangle(90); % Girar etiquetas del eje X a 90 grados
+
 
 %% Subplots 2 a 6: boxplots
 for k = 1:5
     subplot(1,6,k+1); % shift by 1
+
+    % === Fondo gris para las primeras 'divide' columnas ===
+    hold on;
+    num_experiments = numel(ordered_experiments);
+    for j = 1:divide
+        x0 = j - 0.5;
+        x1 = j + 0.5;
+        ylims_current = ylims{k};
+        if isempty(ylims_current)
+            ylims_current = ylim; % usa límites automáticos si no están definidos
+        end
+        patch([x0 x1 x1 x0], [ylims_current(1) ylims_current(1) ylims_current(2) ylims_current(2)], ...
+              color_divide, 'EdgeColor', 'none');
+    end
+
+    % === Boxplot ===
     boxplot(combinedTable.(vars{k}), combinedTable.Experiment, ...
         'Colors', blue, 'Symbol', 'k+', 'Widths', 0.5, 'Whisker', 1.5);
-    hold on;
     yline(0, '--g', 'LineWidth', 1.2);
     lines = findobj(gca, 'type', 'line', 'Tag', 'Median');
     set(lines, 'Color', red);
@@ -92,8 +134,9 @@ for k = 1:5
     title(titles{k}, 'FontWeight', 'bold');
     if ~isempty(ylims{k}), ylim(ylims{k}); end
     set(gca, 'FontSize', 11, 'FontWeight', 'bold');
-    xtickangle(90); % Girar etiquetas del eje X a 90 grados
+    xtickangle(90);
 end
+
 
 sgtitle('', 'FontSize', 16, 'FontWeight', 'bold');
 

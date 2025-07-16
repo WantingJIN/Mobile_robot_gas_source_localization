@@ -27,6 +27,14 @@ extern float **obstacles;
 extern FILE *console_logfile;
 extern FILE *clustering_debugging_logfile;
 extern FILE *KLD_debugging_logfile;
+extern FILE *trajectory_logfile;
+extern FILE *cumulative_path_logfile;
+
+extern char trajectory_logfile_name[512];
+
+
+// obstacle map
+extern std::vector<int> obstacle_map;
 
 PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history)
 {
@@ -76,6 +84,86 @@ void PathPlanner::information_center_planning()
     printf("Information center goal: %f %f\n", goal_position.x, goal_position.y);
 	// debugging purpose
     fprintf(clustering_debugging_logfile, "Robot ID [%d]: Information center goal: %f %f\n", ID, goal_position.x, goal_position.y);
+}
+
+void PathPlanner::farthest_belief_point_planning()
+{
+    printf("Enter farthest belief point planning\n");
+    fprintf(console_logfile, "Enter farthest belief point planning\n");
+
+    // Convert robot position to grid coordinates
+    int robot_x = static_cast<int>((current_position.x - XMIN) / ((XMAX - XMIN) / x_nbins));
+    int robot_y = static_cast<int>((current_position.y - YMIN) / ((YMAX - YMIN) / y_nbins));
+
+    // Build 2D obstacle-aware distance map using BFS
+    std::vector<std::vector<double>> dist_map(y_nbins, std::vector<double>(x_nbins, std::numeric_limits<double>::max()));
+    std::queue<std::pair<int, int>> q;
+    dist_map[robot_y][robot_x] = 0.0;
+    q.push({robot_x, robot_y});
+
+    const std::vector<std::pair<int, int>> directions = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+        {1, 1}, {-1, -1}, {-1, 1}, {1, -1}
+    };
+
+    double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);
+    double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);
+
+    std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
+    for (int y = 0; y < y_nbins; ++y)
+        for (int x = 0; x < x_nbins; ++x)
+            obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
+
+    while (!q.empty()) {
+        auto [x, y] = q.front(); q.pop();
+        double d = dist_map[y][x];
+
+        for (const auto& [dx, dy] : directions) {
+            int nx = x + dx;
+            int ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= x_nbins || ny >= y_nbins) continue;
+            if (obstacle_map_2d[ny][nx] == 1) continue;
+
+            double cost = std::sqrt(std::pow(dx * cell_size_x, 2) + std::pow(dy * cell_size_y, 2));
+            if (dist_map[ny][nx] > d + cost) {
+                dist_map[ny][nx] = d + cost;
+                q.push({nx, ny});
+            }
+        }
+    }
+
+    // Find the cell with non-zero belief and maximum distance
+    double max_distance = -1.0;
+    int best_index = -1;
+    for (int y = 0; y < y_nbins; ++y) {
+        for (int x = 0; x < x_nbins; ++x) {
+            int idx = y * x_nbins + x;
+            if (posterior->pdf[idx] > 0 && dist_map[y][x] < std::numeric_limits<double>::max()) {
+                if (dist_map[y][x] > max_distance) {
+                    max_distance = dist_map[y][x];
+                    best_index = idx;
+                }
+            }
+        }
+    }
+
+    if (best_index == -1) {
+        printf("No reachable belief cells found. Falling back.\n");
+        fprintf(console_logfile, "No reachable belief cells found. Falling back to maximal belief planning.\n");
+        maximal_belief_planning(); // fallback
+        return;
+    }
+
+    // Convert best_index to metric coordinates
+    double best_point[2];
+    posterior->index_to_param_values(best_index, best_point);
+
+    goal_position.x = best_point[0];
+    goal_position.y = best_point[1];
+    goal_position.heading = 0;
+
+    printf("Selected farthest belief cell at: %f %f (distance %.2f m)\n", goal_position.x, goal_position.y, max_distance);
+    fprintf(console_logfile, "Selected farthest belief cell at: %f %f (distance %.2f m)\n", goal_position.x, goal_position.y, max_distance);
 }
 
 // TODO - maybe merge this to greedy_information_planning
@@ -326,6 +414,7 @@ vector<pair<CellPoint, CellPoint>> PathPlanner::clustering_information_blocks(do
 	return dbscan.cluster_bounding_boxes;
 }
 
+// useful for VisitedCells = OFF
 void PathPlanner::belief_clustering_planning()
 {
 	printf("Enter belief clustering planning \n");
@@ -379,7 +468,7 @@ void PathPlanner::belief_clustering_planning()
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
 					int pos_coord[2];
-                              position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
+                    position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
 					int idx = posterior->indices_to_index(pos_coord);
 					if (cell_visited_list[idx] == 0)
 					{
@@ -415,6 +504,106 @@ void PathPlanner::belief_clustering_planning()
 		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 }
+
+// useful for VisitedCells = ON
+// void PathPlanner::belief_clustering_planning()
+// {
+// 	printf("Enter belief clustering planning \n");
+
+// 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
+// 	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+// 	if (clusters_bounding_box.size() == 0)
+// 	{
+// 		printf("no cluster found \n");
+// 		fprintf(console_logfile, "no cluster found \n");
+// 		maximal_belief_planning();
+// 		// maximal_information_planning();
+// 		return;
+// 	}
+// 	else
+// 	{
+// 		// fprintf(console_logfile, "clusters found \n");
+// 		// Find furthest vertex of each cluster
+// 		double max_dist_to_robot;
+// 		int max_dist_to_robot_index;
+// 		vector<Position> candidate_goal;
+// 		for (int i = 0; i < clusters_bounding_box.size(); i++)
+// 		{
+// 			max_dist_to_robot = 0;
+// 			max_dist_to_robot_index = 0;
+// 			// calculate the distance of each vertex to robot
+// 			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0),
+// 								Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
+// 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
+// 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
+// 			for (int i = 0; i < 4; i++)
+// 			{
+// 				double dist = dist_to_goal(cluster_vertex[i]);
+// 				if (dist > max_dist_to_robot)
+// 				{
+// 					max_dist_to_robot = dist;
+// 					max_dist_to_robot_index = i;
+// 				}
+// 			}
+// 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
+// 		}
+// 		// find the closest unvisited point among candidate goals
+// 		double min_dist_to_robot = 1000;
+// 		int min_dist_to_robot_index = 0;
+// 		bool find_goal = false;
+// 		for (int j = 0; j < candidate_goal.size(); j++)
+// 		{
+// 			double dist = dist_to_goal(candidate_goal[j]);
+// 			if (dist < min_dist_to_robot)
+// 			{
+// 				if (simulation_parameters.visitedList == visitedList_ON)
+// 				{
+					
+
+// 					int pos_coord[2];
+//                     position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
+// 					int idx = posterior->indices_to_index(pos_coord);
+// 					if (idx >= 0 && idx < 400)
+// 					{
+// 						if (cell_visited_list[idx] == 0)
+// 						{
+// 							min_dist_to_robot = dist;
+// 							min_dist_to_robot_index = j;
+// 							find_goal = true;
+// 						}
+// 					}
+// 					else
+// 					{
+// 						fprintf(console_logfile, "ERROR: Invalid index (%d) when accessing to cell_visited_list\n", idx);
+// 					}
+// 				}
+// 				else
+// 				{
+// 					min_dist_to_robot = dist;
+// 					min_dist_to_robot_index = j;
+// 					find_goal = true;
+// 				}
+// 			}
+// 		}
+// 		if (!find_goal)
+// 		{
+// 			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
+// 			// maximal_information_planning();
+// 			maximal_belief_planning();
+// 			return;
+// 		}
+// 		else
+// 		{
+// 			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+// 			goal_position.y = candidate_goal[min_dist_to_robot_index].y;
+// 			goal_position.heading = 0;
+			
+// 		}
+
+// 		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
+// 		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+// 	}
+// }
 
 void PathPlanner::informative_clustering_planning()
 {
@@ -655,7 +844,30 @@ void PathPlanner::markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int 
 
 
 // **Main Function: Compute Accumulative Information Gain Using Dijkstra**
-void PathPlanner::accumulative_Dijkstra() {
+//void PathPlanner::accumulative_Dijkstra() {
+std::list<Position> PathPlanner::accumulative_Dijkstra(){
+	
+	// update current_position index
+	double dx = (XMAX - XMIN) / x_nbins;
+    double dy = (YMAX - YMIN) / y_nbins;
+
+    current_position.x_idx = static_cast<int>(std::floor((current_position.x - XMIN) / dx));
+    current_position.y_idx = static_cast<int>(std::floor((current_position.y - YMIN) / dy));
+
+    if (current_position.x_idx < 0) current_position.x_idx = 0; 
+	else if (current_position.x_idx >= x_nbins) current_position.x_idx = x_nbins - 1;
+
+    if (current_position.y_idx < 0) current_position.y_idx = 0; 
+	else if (current_position.y_idx >= y_nbins) current_position.y_idx = y_nbins - 1;
+
+	// Actualizar índice lineal
+    current_position.index = current_position.y_idx * x_nbins + current_position.x_idx;
+
+	std::cout << "Current position index: " << current_position.index
+              << ", x_idx: " << current_position.x_idx
+              << ", y_idx: " << current_position.y_idx
+              << std::endl;
+
      calculate_information_gain();
      reset_metrics();
     // Directions for a 8-connected grid
@@ -807,14 +1019,20 @@ void PathPlanner::accumulative_Dijkstra() {
         std::cout << "Optimal Path: ";
         for (const auto& pos : bestPath) {
             std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
+			//fprintf(cumulative_path_logfile, "%i,%f,%f,\n", FSM.n_cycles, pos.x, pos.y);
+			trajectory_logfile = fopen(trajectory_logfile_name, "a");
+			fprintf(trajectory_logfile, "%d, %f, %f\n", FSM.n_cycles, pos.x, pos.y);
+			fclose(trajectory_logfile);
         }
         std::cout << "Goal\n";
-	  goal_position.x = bestTarget.x;
-	  goal_position.y = bestTarget.y;
-	  cell_visited_list[bestTarget.index] = 1;
-	  markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, x_nbins, y_nbins, radius_neighbor, cell_visited_list);
+		goal_position.x = bestTarget.x;
+		goal_position.y = bestTarget.y;
+		cell_visited_list[bestTarget.index] = 1;
+		markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, x_nbins, y_nbins, radius_neighbor, cell_visited_list);
+		return bestPath;
     } else {
-        std::cout << "No valid path found.\n";
+    	std::cout << "No valid path found.\n";
+		return std::list<Position>();
     }
 }
 
