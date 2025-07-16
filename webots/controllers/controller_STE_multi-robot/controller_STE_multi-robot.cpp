@@ -109,6 +109,9 @@ const char *workspacePath = getenv("STE_DDPM_ROOT");
 // finite state machine
 struct FSM FSM;
 
+// nested finite state machine
+struct FSM_Sub FSM_Sub;
+
 // robot's measurements
 SampleBuffer sampleBuffer(ODOR_FILTER_LENGTH);
 
@@ -226,6 +229,10 @@ bool entered_substate_receive_pdf = false;
 bool entered_state_moving = false;
 bool entered_state_receive_goal = false;
 bool kld_subloop_upd = false;
+bool movesting_initialized = false;
+
+// transforming update_time to number of iterations
+int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_time * 1000.0 / TIME_STEP));
 
 // obstacle map
 std::vector<int> obstacle_map = {
@@ -252,7 +259,6 @@ std::vector<int> obstacle_map = {
 };
 
 int n_combine_pathplanning = 0;
-int n_movesting = 0;
 
 // =========================== FUNCTIONS ================================ //
 // debugging function
@@ -534,7 +540,7 @@ void log_kld_value()
 	double time = wb_robot_get_time();
     kld_value_logfile = fopen(kld_value_logfile_name, "a"); // append mode, to add new rows without removing the previous ones
 
-    fprintf(kld_value_logfile, "%i,%i,%f,%i,%f,%f,%f,", n_movesting, FSM.n_cycles, KLD, kld_replan, current_position.x, current_position.y, time);
+    fprintf(kld_value_logfile, "%i,%f,%i,%f,%f,%f,", FSM.n_cycles, KLD, kld_replan, current_position.x, current_position.y, time);
 
     fprintf(kld_value_logfile, "\n");
     fclose(kld_value_logfile);
@@ -2303,7 +2309,7 @@ void state_moving()
 		// verify if arrived to the goal if applicable
 		// fprintf(console_logfile, "check dist to end goal \n");
 		// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-		int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_time * 1000.0 / TIME_STEP));
+
 		double dist_threshold_movesting = 0.05;
 		distance_to_goal = dist_to_goal(goal_position);
 		if (dist_to_goal(goal_position) > dist_threshold_movesting)
@@ -2356,22 +2362,12 @@ void state_moving()
 			return;
 		}
 		
-		// Kullback–Leibler Divergence (KLD) comparison between PDFs
-		
-		// || n_meas >= 5
+		// 
+		int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update_time * 1000.0 / TIME_STEP));
+		// 
 		if ((n_time_step % compare_pdf_iterations == 0 && n_time_step != 0))
 		{
 			//start_substates = wb_robot_get_time();
-			printf("Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, n_meas);
-			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, n_meas);
-
-			printf("Robot ID [%d]: STATE_MOVESTING \n", ID);
-			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
-
-			fprintf(KLD_debugging_logfile, "FSM cycle: %i\n", FSM.n_cycles);
-			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, n_meas);
-			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered STATE_MOVESTING\n", ID);
-
 
 			FSM.state = STATE_SHARE_DIST;
 			FSM.hook = state_share_dist;
@@ -2387,7 +2383,6 @@ void state_share_dist()
 
     printf("Robot ID [%d]: STATE_SHARE_DIST\n", ID);
 	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered STATE_SHARE_DIST\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered STATE_SHARE_DIST\n", ID);
 
 
     if (posterior.pdf == NULL) {
@@ -2419,7 +2414,6 @@ void state_receive_dist()
 	{
 		printf("Robot ID [%d]: STATE_RECEIVE_DIST \n", ID);
 		fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered STATE_RECEIVE_DIST\n", ID);
-		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered STATE_RECEIVE_DIST\n", ID);
 		entered_state_receive_dist = true;
 	}
 
@@ -2521,23 +2515,153 @@ void state_receive_dist()
 
 void state_movesting()
 {
-	n_movesting++;
+
+
+
+	if (!movesting_initialized)
+	{
+		FSM_Sub.substate = SUBSTATE_MEASURING;
+		FSM_Sub.hook = substate_measuring;
+
+		FSM.subfsm = &FSM_Sub; // remember that in orthe main FSM we declared subfsm as a pointer to the struct FSM_SUb (generic)
+							// then, here we introduce the adress of the actual concrete FSM_Sub which is being used on this code	
+
+		movesting_initialized = true;	
+	}
+
+	// Ejecute sub-FSM
+	if (FSM.subfsm && FSM.subfsm->hook) {
+		FSM.subfsm->hook();  // Executes the logic of the current state (which is SUBSTATE_MEASURING!!!)
+	}
+
+	// FSM.state = SUBSTATE_ESTIMATING;
+	// FSM.hook = substate_estimating;
+}
+
+void substate_measuring()
+{
+
 	printf("Robot ID [%d]: STATE_MOVESTING\n", ID);
-	fprintf(clustering_debugging_logfile,"Robot ID [%d]: STATE_MOVESTING\n", ID);
-	fprintf(KLD_debugging_logfile,"Robot ID [%d]: STATE_MOVESTING\n", ID);
+	printf("Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, history.size);
+	fprintf(KLD_debugging_logfile, "FSM cycle: %i\n", FSM.n_cycles);
+	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Checking comparison between PDFs after %d seconds (%i iterations, %i measurements)\n", ID, simulation_parameters.update_time, compare_pdf_iterations, history.size);
+
+
+	printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 
 
 
-	FSM.state = SUBSTATE_ESTIMATING;
-	FSM.hook = substate_estimating;
+	// printf("measuring sample number %d\n", measurements.n_samples);
+	vector<double> sample_from_map;
+	// if robot is sensing while moving, saving the measurement in motion
+	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
+	{
+		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
+		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+		{
+			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
+		}
+
+		for (int i = 0; i < sample_in_motion.size; i++)
+		{
+			history.position.push_back(sample_in_motion.position[i]);
+			// if there is some post-processing, then use the sample from the gas map
+			// otherwise, use the raw sample from the robot
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+				history.measurement.push_back(sample_from_map[i]);
+			else
+				history.measurement.push_back(sample_in_motion.measurement[i]);
+			history.FSM_iter.push_back(FSM.n_cycles);
+			history.size++;
+			// mark the cell as visited
+			if (simulation_parameters.visitedList == visitedList_ON)
+			{
+				int pos_coord[2];
+				position_to_indices_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y, &pos_coord[0], &pos_coord[1]);
+				int idx = posterior.indices_to_index(pos_coord);
+				cell_visited_list[idx] = 1;
+			}
+		}
+		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Gathered %ld measurements while moving!\n", ID, sample_in_motion.measurement.size());
+		sample_in_motion.position.clear();
+		sample_in_motion.measurement.clear();
+		sample_in_motion.size = 0;
+		sample_from_map.clear();
+	}
+	// if the sampling mode is stop and go, then sample for several seconds and take the average value
+	// Only the average value is used for the estimation
+	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING)
+	{
+		// Sample for several seconds and take the average value
+		if (sampleBuffer.n_samples < ODOR_FILTER_LENGTH)
+		{
+			// continue measuring odor concentration
+			double odor_concentration = 0.0;
+			odor_read(&sampleBuffer.instant_concentration, odor_concentration);
+			// measuring wind
+			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			// printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
+			// add samples to buffers
+			sampleBuffer.add_all_to_buffer();
+			// printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
+			return;
+		}
+		else
+		{
+			// average all samples
+			sampleBuffer.average_all();
+		}
+	}
+	if (simulation_parameters.samplingMode == SENSE_WITHOUT_STOP || simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
+	{
+		// continue measuring odor concentration
+		double odor_concentration = 0.0;
+		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
+		// measuring wind
+		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+		// printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
+		// add samples to buffers
+		sampleBuffer.add_all_to_buffer();
+		sampleBuffer.average_all();
+	}
+
+	history.position.push_back({current_position.x, current_position.y, 0});
+	history.measurement.push_back(sampleBuffer.average_concentration);
+	history.FSM_iter.push_back(FSM.n_cycles);
+	history.size++;
+	history_print(history);
+
+	// mark the current cell as visited
+	if (simulation_parameters.visitedList == visitedList_ON)
+	{
+		int pos_coord[2];
+		position_to_indices_2D(current_position.x, current_position.y, &pos_coord[0], &pos_coord[1]);
+		int idx = posterior.indices_to_index(pos_coord);
+		cell_visited_list[idx] = 1;
+	}
+	// log and save
+	if (VERBOSE)
+		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
+	//log_position();
+	log_measurements();
+
+
+	// // send it to friends
+	// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
+	// {
+	// 	Message msg(ID, 1, history.position[(history.size) - 1], sampleBuffer.average_concentration, goal_position, 0);
+	// 	send_msg(msg);
+	// }
+
+	// go to estimation
+    FSM.subfsm->substate = SUBSTATE_ESTIMATING;
+    FSM.subfsm->hook = substate_estimating;
+
 }
 
 void substate_estimating()
 {
 	printf("Robot ID [%d]: SUBSTATE_ESTIMATING \n", ID);
-	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_ESTIMATING\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_ESTIMATING\n", ID);
-
 
 
 	// reinitialize
@@ -2564,16 +2688,16 @@ void substate_estimating()
 	// printf("sum posterior : %f \n", posterior.sum);
 	posterior.normalize();
 
-	FSM.state = SUBSTATE_SHARE_PDF;
-	FSM.hook = substate_share_pdf;
+    FSM.subfsm->substate = SUBSTATE_SHARE_PDF;
+    FSM.subfsm->hook = substate_share_pdf;
+
+	// FSM.state = SUBSTATE_SHARE_PDF;
+	// FSM.hook = substate_share_pdf;
 }
 
 void substate_share_pdf()
 {
 	printf("Robot ID [%d]: SUBSTATE_SHARE_PDF \n", ID);
-	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_SHARE_PDF\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_SHARE_PDF\n", ID);
-
 
 
 	if (posterior.pdf == NULL) {
@@ -2595,20 +2719,22 @@ void substate_share_pdf()
         }
     }
 
-	FSM.state = SUBSTATE_RECEIVE_PDF;
-	FSM.hook = substate_receive_pdf;
+    FSM.subfsm->substate = SUBSTATE_RECEIVE_PDF;
+    FSM.subfsm->hook = substate_receive_pdf;
+
+	// FSM.state = SUBSTATE_RECEIVE_PDF;
+	// FSM.hook = substate_receive_pdf;
 }
 
 void substate_receive_pdf()
 {
-	printf("Robot ID [%d]: SUBSTATE_RECEIVE_PDF \n", ID);
-	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_RECEIVE_PDF\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_RECEIVE_PDF\n", ID);
+
 
 
 	if (!entered_substate_receive_pdf)
 	{
-		printf("Robot ID [%d]: STATE_RECEIVE_PDF \n", ID);
+		printf("Robot ID [%d]: SUBSTATE_RECEIVE_PDF \n", ID);
+
 		entered_substate_receive_pdf = true;
 	}
 
@@ -2693,8 +2819,12 @@ void substate_receive_pdf()
 
 
 		printf("Robot ID [%d]: All robots READY. Transitioning to STATE_MERGE_PDF.\n", ID);
-		FSM.state = SUBSTATE_MERGE_PDF;
-		FSM.hook = substate_merge_pdf;
+
+		FSM.subfsm->substate = SUBSTATE_MERGE_PDF;
+		FSM.subfsm->hook = substate_merge_pdf;
+				
+		// FSM.state = SUBSTATE_MERGE_PDF;
+		// FSM.hook = substate_merge_pdf;
 
 	}
 
@@ -2703,8 +2833,6 @@ void substate_receive_pdf()
 void substate_merge_pdf()
 {
 	printf("Robot ID [%d]: SUBSTATE_MERGE_PDF \n", ID);
-	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_MERGE_PDF\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_MERGE_PDF\n", ID);
 
 
 	// Original merge without weights
@@ -2779,8 +2907,13 @@ void substate_merge_pdf()
 	}
 	else
 	{
-		FSM.state = SUBSTATE_COMPARE_PDF;
-		FSM.hook = substate_compare_pdf;
+
+		FSM.subfsm->substate = SUBSTATE_COMPARE_PDF;
+		FSM.subfsm->hook = substate_compare_pdf;
+				
+
+		// FSM.state = SUBSTATE_COMPARE_PDF;
+		// FSM.hook = substate_compare_pdf;
 	}
 
 
@@ -2789,8 +2922,6 @@ void substate_merge_pdf()
 void substate_compare_pdf()
 {
 	printf("Robot ID [%d]: SUBSTATE_COMPARE_PDF \n", ID);
-	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_COMPARE_PDF\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_COMPARE_PDF\n", ID);
 
 	n_meas = 0;
 
@@ -2802,6 +2933,9 @@ void substate_compare_pdf()
 	std::vector<std::pair<int, int>> maximum_values_actual_belief = find_top_3(actual_belief_map);
 	std::vector<std::pair<int, int>> maximum_values_proposed_pdf = find_top_3(posterior.pdf);
 
+	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Gathered %ld measurements while moving!\n", ID, sample_in_motion.measurement.size());
+
+
 	if (ID==101)
 	{
 		printf("Robot ID [%d]: KLD COMPARISON Between belief maps corresponding to:\n", ID);
@@ -2809,28 +2943,45 @@ void substate_compare_pdf()
 		for (int i = 0; i < maximum_values_actual_belief.size(); ++i) {
 			int row = maximum_values_actual_belief[i].first;
 			int col = maximum_values_actual_belief[i].second;
-			printf("Top %d: fila = %d, columna = %d\n", i + 1, row, col);
+			printf("Top %d: row = %d, column = %d\n", i + 1, row, col);
 		}
 		printf("Robot ID [%d]: PROPOSED PDF:\n", ID);
 		for (int i = 0; i < maximum_values_proposed_pdf.size(); ++i) {
 			int row = maximum_values_proposed_pdf[i].first;
 			int col = maximum_values_proposed_pdf[i].second;
-			printf("Top %d: fila = %d, columna = %d\n", i + 1, row, col);
+			printf("Top %d: row = %d, column = %d\n", i + 1, row, col);
 		}
 	}
+	fprintf(KLD_debugging_logfile, "=========================================\n");
+	fprintf(KLD_debugging_logfile, "Actual PDF:\n");
+	for (int i = 0; i < maximum_values_actual_belief.size(); ++i) {
+		int row = maximum_values_actual_belief[i].first;
+		int col = maximum_values_actual_belief[i].second;
+		fprintf(KLD_debugging_logfile, "Top %d: row = %d, column = %d\n", i + 1, row, col);
+	}
+	fprintf(KLD_debugging_logfile, "Proposed PDF:\n");
+	for (int i = 0; i < maximum_values_proposed_pdf.size(); ++i) {
+		int row = maximum_values_proposed_pdf[i].first;
+		int col = maximum_values_proposed_pdf[i].second;
+		fprintf(KLD_debugging_logfile, "Top %d: row = %d, column = %d\n", i + 1, row, col);
+	}	
+	fprintf(KLD_debugging_logfile, "=========================================\n");
+
 
 	//log_kld_value();
 
-	FSM.state = SUBSTATE_SHARE_KLD;
-	FSM.hook = substate_share_kld;
+
+	FSM.subfsm->substate = SUBSTATE_SHARE_KLD;
+	FSM.subfsm->hook = substate_share_kld;
+				
+	// FSM.state = SUBSTATE_SHARE_KLD;
+	// FSM.hook = substate_share_kld;
 }
 
 void substate_share_kld()
 {
 
 	printf("Robot ID [%d]: SUBSTATE_SHARE_KLD \n", ID);
-	fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_SHARE_KLD\n", ID);
-	fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_SHARE_KLD\n", ID);
 
 
 
@@ -2864,8 +3015,6 @@ void substate_receive_kld()
 	if (!entered_state_receive_kld)
 	{
 		printf("Robot ID [%d]: SUBSTATE_RECEIVE_KLD \n", ID);
-		fprintf(clustering_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_RECEIVE_KLD\n", ID);
-		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Entered SUBSTATE_RECEIVE_KLD\n", ID);
 		entered_state_receive_kld = true;
 	}
 
@@ -2945,7 +3094,7 @@ void substate_receive_kld()
 		fprintf(KLD_debugging_logfile, "Robot ID [%d]: Received KLDs: %f %f %f\n", ID, received_current_kld[0], received_current_kld[1], received_current_kld[2]);
 		if (abs(received_current_kld[self_index]) > simulation_parameters.KLD_thresh)
 		{
-			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Forcing transition to REGION_ALLOCATION since KLD > 0.1\n",ID);
+			fprintf(KLD_debugging_logfile, "Robot ID [%d]: Forcing transition to REGION_ALLOCATION since KLD > %f\n",ID, simulation_parameters.KLD_thresh);
 
 
 			// Keep the current BM
@@ -2965,6 +3114,11 @@ void substate_receive_kld()
 			kld_replan = 1;
 			log_kld_value();
 
+
+			// Clean sub-FSM
+    		FSM.subfsm = nullptr;  
+			movesting_initialized = false;
+
 			FSM.state = STATE_REGION_ALLOCATION;
 			FSM.hook = state_region_allocation;
 		} 
@@ -2972,6 +3126,11 @@ void substate_receive_kld()
 		{
 			kld_replan = 0;
 			log_kld_value();
+
+
+			// Clean sub-FSM
+    		FSM.subfsm = nullptr;  
+			movesting_initialized = false;
 
 			FSM.state = STATE_MOVING;
 			FSM.hook = state_moving;

@@ -49,23 +49,37 @@ typedef enum state
 	STATE_REGION_ALLOCATION = 16,
 	STATE_SHARE_DIST = 17,
 	STATE_RECEIVE_DIST = 18,
-	STATE_MOVESTING = 19,
-	SUBSTATE_ESTIMATING = 20,
-	SUBSTATE_SHARE_PDF = 21,
-	SUBSTATE_RECEIVE_PDF = 22,
-	SUBSTATE_MERGE_PDF = 23,
-	SUBSTATE_COMPARE_PDF = 24,
-	SUBSTATE_SHARE_KLD = 25,
-	SUBSTATE_RECEIVE_KLD = 26,
+	STATE_MOVESTING = 19, // sub-FSM will run here
+
+	// sub-FSM for STATE_MOVESTING
+	SUBSTATE_MEASURING = 20,
+	SUBSTATE_ESTIMATING = 21,
+	SUBSTATE_SHARE_PDF = 22,
+	SUBSTATE_RECEIVE_PDF = 23,
+	SUBSTATE_MERGE_PDF = 24,
+	SUBSTATE_COMPARE_PDF = 25,
+	SUBSTATE_SHARE_KLD = 26,
+	SUBSTATE_RECEIVE_KLD = 27,
 } eState;
 
-// finite state machine
+// Sub-FSM
+struct FSM_Sub
+{
+	int n_cycles_sub;
+	eState substate;
+	void (*hook)();
+};
+
+// Main FSM
 struct FSM
 {
 	int n_cycles;
 	eState state;
 	void (*hook)();
+
+	struct FSM_Sub *subfsm;
 };
+
 extern struct FSM FSM;
 
 // measurement history
@@ -118,6 +132,7 @@ void state_region_allocation();
 void state_share_dist();
 void state_receive_dist();
 void state_movesting();
+void substate_measuring();
 void substate_estimating();
 void substate_share_pdf();
 void substate_receive_pdf();
