@@ -17,9 +17,9 @@ SampleBuffer::SampleBuffer(){
 
 	buffer_length = 10; //default value when no length mentioned
 
-	concentration_buffer = (double*) calloc(buffer_length, sizeof(double));
-	wind_intensity_buffer = (double*) calloc(buffer_length, sizeof(double));
-	wind_angle_buffer = (double*) calloc(buffer_length, sizeof(double));
+	concentration_buffer = (float*) calloc(buffer_length, sizeof(float));
+	wind_intensity_buffer = (float*) calloc(buffer_length, sizeof(float));
+	wind_angle_buffer = (float*) calloc(buffer_length, sizeof(float));
 }
 
 SampleBuffer::SampleBuffer(int length){
@@ -34,9 +34,9 @@ SampleBuffer::SampleBuffer(int length){
 
 	buffer_length = length;
 
-	concentration_buffer = (double*) calloc(buffer_length, sizeof(double));
-	wind_intensity_buffer = (double*) calloc(buffer_length, sizeof(double));
-	wind_angle_buffer = (double*) calloc(buffer_length, sizeof(double));
+	concentration_buffer = (float*) calloc(buffer_length, sizeof(float));
+	wind_intensity_buffer = (float*) calloc(buffer_length, sizeof(float));
+	wind_angle_buffer = (float*) calloc(buffer_length, sizeof(float));
 }
 
 SampleBuffer::SampleBuffer(const SampleBuffer & to_copy_from){
@@ -52,15 +52,15 @@ SampleBuffer::SampleBuffer(const SampleBuffer & to_copy_from){
 
 	buffer_length = to_copy_from.buffer_length;
 
-	concentration_buffer = (double*) calloc(buffer_length, sizeof(double));
+	concentration_buffer = (float*) calloc(buffer_length, sizeof(float));
 	for(i = 0; i < buffer_length; i++)
 		concentration_buffer[i] = to_copy_from.concentration_buffer[i];
 
-	wind_intensity_buffer = (double*) calloc(buffer_length, sizeof(double));
+	wind_intensity_buffer = (float*) calloc(buffer_length, sizeof(float));
 	for(i = 0; i < buffer_length; i++)
 		wind_intensity_buffer[i] = to_copy_from.wind_intensity_buffer[i];
 
-	wind_angle_buffer = (double*) calloc(buffer_length, sizeof(double));
+	wind_angle_buffer = (float*) calloc(buffer_length, sizeof(float));
 	for(i = 0; i < buffer_length; i++)
 		wind_angle_buffer[i] = to_copy_from.wind_angle_buffer[i];
 }
@@ -76,9 +76,9 @@ SampleBuffer::~SampleBuffer(){
 void SampleBuffer::set_buffer_length(int length){
 	buffer_length = length;
 
-	concentration_buffer 	= (double*) realloc(concentration_buffer, 	buffer_length * sizeof(double));
-	wind_intensity_buffer 	= (double*) realloc(wind_intensity_buffer, 	buffer_length * sizeof(double));
-	wind_angle_buffer 		= (double*) realloc(wind_angle_buffer, 		buffer_length * sizeof(double));
+	concentration_buffer 	= (float*) realloc(concentration_buffer, 	buffer_length * sizeof(float));
+	wind_intensity_buffer 	= (float*) realloc(wind_intensity_buffer, 	buffer_length * sizeof(float));
+	wind_angle_buffer 		= (float*) realloc(wind_angle_buffer, 		buffer_length * sizeof(float));
 }
 
 void SampleBuffer::reset_all(){
@@ -124,7 +124,7 @@ void SampleBuffer::average_odor(){
 	//mean
 	average_concentration /= n_samples;
 	// standard deviation
-	double variance = 0;
+	float variance = 0;
 	for(int i = 0; i < n_samples; i++)
       	variance += pow(concentration_buffer[i] - average_concentration, 2);
     variance /= n_samples;
@@ -133,7 +133,7 @@ void SampleBuffer::average_odor(){
 
 void SampleBuffer::average_wind(){
 	int i=0;
-	double tmp_sin = 0, tmp_cos = 0;
+	float tmp_sin = 0, tmp_cos = 0;
 
 	average_wind_intensity /= n_samples;
 

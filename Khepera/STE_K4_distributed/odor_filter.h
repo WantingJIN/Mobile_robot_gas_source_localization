@@ -6,9 +6,9 @@
 #include <string.h>
 
 typedef struct {
-  double* buffer;
-  double max;
-  double last;
+  float* buffer;
+  float max;
+  float last;
   int length;
   int current;
 } sMaxFilter;
@@ -20,10 +20,10 @@ sMaxFilter odor_filter_make(int length);
 void odor_filter_free(sMaxFilter* f);
 
 // Adds new value to the filter and returns max
-double odor_filter_update(sMaxFilter* f, double x);
+float odor_filter_update(sMaxFilter* f, float x);
 
 // returns the average of the buffer
-double odor_filter_average(sMaxFilter* f);
+float odor_filter_average(sMaxFilter* f);
 
 // prints the values of the odor filter
 void print_filter(sMaxFilter* f);

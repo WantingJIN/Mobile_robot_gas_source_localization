@@ -6,7 +6,7 @@ sMaxFilter odor_filter_make(int length) {
   f.current = 0;    //index of the position in the array where the new sample will be written
   f.length = length;//length of the array
   f.last = 0;       //the last value put in the array (not an index)
-  f.buffer = (double*) calloc(length, sizeof (double)); //the array initialized to 0
+  f.buffer = (float*) calloc(length, sizeof (float)); //the array initialized to 0
   return f;
 }
 
@@ -16,8 +16,8 @@ void odor_filter_free(sMaxFilter* f) {
 }
 
 // Adds new value to the filter and returns max
-double odor_filter_update(sMaxFilter* f, double x) {
-  //double pop = f->buffer[f->current];
+float odor_filter_update(sMaxFilter* f, float x) {
+  //float pop = f->buffer[f->current];
   f->last = x;
 
   f->buffer[f->current++] = x;
@@ -25,14 +25,14 @@ double odor_filter_update(sMaxFilter* f, double x) {
 
   /*// If value removed was current max
   if (f->max == pop) {
-    double *p;
+    float *p;
     f->max = 0;
     for (p = f->buffer; p < f->buffer + f->length; p++)
       f->max = (*p > f->max) ? *p : f->max;
   }*/ //This method would not update the max value every iteration /!\ *
 
   // update max
-  double *p;
+  float *p;
   f->max = 0;
   for (p = f->buffer; p < f->buffer + f->length; p++)
       f->max = (*p > f->max) ? *p : f->max;
@@ -41,8 +41,8 @@ double odor_filter_update(sMaxFilter* f, double x) {
 }
 
 // returns the average of the buffer
-double odor_filter_average(sMaxFilter* f) {
-  double sum = 0;
+float odor_filter_average(sMaxFilter* f) {
+  float sum = 0;
   int i = 0;
 
   for(i=0; i<f->length; i++)

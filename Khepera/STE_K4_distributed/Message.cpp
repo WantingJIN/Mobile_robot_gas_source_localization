@@ -12,11 +12,11 @@ Message::Message(){
     finish_flag = 0; // not finished
     memset(belief_map, 0, sizeof(belief_map)); // Inicializar belief map
     params_to_buffer();
-    buffer_size = sizeof(double)*(MAP_SIZE + 7); 
+    buffer_size = sizeof(float)*(MAP_SIZE + 7); 
 
 }
 
-Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _position, int _flag, double *_belief_map){
+Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _position, int _flag, float *_belief_map){
     msg_ID = _msg_ID;
     sender_ID = _sender_ID; 
     receiver_ID = _receiver_ID; 
@@ -24,11 +24,11 @@ Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _positi
     finish_flag = _flag;
     memcpy(belief_map, _belief_map, sizeof(belief_map));
     params_to_buffer();
-    buffer_size = sizeof(double)*(MAP_SIZE + 7); // belief map + 4 additional values for msg_ID, sender_ID, receiver_ID, position
+    buffer_size = sizeof(float)*(MAP_SIZE + 7); // belief map + 4 additional values for msg_ID, sender_ID, receiver_ID, position
 }
 
 Message::Message(const void * m_buffer){
-    buffer_size = sizeof(double)*(MAP_SIZE + 7);
+    buffer_size = sizeof(float)*(MAP_SIZE + 7);
     memcpy(buffer, m_buffer, buffer_size);
     buffer_to_params();
 }

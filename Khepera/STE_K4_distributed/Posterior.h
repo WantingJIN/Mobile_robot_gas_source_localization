@@ -10,17 +10,17 @@
 class Posterior
 {
 public:
-    double sum;
-    double max;
-    double entropy;
+    float sum;
+    float max;
+    float entropy;
     int x_spatial_spread;
     int y_spatial_spread;
     int dirac_flag;
     int nbr_dimension;
     int nbr_element;
-    double *pdf;
+    float *pdf;
     int nbr_element_marginal;
-    double *source_marginal_pdf;
+    float *source_marginal_pdf;
     PlumeModel *model;
 
     // constructor : uniform distribution
@@ -41,10 +41,10 @@ public:
     // this function takes a single index in a multi-dimensional matrix and generates the indices for all the dimensions
     void index_to_indices(int index, int *indices);
     // this function takes a single index in a multi-dimensional matrix and returns the values in the matrix corresponding to that index
-    void index_to_param_values(int index, double *bin_values);
+    void index_to_param_values(int index, float *bin_values);
 
     // update the posterior pdf with the value given by sample paramter set
-    void update(double value, double *sample);
+    void update(float value, float *sample);
     //normalization
     void normalize();
     // normalization + max a posterior (value and parameter set)
@@ -58,15 +58,15 @@ public:
     void exhaustive_evaluation(struct history &history);
 
     // relative entropy calculation between one posterior pdf and another P
-    double Kullback_Leibler_divergence(Posterior P);
+    float Kullback_Leibler_divergence(Posterior P);
     // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf
     // and then generates the best goal point based on the two pdfs
-    void XYmarginal_distance_combined(Position current_position, double ratio, double *best_point);
+    void XYmarginal_distance_combined(Position current_position, float ratio, float *best_point);
 
     // log the posterior pdf
     void log_pdf(const char *file_name, char writing_mode);
     void log_marginal_pdf(const char *file_name, char writing_mode);
-    void log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas);
+    void log_relative_history_meas(const char *file_name, const char writing_mode, const vector<float> rel_history_meas);
 
 
 };

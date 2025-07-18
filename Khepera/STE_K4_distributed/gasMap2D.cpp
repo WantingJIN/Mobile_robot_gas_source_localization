@@ -1,7 +1,7 @@
 #include "gasMap2D.h"
 
 
-GasMap2D::GasMap2D(double sigma, double gamma, double scaling_param, double wind_speed, double rco){
+GasMap2D::GasMap2D(float sigma, float gamma, float scaling_param, float wind_speed, float rco){
   avg_WRt=0;
   counter_WRt=0;
 
@@ -20,7 +20,7 @@ void GasMap2D::initialize_gas_map_features(){
   y_update_range = kp.rco / y_resol;
 }
 
-void GasMap2D::configureKernelAlgorithm(double sigma, double gamma, double scaling_param, double wind_speed, double rco){
+void GasMap2D::configureKernelAlgorithm(float sigma, float gamma, float scaling_param, float wind_speed, float rco){
   kp.sigma = sigma;
   kp.gamma = gamma;
   kp.scaling_param = scaling_param;
@@ -41,7 +41,7 @@ void GasMap2D::configureKernelAlgorithm(double sigma, double gamma, double scali
 
 void GasMap2D::runKernelAlgorithm(Position current_position, float current_odor){
 
-  double x_dist = 0, y_dist = 0; //distance from sampled point from center of cells
+  float x_dist = 0, y_dist = 0; //distance from sampled point from center of cells
   //normalize received odor sample
   int idx_x = round((current_position.x - x_min) / x_resol);
   int idx_y = round((current_position.y - y_min) / y_resol);
@@ -90,7 +90,7 @@ void GasMap2D::setGaussianDivisor(){
    _gaussian_divisor= 1/(2*M_PI*pow(kp.sigma,2));
 }
 
-float GasMap2D::compute_gaussian(const double x_dist, const double y_dist){
+float GasMap2D::compute_gaussian(const float x_dist, const float y_dist){
     float a  = kp.sigma + kp.gamma*kp.wind_speed;
     float b  = kp.sigma/(1 + kp.gamma*kp.wind_speed/kp.sigma);
     //float num= (pow(x_dist,2)+ pow(y_dist,2))/ (2 * pow(kp.sigma,2));
@@ -98,7 +98,7 @@ float GasMap2D::compute_gaussian(const double x_dist, const double y_dist){
     return exp(-num)/_gaussian_divisor;
 }
 
-void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_position, vector<double> &concentrations_from_map){
+void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_position, vector<float> &concentrations_from_map){
   for(size_t i=0; i<history_position.size(); i++){
     int idx_x = round((history_position[i].x - x_min) / x_resol);
     int idx_y = round((history_position[i].y - y_min) / y_resol);

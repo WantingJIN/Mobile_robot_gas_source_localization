@@ -35,7 +35,7 @@ extern SimulationParameters simulation_parameters;
 // 		vec.setRandom();
 // 		vec = (vec.array() * dist(gen)).matrix();
 // 		return mean + transform * vec;
-// 		// return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](double x) { return dist(gen); });
+// 		// return mean + transform * Eigen::VectorXd{ mean.size() }.unaryExpr([&](float x) { return dist(gen); });
 // 	}
 // };
 
@@ -58,8 +58,8 @@ Posterior::Posterior(PlumeModel *input_model)
 	entropy = 0;
 
 	// pdf
-	// pdf = (double*) malloc (nbr_element*sizeof(double));
-	pdf = new double[nbr_element];
+	// pdf = (float*) malloc (nbr_element*sizeof(float));
+	pdf = new float[nbr_element];
 	for (i = 0; i < nbr_element; i++)
 	{
 		pdf[i] = 1 / (float)nbr_element;
@@ -79,7 +79,7 @@ Posterior::Posterior(PlumeModel *input_model)
 	int nbr_source_position_param = model->get_source_position_params_nbr();
 	for (i = 0; i < nbr_source_position_param; i++)
 		nbr_element_marginal *= model->param_list[i].nbins;
-	source_marginal_pdf = new double[nbr_element_marginal];
+	source_marginal_pdf = new float[nbr_element_marginal];
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 1 / (float)nbr_element_marginal;
 
@@ -107,8 +107,8 @@ Posterior::Posterior(PlumeModel *input_model, int zero)
 	entropy = 1;
 
 	// pdf
-	// pdf = (double*) malloc (nbr_element*sizeof(double));
-	pdf = new double[nbr_element];
+	// pdf = (float*) malloc (nbr_element*sizeof(float));
+	pdf = new float[nbr_element];
 	for (i = 0; i < nbr_element; i++)
 		pdf[i] = 0;
 
@@ -124,7 +124,7 @@ Posterior::Posterior(PlumeModel *input_model, int zero)
 	int nbr_source_position_param = model->get_source_position_params_nbr();
 	for (i = 0; i < nbr_source_position_param; i++)
 		nbr_element_marginal *= model->param_list[i].nbins;
-	source_marginal_pdf = new double[nbr_element_marginal];
+	source_marginal_pdf = new float[nbr_element_marginal];
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 0;
 }
@@ -141,11 +141,11 @@ Posterior::Posterior(const Posterior &to_copy_from)
 	nbr_element = to_copy_from.nbr_element;
 	nbr_element_marginal = to_copy_from.nbr_element_marginal;
 	// pdf
-	pdf = new double[nbr_element];
+	pdf = new float[nbr_element];
 	for (i = 0; i < nbr_element; i++)
 		pdf[i] = to_copy_from.pdf[i];
 	// marginal
-	source_marginal_pdf = new double[nbr_element_marginal];
+	source_marginal_pdf = new float[nbr_element_marginal];
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = to_copy_from.source_marginal_pdf[i];
 	// model
@@ -230,7 +230,7 @@ void Posterior::index_to_indices(int index, int *indices)
 }
 
 // this function takes a single index in a multi-dimensional matrix and returns the values in the matrix corresponding to that index
-void Posterior::index_to_param_values(int index, double *bin_values)
+void Posterior::index_to_param_values(int index, float *bin_values)
 {
 	int j = 0;
 	int indices[nbr_dimension];
@@ -253,7 +253,7 @@ void Posterior::index_to_param_values(int index, double *bin_values)
 }
 
 // update the posterior pdf with the value given by sample parameter set
-void Posterior::update(double value, double *sample)
+void Posterior::update(float value, float *sample)
 {
 	int i = 0;
 	int indices[nbr_dimension];
@@ -301,7 +301,7 @@ void Posterior::process()
 {
 	int i = 0, j = 0;
 	int indices[nbr_dimension];
-	double bin_values[nbr_dimension];
+	float bin_values[nbr_dimension];
 	max = 0;
 	for (j = 0; j < nbr_dimension; j++)
 		model->expected_value[j] = 0;
@@ -315,7 +315,7 @@ void Posterior::process()
 		if (pdf[i] > max)
 		{
 			max = pdf[i];
-			memcpy(model->max_a_post_value, bin_values, sizeof(double) * nbr_dimension);
+			memcpy(model->max_a_post_value, bin_values, sizeof(float) * nbr_dimension);
 		}
 		// expected value
 		index_to_indices(i, indices);
@@ -334,10 +334,10 @@ void Posterior::process()
 void Posterior::calculate_entropy_and_spread()
 {
 	entropy = 0;
-	double possible_source_x_index_min = x_nbins;
-	double possible_source_x_index_max = 0;
-	double possible_source_y_index_min = y_nbins;
-	double possible_source_y_index_max = 0;
+	float possible_source_x_index_min = x_nbins;
+	float possible_source_x_index_max = 0;
+	float possible_source_y_index_min = y_nbins;
+	float possible_source_y_index_max = 0;
 	int indices[nbr_dimension];
 	for (int i = 0; i < nbr_element; i++)
 	{
@@ -364,20 +364,20 @@ void Posterior::calculate_entropy_and_spread()
 }
 
 //random value sampled from a nromal distribution (solution without Eigen)
-double randn(double mu, double sigma){
+float randn(float mu, float sigma){
 	//taken from https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
-	double U1, U2, W, mult;
-	static double X1, X2;
+	float U1, U2, W, mult;
+	static float X1, X2;
 	static int call = 0;
 	
 	if(call == 1){
     	call = !call;
-      	return (mu + sigma * (double) X2);
+      	return (mu + sigma * (float) X2);
     }
 
 	do{
-      	U1 = -1 + ((double) rand () / RAND_MAX) * 2;
-    	U2 = -1 + ((double) rand () / RAND_MAX) * 2;
+      	U1 = -1 + ((float) rand () / RAND_MAX) * 2;
+    	U2 = -1 + ((float) rand () / RAND_MAX) * 2;
       	W = pow (U1, 2) + pow (U2, 2);
     } while (W >= 1 || W == 0);
  
@@ -387,7 +387,7 @@ double randn(double mu, double sigma){
  
   	call = !call;
  
-  	return (mu + sigma * (double) X1);
+  	return (mu + sigma * (float) X1);
 }
 
 
@@ -395,11 +395,11 @@ double randn(double mu, double sigma){
 void Posterior::MCMC_evaluation(struct history history)
 {
 	int i = 0, j = 0, count = simulation_parameters.MCMC_iteration_num; // number of iterations
-	double p_acceptance = 0, posterior_value = 0;
+	float p_acceptance = 0, posterior_value = 0;
 	int acceptance_rate = 0;
-	double sample[nbr_dimension];
-	double last_sample[nbr_dimension];
-	double candidate[nbr_dimension];
+	float sample[nbr_dimension];
+	float last_sample[nbr_dimension];
+	float candidate[nbr_dimension];
 
 	// initial values (maybe randomize later)
 	model->get_expected_value(sample); // copy expected value in last sample
@@ -420,13 +420,13 @@ void Posterior::MCMC_evaluation(struct history history)
 	// 	}
 	// }
 
-	double sample_likelihood = likelihood(history, sample, model);
+	float sample_likelihood = likelihood(history, sample, model);
 
 	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 	update(posterior_value, sample);
 
 	// copy sample and last_sample before starting
-	memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
+	memcpy(last_sample, sample, sizeof(float) * nbr_dimension);
 	// sampling
 	for (i = 0; i < count; i++)
 	{
@@ -445,7 +445,7 @@ void Posterior::MCMC_evaluation(struct history history)
             candidate[1] = randn(sample[1], 1);//0.1 //1
 
 		// calculate the acceptance chance
-		double candidate_likelihood = likelihood(history, candidate, model);
+		float candidate_likelihood = likelihood(history, candidate, model);
 		p_acceptance = (prior(candidate, nbr_dimension, model) * candidate_likelihood) /
 				   (prior(sample, nbr_dimension, model) * sample_likelihood);
 		if (p_acceptance > 1)
@@ -455,7 +455,7 @@ void Posterior::MCMC_evaluation(struct history history)
 		if (randu() < p_acceptance)
 		{
 			// set the next value
-			memcpy(sample, candidate, sizeof(double) * nbr_dimension);
+			memcpy(sample, candidate, sizeof(float) * nbr_dimension);
 			sample_likelihood = candidate_likelihood;
 			acceptance_rate++;
 		}
@@ -466,7 +466,7 @@ void Posterior::MCMC_evaluation(struct history history)
 		posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 		update(posterior_value, sample);
 	}
-	memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
+	memcpy(last_sample, sample, sizeof(float) * nbr_dimension);
 
 	// print of screen
 	if (acceptance_rate == 0 && VERBOSE)
@@ -479,7 +479,7 @@ void Posterior::MCMC_evaluation(struct history history)
 void Posterior::exhaustive_evaluation(struct history &history)
 {
 	int i = 0;
-	double sample[nbr_dimension];
+	float sample[nbr_dimension];
 	vector<float> slope_history_meas;
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
@@ -522,9 +522,9 @@ void Posterior::exhaustive_evaluation(struct history &history)
 }
 
 // relative entropy calculation between one posterior pdf and another P
-double Posterior::Kullback_Leibler_divergence(Posterior P)
+float Posterior::Kullback_Leibler_divergence(Posterior P)
 {
-	double KLD = 0;
+	float KLD = 0;
 	int i = 0;
 	// for each element of the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -541,13 +541,13 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 
 // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf
 // and then generates the best goal point based on the two pdfs
-void Posterior::XYmarginal_distance_combined(Position current_position, double ratio, double *best_point)
+void Posterior::XYmarginal_distance_combined(Position current_position, float ratio, float *best_point)
 {
 	int i = 0, j = 0;
-	double marginal = 0, value = 0;
-	double tmp_position[2] = {0};
-	double inv_dist[model->param_list[0].nbins][model->param_list[1].nbins];
-	double sum_inv_distance = 0;
+	float marginal = 0, value = 0;
+	float tmp_position[2] = {0};
+	float inv_dist[model->param_list[0].nbins][model->param_list[1].nbins];
+	float sum_inv_distance = 0;
 	int indices[nbr_dimension];
 
 	// find the current cell number based on the current position
@@ -589,7 +589,7 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 			marginal = source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)];
 
 			// combined value
-			double tmp_value = (ratio * marginal) + ((1 - ratio) * (inv_dist[i][j] / sum_inv_distance)); // marginal - ratio*(distance/MAX_DISTANCE);
+			float tmp_value = (ratio * marginal) + ((1 - ratio) * (inv_dist[i][j] / sum_inv_distance)); // marginal - ratio*(distance/MAX_DISTANCE);
 			// if the cell(i,j) is the best so far, its center is copied in best_point
 			if (tmp_value > value)
 			{
@@ -617,7 +617,7 @@ void Posterior::log_pdf(const char *file_name, char writing_mode)
 	fclose(posterior_pdf_3D);
 }
 
-void Posterior::log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas)
+void Posterior::log_relative_history_meas(const char *file_name, const char writing_mode, const vector<float> rel_history_meas)
 {
 	FILE *log_relative_history_meas_file = fopen(file_name, &writing_mode);
 

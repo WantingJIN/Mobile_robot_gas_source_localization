@@ -141,12 +141,12 @@ typedef enum updataGoalPolicy{
 // parameters to estimate
 struct parameters_set
 {
-	double Q;
-	double source_position[2];
-	double a_y;
-	double b_y;
-	// double a_z;
-	// double b_z;
+	float Q;
+	float source_position[2];
+	float a_y;
+	float b_y;
+	// float a_z;
+	// float b_z;
 };
 
 // simulation paramters

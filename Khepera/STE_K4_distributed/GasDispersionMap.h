@@ -19,9 +19,9 @@ public:
     float gasConcentrationMap[x_nbins][y_nbins];
     // constructor
     GasDispersionMap(int index_sx, int index_sy);
-    GasDispersionMap(double source_x, double source_y);
+    GasDispersionMap(float source_x, float source_y);
     void log_map(const char *, char writing_mode);
-    double get_concentration(int idx_x, int idx_y);
+    float get_concentration(int idx_x, int idx_y);
 };
 
 #endif

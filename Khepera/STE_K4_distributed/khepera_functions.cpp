@@ -5,7 +5,7 @@ struct sKhepera4 khepera4;
 struct sOdorboard odorboard;
 struct sWindSensorBoard windsensorboard;
 struct sBraitenberg braitenberg;
-double odor_baseline_value = 0;
+float odor_baseline_value = 0;
 sMsg STmsg;
 sUdpMsg udp_msgR;
 static int broadcastR = 1;
@@ -195,7 +195,7 @@ int initCortexComm(){
 
 void initCommRobot(){
 //   	udp_msgR.myID = ID;
-//   	udp_msgR.len = sizeof(double)*12;
+//   	udp_msgR.len = sizeof(float)*12;
 
 //   	//initialize receiver
 //   	memset(&udp_msgR.rcv.address, 0, sizeof (udp_msgR.rcv.address));
@@ -225,9 +225,9 @@ void initCommRobot(){
 }
 
 void establish_baseline(){
-    double current_odor = 0;
-    double min=10000000.0, max=0.0;
-    double filtered_concentration = 0;
+    float current_odor = 0;
+    float min=10000000.0, max=0.0;
+    float filtered_concentration = 0;
 
     printf("[%d] Establishing the odor baseline ... \n", ID);
 
@@ -311,19 +311,19 @@ void establish_baseline(){
     FSM.hook = state_moving;
 }
 
-double odor_read(){
-	double current_odor = 0;
+float odor_read(){
+	float current_odor = 0;
     while(current_odor < 0.1 ){
         odorboard_voc_get();
-        current_odor = (double) odorboard.voc.last.sensor[0];
+        current_odor = (float) odorboard.voc.last.sensor[0];
         usleep(100 * 1000);
     }
     //printf("current_odor : %f \n", current_odor);
     return current_odor;
 }
 
-double wind_read(){
-	double current_wind = 0, heading=0;
+float wind_read(){
+	float current_wind = 0, heading=0;
     windsensorboard_windsensor_get();
     current_wind = windsensorboard.windsensor.last.angle;
     //calculation
@@ -342,8 +342,8 @@ void updateCortexPos(Position * position){
     while(FrameOfData == NULL)
         FrameOfData = Cortex_GetCurrentFrame();
     
-    double new_x = 0.0;
-    double new_y = 0.0;
+    float new_x = 0.0;
+    float new_y = 0.0;
         
     //decode the received frame of data
     for(int i=0;i<FrameOfData->nBodies;i++){
@@ -384,7 +384,7 @@ void update_position() {
 }
 
 int obstacle_or_not(){
-	double sensors_value[SENSOR_NUMBER];
+	float sensors_value[SENSOR_NUMBER];
 
 	khepera4_infrared_proximity();
 
@@ -491,8 +491,8 @@ int receive_udp_msg(Message * msg){
     struct sockaddr_in sender;
     socklen_t sender_len;
     sender_len = sizeof (sender);
-    memset((char *) (*msg).buffer, '\0', sizeof(double)*12);
-    result = recvfrom(udp_msgR.rcv.sock, (*msg).buffer, sizeof(double)*12, 0, (struct sockaddr*) &sender, &sender_len);
+    memset((char *) (*msg).buffer, '\0', sizeof(float)*12);
+    result = recvfrom(udp_msgR.rcv.sock, (*msg).buffer, sizeof(float)*12, 0, (struct sockaddr*) &sender, &sender_len);
     // If reception ok
     if (result > 0 ){ //&& (*msg).buffer[1] != ID
         //printf("RECEIVED msg %f from %f for %f - (%f %f %f) %f (%f %f %f) %f %f \n", (*msg).buffer[0], (*msg).buffer[1], (*msg).buffer[2], (*msg).buffer[3], (*msg).buffer[4], (*msg).buffer[5], (*msg).buffer[6], (*msg).buffer[7], (*msg).buffer[8], (*msg).buffer[9], (*msg).buffer[10], (*msg).buffer[11], (*msg).buffer[12]);
@@ -500,7 +500,7 @@ int receive_udp_msg(Message * msg){
         //printf("RECEIVED msg %d from %d for %d \n", (*msg).msg_ID, (*msg).sender_ID, (*msg).receiver_ID);
         return 1;
     }else{
-    	memset((char *) (*msg).buffer, '\0', sizeof(double)*12);
+    	memset((char *) (*msg).buffer, '\0', sizeof(float)*12);
     	return 0;
     }
 }
@@ -530,30 +530,30 @@ int receive_tcp_msg(int sock, Message * msg){
         printf("RECEIVED msg %d from %d for %d \n", (*msg).msg_ID, (*msg).sender_ID, (*msg).receiver_ID);
         return 1;
     }else{
-        memset((char *) (*msg).buffer, '\0', sizeof(double)*(MAP_SIZE+7));
+        memset((char *) (*msg).buffer, '\0', sizeof(float)*(MAP_SIZE+7));
         //printf("Robot %d failed to receive a message\n", ID);
         return 0;   
     }
 }
 
 void go_to_goal(Position goal){
-    double movement[2]={0};
+    float movement[2]={0};
     movement[0] = (goal.x - current_position.x);
     movement[1] = (goal.y - current_position.y);
 
-    double dist = sqrt(pow(movement[0],2)+pow(movement[1],2));
+    float dist = sqrt(pow(movement[0],2)+pow(movement[1],2));
     
     movement[0] = movement[0]/dist;
     movement[1] = movement[1]/dist;
 
-    double x, y;
-    double gamma = (-1.0)*current_position.heading + PI; // the rotation of the coord. syst.
+    float x, y;
+    float gamma = (-1.0)*current_position.heading + PI; // the rotation of the coord. syst.
 
     x = movement[0]*cos(gamma) + movement[1]*sin(gamma);
     y = -movement[0]*sin(gamma) + movement[1]*cos(gamma);
 
-    double common = x;
-    double diff   = -y/2.0;  // if > 0 --> turn right
+    float common = x;
+    float diff   = -y/2.0;  // if > 0 --> turn right
 
     /*if (FSM.n_cycles == 0)
         khepera4_drive_set_speed_differential((float) 400, common, diff);
@@ -567,11 +567,11 @@ void go_to_goal(Position goal){
 	//printf("speed : %f %f \n", speed[0], speed[1]);
 }
 
-void obstacle_avoidance(double speed[2]){
+void obstacle_avoidance(float speed[2]){
 	printf("I'm avoiding obstacles... \n");
 	//double khepera3_matrix[9][2] = {{-50,-500},{-200,400},{-300,500},{150, 100},{500,-400},{400,-200},{-50,-50},{-100,-100}};
 	//double khepera3_matrix[8][2] = {{-1,1},{1,-1},{3,-3},{-3, -3},{-3,3},{-1,1},{1,-1},{0,0}};
-    double khepera4_matrix[8][2] = {{-0,1},{1,-1},{2,-2},{-3, -2},{-2,2},{-1,1},{1,-0},{0,0}};
+    float khepera4_matrix[8][2] = {{-0,1},{1,-1},{2,-2},{-3, -2},{-2,2},{-1,1},{1,-0},{0,0}};
 	//double sensors_value[SENSOR_NUMBER];
 	//double range = 1024;
 
@@ -592,14 +592,14 @@ void obstacle_avoidance(double speed[2]){
 		for (int j = 0; j < SENSOR_NUMBER; j++){
 			//printf("j = %d\n", j);
 			speed[i] += (khepera4_matrix[j][i] * khepera4.infrared_proximity.sensor[j]/20.0);//(1.0 - (sensors_value[j] / range));
-            speed[i] = bound(speed[i],-300.0, 300.0); 
+            speed[i] = bound(speed[i],static_cast<float>(-300.0), static_cast<float>(300.0)); 
 			//printf("speed[%d] = %f\n", i, speed[i]);
 		}
 		//printf("works until here\n");
 	}
 }
 
-void set_wheels_speed(double speed1, double speed2){
+void set_wheels_speed(float speed1, float speed2){
 	//khepera4_drive_set_speed_differential((float) 400, speed1, speed2);
 	//printf("speed : %d %d \n", (int)speed1, (int)speed2);
 	khepera4_drive_set_speed((int)speed1, (int)speed2);
@@ -648,18 +648,18 @@ void next_iteration_time(){
 	usleep(CONTROLLER_TIMESTAMP);
 }
 
-void log_baseline(double min_c, double max_c, double baseline_c){
+void log_baseline(float min_c, float max_c, float baseline_c){
 	baseline_measurements_logfile = fopen(baseline_measurements_logfile_name, "a");
 	fprintf(baseline_measurements_logfile,"%f, %f, %f\n", min_c, max_c, baseline_c);
 	fclose(baseline_measurements_logfile);
 }
 
-double calibrate_sensor_reading (double raw_reading){
+float calibrate_sensor_reading (float raw_reading){
     // first degree calibration -0310
-    // double a = 2.0;
-    // double b = 99;
-    double a;
-    double b;
+    // float a = 2.0;
+    // float b = 99;
+    float a;
+    float b;
 
     if (simulation_parameters.sensorCalibration == ON){
         // a = 2.9;
@@ -672,12 +672,12 @@ double calibrate_sensor_reading (double raw_reading){
         a = 1.0;
         b = 0.0;
     }
-    double calibrated_reading = (raw_reading - b) * a;
+    float calibrated_reading = (raw_reading - b) * a;
     
     
     // second degree calibration
-    //double a = 0.0008376;
-    //double calibrated_reading = a* raw_reading*raw_reading;
+    //float a = 0.0008376;
+    //float calibrated_reading = a* raw_reading*raw_reading;
     if (calibrated_reading < 0){
         calibrated_reading = 0.0;
     }
@@ -747,10 +747,10 @@ void braitenberg_init(struct sBraitenberg *braitenberg) {
     braitenberg->wait_us =  5000;
 }
 
-void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading){
-	double Ts = TIME_STEP / 1000.0; // sampling frequency
-	double reverse_sensor_reading = 0.0;
-	double tau_r = 0, tau_d = 0;
+void reverse_sensor_model(float &sensor_reading, float &previous_sensor_reading){
+	float Ts = TIME_STEP / 1000.0; // sampling frequency
+	float reverse_sensor_reading = 0.0;
+	float tau_r = 0, tau_d = 0;
 	if (simulation_parameters.gasSensor == MOX || simulation_parameters.gasSensor == NOISY_MOX)
 	{
 		tau_r = 0.72; // time constant for the rise (our default sensor)
@@ -766,7 +766,7 @@ void reverse_sensor_model(double &sensor_reading, double &previous_sensor_readin
 		tau_r = 5.19;  // time constant for the rise (very slow MOX TGS2600)
 		tau_d = 19.74; // time constant for the decay
 	}
-	double alpha = 0.0;
+	float alpha = 0.0;
 	if (sensor_reading > previous_sensor_reading) // rising phase
 		alpha = tau_r / Ts;
 	else // decaying phase

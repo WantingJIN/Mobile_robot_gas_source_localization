@@ -28,7 +28,7 @@ public:
 
     void set_to(float _x, float _y, float _heading);
 
-    double distance_from(Position p);
+    float distance_from(Position p);
 
     bool is_in_obstacle(float obs_xmin, float obs_xmax, float obs_ymin, float obs_ymax);
 

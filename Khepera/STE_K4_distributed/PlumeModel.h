@@ -30,8 +30,8 @@ typedef struct
 	float upper_limit;
 	float resolution;
 	int nbins;
-	double expected_val;
-	double max_a_post_val;
+	float expected_val;
+	float max_a_post_val;
 } parameter;
 
 /********************************************************/
@@ -48,23 +48,23 @@ public:
 	//(!!!!!!! PROTOCOL : source position x, y, (z) should be the first ones in the param_list)
 	parameter *param_list;
 	// expected values of the parameters
-	double *expected_value;
+	float *expected_value;
 	// max a posteriori values of the parameters
-	double *max_a_post_value;
+	float *max_a_post_value;
 
 	// MCMC proposal distribution's covariance sigma_i,i
-	double *covar_sig_ii;
+	float *covar_sig_ii;
 
 
 	// function that returns concentration using parameters
-	virtual float concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
-	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
-	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
+	virtual float concentration(Position robot_position, float wind_intensity, float param_list[]) = 0;
+	virtual void concentration(vector<Position> robot_position, int nbr, float wind_intensity, float param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
+	// virtual void concentration(Position robot_position[], int nbr, float wind_intensity, vector<float> &c_avg) = 0;
 
 	// read from precomputed maps
-	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg) = 0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, float wind_intensity, int soure_pos_idx, vector<float> &c_avg) = 0;
 
-	virtual float approx_concentration(Position robot_position, double wind_intensity) = 0;
+	virtual float approx_concentration(Position robot_position, float wind_intensity) = 0;
 
 	// print expected and max a posteriori values on screen
 	virtual void print_expected_val() = 0;
@@ -73,18 +73,18 @@ public:
 	virtual int get_source_position_params_nbr() = 0;
 	virtual void get_source_position_params(parameter *source_position_param_list) = 0;
 	// virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
-	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
-	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
-	virtual void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf) = 0;
+	virtual void calculate_weighted_gas_con_variance_map(float *gas_con_variance_map, float *pdf) = 0;
+	virtual void calculate_weighted_gas_con_mean_map(float *gas_con_variance_map, float *pdf) = 0;
+	virtual void calculate_weighted_gas_hit_variance_map(float *gas_hit_variance_map, float *pdf) = 0;
 	virtual void log_gas_concentration_map(char *filename, char writing_mode) = 0;
 	virtual void initialize_potential_gas_maps() = 0;
 
-	void random_params(double *random_params);
+	void random_params(float *random_params);
 
-	void get_expected_value(double *container);
-	void get_max_a_post_value(double *container);
-	void set_expected_value(double *container);
-	void set_max_a_post_value(double *container);
+	void get_expected_value(float *container);
+	void get_max_a_post_value(float *container);
+	void set_expected_value(float *container);
+	void set_max_a_post_value(float *container);
 };
 
 /********************************************************/
@@ -102,11 +102,11 @@ public:
 	~GaussianPlumeModel2D();
 
 	// returns concentration for a set of parameters and a position
-	float concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
+	float concentration(Position robot_position, float wind_intensity, float param_list[]);
+	void concentration(vector<Position> robot_position, int nbr, float wind_intensity, float param_list[], vector<float> &c_avg, vector<float> &c_std);
+	// void concentration(Position robot_position[], int nbr, float wind_intensity, vector<float> &c_avg);
 
-	float approx_concentration(Position robot_position, double wind_intensity);
+	float approx_concentration(Position robot_position, float wind_intensity);
 
 	// print expected and max a posteriori values on screen
 	void print_expected_val();
@@ -116,9 +116,9 @@ public:
 	void get_source_position_params(parameter *source_position_param_list);
 
 	void initialize_potential_gas_maps();
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf);
+	void calculate_weighted_gas_con_variance_map(float *gas_con_variance_map, float *pdf);
+	void calculate_weighted_gas_con_mean_map(float *gas_con_variance_map, float *pdf);
+	void calculate_weighted_gas_hit_variance_map(float *gas_hit_variance_map, float *pdf);
 	void log_gas_concentration_map(char *filename, char writing_mode);
 };
 
@@ -146,19 +146,19 @@ public:
 	void initialize_cell_measurement_list();
 	void load_gas_concentration_map_list_from_file(const char *filename);
 	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf);
+	void calculate_weighted_gas_con_variance_map(float *gas_con_variance_map, float *pdf);
+	void calculate_weighted_gas_con_mean_map(float *gas_con_variance_map, float *pdf);
+	void calculate_weighted_gas_hit_variance_map(float *gas_hit_variance_map, float *pdf);
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
 
-	float concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
+	float concentration(Position robot_position, float wind_intensity, float param_list[]);
+	void concentration(vector<Position> robot_position, int nbr, float wind_intensity, float param_list[], vector<float> &c_avg, vector<float> &c_std);
+	// void concentration(Position robot_position[], int nbr, float wind_intensity, vector<float> &c_avg);
 
 	// read from precomputed maps
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<float> &c_avg);
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, float wind_intensity, int soure_pos_idx, vector<float> &c_avg);
 
-	float approx_concentration(Position robot_position, double wind_intensity);
+	float approx_concentration(Position robot_position, float wind_intensity);
 
 	// print expected and max a posteriori values on screen
 	void print_expected_val();
@@ -166,7 +166,7 @@ public:
 
 	int get_source_position_params_nbr();
 	void get_source_position_params(parameter *source_position_param_list);
-	// void random_params(double * random_params);
+	// void random_params(float * random_params);
 	void log_gas_concentration_map(char *filename, char writing_mode);
 };
 

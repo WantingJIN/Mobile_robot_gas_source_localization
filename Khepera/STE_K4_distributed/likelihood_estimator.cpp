@@ -7,11 +7,11 @@ extern SimulationParameters simulation_parameters;
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)
-double likelihood_precomp(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+float likelihood_precomp(struct history &history, float *parameters, int source_pos_idx, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
-	double sum_tmp = 0;
+	float sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
@@ -50,12 +50,12 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model)
+float likelihood_rel_con(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
 {
 
 	// float sigma = 0.22;// works well for Gaussian CDF
 	float sigma = 0.35; // works well for Empirical CDF
-	double sum_tmp = 0;
+	float sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
@@ -128,11 +128,11 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 	return (exp(-0.5 * sum_tmp));
 }
 
-double likelihood(struct history &history, double *parameters, PlumeModel *model)
+float likelihood(struct history &history, float *parameters, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
-	double sum_tmp = 0;
+	float sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
@@ -193,8 +193,8 @@ void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, co
 		return;
 	}
       // normalize the measurements with max and min values
-	double max_val = *max_element(data_list.begin(), data_list.end());
-	double min_val = *min_element(data_list.begin(), data_list.end());
+	float max_val = *max_element(data_list.begin(), data_list.end());
+	float min_val = *min_element(data_list.begin(), data_list.end());
 	// printf("max: %f, min: %f\n", max_val, min_val);
 
 	for (size_t i = 0; i < data_list.size(); i++)
@@ -211,9 +211,9 @@ void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, co
 	}
 }
 
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model)
+float likelihood_gas_hit(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
 {
-	double sum_tmp = 0;
+	float sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
@@ -237,7 +237,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	int history_hit;
 	int model_hit;
 
-	double likelihood;
+	float likelihood;
 
 	//-----model and measurement fixed threshold, penalty on gas hit event difference-------
 	if (simulation_parameters.gasHitMethod == FIXED_THRES)
@@ -275,17 +275,17 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 			if (history_hit != model_hit)
 				sum_tmp += 1;
 		}
-		sum_tmp *= 0.8 * double(history.size) / (double(history.size) + 1); // best result with exp 0.5
+		sum_tmp *= 0.8 * float(history.size) / (float(history.size) + 1); // best result with exp 0.5
 		likelihood = (exp(-sum_tmp));
 	}
 	//-------------------------min max avg threshold-------------------------------
 
 	if (simulation_parameters.gasHitMethod == MIN_MAX_THRES)
 	{
-		double his_thrs = 0;
-		double mod_thrs = 0;
-		static double max_con = 0.0;
-		static double min_con = 10000.0;
+		float his_thrs = 0;
+		float mod_thrs = 0;
+		static float max_con = 0.0;
+		static float min_con = 10000.0;
 		static int max_idx = 0;
 		static int min_idx = 0;
 
@@ -331,11 +331,11 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	//-------------adaptive threshold- based on recent measurements------------------------------
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES)
 	{
-		// double lamda = 0.8; //0.5;
-		double his_thrs = 0;
-		double mod_thrs = 0;
-		double prev_mod_thrs = 0.0;
-		double prev_his_thrs = 0.0;
+		// float lamda = 0.8; //0.5;
+		float his_thrs = 0;
+		float mod_thrs = 0;
+		float prev_mod_thrs = 0.0;
+		float prev_his_thrs = 0.0;
 
 		// Dynamic thresholds computation
 		for (int i = 0; i < history.size; i++)
@@ -368,11 +368,11 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	}
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES_NUM)
 	{
-		// double lamda = 0.8; //0.5;
-		double his_thrs = 0;
-		double mod_thrs = 0;
-		double prev_mod_thrs = 0.0;
-		double prev_his_thrs = 0.0;
+		// float lamda = 0.8; //0.5;
+		float his_thrs = 0;
+		float mod_thrs = 0;
+		float prev_mod_thrs = 0.0;
+		float prev_his_thrs = 0.0;
 
 		// Dynamic thresholds computation
 		for (int i = 0; i < history.size; i++)
@@ -400,14 +400,14 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 				sum_tmp += 1;
 			}
 		}
-		sum_tmp *= 0.8 * double(history.size) / (double(history.size) + 1);
+		sum_tmp *= 0.8 * float(history.size) / (float(history.size) + 1);
 		likelihood = (exp(-sum_tmp));
 	}
 
 	return likelihood;
 }
 
-bool prior(double *parameters, int nbr_dimension, PlumeModel *model)
+bool prior(float *parameters, int nbr_dimension, PlumeModel *model)
 {
 	int i = 0;
 	bool output = 1;

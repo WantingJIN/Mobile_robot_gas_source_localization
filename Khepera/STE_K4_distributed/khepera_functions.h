@@ -78,7 +78,7 @@ extern struct FSM FSM;
 
 extern Position goal_position; //position in m
 extern Position current_position; //position in m
-extern double speed[2];
+extern float speed[2];
 // robot's position and measurement history
 extern struct history history;
 //wind vector
@@ -97,7 +97,7 @@ extern vector<int> ID_list; // IDs of the robots
 
 extern int n_time_step;
 
-extern double odor_baseline_value;
+extern float odor_baseline_value;
 
 extern std::vector<int> received_msgs;
 
@@ -145,10 +145,10 @@ int initCortexComm();
 void initCommRobot();
 void set_logfile_names();
 void establish_baseline();
-double odor_read();
-double wind_read();
+float odor_read();
+float wind_read();
 void update_position();
-void updateSwisTrack(double position[3]);
+void updateSwisTrack(float position[3]);
 void updateCortexPos(Position *position);
 int obstacle_or_not();
 void receive_from_friends();
@@ -160,18 +160,18 @@ int receive_tcp_msg(int sock, Message * msg);
 int find_index_in_ID_list(int ID, std::vector<int> &ID_list);
 
 void go_to_goal(Position goal);
-void obstacle_avoidance(double speed[2]);
-void set_wheels_speed(double speed1, double speed2);
+void obstacle_avoidance(float speed[2]);
+void set_wheels_speed(float speed1, float speed2);
 void cleaning_up();
 void next_iteration_time();
-void log_baseline(double min_c, double max_c, double baseline_c);
-double calibrate_sensor_reading (double raw_reading);
+void log_baseline(float min_c, float max_c, float baseline_c);
+float calibrate_sensor_reading (float raw_reading);
 
 
 void braitenberg_run(sBraitenberg *braitenberg);
 void braitenberg_set_obstacle_avoidance(sBraitenberg *braitenberg, int aggressivity);
 void braitenberg_init(sBraitenberg *braitenberg);
 
-void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading);
+void reverse_sensor_model(float &sensor_reading, float &previous_sensor_reading);
 
 #endif

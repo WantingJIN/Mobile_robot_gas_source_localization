@@ -10,12 +10,12 @@
 
 
 struct ComparePosition {
-      bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
+      bool operator()(const std::pair<float, Position>& a, const std::pair<float, Position>& b) {
           return a.first > b.first; // Min-heap: prioritize lower cost
       }
 };
 struct ComparePosition2 {
-      bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
+      bool operator()(const std::pair<float, Position>& a, const std::pair<float, Position>& b) {
           return a.first < b.first; // Min-heap: prioritize higher cost
       }
 };
@@ -27,14 +27,14 @@ private:
     PlumeModel *plume_model;
     struct history *history;
 
-    double gas_information_map[MAP_SIZE] = {0};
-    double scores_map[MAP_SIZE] = {0};
-    double distance_map[MAP_SIZE] = {0};
-    double acc_info_map[MAP_SIZE] = {0}; 
+    float gas_information_map[MAP_SIZE] = {0};
+    float scores_map[MAP_SIZE] = {0};
+    float distance_map[MAP_SIZE] = {0};
+    float acc_info_map[MAP_SIZE] = {0}; 
 
     // helper functions
     void reset_metrics();
-    double index_distance(int x_idx_diff, int y_idx_diff);
+    float index_distance(int x_idx_diff, int y_idx_diff);
 
     //log functions
     void log_scores_map();
@@ -42,11 +42,11 @@ private:
     void log_acc_info_map();
     void log_gas_information_map();
     // functions for Dijkstra
-    std::pair<std::vector<double>, std::unordered_map<int, Position>> computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
-    std::pair<std::vector<double>, std::unordered_map<int, Position>> computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
+    std::pair<std::vector<float>, std::unordered_map<int, Position>> computeDijkstra(Position start, std::vector<std::tuple<int, int, float>> directions);
+    std::pair<std::vector<float>, std::unordered_map<int, Position>> computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, float>> directions);
     std::list<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom);
     void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, int *cell_visited_list);
-    std::vector<Position> findOptimalPath(Position start, double target[2]);
+    std::vector<Position> findOptimalPath(Position start, float target[2]);
     //
 public:
     
@@ -70,15 +70,15 @@ public:
     std::list<Position> multi_objective_Dijkstra();
     void maximal_merged_belief_planning();
 
-    void calculate_mean_value_within_cluster(const pair<CellPoint, CellPoint> &cluster, double &mean_value, double &min_value, double &max_value);
-    double evaluate_cluster(const pair<CellPoint, CellPoint> &cluster);
-    void move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, double information_map[]);
+    void calculate_mean_value_within_cluster(const pair<CellPoint, CellPoint> &cluster, float &mean_value, float &min_value, float &max_value);
+    float evaluate_cluster(const pair<CellPoint, CellPoint> &cluster);
+    void move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, float information_map[]);
     void weighted_belief_clustering();
     void balance_expected_maximal_pdf();
     void joint_planning();
     void KLD_distance_balance();
     void goal_outside_obstacles(Position *goal);
-    vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double information_map[]);
+    vector<pair<CellPoint, CellPoint>> clustering_information_blocks(float information_map[]);
 
 };
 

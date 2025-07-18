@@ -17,7 +17,7 @@ GasDispersionMap::GasDispersionMap(int index_sx, int index_sy)
 	}
 }
 
-GasDispersionMap::GasDispersionMap(double source_x, double source_y)
+GasDispersionMap::GasDispersionMap(float source_x, float source_y)
 {
 	sx = source_x;
 	sy = source_y;
@@ -47,7 +47,7 @@ void GasDispersionMap::log_map(const char *filename, char writing_mode)
 	fclose(gas_dispersion_maps);
 }
 
-double GasDispersionMap::get_concentration(int idx_x, int idx_y)
+float GasDispersionMap::get_concentration(int idx_x, int idx_y)
 {
 	if (idx_x < 0 || idx_x >= x_nbins || idx_y < 0 || idx_y >= y_nbins)
 	{

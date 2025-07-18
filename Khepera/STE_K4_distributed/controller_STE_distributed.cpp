@@ -80,7 +80,7 @@ SampleBuffer sampleBuffer(ODOR_FILTER_LENGTH);
 Position goal_position;
 Position goal_position_team[3];
 Position current_position;
-double speed[2] = {0};
+float speed[2] = {0};
 // robot's position and measurement history
 struct history history;
 // robot's postion and meausrement during motion
@@ -112,7 +112,7 @@ vector<pair<int, int>> sock_list;
 int message_counter = 0;
 int n_time_step = 0;
 
-double previous_sensor_reading = 0.0;
+float previous_sensor_reading = 0.0;
 
 int cell_visited_list[MAP_SIZE] = {0};
 
@@ -125,7 +125,7 @@ Posterior posterior(&plume_model);
 // path planner
 PathPlanner path_planner(&plume_model, &posterior, &history);
 
-double sample_counter = 0;
+int sample_counter = 0;
 
 // gas map initialization
 // param: sigma, gamma, scaling_param, wind_speed, rco
@@ -175,18 +175,18 @@ double navigation_sampling_time_sum = 0;
 long long estimating_time_sum = 0; // computation time of the estimation part
 long long planning_time_sum = 0;   // computation time of the planning part
 
-static double belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
+static float belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
 static int received_flags[MAX_NB_ROBOTS] = {0};
-static double belief_map_merged[MAP_SIZE] = {0};
+static float belief_map_merged[MAP_SIZE] = {0};
 
 bool printed = false;
 bool entered_state_receive_pdf = false;
 
 // =========================== FUNCTIONS ================================ //
 //random value sampled from a uniform distribution
-double randu(){
+float randu(){
 	//random variable between 0 and 1
-    return (double)rand() / (double)RAND_MAX ;
+    return (float)rand() / (float)RAND_MAX ;
 }
 
 long long current_timestamp(){
@@ -211,9 +211,9 @@ void odometry_set_absolute_position_from_external(const float ex_x, const float 
 
 }
 
-double dist_to_goal(Position goal_position){
+float dist_to_goal(Position goal_position){
 	//Euclidean distance between current position to the goal
-	double dx, dy;
+	float dx, dy;
 	dx = goal_position.x-current_position.x;
 	dy = goal_position.y-current_position.y;
 	return sqrt(dx*dx+dy*dy);
@@ -426,7 +426,7 @@ void state_waiting(){
 
 void state_measuring(){
       printf("Robot ID [%d]: STATE_MEASURING \n", ID);
-	std::vector<double> sample_from_map;
+	std::vector<float> sample_from_map;
 	int history_size_before_sampling = history.size;
       if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
@@ -486,7 +486,7 @@ void state_measuring(){
 	log_position();
 	log_measurements();
 	history.position.push_back({current_position.x, current_position.y, 0.0});
-	double calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
+	float calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
 	if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
 	history.measurement.push_back(calibrated_sensor_reading);
 	// if(history.measurement[history.size] < 0) history.measurement[history.size] = 0;
@@ -503,7 +503,7 @@ void state_measuring(){
 	}
 
 	// send the measurement to the server
-	// double m_buffer[5] = {0};
+	// float m_buffer[5] = {0};
 	// int timeout = 10;
 	// int success = -1;
 
@@ -671,7 +671,7 @@ void state_updategoal()
 	if (FSM.state != STATE_FINISHED)
 	{
 		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<float>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
 		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
@@ -710,7 +710,7 @@ void state_updategoal()
 
 void state_listen(){
 	// int result;
-	// double g_buffer[2] = {0}; 
+	// float g_buffer[2] = {0}; 
 
 	// //wait for new orders
 	// result = read(sock, g_buffer, sizeof(g_buffer));
@@ -758,8 +758,8 @@ void state_moving(){
 	{
 		sample_counter++;
 		//sample and run Kernel
-		double sensor_reading = odor_read();
-		double instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
+		float sensor_reading = odor_read();
+		float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
 		if (instant_concentration < 0) instant_concentration = 0;
 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
@@ -862,7 +862,7 @@ void state_send_goal()
 	if (FSM.state != STATE_FINISHED)
 	{
 		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<float>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
 		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
@@ -962,7 +962,7 @@ void state_receive_pdf()
 	{
 		if (!printed && posterior.pdf != nullptr)
 		{
-			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(double));
+			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(float));
 			printed = true;
 		}
 
@@ -978,7 +978,7 @@ void state_receive_pdf()
 			return;
 		} else {
 			int sender_index = find_index_in_ID_list(msg.sender_ID, simulation_parameters.ID_list);
-			memcpy(belief_maps[sender_index], msg.belief_map, sizeof(double)*MAP_SIZE);
+			memcpy(belief_maps[sender_index], msg.belief_map, sizeof(float)*MAP_SIZE);
 			received_flags[sender_index] = 1;
 		}
 		
@@ -1034,7 +1034,7 @@ void state_merge_pdf()
 	}
 
 	// normalize belief map
-	double sum = 0.0;
+	float sum = 0.0;
 	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		sum += belief_map_merged[i];
@@ -1055,7 +1055,7 @@ void state_merge_pdf()
 		printf("%f ", belief_map_merged[i]);
 	}
 	printf("\n");
-	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
+	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(float));
       // Check the stopping condition after merging
 	posterior.process();
       posterior.calculate_entropy_and_spread();

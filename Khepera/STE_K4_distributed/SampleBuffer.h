@@ -9,17 +9,17 @@ class SampleBuffer{
     //sample counter
     int n_samples;
     //odor
-    double* concentration_buffer;
-    double instant_concentration;
-    double average_concentration;
-    double stdDev_concentration;
+    float* concentration_buffer;
+    float instant_concentration;
+    float average_concentration;
+    float stdDev_concentration;
     //wind 
-    double* wind_intensity_buffer;
-    double instant_wind_intensity;
-    double average_wind_intensity;
-    double* wind_angle_buffer;
-    double instant_wind_angle;
-    double average_wind_angle;
+    float* wind_intensity_buffer;
+    float instant_wind_intensity;
+    float average_wind_intensity;
+    float* wind_angle_buffer;
+    float instant_wind_angle;
+    float average_wind_angle;
     //!\ angle must be in radian [0,2PI]
 
     //default constructor

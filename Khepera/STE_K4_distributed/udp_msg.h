@@ -34,23 +34,23 @@ typedef struct sUdpMsg {
 typedef struct robot_data {
   int id;
   int state;
-  double odor;
+  float odor;
   //int rcv_id;
   float X;  
   float Y;  
   float Z;  
   float Angle;
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
   int IDs[N];
 
   //int placeholder;
-  double range[N][N];
-  double bearingH[N][N];
-  double bearingV[N][N];
+  float range[N][N];
+  float bearingH[N][N];
+  float bearingV[N][N];
 
-  double windAngle[N];
+  float windAngle[N];
 } sRobotData;
 
 extern sUdpMsg udp_msg;

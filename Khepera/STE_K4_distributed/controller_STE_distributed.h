@@ -70,8 +70,8 @@ struct history{
 // message structure
 struct message{
 	int sender_ID;
-	double position[3];
-	double concentration;
+	float position[3];
+	float concentration;
 	int termination_flag;
 };
 
@@ -110,20 +110,20 @@ void state_share_pdf();
 void state_region_allocation();
 void state_updategoal_team();
 
-double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
-double likelihood(struct history history, struct parameters_set parameters);
-double prior(struct parameters_set parameters);
+float pseudo_gaussian_plume_model(float robot_position[], float wind_intensity, struct parameters_set parameters);
+float likelihood(struct history history, struct parameters_set parameters);
+float prior(struct parameters_set parameters);
 
-double randu();
+float randu();
 long long current_timestamp();
 void ack_msg(Message msg);
 
-double target_evaluation(double position[][3]);
-void get_gps_position(double external_gps_position[3]);
+float target_evaluation(float position[][3]);
+void get_gps_position(float external_gps_position[3]);
 int obstacle_or_not();
 void do_odometry(Position *position);
 void odometry_set_absolute_position_from_external(const float ex_x, const float ex_y, const float ex_heading);
-double dist_to_goal(Position goal);
+float dist_to_goal(Position goal);
 
 bool check_stop_condition();
 void broadcast_state_finished();

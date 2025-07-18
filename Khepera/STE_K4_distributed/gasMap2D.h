@@ -29,32 +29,32 @@ struct KernelParameters {
 
 class GasMap2D{
   public:
-    double gasWeightConMap[map_x_nbins][map_y_nbins];
-    double gasAverConMap[map_x_nbins][map_y_nbins];
-    double gasWeightMap[map_x_nbins][map_y_nbins];
-    double gasConfidenceMap[map_x_nbins][map_y_nbins];
+    float gasWeightConMap[map_x_nbins][map_y_nbins];
+    float gasAverConMap[map_x_nbins][map_y_nbins];
+    float gasWeightMap[map_x_nbins][map_y_nbins];
+    float gasConfidenceMap[map_x_nbins][map_y_nbins];
 
-    double x_min;
-    double y_min;
-    double x_max;
-    double y_max;
-    double x_resol;
-    double y_resol;
-    double x_update_range;
-    double y_update_range;
+    float x_min;
+    float y_min;
+    float x_max;
+    float y_max;
+    float x_resol;
+    float y_resol;
+    float x_update_range;
+    float y_update_range;
 
     
-    GasMap2D(double sigma, double gamma, double scaling_param, double wind_speed, double rco);
-    void configureKernelAlgorithm(double sigma, double gamma, double scaling_param, double wind_speed, double rco);
+    GasMap2D(float sigma, float gamma, float scaling_param, float wind_speed, float rco);
+    void configureKernelAlgorithm(float sigma, float gamma, float scaling_param, float wind_speed, float rco);
     void runKernelAlgorithm(Position current_position, float current_odor);
     KernelParameters kp;
     void initialize_gas_map_features();
-    void retrieve_readings_from_gasmap(const vector<Position> history_position, vector<double> &concentrations_from_map);
+    void retrieve_readings_from_gasmap(const vector<Position> history_position, vector<float> &concentrations_from_map);
 
     
   private:
     //Eigen::Matrix2f _sigma_matrix;
-    double _sigma_matrix[2][2];
+    float _sigma_matrix[2][2];
     float _gaussian_divisor;
     float avg_WRt;
     float counter_WRt;
@@ -62,7 +62,7 @@ class GasMap2D{
     void setBinBorders(int n_bins);
     void setSigmaMatrix();
     void setGaussianDivisor();
-    float compute_gaussian(const double x_dist, const double y_dist);
+    float compute_gaussian(const float x_dist, const float y_dist);
 
 };
 

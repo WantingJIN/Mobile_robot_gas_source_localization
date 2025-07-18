@@ -38,9 +38,9 @@ void PathPlanner::maximal_belief_planning()
 {
 	printf("Enter maximal belief planning \n");
 	fprintf(console_logfile, "Enter maximal belief planning \n");
-	double best_point[2] = {0};
+	float best_point[2] = {0};
 	// find the maximal variance in gas variance map
-	double max_pdf = 0;
+	float max_pdf = 0;
 	int max_pdf_index = 0;
 	for (int i = 0; i < MAP_SIZE; i++)
 	{
@@ -63,7 +63,7 @@ void PathPlanner::maximal_belief_planning()
 	}
 	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
 
-	double epsilon = 1e-9;
+	float epsilon = 1e-9;
 	if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
 	{
 		printf("all the probable points have been visited \n");
@@ -99,8 +99,8 @@ bool PathPlanner::position_outside_arena(Position p)
 void PathPlanner::KLD_informative_goal_selection()
 {
 	float p0 = 0.5; // 50 cm
-	double KLD = 0, max_KLD = -100;
-	// double position[1][3] = {{0}};
+	float KLD = 0, max_KLD = -100;
+	// float position[1][3] = {{0}};
 	Position tmp_position;
 	struct history fake_history;
 	fake_history.position = history->position;
@@ -166,8 +166,8 @@ void PathPlanner::random_planning()
 	do
 	{
 		goal_position.heading = 0;
-		goal_position.x = (((double)rand() / (double)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + XMIN;
-		goal_position.y = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + YMIN;
+		goal_position.x = (((float)rand() / (float)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + XMIN;
+		goal_position.y = (((float)rand() / (float)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + YMIN;
 	} while (goal_position.is_in_obstacle_list(obstacles, nbr_obs) != -1);
 }
 
@@ -176,8 +176,8 @@ void PathPlanner::lawnmower_planning()
 {
 	printf("Enter lawnmower planning \n");
 	int static direction = 1;
-	double x_step = 1.0;
-	double y_step = 4;
+	float x_step = 1.0;
+	float y_step = 4;
 	goal_position.y = current_position.y + direction * y_step;
 	goal_position.x = current_position.x;
 	goal_position.heading = 0;
@@ -218,7 +218,7 @@ void PathPlanner::calculate_information_gain()
 }
 
 
-double PathPlanner::index_distance(int x_idx_diff, int y_idx_diff){
+float PathPlanner::index_distance(int x_idx_diff, int y_idx_diff){
 	return sqrt(pow(x_idx_diff * x_resol, 2) + pow(y_idx_diff * y_resol, 2));
 }
 
@@ -228,9 +228,9 @@ void PathPlanner::maximal_information_planning()
 	printf("Enter maximal information planning \n");
 	fprintf(console_logfile, "Enter maximal information planning \n");
 	calculate_information_gain();
-	double best_point[2] = {0};
+	float best_point[2] = {0};
 	// find the maximal variance in gas variance map
-	double max_info = 0;
+	float max_info = 0;
 	int max_info_index = 0;
 	for (int i = 0; i < MAP_SIZE; i++)
 	{
@@ -253,7 +253,7 @@ void PathPlanner::maximal_information_planning()
 	}
 	fprintf(console_logfile, "max_info : %f , max_info_iter: %d\n", max_info, max_info_index);
 
-	double epsilon = 1e-9;
+	float epsilon = 1e-9;
 	if (fabs(max_info - 0.0) < epsilon) // all the informative points have been visited
 	{
 		printf("all the informative points have been visited \n");
@@ -270,7 +270,7 @@ void PathPlanner::maximal_information_planning()
 	goal_position.heading = 0;
 }
 
-vector<pair<CellPoint, CellPoint>> PathPlanner::clustering_information_blocks(double information_map[])
+vector<pair<CellPoint, CellPoint>> PathPlanner::clustering_information_blocks(float information_map[])
 {
 	// dbscan clustering
 	// param: x_eps, y_eps, minPts, ratio
@@ -297,7 +297,7 @@ void PathPlanner::belief_clustering_planning()
 	{
 		// fprintf(console_logfile, "clusters found \n");
 		// Find furthest vertex of each cluster
-		double max_dist_to_robot;
+		float max_dist_to_robot;
 		int max_dist_to_robot_index;
 		vector<Position> candidate_goal;
 		for (size_t i = 0; i < clusters_bounding_box.size(); i++)
@@ -311,7 +311,7 @@ void PathPlanner::belief_clustering_planning()
 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
 			for (int i = 0; i < 4; i++)
 			{
-				double dist = dist_to_goal(cluster_vertex[i]);
+				float dist = dist_to_goal(cluster_vertex[i]);
 				if (dist > max_dist_to_robot)
 				{
 					max_dist_to_robot = dist;
@@ -321,12 +321,12 @@ void PathPlanner::belief_clustering_planning()
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
 		// find the closest unvisited point among candidate goals
-		double min_dist_to_robot = 1000;
+		float min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
 		for (size_t j = 0; j < candidate_goal.size(); j++)
 		{
-			double dist = dist_to_goal(candidate_goal[j]);
+			float dist = dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
@@ -385,7 +385,7 @@ void PathPlanner::informative_clustering_planning()
 	{
 		// fprintf(console_logfile, "clusters found \n");
 		// Find furthest vertex of each cluster
-		double max_dist_to_robot;
+		float max_dist_to_robot;
 		int max_dist_to_robot_index;
 		vector<Position> candidate_goal;
 		for (size_t i = 0; i < clusters_bounding_box.size(); i++)
@@ -399,7 +399,7 @@ void PathPlanner::informative_clustering_planning()
 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
 			for (int i = 0; i < 4; i++)
 			{
-				double dist = dist_to_goal(cluster_vertex[i]);
+				float dist = dist_to_goal(cluster_vertex[i]);
 				if (dist > max_dist_to_robot)
 				{
 					max_dist_to_robot = dist;
@@ -409,12 +409,12 @@ void PathPlanner::informative_clustering_planning()
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
 		// find the closest unvisited point among candidate goals
-		double min_dist_to_robot = 1000;
+		float min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
 		for (size_t j = 0; j < candidate_goal.size(); j++)
 		{
-			double dist = dist_to_goal(candidate_goal[j]);
+			float dist = dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
@@ -458,22 +458,22 @@ void PathPlanner::informative_clustering_planning()
 // **Dijkstra’s Algorithm with Path Tracking**
 
 
-std::pair<std::vector<double>, std::unordered_map<int, Position>> 
-PathPlanner::computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions) {
+std::pair<std::vector<float>, std::unordered_map<int, Position>> 
+PathPlanner::computeDijkstra(Position start, std::vector<std::tuple<int, int, float>> directions) {
     
     std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
-    std::priority_queue<std::pair<double, Position>, 
-                        std::vector<std::pair<double, Position>>, 
+    std::priority_queue<std::pair<float, Position>, 
+                        std::vector<std::pair<float, Position>>, 
                         ComparePosition> pq;
 
-    std::vector<double> dist_map(MAP_SIZE, 1e3);
+    std::vector<float> dist_map(MAP_SIZE, 1e3);
     dist_map[start.index] = 0;
     pq.push({0, start});
     while (!pq.empty()) {
         //auto [currentDist, pos] = pq.top();
 	  // make it to work with c++14
 	  auto top = pq.top();
-	  double currentDist = top.first;
+	  float currentDist = top.first;
         Position pos = top.second;
         pq.pop();
 	
@@ -486,11 +486,11 @@ PathPlanner::computeDijkstra(Position start, std::vector<std::tuple<int, int, do
 	  for (size_t i = 0; i < directions.size(); i++) {
 		int dx = std::get<0>(directions[i]);
 		int dy = std::get<1>(directions[i]);
-		double rel_dist = std::get<2>(directions[i]);
+		float rel_dist = std::get<2>(directions[i]);
             int nx = x + dx, ny = y + dy;
 		Position neg(nx, ny); 
             if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
-                double newDist = currentDist + rel_dist;
+                float newDist = currentDist + rel_dist;
 		    if (newDist < dist_map[neg.index]) {
                     dist_map[neg.index] = newDist;
                     pq.push({newDist, neg});
@@ -502,18 +502,18 @@ PathPlanner::computeDijkstra(Position start, std::vector<std::tuple<int, int, do
     return {dist_map, cameFrom};
 }
 
-std::pair<std::vector<double>, std::unordered_map<int, Position>> 
-PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions) {
+std::pair<std::vector<float>, std::unordered_map<int, Position>> 
+PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, float>> directions) {
     
     std::unordered_map<int, Position> cameFrom; // Stores the parent of each cell
-    std::priority_queue<std::pair<double, Position>, 
-                        std::vector<std::pair<double, Position>>, 
+    std::priority_queue<std::pair<float, Position>, 
+                        std::vector<std::pair<float, Position>>, 
                         ComparePosition2> pq;
 
-    double start_dist = 0.0;
-    double start_info = gas_information_map[start.index];
-    double start_obj = simulation_parameters.scoreSigma * start_info - (1 - simulation_parameters.scoreSigma) * start_dist;
-    std::vector<double> obj_map(MAP_SIZE, -1e3);
+    float start_dist = 0.0;
+    float start_info = gas_information_map[start.index];
+    float start_obj = simulation_parameters.scoreSigma * start_info - (1 - simulation_parameters.scoreSigma) * start_dist;
+    std::vector<float> obj_map(MAP_SIZE, -1e3);
     obj_map[start.index] = start_obj;
     pq.push({start_obj, start});
     int step_counter = 0;
@@ -523,7 +523,7 @@ PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, in
         //auto [currentObj, pos] = pq.top();
 	  // make it to work with c++14
 	  auto top = pq.top();
-	  double currentObj = top.first;
+	  float currentObj = top.first;
         Position pos = top.second;
         pq.pop();
 	   
@@ -537,7 +537,7 @@ PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, in
 	  for (size_t i = 0; i < directions.size(); i++) {
 		int dx = std::get<0>(directions[i]);
 		int dy = std::get<1>(directions[i]);
-		double rel_dist = std::get<2>(directions[i]);
+		float rel_dist = std::get<2>(directions[i]);
             int nx = x + dx, ny = y + dy;
 		Position neg(nx, ny); 
 		// when the neg is already in the path, skip it
@@ -561,12 +561,12 @@ PathPlanner::computeMultiDijkstra(Position start, std::vector<std::tuple<int, in
 		if (in_path) continue;
 		if (nx >= 0 && ny >= 0 && nx < x_nbins && ny < y_nbins && neg.is_in_obstacle_list(obstacles, nbr_obs)==-1) {
                 // normalize the relative distance
-		    double normalized_rel_dist = (1 - simulation_parameters.scoreSigma) * rel_dist / (index_distance(1, 1) * simulation_parameters.planning_step);
+		    float normalized_rel_dist = (1 - simulation_parameters.scoreSigma) * rel_dist / (index_distance(1, 1) * simulation_parameters.planning_step);
                 // the gas information map is already normalized (at least for PDF)
-		    double normalized_info_gain = simulation_parameters.scoreSigma * gas_information_map[neg.index];
-		    double relativeObj = normalized_info_gain - normalized_rel_dist;
+		    float normalized_info_gain = simulation_parameters.scoreSigma * gas_information_map[neg.index];
+		    float relativeObj = normalized_info_gain - normalized_rel_dist;
 		    //printf("normalized rel dist: %f, normalized info gain: %f, relative obj: %f \n", normalized_rel_dist, normalized_info_gain, relativeObj);
-		    double newObj = currentObj + relativeObj;
+		    float newObj = currentObj + relativeObj;
 		    if (newObj > obj_map[neg.index]) {
                     obj_map[neg.index] = newObj;
                     pq.push({newObj, neg});
@@ -629,7 +629,7 @@ void PathPlanner::accumulative_Dijkstra() {
      calculate_information_gain();
      reset_metrics();
     // Directions for a 8-connected grid
-    std::vector<std::tuple<int, int, double>> directions = {
+    std::vector<std::tuple<int, int, float>> directions = {
 	std::make_tuple(-1, 0, index_distance(-1, 0)),
 	std::make_tuple(1, 0, index_distance(1, 0)),
 	std::make_tuple(0, -1, index_distance(0, -1)),
@@ -643,15 +643,15 @@ void PathPlanner::accumulative_Dijkstra() {
     //auto [distanceMap, cameFrom] = computeDijkstra(current_position, directions);
     // make it to work with c++14
     auto result = computeMultiDijkstra(current_position, directions);
-    std::vector<double> distanceMap = result.first;
+    std::vector<float> distanceMap = result.first;
     std::unordered_map<int, Position> cameFrom = result.second;
 
-    double bestScore = -1000; // Initialize the best score
+    float bestScore = -1000; // Initialize the best score
     Position bestTarget;
     std::list<Position> bestPath;
 
-    double min_acc_info = 1e9, max_acc_info = -1e9;
-    double min_dist = 1e9, max_dist = -1e9;
+    float min_acc_info = 1e9, max_acc_info = -1e9;
+    float min_dist = 1e9, max_dist = -1e9;
 
     int radius_neighbor = 2;
 
@@ -660,7 +660,7 @@ void PathPlanner::accumulative_Dijkstra() {
 		Position cell(x_idx,y_idx);
             if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
 
-            double pathLength = distanceMap[cell.index];
+            float pathLength = distanceMap[cell.index];
 
             if (pathLength == 1e3) continue; // Unreachable cell
  
@@ -672,7 +672,7 @@ void PathPlanner::accumulative_Dijkstra() {
 		} 
 
             // **Accumulate total information gain along the path**
-            double totalInfo = 0.0;
+            float totalInfo = 0.0;
 		if (simulation_parameters.infoSum == LINEAR_SUM){
 			for (const auto& pos : dij_path) {		    
 				totalInfo += gas_information_map[pos.index]; // Sum information along the path
@@ -705,14 +705,14 @@ void PathPlanner::accumulative_Dijkstra() {
         	} else {
             	acc_info_map[cell.index] = 0; // Avoid division by zero
        	}
-		double totalInfo = acc_info_map[cell.index];
+		float totalInfo = acc_info_map[cell.index];
 
         	if (max_dist != min_dist) {
             	distance_map[cell.index] = (distance_map[cell.index] - min_dist) / (max_dist - min_dist);
        	} else {
             	distance_map[cell.index] = 0; // Avoid division by zero
         	}
-		double pathLength = distance_map[cell.index];
+		float pathLength = distance_map[cell.index];
             
             if (totalInfo < 1e-2) continue; // Skip no information gain cells
 		// skip visited cells
@@ -722,18 +722,18 @@ void PathPlanner::accumulative_Dijkstra() {
 		}
 
 		// **Compute the score based on information-to-distance trade-off**
-            double score;
+            float score;
             if (simulation_parameters.scoreFun == RATIO)
 		{
-			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(0.0, pathLength);
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(0.0, static_cast<double>(pathLength));
 		}
 		if (simulation_parameters.scoreFun == LOG)
 		{
-			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(0.0, pathLength) + 1);
+			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(0.0, static_cast<double>(pathLength)) + 1);
 		}
 		if (simulation_parameters.scoreFun == SIGMOID)
 		{
-			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(0.0, pathLength)));
+			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(0.0, static_cast<double>(pathLength))));
 		}
 		if (simulation_parameters.scoreFun == SUM)
 		{
@@ -743,7 +743,7 @@ void PathPlanner::accumulative_Dijkstra() {
 			}
 			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
 				// in the beginning, when the uncertainty is high, the dynamic weight is smaller
-				double dynamic_weight = 1.0 - posterior->entropy / simulation_parameters.weighting_entropy_ratio;
+				float dynamic_weight = 1.0 - posterior->entropy / simulation_parameters.weighting_entropy_ratio;
 				if (dynamic_weight < 0.0)
 					dynamic_weight = 0.0;
 				score = dynamic_weight * totalInfo - (1.0 - dynamic_weight) * pathLength;
@@ -757,7 +757,7 @@ void PathPlanner::accumulative_Dijkstra() {
 			}
 			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_ADP){
 				// in the beginning, when the uncertainty is high, the dynamic weight is smaller
-				double dynamic_weight = 1.0 - posterior->entropy / simulation_parameters.weighting_entropy_ratio;
+				float dynamic_weight = 1.0 - posterior->entropy / simulation_parameters.weighting_entropy_ratio;
 				if (dynamic_weight < 0.0)
 					dynamic_weight = 0.0;
 				score = dynamic_weight * (exp(totalInfo) - 1.0) - (1.0 - dynamic_weight) * pathLength;
@@ -802,12 +802,12 @@ void PathPlanner::accumulative_Dijkstra() {
 
 std::list<Position> PathPlanner::multi_objective_Dijkstra() {
      printf("Enter multi_objective_Dijkstra \n");
-     double bestScore = -1e2; // Initialize the best score
+     float bestScore = -1e2; // Initialize the best score
      Position bestTarget;
      std::list<Position> bestPath;
      calculate_information_gain();
      
-      std::vector<std::tuple<int, int, double>> directions = {
+      std::vector<std::tuple<int, int, float>> directions = {
 		std::make_tuple(-1, 0, index_distance(-1, 0)),
 		std::make_tuple(1, 0, index_distance(1, 0)),
 		std::make_tuple(0, -1, index_distance(0, -1)),
@@ -822,14 +822,14 @@ std::list<Position> PathPlanner::multi_objective_Dijkstra() {
      //auto [costMap, cameFrom] = computeMultiDijkstra(current_position, directions);
      // make it to work with c++14
      auto result = computeMultiDijkstra(current_position, directions);
-     std::vector<double> costMap = result.first;
+     std::vector<float> costMap = result.first;
      std::unordered_map<int, Position> cameFrom = result.second;
      
 	for (int y_idx = 0; y_idx < y_nbins; y_idx++) {
 		for (int x_idx = 0; x_idx < x_nbins; x_idx++) {
 			Position cell(x_idx,y_idx);
 			if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
-			double cost = costMap[cell.index];
+			float cost = costMap[cell.index];
 			scores_map[cell.index] = cost;
 			if (cost == -1e3) continue; // Unreachable cell
 			if (cost > bestScore) {
@@ -868,18 +868,18 @@ std::list<Position> PathPlanner::multi_objective_Dijkstra() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void PathPlanner::calculate_mean_value_within_cluster(const pair<CellPoint, CellPoint> &cluster, double &mean_value, double &min_value, double &max_value)
+void PathPlanner::calculate_mean_value_within_cluster(const pair<CellPoint, CellPoint> &cluster, float &mean_value, float &min_value, float &max_value)
 {
 
-	double total_value = 0.0;
+	float total_value = 0.0;
 	int count = 0;
 	int bin_values[2];
 	int index_mean;
-	double value;
+	float value;
 
 	// Initialiser min et max avec des valeurs appropriées
-	min_value = std::numeric_limits<double>::max();	   // Valeur initiale très élevée
-	max_value = std::numeric_limits<double>::lowest(); // Valeur initiale très basse
+	min_value = std::numeric_limits<float>::max();	   // Valeur initiale très élevée
+	max_value = std::numeric_limits<float>::lowest(); // Valeur initiale très basse
 
 	// Iterate on the cluster zone
 	for (int x = cluster.first.x; x <= cluster.second.x; ++x)
@@ -912,35 +912,35 @@ void PathPlanner::calculate_mean_value_within_cluster(const pair<CellPoint, Cell
 	mean_value = (count > 0) ? (total_value / count) : 0.0;
 }
 
-double PathPlanner::evaluate_cluster(const pair<CellPoint, CellPoint> &cluster)
+float PathPlanner::evaluate_cluster(const pair<CellPoint, CellPoint> &cluster)
 {
 	// Assuming you have a way to calculate the mean value inside the cluster
-	double mean_value, mean_value_min, mean_value_max;
+	float mean_value, mean_value_min, mean_value_max;
 	calculate_mean_value_within_cluster(cluster, mean_value, mean_value_min, mean_value_max);
-	double mean_value_normed = (mean_value - mean_value_min) / (mean_value_max - mean_value_min);
+	float mean_value_normed = (mean_value - mean_value_min) / (mean_value_max - mean_value_min);
 	// Calculate the centroid of the cluster for distance measurement
-	double centroid_idx_x = (cluster.first.x + cluster.second.x) / 2.0;
-	double centroid_idx_y = (cluster.first.y + cluster.second.y) / 2.0;
+	float centroid_idx_x = (cluster.first.x + cluster.second.x) / 2.0;
+	float centroid_idx_y = (cluster.first.y + cluster.second.y) / 2.0;
 
 	Position centroid(centroid_idx_x, centroid_idx_y, 0);
 
 	// Calculate the traveling distance to the centroid
-	double TD = dist_to_goal(centroid); // en m
-      double TD_min = 0;
-      double TD_max = sqrt((source_y_max - source_y_min) * (source_y_max - source_y_min) + (source_x_max - source_x_min) * (source_x_max - source_x_min));
-	double TD_normed = 1 - (TD - TD_min) / (TD_max - TD_min); // en m
+	float TD = dist_to_goal(centroid); // en m
+    float TD_min = 0;
+    float TD_max = sqrt((source_y_max - source_y_min) * (source_y_max - source_y_min) + (source_x_max - source_x_min) * (source_x_max - source_x_min));
+	float TD_normed = 1 - (TD - TD_min) / (TD_max - TD_min); // en m
 	// Combine the mean value and traveling distance into a score
 	// weights to be adjusted
-	double score = mean_value_normed / TD_normed;
+	float score = mean_value_normed / TD_normed;
 
 	return score;
 }
 
-void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, double information_map[])
+void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &cluster, float information_map[])
 {
-	double total_x = 0.0;
-	double total_y = 0.0;
-	double total_value = 0.0; // To compute the weighted average based on gas values
+	float total_x = 0.0;
+	float total_y = 0.0;
+	float total_value = 0.0; // To compute the weighted average based on gas values
 	int count = 0;
 
 	int cluster_first_x_index = static_cast<int>((cluster.first.x - source_x_min) / x_resol);
@@ -955,7 +955,7 @@ void PathPlanner::move_to_cluster_centroid(const pair<CellPoint, CellPoint> &clu
 		{
 
 			int index = indices_to_index_2D(x, y);
-			double value = information_map[index];
+			float value = information_map[index];
 
 			// Accumulate total coordinates weighted by value
 			total_x += x * value;
@@ -1004,12 +1004,12 @@ void PathPlanner::weighted_belief_clustering()
 	else
 	{
 
-		double max_score = -1; // Assuming scores are non-negative
+		float max_score = -1; // Assuming scores are non-negative
 		int best_cluster_index = -1;
 		// Evaluate each cluster using the scoring function
 		for (size_t i = 0; i < clusters_bounding_box.size(); i++)
 		{
-			double score = evaluate_cluster(clusters_bounding_box[i]); // Scoring function
+			float score = evaluate_cluster(clusters_bounding_box[i]); // Scoring function
 			if (score > max_score)
 			{
 				max_score = score;
@@ -1025,8 +1025,8 @@ void PathPlanner::weighted_belief_clustering()
 
 void PathPlanner::balance_expected_maximal_pdf()
 {
-	double maximal_pdf_point[2] = {0};
-	double expected_pdf_point[2] = {0};
+	float maximal_pdf_point[2] = {0};
+	float expected_pdf_point[2] = {0};
 	maximal_pdf_point[0] = plume_model->max_a_post_value[0];
 	maximal_pdf_point[1] = plume_model->max_a_post_value[1];
 	expected_pdf_point[0] = plume_model->expected_value[0];
@@ -1144,7 +1144,7 @@ void PathPlanner::balance_expected_maximal_pdf()
 
 void PathPlanner::KLD_distance_balance()
 {
-	double best_point[2] = {0};
+	float best_point[2] = {0};
 	posterior->XYmarginal_distance_combined(current_position, 1.0, best_point);
 	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
@@ -1167,7 +1167,7 @@ void PathPlanner::KLD_distance_balance()
 void PathPlanner::goal_outside_obstacles(Position *goal)
 {
 
-	double min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
+	float min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
 	// is the goal position in an obstacle or out of arena or too close to current position?
 	int idx = goal->is_in_obstacle_list(obstacles, nbr_obs);
 	if (idx == -1 && !position_outside_arena(*goal) && goal->distance_from(current_position) > min_dist_to_current)
@@ -1400,15 +1400,15 @@ void PathPlanner:: maximal_merged_belief_planning()
 {
 	// compute maximal merged belief map values
 	std::vector<int> top1_indices, top2_indices, top3_indices;
-	double top1 = -1, top2 = -1, top3 = -1;
-	double epsilon = 1e-6;
+	float top1 = -1, top2 = -1, top3 = -1;
+	float epsilon = 1e-6;
 
 	for (int i = 0; i < MAP_SIZE; i++) {
 
 		if (simulation_parameters.visitedList == visitedList_ON && cell_visited_list[i] != 0)
 			continue;
 
-		double value = posterior->pdf[i];
+		float value = posterior->pdf[i];
 
 		if (value > top1 + epsilon) {
 			// shift down
@@ -1435,7 +1435,7 @@ void PathPlanner:: maximal_merged_belief_planning()
 	}
 
 	int top_indices[3] = {-1, -1, -1};
-	double top_values[3] = {top1, top2, top3};
+	float top_values[3] = {top1, top2, top3};
 
 	if (!top1_indices.empty())
 		top_indices[0] = top1_indices[rand() % top1_indices.size()];
@@ -1454,7 +1454,7 @@ void PathPlanner:: maximal_merged_belief_planning()
 	cell_visited_list[top_indices[2]] = 1;
 
 	// assign goals to the maximal merged belief map values
-	double best_points[3][2] = {0};
+	float best_points[3][2] = {0};
 	int max_indices[3] = {top_indices[0], top_indices[1], top_indices[2]};
 
 	for (int i = 0; i < 3; i++) {

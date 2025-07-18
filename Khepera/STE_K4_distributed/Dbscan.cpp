@@ -6,7 +6,7 @@
 using namespace std;
 extern char clustering_bounding_boxes_logfile_name[512];
 FILE *clustering_bounding_boxes_logfile;
-DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
+DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, float rat)
 {
 	x_epsilon = x_eps;
 	y_epsilon = y_eps;
@@ -91,10 +91,10 @@ void DBSCAN::expandCluster(CellPoint &cell, vector<int> &neighbors, int clusterI
 	// }
 }
 
-void DBSCAN::run(double information[])
+void DBSCAN::run(float information[])
 {
-	double max_info = 0;
-	double min_info = 100000;
+	float max_info = 0;
+	float min_info = 100000;
 	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		if (information[i] > max_info)

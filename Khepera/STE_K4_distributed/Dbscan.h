@@ -22,17 +22,17 @@ public:
     vector<pair<CellPoint, CellPoint>> cluster_bounding_boxes;
 
 public:
-    DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat);
+    DBSCAN(float x_eps, float y_eps, unsigned int minPts, float rat);
     ~DBSCAN() {}
     vector<int> findNeighbors(const CellPoint cell);
     void expandCluster(CellPoint &cell, vector<int> &neighbors, int clusterId);
-    void run(double cells[]);
+    void run(float cells[]);
     void printResults();
 
 private:
     unsigned int pointSize;
     unsigned int minPoints;
-    double ratio;
+    float ratio;
     float x_epsilon;
     float y_epsilon;
 

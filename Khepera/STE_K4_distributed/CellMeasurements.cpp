@@ -39,7 +39,7 @@ void CellMeasurements::add_gas_hit(float meas){
 	hit_sum += gas_hit;
 }
 
-void CellMeasurements::calculate_con_weighted_mean_variance(double *pdf){
+void CellMeasurements::calculate_con_weighted_mean_variance(float *pdf){
 	int i;
 	float sum = 0.0;
 	meas_mean = 0.0;
@@ -53,7 +53,7 @@ void CellMeasurements::calculate_con_weighted_mean_variance(double *pdf){
 	meas_std = sqrt(sum);
 }
 
-void CellMeasurements::calculate_hit_weighted_mean_variance(double *pdf){
+void CellMeasurements::calculate_hit_weighted_mean_variance(float *pdf){
 	int i;
 	float sum = 0.0;
 	for(i = 0; i < meas_num; i++){

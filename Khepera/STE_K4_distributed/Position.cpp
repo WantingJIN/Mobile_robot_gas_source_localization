@@ -80,7 +80,7 @@ void Position::set_to(float _x, float _y, float _heading)
 	heading = _heading;
 }
 
-double Position::distance_from(Position p)
+float Position::distance_from(Position p)
 {
 	return sqrt(pow(x - p.x, 2) + pow(y - p.y, 2));
 }
