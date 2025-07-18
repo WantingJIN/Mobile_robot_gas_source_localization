@@ -282,7 +282,7 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D()
 void DeepCFDPlumeModel2D::initialize_potential_gas_maps()
 {
 	// initialize the dispersion map list
-	load_gas_concentration_map_list_from_file("example_gas_concentration_map.csv");
+	load_gas_concentration_map_list_from_file("gas_concentration_maps.csv");
 
 	// initialize the cell measurements list
 	initialize_cell_measurement_list();

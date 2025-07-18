@@ -95,10 +95,10 @@ typedef enum relativeMethod
 	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
 } eRelativeMethod;
 
-typedef enum simuMode{
-	ONLINE = 0,
+typedef enum workMode{
+	EXPERIMENT = 0,
 	OFFLINE = 1,
-}eSimuMode;
+}eworkMode;
 
 typedef enum sensorCalibration
 {
@@ -183,7 +183,7 @@ class SimulationParameters{
 		eInfoFeature infoFeature; 
 		
 		eRelativeMethod relativeMethod; 
-		eSimuMode simuMode; 
+		eworkMode workMode; 
 		eSensorCalibration sensorCalibration;
 		eGasHitMethod gasHitMethod;
 		eTeamStrategy teamStrategy;

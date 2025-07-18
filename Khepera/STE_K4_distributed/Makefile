@@ -13,7 +13,7 @@ MODULES	:= khepera4 odometry_track odometry_goto i2cal i2c_stream nmea odorboard
 #Y_MODULES	:= /home/disal/khepera4toolbox/Modules/
 #MY_MODULES_FOLDER := /Modules
 
-TARGET	:= STE_K4_client
+TARGET	:= STE_K4_distributed
 
 #INCS_ADD	:= -I /home/disal/projects/Faezeh/Eigen
 
