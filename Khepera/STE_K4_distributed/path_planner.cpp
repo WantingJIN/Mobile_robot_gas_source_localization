@@ -37,7 +37,7 @@ PathPlanner:: ~PathPlanner()
 void PathPlanner::maximal_belief_planning()
 {
 	printf("Enter maximal belief planning \n");
-	fprintf(console_logfile, "Enter maximal belief planning \n");
+	//fprintf(console_logfile, "Enter maximal belief planning \n");
 	float best_point[2] = {0};
 	// find the maximal variance in gas variance map
 	float max_pdf = 0;
@@ -61,13 +61,13 @@ void PathPlanner::maximal_belief_planning()
 			}
 		}
 	}
-	fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
+	//fprintf(console_logfile, "max_pdf : %f , max_pdf_iter: %d\n", max_pdf, max_pdf_index);
 
 	float epsilon = 1e-9;
 	if (fabs(max_pdf - 0.0) < epsilon) // all the possible points have been visited
 	{
 		printf("all the probable points have been visited \n");
-		fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
+		//fprintf(console_logfile, "all the probable points have been visited, use maximal information planning \n");
 		maximal_information_planning();
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
@@ -162,7 +162,7 @@ void PathPlanner::KLD_informative_goal_selection()
 void PathPlanner::random_planning()
 {
 	printf("Enter random planning \n");
-	fprintf(console_logfile, "Enter random planning \n");
+	//fprintf(console_logfile, "Enter random planning \n");
 	do
 	{
 		goal_position.heading = 0;
@@ -226,7 +226,7 @@ float PathPlanner::index_distance(int x_idx_diff, int y_idx_diff){
 void PathPlanner::maximal_information_planning()
 {
 	printf("Enter maximal information planning \n");
-	fprintf(console_logfile, "Enter maximal information planning \n");
+	//fprintf(console_logfile, "Enter maximal information planning \n");
 	calculate_information_gain();
 	float best_point[2] = {0};
 	// find the maximal variance in gas variance map
@@ -251,13 +251,13 @@ void PathPlanner::maximal_information_planning()
 			}
 		}
 	}
-	fprintf(console_logfile, "max_info : %f , max_info_iter: %d\n", max_info, max_info_index);
+	//fprintf(console_logfile, "max_info : %f , max_info_iter: %d\n", max_info, max_info_index);
 
 	float epsilon = 1e-9;
 	if (fabs(max_info - 0.0) < epsilon) // all the informative points have been visited
 	{
 		printf("all the informative points have been visited \n");
-		fprintf(console_logfile, "all the informative points have been visited \n");
+		//fprintf(console_logfile, "all the informative points have been visited \n");
 		random_planning();
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
@@ -288,14 +288,14 @@ void PathPlanner::belief_clustering_planning()
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
-		fprintf(console_logfile, "no cluster found \n");
+		//fprintf(console_logfile, "no cluster found \n");
 		maximal_belief_planning();
 		// maximal_information_planning();
 		return;
 	}
 	else
 	{
-		// fprintf(console_logfile, "clusters found \n");
+		// //fprintf(console_logfile, "clusters found \n");
 		// Find furthest vertex of each cluster
 		float max_dist_to_robot;
 		int max_dist_to_robot_index;
@@ -351,7 +351,7 @@ void PathPlanner::belief_clustering_planning()
 		}
 		if (!find_goal)
 		{
-			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
+			//fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
 			// maximal_information_planning();
 			maximal_belief_planning();
 			return;
@@ -363,8 +363,8 @@ void PathPlanner::belief_clustering_planning()
 			goal_position.heading = 0;
 		}
 
-		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
-		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+		// //fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
+		// //fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 }
 
@@ -377,13 +377,13 @@ void PathPlanner::informative_clustering_planning()
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
-		fprintf(console_logfile, "no cluster found \n");
+		//fprintf(console_logfile, "no cluster found \n");
 		maximal_information_planning();
 		return;
 	}
 	else
 	{
-		// fprintf(console_logfile, "clusters found \n");
+		// //fprintf(console_logfile, "clusters found \n");
 		// Find furthest vertex of each cluster
 		float max_dist_to_robot;
 		int max_dist_to_robot_index;
@@ -439,7 +439,7 @@ void PathPlanner::informative_clustering_planning()
 		}
 		if (!find_goal)
 		{
-			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
+			//fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
 			maximal_information_planning();
 			return;
 		}
@@ -450,8 +450,8 @@ void PathPlanner::informative_clustering_planning()
 			goal_position.heading = 0;
 		}
 
-		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
-		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
+		// //fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
+		// //fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 }
 
@@ -1186,7 +1186,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
-		fprintf(console_logfile, ">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
+		//fprintf(console_logfile, ">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
 		Position nearest_position(*goal);
@@ -1223,7 +1223,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		}
 		// change the goal position using the pointer
 		printf(">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-		// fprintf(console_logfile, ">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		// //fprintf(console_logfile, ">>> Obstacle Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 
 		goal->copy_position(nearest_position);
 	}
@@ -1238,7 +1238,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
-		fprintf(console_logfile, ">>> ! position %f %f is outside the region\n", goal->x, goal->y);
+		//fprintf(console_logfile, ">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 8 different candidates
 		float min_dist = 10000.0;
 		Position nearest_position(*goal);
@@ -1284,7 +1284,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 				}
 			}
 		}
-		// fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		// //fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
 	}
 	// make sure that the chosen goal is not too close from the robot current position so that it will not instantaneously be reached
@@ -1297,7 +1297,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
-		fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
+		//fprintf(console_logfile, ">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
 		//  otherwise, lets try 4 different candidates
 		Position nearest_position(*goal);
 		Position candidates[8] = {Position(goal->x + min_dist_to_current, goal->y + min_dist_to_current, 0),
@@ -1331,13 +1331,13 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 				}
 			}
 		}
-		fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+		//fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
 	}
 
 	// change the goal position using the pointer
 	// printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-	// fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
+	// //fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 }
 
 

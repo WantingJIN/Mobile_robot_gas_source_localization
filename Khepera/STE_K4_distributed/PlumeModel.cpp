@@ -250,6 +250,8 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D()
 	covar_sig_ii = new float[nbr_param];
 	covar_sig_ii[0] = 2;   // x
 	covar_sig_ii[1] = 0.1; // y
+
+	initialize_potential_gas_maps();
 }
 
 DeepCFDPlumeModel2D::DeepCFDPlumeModel2D(const DeepCFDPlumeModel2D &another_model)

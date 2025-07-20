@@ -140,6 +140,7 @@ void set_logfile_names(){
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+    //console_logfile = fopen(console_logfile_name, "a");
 }
 
 int initCortexComm(){
@@ -225,57 +226,58 @@ void initCommRobot(){
 }
 
 void establish_baseline(){
-    float current_odor = 0;
-    float min=10000000.0, max=0.0;
-    float filtered_concentration = 0;
+    // float current_odor = 0;
+    // float min=10000000.0, max=0.0;
+    // float filtered_concentration = 0;
 
-    printf("[%d] Establishing the odor baseline ... \n", ID);
+    // printf("[%d] Establishing the odor baseline ... \n", ID);
 
-    //starting point at the begining of the map to establish the baseline
-    goal_position.x = 3; //+ float(ID-101)/5.0;
+    // //starting point at the begining of the map to establish the baseline
+    // goal_position.x = 3; //+ float(ID-101)/5.0;
 
-    //stop every 35 cm to make a measurement 
-    for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.35){
-    	//move until reached
-    	 while (dist_to_goal(goal_position)>0.05){
-        	//updateSwisTrack(current_position);
-            updateCortexPos(&current_position);
-        	go_to_goal(goal_position);  
-        	//if obstacle, avoid
-        	// if(obstacle_or_not() == 1){
-            //     obstacle_avoidance(speed);
-            //     continue;
-            // }
-        	set_wheels_speed(speed[0],speed[1]);
-            // braitenberg_run(&braitenberg);
-        	usleep(SLEEP_PERIOD * 100);
-    	}
-    	//stop once reached
-    	khepera4_drive_set_speed(0,0);
-    	//measure
-    	filtered_concentration = odor_read();
-        // for (int j=0; j < 1; j++){ //100 times
-        //     current_odor = odor_read();
-        //     if (current_odor > 0.1)
-        //         filtered_concentration += current_odor;
-        //     else
-        //     	j--;
-        // }
-        //filtered_concentration /= ODOR_FILTER_LENGTH;
-        printf("[%d] position : %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, filtered_concentration);
-    	//take min and max
-    	if (filtered_concentration > max) 
-            max = filtered_concentration ;
-        if (filtered_concentration < min) 
-            min = filtered_concentration ;
-        //next
-        usleep(SLEEP_PERIOD * 100);
-    }
-    //once reached the end of the line
-    khepera4_drive_set_speed(0,0);
-    odor_baseline_value = (max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
-    printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
-    log_baseline(min, max, odor_baseline_value);
+    // //stop every 35 cm to make a measurement 
+    // for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.35){
+    // 	//move until reached
+    // 	 while (dist_to_goal(goal_position)>0.05){
+    //     	//updateSwisTrack(current_position);
+    //         updateCortexPos(&current_position);
+    //     	go_to_goal(goal_position);  
+    //     	//if obstacle, avoid
+    //     	// if(obstacle_or_not() == 1){
+    //         //     obstacle_avoidance(speed);
+    //         //     continue;
+    //         // }
+    //     	set_wheels_speed(speed[0],speed[1]);
+    //         // braitenberg_run(&braitenberg);
+    //     	usleep(SLEEP_PERIOD * 100);
+    // 	}
+    // 	//stop once reached
+    // 	khepera4_drive_set_speed(0,0);
+    // 	//measure
+    // 	filtered_concentration = odor_read();
+    //     // for (int j=0; j < 1; j++){ //100 times
+    //     //     current_odor = odor_read();
+    //     //     if (current_odor > 0.1)
+    //     //         filtered_concentration += current_odor;
+    //     //     else
+    //     //     	j--;
+    //     // }
+    //     //filtered_concentration /= ODOR_FILTER_LENGTH;
+    //     printf("[%d] position : %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, filtered_concentration);
+    // 	//take min and max
+    // 	if (filtered_concentration > max) 
+    //         max = filtered_concentration ;
+    //     if (filtered_concentration < min) 
+    //         min = filtered_concentration ;
+    //     //next
+    //     usleep(SLEEP_PERIOD * 100);
+    // }
+    // //once reached the end of the line
+    // khepera4_drive_set_speed(0,0);
+    // odor_baseline_value = (max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
+    // printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
+    // log_baseline(min, max, odor_baseline_value);
+    odor_baseline_value = 15890;
     //starting point of the actuall algorithm random on Y
     goal_position.x = current_position.x;
     //NOTE - Khepera start position

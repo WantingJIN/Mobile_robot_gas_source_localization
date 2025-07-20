@@ -554,7 +554,7 @@ void state_measuring(){
 	FSM.hook  = state_estimating;
 }
 void state_estimating(){
-	printf("Robot ID [%d]: STATE_ESTIMATING \n", ID);
+	printf("Robot ID [%d]: STATE_ESTIMATING!!! \n", ID);
 	// if (VERBOSE)
 	// 	printf("[%d] estimating...\n", ID);
 
@@ -625,7 +625,7 @@ void state_updategoal()
 	// computation time of path planning
 	long long time_before_path_planning = current_timestamp();
 	printf("Robot ID [%d]: STATE_UPDATEGOAL \n", ID);
-	fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
+	//fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 	if (VERBOSE)
 		printf("[%d] updating the goal\n", ID);
 	switch (simulation_parameters.planningStrategy)
@@ -674,7 +674,7 @@ void state_updategoal()
 		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<float>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		// 	//fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
 		// 	random_planning();
 		// }
 		if (use_visibility_path)
@@ -865,7 +865,7 @@ void state_send_goal()
 		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<float>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
+		// 	//fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
 		// 	random_planning();
 		// }
 
@@ -1067,7 +1067,7 @@ void state_merge_pdf()
 	{
 		FSM.state = STATE_FINISHED;
 		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-		fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+		//fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
 		broadcast_state_finished();
 		return;
 	} else {
@@ -1168,6 +1168,7 @@ void broadcast_state_finished()
 bool check_stop_condition()
 {
 	bool is_stop_condition_reached = false;
+	printf("current_entropy is %f\n", posterior.entropy);
 	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
 		if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 ){
 			is_stop_condition_reached = true;
@@ -1181,14 +1182,14 @@ bool check_stop_condition()
 			is_stop_condition_reached = true;
 		}
 	}
-	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	//fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	if (is_stop_condition_reached)
 	{
 		// log the finish time stamp
 		end_timestamp = current_timestamp();
 		printf("Robot ID [%d]: Stop condition reached!\n", ID);
-		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
+		//fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
 	}
 	return is_stop_condition_reached;
 }

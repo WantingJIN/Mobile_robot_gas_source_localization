@@ -265,7 +265,7 @@ void Posterior::update(float value, float *sample)
 		if (std::isnan(sample[i]))
 		{
 			printf("ERROR in update: sample is NaN  \n");
-			fprintf(console_logfile, "ERROR in update: sample %f is NaN  \n", sample[i]);
+			//fprintf(console_logfile, "ERROR in update: sample %f is NaN  \n", sample[i]);
 			value = 0;
 		}
 		// indices[i] = (int)((sample[i]-model->param_list[i].lower_limit) / ((float)(model->param_list[i].upper_limit-model->param_list[i].lower_limit)/(float)(model->param_list[i].nbins)));
@@ -290,7 +290,7 @@ void Posterior::normalize()
 		if (sum == 0)
 		{
 			printf("!!!!!!!!!!!!!sum is equal to zero!\n");
-			fprintf(console_logfile, "!!!!!!!!!!!!!sum is equal to zero!\n");
+			//fprintf(console_logfile, "!!!!!!!!!!!!!sum is equal to zero!\n");
 		}
 		pdf[i] /= sum;
 	}

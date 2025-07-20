@@ -12,8 +12,6 @@ float likelihood_precomp(struct history &history, float *parameters, int source_
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
 	float sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
 
 	vector<float> model_c_avg(history.size);
 
@@ -41,10 +39,10 @@ float likelihood_precomp(struct history &history, float *parameters, int source_
 	for (int i = 0; i < history.size; i++)
 	{
 		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
+		//printf("history.measurement[%d]: %f, model_c_avg[%d]: %f\n", i, history.measurement[i], i, model_c_avg[i]);
 		// if (source_pos_idx == 0)
-		// 	fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.measurement[i], model_c_avg[i]);
+		// 	//fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.measurement[i], model_c_avg[i]);
 	}
-
 	return (exp(-0.5 * sum_tmp));
 }
 
@@ -56,8 +54,6 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 	// float sigma = 0.22;// works well for Gaussian CDF
 	float sigma = 0.35; // works well for Empirical CDF
 	float sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
 
 	vector<float> model_c_avg(history.size);
 
@@ -133,8 +129,6 @@ float likelihood(struct history &history, float *parameters, PlumeModel *model)
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
 	float sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	vector<float> model_c_avg(history.size);
@@ -214,8 +208,6 @@ void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, co
 float likelihood_gas_hit(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
 {
 	float sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
 
 	vector<float> model_c_avg(history.size);
 
