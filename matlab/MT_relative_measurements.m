@@ -1,5 +1,5 @@
 % Ruta base
-exp_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/Week18/Exp7';
+exp_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/cluster_analysis/';
 
 % Obtener lista de carpetas dentro de Exp7 (ej. Run1, Run2...)
 run_folders = dir(exp_folder);

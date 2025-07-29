@@ -4,12 +4,12 @@ MCMC_iteration_num = 1000
 BayesianModelingMethod = EXHAUSTIVE 
 number_of_robots = 3
 scenario = NO_COM_NO_COOR 
-map_nbr = 0 
+map_nbr = 9 
 samplingMode = CONTINOUS_SAMPLING 
 processingMode = NO_PROCESSING
 gasSensor = MOX
 planningStrategy = GREEDY
-gasFeature = ABSOLUTE_VALUE
+gasFeature = RELATIVE_VALUE
 visitedList = visitedList_OFF
 infoFeature = PDF
 sampling_period = 10 
@@ -33,8 +33,11 @@ controlArchitecture = DISTRIBUTED
 stopCondition = ENTROPY_ONLY
 updateGoalPolicy = FIXED_FREQ
 
-
-mapCoverageStrategy = VORONOI
+epsilon_clusterize = 0
+mapCoverageStrategy = REGION_GROWING_D
+mapCoverageSeed = ROBOT_CELL
+distObstacleAware = DIJKSTRA
 increaseFreqBM = YES
-update_time = 4
+update_time = 2
 KLD_thresh = 1
+

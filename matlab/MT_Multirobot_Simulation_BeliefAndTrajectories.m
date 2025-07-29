@@ -13,6 +13,7 @@ exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment 
 show_cell_indices = false;
 repr_vel = 3;           % How many steps to skip per frame (for robot position update)
 video_repr_vel = repr_vel*10;    % Frame rate of the output video
+map_num = 9;
 
 % === Robot IDs and corresponding colors ===
 robot_ids = [101, 102, 103];
@@ -150,9 +151,20 @@ rectangle('Position', [0, 4, 16 + wall_thickness, wall_thickness], 'FaceColor', 
 rectangle('Position', [-wall_thickness, 0, wall_thickness, 4 + wall_thickness], 'FaceColor', dark_gray);
 rectangle('Position', [16, 0 - wall_thickness, wall_thickness, 4 + wall_thickness], 'FaceColor', dark_gray);
 
-% === Draw obstacles ===
-rectangle('Position', [8.0, 0.0, 0.5, 2.0], 'FaceColor', dark_gray);
-rectangle('Position', [4.5, 2.0, 0.5, 2.0], 'FaceColor', dark_gray);
+% === Draw obstacles based on map number ===
+if map_num == 9
+    % Original obstacles
+    rectangle('Position', [8.0, 0.0, 0.5, 2.0], 'FaceColor', dark_gray);
+    rectangle('Position', [4.5, 2.0, 0.5, 2.0], 'FaceColor', dark_gray);
+elseif map_num == 5
+    % New obstacle
+    rectangle('Position', [6.5, 1.25, 0.5, 1.5], 'FaceColor', dark_gray);
+elseif map_num == 0
+    % No obstacles for map 0
+    % Intentionally left empty
+else
+    warning('No obstacles defined for map_num = %d', map_num);
+end
 
 % === Plot ground truth gas source (black star) ===
 plot(source_x, source_y, 'p', 'MarkerSize', 16, ...
@@ -215,35 +227,42 @@ for frame_t = 1:10000
             % Normalizar intensidad
             min_int = min(intensity_map);
             max_int = max(intensity_map);
-            if max_int > min_int
-                intensity_map = (intensity_map - min_int) / (max_int - min_int);
-            else
-                intensity_map = zeros(size(intensity_map));
-            end
-
+            
+            cmap = parula(256);
             % === Actualizar color de celdas y bordes ===
             % === Actualizar color de celdas basado en intensidad ===
             for col = 1:cols
                 for row = 1:rows
                     map_idx = (row - 1) * cols + col;
-                    intensity = max(0, min(1, intensity_map(map_idx)));
+                    intensity = intensity_map(map_idx);  % valor real, sin recortar
 
-                    % Escalar a color usando colormap (e.g., parula)
-                    cmap = parula(256);  % o 'hot', 'jet', etc.
-                    color_idx = max(1, round(intensity * 255)) + 1;  % de 1 a 256
+                    % Mapear intensidad al índice del colormap
+                    if max_int > min_int
+                        color_idx = round((intensity - min_int) / (max_int - min_int) * 255) + 1;
+                    else
+                        color_idx = 1;  % En caso de que no haya rango
+                    end
+
+                    % Asegurar índice dentro del rango válido
+                    color_idx = max(1, min(256, color_idx));
+
                     base_color = cmap(color_idx, :);
 
-                    % Aplicar color al patch
+                    % Aplicar color a la celda
                     set(cell_patches(row, col), 'FaceColor', base_color);
                 end
             end
 
-            colormap(parula); % Puedes cambiar a 'parula', 'hot', 'jet', etc.
-            caxis([0 1]);     % Rango de intensidades esperadas (probabilidades)
-            colorbar;         % Añade la escala a la derecha
 
+            %rounded_max = ceil(max_int * 10) / 10;
+            colormap(parula);
+            caxis([min_int max_int]);
+            hold on;
 
-
+            colorbar;        % Añade la escala a la derecha
+            cb = colorbar;
+            cb.Ticks = linspace(min_int, max_int, 5);  % 5 valores distribuidos
+            cb.TickLabels = arrayfun(@(x) sprintf('%.5f', x), cb.Ticks, 'UniformOutput', false);
 
             title(sprintf('FSM cycle: %d', idx), 'FontSize', 14, 'FontWeight', 'bold');
             

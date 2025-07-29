@@ -289,7 +289,7 @@ for frame_t = 1:10000
 
     pause(0.00001);
     frame = getframe(gcf);
-    writeVideo(v, frame);
+    writeVideo(v, frame); 
 
 
     if all(done)

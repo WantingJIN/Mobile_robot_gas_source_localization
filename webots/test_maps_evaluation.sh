@@ -1,5 +1,3 @@
-#!/bin/bash
-
 now=$(date +"%T")
 echo "Start time : $now"
 
@@ -46,7 +44,7 @@ sigma=0.4 #noise level for the STE likelihood
 for r in 53 #53 #200 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
-	for m in 9 #5 #1 2 3 5 10 #0 1  
+	for m in 0 #5 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
 		# for likelihood in 2000 3000

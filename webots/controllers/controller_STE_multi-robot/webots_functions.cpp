@@ -591,6 +591,9 @@ void set_logfile_names()
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_lloyd_name, "%s/posterior_pdf_3D_cluster_lloyd.csv", folder_name);
+	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
+	sprintf(cluster_sizes_informative_name, "%s/cluster_sizes_informative.csv", folder_name);
+	sprintf(stop_time_name, "%s/stop_time.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(entropy_individual_logfile_name, "%s/entropy_individual.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);

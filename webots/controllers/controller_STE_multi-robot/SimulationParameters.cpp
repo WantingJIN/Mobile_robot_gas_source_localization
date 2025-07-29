@@ -201,11 +201,18 @@ eControlArchitecture parse_control_architecture(const char* str) {
 
 eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
 	if (strcmp(str, "VORONOI") == 0) return VORONOI;
-	if (strcmp(str, "VORONOI_LLOYD_DIST") == 0) return VORONOI_LLOYD_DIST;
-	if (strcmp(str, "VORONOI_LLOYD_PROB") == 0) return VORONOI_LLOYD_PROB;
-	if (strcmp(str, "MAXCELL") == 0) return MAXCELL;
-	if (strcmp(str, "PROVA") == 0) return PROVA;
+	if (strcmp(str, "LLOYD_D") == 0) return LLOYD_D;
+	if (strcmp(str, "LLOYD_P") == 0) return LLOYD_P;
+	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
+	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
 	if (strcmp(str, "NONE") == 0) return NONE;
+	fprintf(stderr, "Unknown cluster method: %s\n", str);
+	exit(1);
+}
+
+eMapCoverageSeed parse_map_coverage_seed(const char* str) {
+	if (strcmp(str, "MAX_CELL") == 0) return MAX_CELL;
+	if (strcmp(str, "ROBOT_CELL") == 0) return ROBOT_CELL;
 	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }
@@ -229,6 +236,13 @@ eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
 eIncreaseFreqBM parse_increase_freq_BM(const char* str) {
 	if (strcmp(str, "YES") == 0) return YES;
 	if (strcmp(str, "NO") == 0) return NO;
+	fprintf(stderr, "Unknown estimate while moving: %s\n", str);
+	exit(1);
+}
+
+eDistObstacleAware parse_dist_obstacle_aware(const char* str) {
+	if (strcmp(str, "EUCLIDEAN") == 0) return EUCLIDEAN;
+	if (strcmp(str, "DIJKSTRA") == 0) return DIJKSTRA;
 	fprintf(stderr, "Unknown estimate while moving: %s\n", str);
 	exit(1);
 }
@@ -279,10 +293,13 @@ SimulationParameters::SimulationParameters()
 	weighting_entropy_ratio = 6;
 	controlArchitecture = CENTRALIZED;
 	update_time = 10;
+	epsilon_clusterize = 0;
 	KLD_thresh = 0.1;
 	stopCondition = ENTROPY_ONLY;
-	mapCoverageStrategy = VORONOI_LLOYD_PROB;
+	mapCoverageStrategy = LLOYD_P;
+	mapCoverageSeed = ROBOT_CELL;
 	increaseFreqBM = NO;
+	distObstacleAware = DIJKSTRA;
 
 }
 
@@ -429,8 +446,14 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "mapCoverageStrategy") == 0) {
 			mapCoverageStrategy = parse_map_coverage_strategy(value);
 		} 
+		else if (strcmp(key, "mapCoverageSeed") == 0) {
+			mapCoverageSeed = parse_map_coverage_seed(value);
+		} 
 		else if (strcmp(key, "update_time") == 0) {
 			update_time = atoi(value);
+		}
+		else if (strcmp(key, "epsilon_clusterize") == 0) {
+			epsilon_clusterize = atoi(value);
 		}
 		else if (strcmp(key, "KLD_thresh") == 0) {
 			KLD_thresh = atoi(value);
@@ -443,6 +466,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		}
 		else if (strcmp(key, "increaseFreqBM") == 0) {
 			increaseFreqBM = parse_increase_freq_BM(value);
+		}
+		else if (strcmp(key, "distObstacleAware") == 0) {
+			distObstacleAware = parse_dist_obstacle_aware(value);
 		}
 		else
 		{
@@ -506,7 +532,9 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "control_architecture %d\n", controlArchitecture);
 	fprintf(sim_param_file, "cluster_method %d\n", mapCoverageStrategy);
+	fprintf(sim_param_file, "cluster_seed %d\n", mapCoverageSeed);
 	fprintf(sim_param_file, "update_time %d\n", update_time);
+	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
 	fprintf(sim_param_file, "KLD_thresh %f\n", KLD_thresh);
 	fclose(sim_param_file);
 }

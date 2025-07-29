@@ -13,6 +13,7 @@ exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment 
 show_cell_indices = false;
 repr_vel = 3;           % How many steps to skip per frame (for robot position update)
 video_repr_vel = repr_vel*10;    % Frame rate of the output video
+map_num = 9;
 
 % === Robot IDs and corresponding colors ===
 robot_ids = [101, 102, 103];
@@ -37,6 +38,18 @@ belief_maps = belief_data(:, 3:end);  % columns containing map values
 intensity_path = fullfile(exp_folder, '101', 'posterior_pdf_3D.csv');
 intensity_data = readmatrix(intensity_path);
 intensity_maps = intensity_data;  % todos los valores son intensidades
+
+% === Balance metric clusters (geometric) ===
+data_clusters_geometric = fullfile(exp_folder, '101', 'cluster_sizes_geometric.csv');
+data_clusters_geometric = readmatrix(data_clusters_geometric);
+n_iter_geometric = size(data_clusters_geometric, 1);
+H_vals_geometric = zeros(n_iter_geometric, 1);
+
+% === Balance metric clusters (informative) ===
+data_clusters_informative = fullfile(exp_folder, '101', 'cluster_sizes_informative.csv');
+data_clusters_informative = readmatrix(data_clusters_informative);
+n_iter_informative = size(data_clusters_informative, 1);
+H_vals_informative = zeros(n_iter_informative, 1);
 
 
 % === Load goal positions for each robot ===
@@ -157,9 +170,17 @@ rectangle('Position', [0, 4, 16 + wall_thickness, wall_thickness], 'FaceColor', 
 rectangle('Position', [-wall_thickness, 0, wall_thickness, 4 + wall_thickness], 'FaceColor', dark_gray);
 rectangle('Position', [16, 0 - wall_thickness, wall_thickness, 4 + wall_thickness], 'FaceColor', dark_gray);
 
-% === Draw obstacles ===
-rectangle('Position', [8.0, 0.0, 0.5, 2.0], 'FaceColor', dark_gray);
-rectangle('Position', [4.5, 2.0, 0.5, 2.0], 'FaceColor', dark_gray);
+% === Draw obstacles based on map number ===
+if map_num == 9
+    % Original obstacles
+    rectangle('Position', [8.0, 0.0, 0.5, 2.0], 'FaceColor', dark_gray);
+    rectangle('Position', [4.5, 2.0, 0.5, 2.0], 'FaceColor', dark_gray);
+elseif map_num == 5
+    % New obstacle
+    rectangle('Position', [6.5, 1.25, 0.5, 1.5], 'FaceColor', dark_gray);
+else
+    warning('No obstacles defined for map_num = %d', map_num);
+end
 
 % === Plot ground truth gas source (black star) ===
 plot(source_x, source_y, 'p', 'MarkerSize', 16, ...
@@ -198,7 +219,9 @@ waiting = false(1,3);
 last_pos = zeros(3, 2);
 t_idx = ones(1, 3);
 done = false(1, 3);
-
+h_text_geometric = [];  
+h_text_informative = [];  
+            
 % === Animation loop ===
 for frame_t = 1:10000
     % --- Actualizar belief map si corresponde ---
@@ -213,8 +236,9 @@ for frame_t = 1:10000
         if goal_update_count <= size(belief_maps, 1)
             idx = goal_update_count;
             belief_map = belief_maps(idx, :);
-            intensity_map = intensity_maps(idx, :);
+            intensity_map = intensity_maps(idx, :);            
 
+            
             % Normalizar intensidad
             min_int = min(intensity_map);
             max_int = max(intensity_map);
@@ -250,12 +274,70 @@ for frame_t = 1:10000
                     adjusted_intensity = min_visible_intensity + (1 - min_visible_intensity) * intensity;
                     blended_color = base_color * adjusted_intensity + white * (1 - adjusted_intensity);
 
+                    
 
                     % Aplicar color al patch
                     set(cell_patches(row, col), 'FaceColor', blended_color);
                 end
             end
+            
+            data_cluster_geometric = data_clusters_geometric(idx,:);
+            data_cluster_informative = data_clusters_informative(idx,:);
+            
+            % Actualizar balanced cluster score
+            total_geometric = sum(data_cluster_geometric);
+            total_informative = sum(data_cluster_informative);
+            if total_geometric == 0 || total_informative == 0
+                H_vals_geometric(idx) = 0;
+                H_vals_informative(idx) = 0;
+            else
+                p_geometric = data_cluster_geometric / total_geometric;
+                p_informative = data_cluster_informative / total_informative;
+                
+                p_geometric(p_geometric == 0) = [];  % evitar log2(0)
+                p_informative(p_informative == 0) = [];  % evitar log2(0)
+                
+                H_geometric = -sum(p_geometric .* log2(p_geometric));
+                H_informative = -sum(p_informative .* log2(p_informative));
+                
+                H_vals_geometric(idx) = H_geometric / log2(3);  % normalizar con log2(k), k=3
+                H_vals_informative(idx) = H_informative / log2(3);  % normalizar con log2(k), k=3
+            end
+            
+            % Mostrar mensaje                             
+            if ~isempty(h_text_geometric) && isvalid(h_text_geometric)
+                delete(h_text_geometric);  % eliminar texto anterior si existe
+            end
+            
+            msg_geometric = ['Score [GEOMETRIC]:    ', num2str(H_vals_geometric(idx) * 100, '%.2f'), '%'];
+            color = [0 0 0];  % negro
 
+            % Mostrar el texto en la figura
+            h_text_geometric = text(0.5, -0.7, msg_geometric, 'FontSize', 14, 'FontWeight', 'bold', ...
+                'Color', color, 'Units', 'data');
+
+            
+            
+            % Mostrar mensaje                             
+            if ~isempty(h_text_informative) && isvalid(h_text_informative)
+                delete(h_text_informative);  % eliminar texto anterior si existe
+            end
+            
+            msg_informative = ['Score [INFORMATIVE]: ', num2str(H_vals_informative(idx) * 100, '%.2f'), '%'];
+            color = [0 0 0];  % negro
+
+            % Mostrar el texto en la figura
+            h_text_informative = text(0.5, -1.2, msg_informative, 'FontSize', 14, 'FontWeight', 'bold', ...
+                'Color', color, 'Units', 'data');
+
+
+            
+            
+            fprintf('White cells (value=0): %d\n', sum(belief_map == 0));
+            fprintf('Red cells   (value=1): %d\n', sum(belief_map == 1));
+            fprintf('Blue cells  (value=2): %d\n', sum(belief_map == 2));
+            fprintf('Green cells (value=3): %d\n', sum(belief_map == 3));
+            fprintf('=================================================');
 
 
 
@@ -386,6 +468,42 @@ text(9.5, -1, msg, 'FontSize', 14, 'FontWeight', 'bold', ...
  
 
 
+
+
+% === Balance metric clusters ===
+
+% Promedio de entropía normalizada
+H_prom_geometric = mean(H_vals_geometric);
+H_prom_informative = mean(H_vals_informative);
+
+
+% Mostrar mensaje                             
+if ~isempty(h_text_geometric) && isvalid(h_text_geometric)
+    delete(h_text_geometric);  % eliminar texto anterior si existe
+end
+
+msg_geometric = ['Score [GEOMETRIC] (avg):    ', num2str(H_prom_geometric * 100, '%.2f'), '%'];
+color = [0 0 0];  % negro
+
+% Mostrar el texto en la figura
+h_text_geometric = text(0.5, -0.7, msg_geometric, 'FontSize', 14, 'FontWeight', 'bold', ...
+    'Color', color, 'Units', 'data');
+
+
+% Mostrar mensaje                             
+if ~isempty(h_text_informative) && isvalid(h_text_informative)
+    delete(h_text_informative);  % eliminar texto anterior si existe
+end
+
+msg_informative = ['Score [INFORMATIVE] (avg): ', num2str(H_prom_informative * 100, '%.2f'), '%'];
+
+color = [0 0 0];  % negro
+
+% Mostrar el texto en la figura
+h_text_informative = text(0.5, -1.2, msg_informative, 'FontSize', 14, 'FontWeight', 'bold', ...
+    'Color', color, 'Units', 'data');
+
+
 % === Callback function for spacebar press ===
 function keypress_callback(~, event)
     if strcmp(event.Key, 'space')
@@ -398,3 +516,4 @@ function keypress_callback(~, event)
         end
     end
 end
+

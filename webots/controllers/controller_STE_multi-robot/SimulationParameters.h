@@ -131,12 +131,18 @@ typedef enum controlArchitecture{
 
 typedef enum mapCoverageStrategy{
 	VORONOI = 0,
-	VORONOI_LLOYD_DIST = 1,
-	VORONOI_LLOYD_PROB = 2,
-	MAXCELL = 3,
-	PROVA =4,
+	LLOYD_D = 1,
+	LLOYD_P = 2,
+	REGION_GROWING_P = 3,
+	REGION_GROWING_D = 4,
 	NONE = 5,
 } eMapCoverageStrategy;
+
+typedef enum mapCoverageSeed{
+	MAX_CELL = 0,
+	ROBOT_CELL = 1,
+
+} eMapCoverageSeed;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
@@ -154,6 +160,11 @@ typedef enum increaseFreqBM{
 	YES = 0,
 	NO = 1,
 } eIncreaseFreqBM;
+
+typedef enum distObstacleAware{
+	EUCLIDEAN = 0,
+	DIJKSTRA = 1,
+} eDistObstacleAware;
 
 // parameters to estimate
 struct parameters_set
@@ -186,6 +197,7 @@ class SimulationParameters{
 		int planning_step;
 		float weighting_entropy_ratio;
 		int update_time;
+		double epsilon_clusterize;
 		double KLD_thresh;
 
 		eEvaluationMethod BayesianModelingMethod;
@@ -204,6 +216,7 @@ class SimulationParameters{
 		eGasHitMethod gasHitMethod;
 		eControlArchitecture controlArchitecture;
 		eMapCoverageStrategy mapCoverageStrategy;
+		eMapCoverageSeed mapCoverageSeed;
 
 	      eScoreFun scoreFun;
 		eInfoSum infoSum;
@@ -211,6 +224,7 @@ class SimulationParameters{
 		eStopCondition stopCondition;
 		eUpdateGoalPolicy updateGoalPolicy;
 		eIncreaseFreqBM increaseFreqBM;
+		eDistObstacleAware distObstacleAware;
 
 		SimulationParameters();
 		~SimulationParameters();
