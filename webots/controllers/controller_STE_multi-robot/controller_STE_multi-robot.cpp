@@ -250,11 +250,14 @@ int compare_pdf_iterations = static_cast<int>(round(simulation_parameters.update
 // accum stop times
 double stop_times_accum;
 
-
+// preallocate obstacle map
 std::vector<int> obstacle_map(x_nbins * y_nbins, 0);  // GLOBAL
 
 
-int n_combine_pathplanning = 0;
+int n_combine_pathplanning = 0; //combine path planners
+
+
+
 
 // =========================== FUNCTIONS ================================ //
 // debugging function
@@ -468,19 +471,6 @@ void read_obstacle_map() {
                 obstacle_map[idx] = 1;
             }
         }
-
-		// for (int row = row_start; row <= row_end; ++row) {
-		// 	for (int col = col_start; col <= col_end; ++col) {
-		// 		float cell_center_x = XMIN + (col + 0.3f) * dx;
-		// 		float cell_center_y = YMIN + (row + 0.3f) * dy;
-
-		// 		if (cell_center_x >= x1 && cell_center_x <= x2 &&
-		// 			cell_center_y >= y1 && cell_center_y <= y2) {
-		// 			int idx = row * x_nbins + col;
-		// 			obstacle_map[idx] = 1;
-		// 		}
-		// 	}
-		// }
 
     }
 }
@@ -721,6 +711,9 @@ void log_posterior_pdf_3d_cluster_lloyd(const int* belief_clusters)
 	fprintf(posterior_pdf_3D_cluster_lloyd, "\n");
 	fclose(posterior_pdf_3D_cluster_lloyd);
 }
+
+
+
 
 
 
@@ -1161,28 +1154,7 @@ void clusterize_belief_map_LLOYD(const std::vector<int>& selected_indices) {
             temp_cluster_sizes[best_k]++;
         }
 
-        // STEP 2: Recompute GEOMETRICAL centroids
-        // std::vector<double> sum_x(K, 0.0), sum_y(K, 0.0);
-        // std::vector<int> count(K, 0);
-
-        // for (int i = 0; i < x_nbins * y_nbins; ++i) {
-        //     int cluster = cluster_assignments[i];
-        //     if (cluster < 0) continue;
-        //     int x, y;
-        //     index_to_xy(i, x, y);
-        //     sum_x[cluster] += x;
-        //     sum_y[cluster] += y;
-        //     count[cluster]++;
-        // }
-
-        // for (int k = 0; k < K; ++k) {
-        //     if (count[k] > 0) {
-        //         centroids[k].first  = sum_x[k] / count[k];
-        //         centroids[k].second = sum_y[k] / count[k];
-        //     }
-        // }
-
-		// STEP 2: Recompute INFORMATIVE centroids
+		// STEP 2: Recompute GEOMETRICAL or INFORMATIVE centroids
 		std::vector<double> weighted_sum_x(K, 0.0), weighted_sum_y(K, 0.0), total_weight(K, 0.0);
 		for (int i = 0; i < x_nbins * y_nbins; ++i) {
 			int cluster = cluster_assignments[i];
@@ -1375,27 +1347,7 @@ void clusterize_belief_map_obstacle_dist_LLOYD(const std::vector<int>& selected_
 			temp_cluster_sizes[best_k]++;
 		}
 
-        // STEP 2: Recompute GEOMETRICAL centroids
-        // std::vector<double> sum_x(K, 0.0), sum_y(K, 0.0);
-        // std::vector<int> count(K, 0);
-        // for (int i = 0; i < x_nbins * y_nbins; ++i) {
-        //     int cluster = cluster_assignments[i];
-        //     if (cluster < 0) continue;
-        //     int x, y;
-        //     index_to_xy(i, x, y);
-        //     sum_x[cluster] += x;
-        //     sum_y[cluster] += y;
-        //     count[cluster]++;
-        // }
-
-        // for (int k = 0; k < K; ++k) {
-        //     if (count[k] > 0) {
-        //         seeds[k].first  = static_cast<int>(sum_x[k] / count[k]);
-        //         seeds[k].second = static_cast<int>(sum_y[k] / count[k]);
-        //     }
-        // }
-
-		// STEP 2: Recompute INFORMATIVE centroids
+		// STEP 2: Recompute GEOMETRICAL or INFORMATIVE centroids
 		std::vector<double> weighted_sum_x(K, 0.0), weighted_sum_y(K, 0.0), total_weight(K, 0.0);
 		for (int i = 0; i < x_nbins * y_nbins; ++i) {
 			int cluster = cluster_assignments[i];
@@ -1520,94 +1472,6 @@ void clusterize_belief_map_obstacle_dist_LLOYD(const std::vector<int>& selected_
 
 }
 
-// void clusterize_belief_map_REGION_GROWING() {
-//     const int K = 3;
-//     std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(x_nbins * y_nbins, 0));
-//     std::vector<std::pair<int, int>> seeds;
-
-//     // Obtener las K celdas con mayor probabilidad
-//     std::vector<std::pair<double, int>> top_cells;
-//     for (int i = 0; i < x_nbins * y_nbins; ++i) {
-//         if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize)
-//             top_cells.push_back({posterior.pdf[i], i});
-//     }
-//     std::sort(top_cells.begin(), top_cells.end(), std::greater<>());
-
-//     for (int i = 0; i < K && i < top_cells.size(); ++i) {
-//         int sx, sy;
-//         index_to_xy(top_cells[i].second, sx, sy);
-//         seeds.emplace_back(sx, sy);
-//     }
-
-//     std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
-
-//     // Asignar cada celda al cluster más cercano (evitando obstáculos)
-//     for (int y = 0; y < y_nbins; ++y) {
-//         for (int x = 0; x < x_nbins; ++x) {
-//             int idx = y * x_nbins + x;
-//             if (posterior.pdf[idx] <= simulation_parameters.epsilon_clusterize) continue;
-//             if (obstacle_map[idx] == 1) continue;
-
-//             // Buscar la semilla más cercana (euclídeamente)
-//             double min_dist = std::numeric_limits<double>::max();
-//             int best_k = -1;
-
-//             for (int k = 0; k < seeds.size(); ++k) {
-//                 int dx = x - seeds[k].first;
-//                 int dy = y - seeds[k].second;
-//                 double dist = dx * dx + dy * dy; // evitamos sqrt
-
-//                 if (dist < min_dist) {
-//                     min_dist = dist;
-//                     best_k = k;
-//                 }
-//             }
-
-//             belief_clusters[idx] = best_k + 1;
-//         }
-//     }
-
-//     log_posterior_pdf_3d_cluster(belief_clusters);
-
-//     // Construir máscaras
-//     for (int i = 0; i < x_nbins * y_nbins; ++i) {
-//         if (posterior.pdf[i] <= simulation_parameters.epsilon_clusterize) continue;
-//         for (int k = 0; k < K; ++k)
-//             pdf_masks[k][i] = (belief_clusters[i] == k + 1) ? 1 : 0;
-//     }
-
-//     // Modificar el posterior para el robot correspondiente
-//     for (int k = 0; k < K; ++k) {
-//         if (ID == 101 + k) {
-//             for (int i = 0; i < x_nbins * y_nbins; ++i)
-//                 posterior.pdf[i] *= pdf_masks[k][i];
-//         }
-//     }
-
-//     // Normalizar posterior
-//     double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
-//     if (sum > 0) {
-//         for (int i = 0; i < x_nbins * y_nbins; ++i)
-//             posterior.pdf[i] /= sum;
-//     }
-
-//     printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum);
-
-//     // Debug opcional
-//     for (int k = 0; k < K; ++k) {
-//         if (ID == 101 + k) {
-//             fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (Euclidean):\n");
-//             for (int y = 0; y < y_nbins; ++y) {
-//                 for (int x = 0; x < x_nbins; ++x) {
-//                     int idx = y * x_nbins + x;
-//                     fprintf(clustering_debugging_logfile, "%d ", belief_clusters[idx]);
-//                 }
-//                 fprintf(clustering_debugging_logfile, "\n");
-//             }
-//         }
-//     }
-// }
-
 void clusterize_belief_map_obstacle_dist_REGION_GROWING_D() {
 
     std::vector<std::vector<int>> pdf_masks(simulation_parameters.number_of_robots, std::vector<int>(x_nbins * y_nbins, 0));
@@ -1647,9 +1511,8 @@ void clusterize_belief_map_obstacle_dist_REGION_GROWING_D() {
         // Ajustar grados a [0, 360)
         if (deg < 0) deg += 360.0;
 
-        // Definimos sectores de 45° para cada dirección (centro en: 0, 45, 90, ..., 315)
-        // Rango: [center-22.5, center+22.5)
-        // De esta forma:
+        // Definimos sectores de 45° para cada dirección
+        // Range: [center-22.5, center+22.5)
         // 0° -> (1, 0)
         // 45° -> (1, 1)
         // 90° -> (0, 1)
@@ -1854,9 +1717,7 @@ void clusterize_belief_map_obstacle_dist_REGION_GROWING_P() {
 			// 2. Si la cola está vacía → break global, como pediste
 			if (queues[k].empty()) goto stop_region_growing;
 
-			/* —————————————————————————— */
-			/*   PROCESAR 1 SOLA CELDA    */
-			/* —————————————————————————— */
+			// Process only 1 cell
 			auto [x, y] = queues[k].front(); queues[k].pop();
 
 			int best_nx = -1, best_ny = -1;
@@ -1892,10 +1753,6 @@ void clusterize_belief_map_obstacle_dist_REGION_GROWING_P() {
 		}
 	}
 	stop_region_growing:
-
-	
-
-	
 
 	log_cluster_sizes_geometric(std::vector<int>(cluster_sizes, cluster_sizes + 3));
     log_posterior_pdf_3d_cluster(belief_clusters);
@@ -1958,162 +1815,12 @@ void clusterize_belief_map_obstacle_dist_REGION_GROWING_P() {
     }
 }
 
-// void approach1_centroid_max_pdf()
-// {
-//     int n = simulation_parameters.number_of_robots;
-//     std::vector<std::vector<int>> top_indices_list(n);
-//     std::vector<double> top_values(n, -1);
-//     double epsilon = 1e-6;
-
-//     for (int i = 0; i < x_nbins * y_nbins; i++) {
-
-//         if (simulation_parameters.visitedList == visitedList_ON && cell_visited_list[i] != 0)
-//             continue;
-
-//         double value = posterior.pdf[i];
-
-//         for (int j = 0; j < n; j++) {
-//             if (value > top_values[j] + epsilon) {
-//                 // Shift down other top values and indices
-//                 for (int k = n - 1; k > j; k--) {
-//                     top_values[k] = top_values[k - 1];
-//                     top_indices_list[k] = top_indices_list[k - 1];
-//                 }
-//                 top_values[j] = value;
-//                 top_indices_list[j] = {i};
-//                 break;
-//             } else if (fabs(value - top_values[j]) < epsilon) {
-//                 top_indices_list[j].push_back(i);
-//                 break;
-//             }
-//         }
-//     }
-
-//     std::vector<int> selected_indices(n, -1);
-//     for (int j = 0; j < n; j++) {
-//         if (!top_indices_list[j].empty()) {
-//             selected_indices[j] = top_indices_list[j][0];
-//         }
-//     }
-
-//     printf("Robot ID [%d]: Top %d maximal merged belief map values:\n", ID, n);
-//     for (int j = 0; j < n; j++) {
-//         printf("%d) Value: %f at index %d\n", j + 1, top_values[j], selected_indices[j]);
-//     }
-
-//     int self_index = ID - 101;
-//     if (self_index >= 0 && self_index < simulation_parameters.number_of_robots) {
-// 		fprintf(clustering_debugging_logfile, "Robot ID [%d]: Top %d maximal merged belief map values:\n", ID, n);
-// 		for (int j = 0; j < n; j++) {
-// 			fprintf(clustering_debugging_logfile, "%d) Value: %f at index %d\n", j + 1, top_values[j], selected_indices[j]);
-// 		}
-//     }
-
-//     for (int j = 0; j < n; j++) {
-//         if (selected_indices[j] != -1) {
-//             cell_visited_list[selected_indices[j]] = 1;
-//         }
-//     }
-
-//     clusterize_belief_map(selected_indices);
-// }
-
-
-// void approach2_centroid_curr_pos()
-// {
-//     std::vector<int> selected_indices(simulation_parameters.number_of_robots);
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         double x = received_current_pos[i][0];
-//         double y = received_current_pos[i][1];
-//         selected_indices[i] = xy_to_index(x, y);
-//     }
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         cell_visited_list[selected_indices[i]] = 1;
-//     }
-
-//     printf("Robot positions and bins:\n");
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
-//     }
-
-//     clusterize_belief_map(selected_indices);
-// }
-
-
-// void approach3_centroid_curr_pos_obstacle_dist()
-// {
-//     std::vector<int> selected_indices(simulation_parameters.number_of_robots);
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         double x = received_current_pos[i][0];
-//         double y = received_current_pos[i][1];
-//         selected_indices[i] = xy_to_index(x, y);
-//     }
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         cell_visited_list[selected_indices[i]] = 1;
-//     }
-
-//     printf("Robot positions and bins:\n");
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
-//     }
-
-//     clusterize_belief_map_obstacle_dist(selected_indices);
-// }
-
-// void approach4_centroid_curr_pos_lloyd()
-// {
-//     std::vector<int> selected_indices(simulation_parameters.number_of_robots);
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         double x = received_current_pos[i][0];
-//         double y = received_current_pos[i][1];
-//         selected_indices[i] = xy_to_index(x, y);
-//     }
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         cell_visited_list[selected_indices[i]] = 1;
-//     }
-
-//     printf("Robot positions and bins:\n");
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
-//     }
-
-//     clusterize_belief_map_lloyd(selected_indices);
-// }
-
-// void approach5_centroid_curr_pos_obstacle_dist_lloyd()
-// {
-//     std::vector<int> selected_indices(simulation_parameters.number_of_robots);
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         double x = received_current_pos[i][0];
-//         double y = received_current_pos[i][1];
-//         selected_indices[i] = xy_to_index(x, y);
-//     }
-
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         cell_visited_list[selected_indices[i]] = 1;
-//     }
-
-//     printf("Robot positions and bins:\n");
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
-//     }
-
-//     clusterize_belief_map_obstacle_dist_lloyd(selected_indices);
-// }
-
 void cluster_algorithm()
 {
 	// Select SEED
     std::vector<int> selected_indices;          // salida final
 
-    if (simulation_parameters.mapCoverageSeed == ROBOT_CELL)  /* === MODO 0: posiciones de los robots ========== */
+    if (simulation_parameters.mapCoverageSeed == ROBOT_CELL)  // current robot position as seed
     {
         selected_indices.resize(simulation_parameters.number_of_robots);
 
@@ -2123,18 +1830,18 @@ void cluster_algorithm()
             selected_indices[i] = xy_to_index(x, y);
         }
     }
-    else if (simulation_parameters.mapCoverageSeed == MAX_CELL)              /* === MODO 1: 3 celdas con PDF máximo ============ */
+    else if (simulation_parameters.mapCoverageSeed == MAX_CELL)  // max BM cell  as seed
     {
         constexpr int N_SEEDS = 3;
         std::vector<std::pair<double,int>> top_cells;
 
-        /* Recorremos todo el grid en formato 1‑D y guardamos celdas candidatas */
+        // Recorremos todo el grid en formato 1‑D y guardamos celdas candidatas
         for (int idx = 0; idx < x_nbins * y_nbins; ++idx) {
             if (posterior.pdf[idx] > simulation_parameters.epsilon_clusterize)
                 top_cells.emplace_back(posterior.pdf[idx], idx);
         }
 
-        /* Orden descendente por probabilidad (los empates quedan por orden natural) */
+        // Orden descendente por probabilidad (los empates quedan por orden natural)
         std::partial_sort(top_cells.begin(),
                           top_cells.begin() + std::min(N_SEEDS, (int)top_cells.size()),
                           top_cells.end(),
@@ -2169,52 +1876,11 @@ void cluster_algorithm()
 	if (simulation_parameters.mapCoverageStrategy == REGION_GROWING_P) clusterize_belief_map_obstacle_dist_REGION_GROWING_P();
 	if (simulation_parameters.mapCoverageStrategy == REGION_GROWING_D) clusterize_belief_map_obstacle_dist_REGION_GROWING_D();
 
-		//if (simulation_parameters.distObstacleAware == EUCLIDEAN) clusterize_belief_map_REGION_GROWING();
-		//else if (simulation_parameters.distObstacleAware == DIJKSTRA) clusterize_belief_map_obstacle_dist_REGION_GROWING();
-
-
 }
 
 
-// void cluster_algorithm()
-// {
-//     std::vector<int> selected_indices(simulation_parameters.number_of_robots);
 
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         double x = received_current_pos[i][0];
-//         double y = received_current_pos[i][1];
-//         selected_indices[i] = xy_to_index(x, y);
-//     }
 
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         cell_visited_list[selected_indices[i]] = 1;
-//     }
-
-//     printf("Robot positions and bins:\n");
-//     for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-//         printf("%d) Robot ID [%d]: (%f, %f) -> Bin %d\n", i + 1, 101 + i, received_current_pos[i][0], received_current_pos[i][1], selected_indices[i]);
-//     }
-
-	
-// 	if (simulation_parameters.mapCoverageStrategy == VORONOI) 
-// 	{
-// 		if (simulation_parameters.distObstacleAware == EUCLIDEAN) clusterize_belief_map_VORONOI(selected_indices);
-// 		else if (simulation_parameters.distObstacleAware == DIJKSTRA) clusterize_belief_map_obstacle_dist_VORONOI(selected_indices);
-// 	}
-	
-// 	if (simulation_parameters.mapCoverageStrategy == LLOYD_P || simulation_parameters.mapCoverageStrategy == _PROB) 
-// 	{
-// 		if (simulation_parameters.distObstacleAware == EUCLIDEAN) clusterize_belief_map_LLOYD(selected_indices);
-// 		else if (simulation_parameters.distObstacleAware == DIJKSTRA) clusterize_belief_map_obstacle_dist_LLOYD(selected_indices);
-// 	}
-	
-// 	if (simulation_parameters.mapCoverageStrategy == REGION_GROWING) 
-// 	{
-// 		if (simulation_parameters.distObstacleAware == EUCLIDEAN) clusterize_belief_map_REGION_GROWING(selected_indices);
-// 		else if (simulation_parameters.distObstacleAware == DIJKSTRA) clusterize_belief_map_obstacle_dist_REGION_GROWING(selected_indices);
-// 	}	
-
-// }
 
 // ============================== STATES ================================= //
 void state_waiting()
@@ -2577,15 +2243,6 @@ void state_updategoal()
 			// Cicla entre 1, 2, 3
 			n_combine_pathplanning++;
 
-			// if (n_combine_pathplanning % 2 == 0)
-			// {
-			// 	path_planner.information_center_planning();
-			// }
-			// else
-			// {
-			// 	path_planner.accumulative_Dijkstra();
-					
-			// }	
 			if (FSM.n_cycles == 1)
 			{
 				path_planner.farthest_belief_point_planning();
@@ -2802,9 +2459,11 @@ void state_moving()
 
 			// save the current position in logfile
 			log_whole_position_history(true);
+			
+
+			/*Uncomment this in case that BELIEF MAP UPDATE is desired to be forced each interval of time defined on config.txt*/ 
 
 			// int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_time * 1000.0 / TIME_STEP));
-
 			// if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
 			// 	if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
 			// 		{
@@ -3109,9 +2768,6 @@ void state_receive_dist()
 
 void state_movesting()
 {
-
-
-
 	if (!movesting_initialized)
 	{
 		FSM_Sub.substate = SUBSTATE_MEASURING;
@@ -3250,7 +2906,6 @@ void substate_measuring()
 	// go to estimation
     FSM.subfsm->substate = SUBSTATE_ESTIMATING;
     FSM.subfsm->hook = substate_estimating;
-
 }
 
 void substate_estimating()
@@ -3322,9 +2977,6 @@ void substate_share_pdf()
 
 void substate_receive_pdf()
 {
-
-
-
 	if (!entered_substate_receive_pdf)
 	{
 		printf("Robot ID [%d]: SUBSTATE_RECEIVE_PDF \n", ID);
@@ -3744,7 +3396,7 @@ void state_obstacle_avoidance()
 	obstacle_avoidance_k4();
 }
 
-void state_send_goal()
+void state_send_goal() // for potential centralized control architecture
 {
 	printf("Robot ID [%d]: STATE_SEND_GOAL \n", ID);
 
@@ -3806,7 +3458,7 @@ void state_send_goal()
 	}
 }
 
-void state_receive_goal()
+void state_receive_goal() // for potential centralized architecture
 {
 
 	if (!entered_state_receive_goal)
@@ -3915,7 +3567,7 @@ void state_receive_goal()
 	}
 }
 
-void state_send_pdf()
+void state_send_pdf() // for potential centralized control architecture
 {
 	printf("Robot ID [%d]: STATE_SEND_PDF \n", ID);
 

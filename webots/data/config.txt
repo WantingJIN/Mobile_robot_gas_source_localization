@@ -8,7 +8,7 @@ map_nbr = 9
 samplingMode = CONTINOUS_SAMPLING 
 processingMode = NO_PROCESSING
 gasSensor = MOX
-planningStrategy = GREEDY
+planningStrategy = INFO_CENTER
 gasFeature = RELATIVE_VALUE
 visitedList = visitedList_OFF
 infoFeature = PDF
@@ -34,10 +34,10 @@ stopCondition = ENTROPY_ONLY
 updateGoalPolicy = FIXED_FREQ
 
 epsilon_clusterize = 0
-mapCoverageStrategy = REGION_GROWING_D
+mapCoverageStrategy = LLOYD_D
 mapCoverageSeed = ROBOT_CELL
 distObstacleAware = DIJKSTRA
-increaseFreqBM = YES
+increaseFreqBM = NO
 update_time = 2
 KLD_thresh = 1
 
