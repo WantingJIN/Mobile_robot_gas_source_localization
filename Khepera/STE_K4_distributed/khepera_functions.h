@@ -30,7 +30,7 @@ extern "C" {
 
 #define WEBOTS 0
 #define KHEPERA 1
-#define PUMP_SPEED        0     //1024=stop, 0=max
+#define PUMP_SPEED        1024    //1024=stop, 0=max
 #define COMPUTERID  30
 #define SLEEP_PERIOD      50
 #define CONTROLLER_TIMESTAMP SLEEP_PERIOD*200

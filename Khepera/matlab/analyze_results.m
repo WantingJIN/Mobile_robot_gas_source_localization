@@ -4,8 +4,8 @@ dataTable = table();
 
 %% load the data
 % the general folder
-work_station = "Desktop";
-% work_station = "Laptop"
+%work_station = "Desktop";
+work_station = "Laptop"
 if work_station == "Desktop"
     root_path = '/home/wjin/Workspace/continuous_STE/Khepera';
 else

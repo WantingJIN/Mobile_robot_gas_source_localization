@@ -2,10 +2,10 @@
 
 
 # robot's ID
-ID=106
+ID=102
 
 # set the map number
-map=9
+map=10
 echo "+++ Map number $map +++"
 # environment map
 k4put $STE_DDPM_ROOT/Khepera/Data/test_map.environment +$ID

@@ -10,7 +10,7 @@ STE_DDPM_ROOT=${STE_DDPM_ROOT:-/your/path/to/project/root}  # Set default if not
 
 # Update config.txt with ID_list
 ID_list_str=$(IFS=,; echo "${ID_list[*]}")
-sed -i -E "s/^ID_list *= *.*/ID_list=$ID_list_str/" "$config_file"
+sed -i -E "s/^ID_list *= *.*/ID_list = $ID_list_str/" "$config_file"
 echo "✅ Updated config.txt with ID_list=$ID_list_str"
 
 # Build the executable
@@ -31,6 +31,13 @@ current_date=$(date +"%Y-%m-%d")
 current_time=$(date +"%H-%M")
 results_path="Results_$current_date/$current_time"
 mkdir -p "$results_path/k4"
+mkdir -p "$results_path/terminal"
+
+# Pre-create empty log files for each robot
+for ID in "${ID_list[@]}"; do
+    touch "$results_path/terminal/$ID.txt"
+done
+
 
 # Kill any existing tmux session
 tmux has-session -t $session_name 2>/dev/null && tmux kill-session -t $session_name
@@ -61,11 +68,14 @@ for ((i = 0; i < robot_count; i++)); do
     robot_id="${ID_list[$i]}"
     tmux select-pane -t $pane_index
 
-    run_command="echo '🤖 Connecting to Robot $robot_id'; \
-ssh root@192.168.1.$robot_id 'cd wanting; rm -r log_STE_multi; ./STE_K4_distributed'; \
+    
+run_command="echo '🤖 Connecting to Robot $robot_id'; \
+ssh root@192.168.1.$robot_id 'cd wanting; rm -r log_STE_multi; ./STE_K4_distributed 2>&1 | tee robot_output.log'; \
 echo '📥 Gathering logs from Robot $robot_id'; \
 k4get log_STE_multi +$robot_id; \
+k4get robot_output.log +$robot_id; \
 mv \"$STE_DDPM_ROOT/Khepera/k4-192.168.1.$robot_id/log_STE_multi\" \"$results_path/k4/log_STE_multi_$robot_id\"; \
+mv \"$STE_DDPM_ROOT/Khepera/k4-192.168.1.$robot_id/robot_output.log\" \"$results_path/terminal/$robot_id.txt\"; \
 echo '✅ Logs saved for Robot $robot_id'"
 tmux send-keys "$run_command" C-m
 
@@ -79,3 +89,4 @@ tmux select-pane -t 0
 
 # Attach to tmux session
 tmux attach-session -t $session_name
+

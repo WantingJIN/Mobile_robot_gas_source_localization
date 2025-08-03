@@ -427,7 +427,7 @@ void updateCortexPos(Position * position){
             position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
             //while (position[2] > 2*PI) current_position[2] -= 2.0*PI;
             //while (position[2] < 0   ) current_position[2] += 2.0*PI;
-            //printf("current_position - x: %f - y: %f - o3: %f\n", current_position[0], current_position[1], current_position[2]);
+            printf("current_position - x: %f - y: %f - o3: %f\n", position->x, position->y, position->heading);
         }
     }
 }

@@ -160,7 +160,6 @@ Position last_measurement_pos;
 
 //############################################### to fix
 int nb_robots = 1;
-int robots_ID_list[] = {101};
 
 bool use_visibility_path = true;
 
@@ -869,7 +868,7 @@ void state_send_goal()
 		// 	random_planning();
 		// }
 
-		// goal position for Robot [101]
+		// goal position for Robot
 		goal_position = goal_position_team[0];
 		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
 		path_planner.goal_outside_obstacles(&goal_position);
