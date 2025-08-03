@@ -1,4 +1,5 @@
 #!/bin/bash
+# NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
 ID_list=(102 106)
 session_name="robots_view"
