@@ -2,7 +2,7 @@
 
 
 # robot's ID
-ID=106
+ID=103
 
 # set the map number
 map=1
