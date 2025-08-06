@@ -155,8 +155,6 @@ void receive_from_friends();
 double get_exp_time();
 void send_udp_msg(Message msg); 
 int receive_udp_msg(Message * msg);
-void send_tcp_msg(int dest_sock,Message msg);
-int receive_tcp_msg(int sock, Message * msg);
 int find_index_in_ID_list(int ID, std::vector<int> &ID_list);
 
 void go_to_goal(Position goal);

@@ -236,7 +236,6 @@ vector<int> parse_ID_list(const char *str)
 	while (token != NULL)
 	{
 		id_list.push_back(atoi(token));
-		printf("Parsed ID: %d\n", atoi(token)); // Debugging line
 		token = strtok(NULL, ",");
 	}
 	return id_list;

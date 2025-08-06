@@ -11,9 +11,7 @@ Message::Message(){
     position.set_to_zero();
     finish_flag = 0; // not finished
     memset(belief_map, 0, sizeof(belief_map)); // Inicializar belief map
-    params_to_buffer();
-    buffer_size = sizeof(float)*(MAP_SIZE + 7); 
-
+    buffer_size = sizeof(float)*(BUFFER_LEN); 
 }
 
 Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _position, int _flag, float *_belief_map){
@@ -23,24 +21,28 @@ Message::Message(int _msg_ID, int _sender_ID, int _receiver_ID, Position _positi
     position.copy_position(_position);
     finish_flag = _flag;
     memcpy(belief_map, _belief_map, sizeof(belief_map));
+    buffer_size = sizeof(float)*(BUFFER_LEN); // belief map + 4 additional values for msg_ID, sender_ID, receiver_ID, position
     params_to_buffer();
+    params_to_buffer();
+    buffer_size = sizeof(float)*(MAP_SIZE + 7); // belief map + 4 additional values for msg_ID, sender_ID, receiver_ID, position
+	params_to_buffer();
     buffer_size = sizeof(float)*(MAP_SIZE + 7); // belief map + 4 additional values for msg_ID, sender_ID, receiver_ID, position
 }
 
 Message::Message(const void * m_buffer){
-    buffer_size = sizeof(float)*(MAP_SIZE + 7);
+    buffer_size = sizeof(float)*(BUFFER_LEN);
     memcpy(buffer, m_buffer, buffer_size);
     buffer_to_params();
 }
 
 void Message::params_to_buffer(){
-	buffer[0] = msg_ID;
-	buffer[1] = sender_ID;
-	buffer[2] = receiver_ID;
+	buffer[0] = float(msg_ID);
+	buffer[1] = float(sender_ID);
+	buffer[2] = float(receiver_ID);
 	buffer[3] = position.x;
 	buffer[4] = position.y;
 	buffer[5] = position.heading;
-	buffer[6] = finish_flag; // finish flag
+	buffer[6] = float(finish_flag); // finish flag
 	memcpy(&buffer[7], belief_map, sizeof(belief_map));
 }
 

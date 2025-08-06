@@ -1,7 +1,10 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
+#define BUFFER_LEN  (MAP_SIZE + 7) // 4 additional values for msg_ID, sender_ID, receiver_ID, finish_flag, 3 for position (x, y, heading)
 
 #include "Position.h"
+#include <cassert>   // for C++
+
 
 class Message{ 
     public: 
@@ -12,7 +15,7 @@ class Message{
     Position position;
     int finish_flag; // -1: not finished, 1: finished        
     float belief_map[MAP_SIZE];
-    float buffer[MAP_SIZE + 7]; // 4 additional values for msg_ID, sender_ID, receiver_ID, finish_flag, position (x, y, heading)
+    float buffer[BUFFER_LEN]; // 4 additional values for msg_ID, sender_ID, receiver_ID, finish_flag, 3 for position (x, y, heading)
     int buffer_size;
 
 

@@ -507,36 +507,6 @@ int receive_udp_msg(Message * msg){
     }
 }
 
-void send_tcp_msg(int dest_sock,Message msg){
-    int timeout = 10;
-	int success = -1;
-    
-    do{
-		success = send(dest_sock, msg.buffer, msg.buffer_size, 0);
-		--timeout;
-	} while(success == -1 && timeout > 0);
-	if(success > 0){
-		printf("Robot %d sent the belief map with msg %d\n", ID, msg.msg_ID);
-		timeout = 10;
-	}
-	else
-		printf("failed to send belief map %d \n", ID);
-
-}
-
-int receive_tcp_msg(int sock, Message * msg){
-    int success = -1;
-    success = read(sock, (*msg).buffer, (*msg).buffer_size);
-    if(success > 0){
-        (*msg).buffer_to_params();
-        printf("RECEIVED msg %d from %d for %d \n", (*msg).msg_ID, (*msg).sender_ID, (*msg).receiver_ID);
-        return 1;
-    }else{
-        memset((char *) (*msg).buffer, '\0', sizeof(float)*(MAP_SIZE+7));
-        //printf("Robot %d failed to receive a message\n", ID);
-        return 0;   
-    }
-}
 
 void go_to_goal(Position goal){
     float movement[2]={0};

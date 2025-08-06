@@ -15,8 +15,9 @@
 #include "SimulationParameters.h"
 #include "path_planner.h"
 #include "Position.h"
+#include "BeliefCommManager.h"
 
-#define PORT 3011
+//#define PORT 3011
 #define SA struct sockaddr 
 
 //using namespace std; //can't use it because of isnan !
@@ -103,11 +104,16 @@ int self_index;
 //message structure
 struct message message;
 
+//communication structure
+BeliefCommManager inter_robot_comm;
+
 SimulationParameters simulation_parameters;
 
 //list of other robots
 struct friends friends[MAX_NB_ROBOTS];
 // pair of friends ID and socket
+std::vector<int> server_sockets;
+std::vector<std::pair<int, int>> client_sockets;  // {peer_ID, sock}
 vector<pair<int, int>> sock_list;
 int message_counter = 0;
 int n_time_step = 0;
@@ -178,7 +184,6 @@ static float belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
 static int received_flags[MAX_NB_ROBOTS] = {0};
 static float belief_map_merged[MAP_SIZE] = {0};
 
-bool printed = false;
 bool entered_state_receive_pdf = false;
 
 // =========================== FUNCTIONS ================================ //
@@ -293,39 +298,6 @@ void read_obstacle_list(){
 //     printf("\n");
 // }
 
-int init_TCP_socket(){
-	struct sockaddr_in address; 
-	struct sockaddr_in serv_addr; 
-      int sock = 0;
-	for (size_t i = 0; i < simulation_parameters.ID_list.size(); i++) {
-		// skip itself
-		if (i == self_index) continue;
-		// Creating socket file descriptor 
-		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) { 
-			printf("\n Socket creation error \n"); 
-			return -1; 
-		} 
-
-		memset(&serv_addr, '0', sizeof(serv_addr)); 
-
-		serv_addr.sin_family = AF_INET; 
-		serv_addr.sin_port = htons(PORT); 
-		//serv_addr.sin_addr.s_addr = INADDR_ANY; 
-		
-		// Convert IPv4 and IPv6 addresses from text to binary form
-		string IP_address = "192.168.1." + std::to_string(simulation_parameters.ID_list[i]); 
-		if(inet_pton(AF_INET, IP_address.c_str(), &serv_addr.sin_addr)<=0) { //Server's IP
-			printf("\nInvalid address/ Address not supported \n"); 
-			return -1; 
-		} 
-		// connect
-		if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) { 
-			printf("\nConnection Failed \n"); 
-			return -1; 
-		}
-      	sock_list.push_back(make_pair(simulation_parameters.ID_list[i], sock));
-	}
-}
 
 // ===================== LOG FILES FUNCTIONS ========================== //
 
@@ -949,6 +921,7 @@ void state_receive_goal()
 	time_before_moving = current_timestamp();
 }
 
+// FIXME: still need to fix the state_receive_pdf function
 void state_receive_pdf()
 {
 	if (!entered_state_receive_pdf)
@@ -959,55 +932,65 @@ void state_receive_pdf()
 
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
-		if (!printed && posterior.pdf != nullptr)
+		if (posterior.pdf != nullptr)
 		{
 			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(float));
-			printed = true;
 		}
 
-		Message msg;
-		for (size_t i = 0; i < sock_list.size(); i++)
-		{
-			receive_tcp_msg(sock_list[i].second, &msg);		
-		}
-		if (msg.finish_flag == -1) {
-			// finish the task
-			FSM.state = STATE_FINISHED;
-			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-			return;
-		} else {
-			int sender_index = find_index_in_ID_list(msg.sender_ID, simulation_parameters.ID_list);
-			memcpy(belief_maps[sender_index], msg.belief_map, sizeof(float)*MAP_SIZE);
-			received_flags[sender_index] = 1;
-		}
-		
-		// Check if all others have sent their belief maps
-		int all_received = 1;
-		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
-		{
-			if (i == self_index)
-				continue;
-			if (!received_flags[i])
-			{
-				all_received = 0;
-				printf("Robot ID [%d]: Waiting for belief map from Robot ID [%d]\n", ID, 101 + i);
-				break;
-			}
-		}
+        std::map<int, Message> received_msgs;
+	    inter_robot_comm.wait_for_all_maps(received_msgs);
+		// for (const auto& pair : received_msgs)
+		// {
+		// 	int sender_ID = pair.first;
+		// 	const Message& msg = pair.second;
+
+		// 	if (msg.finish_flag == -1) {
+		// 		// finish the task
+		// 		FSM.state = STATE_FINISHED;
+		// 		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+		// 		return;
+		// 	} else {
+		// 		int sender_index = find_index_in_ID_list(sender_ID, simulation_parameters.ID_list);
+		// 		memcpy(belief_maps[sender_index], msg.belief_map, sizeof(float) * MAP_SIZE);
+		// 		received_flags[sender_index] = 1;
+		// 	}
+		// }
+
+		// //Check if all others have sent their belief maps
+		// int all_received = 1;
+		// for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+		// {
+		// 	if (i == self_index)
+		// 		continue;
+		// 	if (!received_flags[i])
+		// 	{
+		// 		all_received = 0;
+		// 		printf("Robot ID [%d]: Waiting for belief map from Robot ID [%d]\n", ID, simulation_parameters.ID_list[i]);
+		// 		break;
+		// 	}
+		// }
 	
-		if (all_received)
-		{
+		// if (all_received)
+		// {
 
-			// Reset state for next round
-			for (int i = 0; i < simulation_parameters.number_of_robots; i++)
-			{
-				received_flags[i] = 0;
-			}
-			printed = false;
-			FSM.state = STATE_MERGE_PDF;
-			FSM.hook = state_merge_pdf;
-			entered_state_receive_pdf = false;
-		}
+		// 	// Reset state for next round
+		// 	for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+		// 	{
+		// 		received_flags[i] = 0;
+		// 	}
+		// 	//printed = false;
+		// 	// FSM.state = STATE_MERGE_PDF;
+		// 	// FSM.hook = state_merge_pdf;
+		// 	// entered_state_receive_pdf = false;
+		// 	FSM.state = STATE_UPDATEGOAL;
+	    // 	FSM.hook = state_updategoal;
+
+		// }
+		// FSM.state = STATE_UPDATEGOAL;
+	    // FSM.hook = state_updategoal;
+		usleep(5000*1000); // Wait for 5s
+		FSM.state = STATE_SHARE_PDF;
+		FSM.hook = state_share_pdf;
 	}
 }
 
@@ -1109,26 +1092,45 @@ void state_share_pdf()
     if (posterior.pdf == NULL) {
         printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
     } else {
-        for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-		if (i == self_index) continue; // Skip self
-            int target_ID = simulation_parameters.ID_list[i];
-		int message_ID = ID + message_counter++;
+        // FIXME: maybe remove target ID from the message
+		// FIXME: maybe use message ID to represent different type of message
+        //int message_ID = ID + message_counter++;
+		int message_ID = 1;
+		int target_ID = 0; // 0 indicates that this is a broadcast message
 		int finish_flag = 0; // -1 indicates that this is not a finish message
-            Message msg(message_ID, ID, target_ID, current_position, finish_flag, posterior.pdf);
-		int target_sock = -1;
-		for(size_t i=0; i<sock_list.size(); i++){
-			if(sock_list[i].first == target_ID){
-				target_sock = sock_list[i].second;
-				break;
-			}
-		}
-            if (target_sock != -1) send_tcp_msg(target_sock, msg);
-            printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
-        }
+        Message msg(message_ID, ID, target_ID, current_position, finish_flag, posterior.pdf);
+	    printf("send message_ID is %d \n", message_ID);
+		//message belief map
+		// printf("belief map is: \n");
+		// for (int i = 0; i < MAP_SIZE; i++)
+		// {
+		// 	printf("%f ", msg.belief_map[i]);
+		// }
+        // printf("\n");
+
+		// printf("Size of buffer is: %d \n", sizeof(msg.buffer));	
+		// // message buffer
+		// printf("msg is:");
+	
+		// for (int i = 0; i < 407; i++)
+		// {
+		// 	printf("%f ", msg.buffer[i]);
+		// }
+		// printf("\n");
+		
+		inter_robot_comm.send_message_to_all(msg);
     }
 
     FSM.state = STATE_RECEIVE_PDF;
     FSM.hook = state_receive_pdf;
+	// FSM.state = STATE_UPDATEGOAL;
+	// FSM.hook = state_updategoal;
+
+	// Reset the flags for the next round
+	for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+	{
+		received_flags[i] = 0;
+	}
 }
 
 void state_region_allocation()
@@ -1146,22 +1148,16 @@ void broadcast_state_finished()
 {
     printf("Robot ID [%d]: Broadcasting STATE_FINISHED\n", ID);
 
-    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-        int target_ID = 101 + i;
-        if (target_ID == ID) continue;  // Skip self
-        int message_ID = ID + message_counter++;
+    // for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+    //     int target_ID = 101 + i;
+    //     if (target_ID == ID) continue;  // Skip self
+      int message_ID = ID + message_counter++;
 	  //send STATE_FINISHED message to other robots
-        Message msg(message_ID, ID, target_ID, current_position, -1, nullptr); // -1 for STATE_FINISHED flag
-	  int target_sock = -1;
-	  for(size_t j=0; j<sock_list.size(); j++){
-		if(sock_list[j].first == target_ID){
-		    target_sock = sock_list[j].second;
-		    break;
-		}
-	  }
-        if (target_sock != -1) send_tcp_msg(target_sock, msg);
-        printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
-    }
+	  // FIXME: maybe remove target ID from the message
+	  int target_ID = 0; // 0 indicates that this is a broadcast message
+      Message msg(message_ID, ID, target_ID, current_position, -1, nullptr); // -1 for STATE_FINISHED flag
+	
+	// inter_robot_comm.send_message_to_all(msg);
 }
 
 bool check_stop_condition()
@@ -1199,7 +1195,8 @@ bool check_stop_condition()
 int main(int argc, char **argv){
 	
 	init();
-	init_TCP_socket();
+	inter_robot_comm.initialize(ID, simulation_parameters.ID_list);
+
 	establish_baseline();
 	read_obstacle_list();
 	//odor_baseline_value = 30000
