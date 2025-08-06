@@ -27,7 +27,7 @@ void BeliefCommManager::send_message_to_all(const Message& msg) {
 
 void BeliefCommManager::wait_for_all_maps(std::map<int, Message>& received_maps) {
     std::set<int> received_from;
-   // while (received_from.size() < peer_IDs.size()) {
+    while (received_from.size() < peer_IDs.size()) {
 
         Message msg;
         int from_peer;
@@ -40,7 +40,7 @@ void BeliefCommManager::wait_for_all_maps(std::map<int, Message>& received_maps)
         }
         printf("msg.msg_ID = %d, from_peer = %d\n", int(msg.msg_ID), from_peer);
         printf("peer_IDs.size() = %zu, received_from.size() = %zu\n", peer_IDs.size(), received_from.size());
-    //}
+    }
 }
 
 void BeliefCommManager::start_server() {
@@ -136,15 +136,19 @@ bool BeliefCommManager::receive_from_any(Message& msg_out, int& from_peer) {
             success_recv_map = read(sock, buf, sizeof(double)*BUFFER_LEN); 
 
             if (success_recv_map){
-                 printf("Received message from Robot %d\n", peer_id);
-
+                printf("Received message from Robot %d\n", peer_id);
+                //check the size of the message
+                if (sizeof(buf) != sizeof(float) * (MAP_SIZE + 7)) {
+                    std::cerr << "❌ Received message size mismatch from Robot " << peer_id << std::endl;
+                    return false;
+                }
                 msg_out = Message(buf);
                 msg_out.buffer_to_params();
-                printf("Received belief map is: \n");
-                for (int i = 0; i < MAP_SIZE; ++i) {
-                    std::cout << msg_out.belief_map[i] << " ";
-                }
-                printf("\n");            
+                // printf("Received belief map is: \n");
+                // for (int i = 0; i < MAP_SIZE; ++i) {
+                //     std::cout << msg_out.belief_map[i] << " ";
+                // }
+                // printf("\n");            
                 from_peer = peer_id;
                 return true;
             } else {
