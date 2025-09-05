@@ -1,8 +1,8 @@
 %% load data
 clear all; close all; clc;
 
-root_folder='/home/wjin/Workspace/continuous_STE/Khepera/RAL_2025_Results/Results_RAL_BoardF/2/15-10';
-anim_folder='/home/wjin/Workspace/continuous_STE/Khepera/RAL_2025_Results/plot/paper_estimation_process';
+root_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/RAL_2025_results/experimental_trail/Results_RAL_BoardF/2/15-10';
+anim_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/RAL_2025_results/Plot/paper_estimation_process';
 
 pc_folder=[root_folder '/pc'];
 k4_folder=[root_folder '/k4'];
@@ -12,7 +12,7 @@ positions_his = dlmread([pc_folder, '/position_history.csv']);
 measurements = dlmread([pc_folder, '/measurement_history.csv']);
 cluster_bounding_boxes = dlmread([pc_folder, '/clustering_bounding_boxes.csv']);
 params = my_text2struct([pc_folder, '/param_log.csv']);
-obst_file = ['/home/wjin/Workspace/continuous_STE/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
+obst_file = ['/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/Data/Obstacle_lists/' num2str(params.map_nbr) '_obstacles.txt'];
 obst_fileID = fopen(obst_file);
 C = textscan(obst_fileID,'%f %f %f %f', 'HeaderLines', 1);
 gas_feature = params.gas_feature;
@@ -119,7 +119,7 @@ for i=1:size(pdf,1)
     meas_num = size(current_relative_measurements,2);
     ax2 = axes; 
     scatter(ax2,positions_his(1:meas_num,3),positions_his(1:meas_num,2),60,current_relative_measurements,'MarkerFaceColor','flat','MarkerEdgeColor','k');
-    clim([0, 1]);
+    caxis([0, 1]);
   
     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     ax2.XDir = 'normal'; 
@@ -151,5 +151,6 @@ for i=1:size(pdf,1)
  
     pause;
     drawnow
-    saveas(f, [anim_folder,'/',num2str(i),'.eps'], 'epsc');
+    %saveas(f, [anim_folder,'/',num2str(i),'.eps'], 'epsc');
+    saveas(f, [anim_folder,'/',num2str(i),'.svg']);
 end
