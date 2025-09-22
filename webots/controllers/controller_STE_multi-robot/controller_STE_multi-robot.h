@@ -94,6 +94,8 @@ void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
 
+PlumeModel* initializePlumeModel();
+
 // old
 double likelihood(struct history history, double *parameters, PlumeModel *model);
 // new likelihood with precomputed gas maps

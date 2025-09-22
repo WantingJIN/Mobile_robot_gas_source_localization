@@ -98,8 +98,12 @@ struct history sample_in_motion;
 vector<double> ground_truth_in_motion;
 
 int sample_counter = 0;
-// plume model
-DeepCFDPlumeModel2D plume_model;
+
+// simulation parameters
+SimulationParameters simulation_parameters("../../data/config.txt");
+
+// Declare a pointer to the base class or common interface for plume models
+PlumeModel* plume_model = nullptr;
 
 // gas information map
 double gas_information_map[x_nbins * y_nbins] = {0};
@@ -107,8 +111,8 @@ double gas_hit_variance_map[x_nbins * y_nbins] = {0};
 int cell_visited_list[x_nbins * y_nbins] = {0};
 
 // current posterior distribution
-Posterior posterior(&plume_model);
-
+// Posterior posterior(plume_model);
+Posterior* posterior= nullptr;
 // robot's ID
 int ID;
 
@@ -119,8 +123,6 @@ struct message message;
 struct friends friends[MAX_NB_ROBOTS];
 
 int n_time_step = 0;
-
-SimulationParameters simulation_parameters;
 
 double previous_sensor_reading = 0.0;
 
@@ -329,8 +331,8 @@ void log_expected_a_posteriori()
 {
 	expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "a");
 	fprintf(expected_a_posteriori_logfile, "%d, %f, %f, %f, %f, %f\n", FSM.n_cycles,
-		  plume_model.expected_value[0], plume_model.expected_value[1], plume_model.expected_value[2],
-		  plume_model.expected_value[3], plume_model.expected_value[4]);
+		  plume_model->expected_value[0], plume_model->expected_value[1], plume_model->expected_value[2],
+		  plume_model->expected_value[3], plume_model->expected_value[4]);
 	fclose(expected_a_posteriori_logfile);
 }
 
@@ -338,8 +340,8 @@ void log_max_a_posteriori()
 {
 	max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "a");
 	fprintf(max_a_posteriori_logfile, "%d, %f, %f, %f, %f, %f\n", FSM.n_cycles,
-		  plume_model.max_a_post_value[0], plume_model.max_a_post_value[1], plume_model.max_a_post_value[2],
-		  plume_model.max_a_post_value[3], plume_model.max_a_post_value[4]);
+		  plume_model->max_a_post_value[0], plume_model->max_a_post_value[1], plume_model->max_a_post_value[2],
+		  plume_model->max_a_post_value[3], plume_model->max_a_post_value[4]);
 	fclose(max_a_posteriori_logfile);
 }
 
@@ -347,7 +349,7 @@ void log_entropy()
 {
 	double time = get_exp_time();
 	entropy_logfile = fopen(entropy_logfile_name, "a");
-	fprintf(entropy_logfile, "%f, %f\n", posterior.entropy, time);
+	fprintf(entropy_logfile, "%f, %f\n", posterior->entropy, time);
 	fclose(entropy_logfile);
 }
 
@@ -396,7 +398,7 @@ void log_history()
 	fclose(measurement_history_logfile);
 
 	// posterior 3D
-	// posterior.log_pdf(posterior_pdf_3D_name, 'w');
+	// posterior->log_pdf(posterior_pdf_3D_name, 'w');
 }
 
 void log_visited_list()
@@ -507,7 +509,7 @@ double likelihood_rel_con(struct history &history, vector<double> rel_history_li
 	int pos_coord[2];
 	pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
       pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
-	int real_source_idx = posterior.indices_to_index(pos_coord);
+	int real_source_idx = posterior->indices_to_index(pos_coord);
 	//float sigma = 0.22;// works well for Gaussian CDF
 	float sigma = 0.35;// works well for Empirical CDF
 	double sum_tmp = 0;
@@ -677,7 +679,7 @@ double likelihood_pdf(struct history &history, vector<double> pdf_history_list, 
 	int pos_coord[2];
 	pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
       pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
-	int real_source_idx = posterior.indices_to_index(pos_coord);
+	int real_source_idx = posterior->indices_to_index(pos_coord);
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
 
@@ -1171,7 +1173,7 @@ void information_gain_navigation_approx()
 		if (friends[i].ID == 0 || friends[i].ID == ID)
 			continue;
 		fake_history.position[fake_history.size].copy_position(friends[i].goal);
-		fake_history.measurement[fake_history.size] = plume_model.approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
+		fake_history.measurement[fake_history.size] = plume_model->approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
 		(fake_history.size)++;
 	}
 	// 8 candidate positions
@@ -1194,16 +1196,17 @@ void information_gain_navigation_approx()
 		if (position_outside_arena(tmp_position))
 			continue;
 		// calculate the expected concentration on position
-		fake_history.measurement.push_back(plume_model.approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
+		fake_history.measurement.push_back(plume_model->approx_concentration(tmp_position, sampleBuffer.average_wind_intensity));
 		std::cout << "fake_history.measurement = " << fake_history.measurement[fake_history.size] << std::endl;
 		fake_history.position.push_back(tmp_position);
 		(fake_history.size)++;
-		DeepCFDPlumeModel2D plume_model_fake;
-		Posterior future_posterior(&plume_model_fake, 0);
-		// future_posterior.copy_posterior(zero);
+		PlumeModel *plume_model_fake = initializePlumeModel();
+
+		Posterior future_posterior(plume_model_fake, 0);
+		// future_posterior->copy_posterior(zero);
 		future_posterior.MCMC_evaluation(fake_history);
 		// calculate the expected information gain
-		KLD = posterior.Kullback_Leibler_divergence(future_posterior);
+		KLD = posterior->Kullback_Leibler_divergence(future_posterior);
 		// printf("KLD: %f _______________________\n", KLD);
 		if (KLD > max_KLD)
 		{
@@ -1223,11 +1226,11 @@ void balance_exploration_exploitation(float gloabl_local_search_ratio)
 	float ratio = gloabl_local_search_ratio;
 	float vec1[2] = {0}, vec2[2] = {0};
 	printf("current_position : %f %f , goal position : %f %f , estimated source : %f %f \n", current_position.x, current_position.y,
-		 goal_position.x, goal_position.y, plume_model.max_a_post_value[0], plume_model.max_a_post_value[1]);
+		 goal_position.x, goal_position.y, plume_model->max_a_post_value[0], plume_model->max_a_post_value[1]);
 	vec1[0] = goal_position.x - current_position.x; // exploration
 	vec1[1] = goal_position.y - current_position.y;
-	vec2[0] = plume_model.max_a_post_value[0] - current_position.x; // TODO: to improve
-	vec2[1] = plume_model.max_a_post_value[1] - current_position.y;
+	vec2[0] = plume_model->max_a_post_value[0] - current_position.x; // TODO: to improve
+	vec2[1] = plume_model->max_a_post_value[1] - current_position.y;
 	goal_position.x = current_position.x + ratio * vec1[0] + (1 - ratio) * vec2[0];
 	goal_position.y = current_position.y + ratio * vec1[1] + (1 - ratio) * vec2[1];
 	goal_position.heading = 0;
@@ -1277,11 +1280,11 @@ void calculate_information_gain()
 {
 	if (simulation_parameters.infoFeature == VARIANCE)
 	{
-		plume_model.calculate_weighted_gas_con_variance_map(gas_information_map, posterior.pdf);
+		plume_model->calculate_weighted_gas_con_variance_map(gas_information_map, posterior->pdf);
 	}
 	else if (simulation_parameters.infoFeature == MEAN)
 	{
-		plume_model.calculate_weighted_gas_con_mean_map(gas_information_map, posterior.pdf);
+		plume_model->calculate_weighted_gas_con_mean_map(gas_information_map, posterior->pdf);
 	}
 	// printf("gas information map is: \n");
 	// for (int i = 0; i < x_nbins * y_nbins; i++)
@@ -1332,7 +1335,7 @@ void maximal_information_planning()
 		return;
 	}
 
-	posterior.index_to_param_values(max_info_index, best_point);
+	posterior->index_to_param_values(max_info_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
@@ -1352,17 +1355,17 @@ void maximal_belief_planning()
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
-			if (posterior.pdf[i] > max_pdf && cell_visited_list[i] == 0)
+			if (posterior->pdf[i] > max_pdf && cell_visited_list[i] == 0)
 			{ 
-				max_pdf = posterior.pdf[i];
+				max_pdf = posterior->pdf[i];
 				max_pdf_index = i;
 			}		
 		}
 		else
 		{
-			if (posterior.pdf[i] > max_pdf)
+			if (posterior->pdf[i] > max_pdf)
 			{
-				max_pdf = posterior.pdf[i];
+				max_pdf = posterior->pdf[i];
 				max_pdf_index = i;
 			}		
 		}
@@ -1378,7 +1381,7 @@ void maximal_belief_planning()
 		printf("goal position : %f %f \n", goal_position.x, goal_position.y);
 		return;
 	}
-	posterior.index_to_param_values(max_pdf_index, best_point);
+	posterior->index_to_param_values(max_pdf_index, best_point);
 
 	goal_position.x = best_point[0];
 	goal_position.y = best_point[1];
@@ -1390,7 +1393,7 @@ vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double informat
 {
 	// dbscan clustering
 	// param: x_eps, y_eps, minPts, ratio
-	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0 - posterior.entropy / simulation_parameters.cluster_entropy_ratio));
+	DBSCAN dbscan(x_resol + 0.1, y_resol + 0.1, 4, (1.0 - posterior->entropy / simulation_parameters.cluster_entropy_ratio));
 	dbscan.run(information_map);
 	return dbscan.cluster_bounding_boxes;
 }
@@ -1400,7 +1403,7 @@ void belief_clustering_planning()
 	printf("Enter belief clustering planning \n");
 	
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	clusters_bounding_box = clustering_information_blocks(posterior.pdf);
+	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
@@ -1450,7 +1453,7 @@ void belief_clustering_planning()
 					int pos_coord[2];
 					pos_coord[0] = floor((candidate_goal[j].x - source_x_min) / x_resol);
 					pos_coord[1] = floor((candidate_goal[j].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
+					int idx = posterior->indices_to_index(pos_coord);
 					if (cell_visited_list[idx] == 0)
 					{
 						min_dist_to_robot = dist;
@@ -1539,7 +1542,7 @@ void informative_clustering_planning()
 					int pos_coord[2];
 					pos_coord[0] = floor((candidate_goal[j].x - source_x_min) / x_resol);
 					pos_coord[1] = floor((candidate_goal[j].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
+					int idx = posterior->indices_to_index(pos_coord);
 					if (cell_visited_list[idx] == 0)
 					{
 						min_dist_to_robot = dist;
@@ -1577,10 +1580,10 @@ void balance_expected_maximal_pdf()
 {
 	double maximal_pdf_point[2] = {0};
 	double expected_pdf_point[2] = {0};
-	maximal_pdf_point[0] = plume_model.max_a_post_value[0];
-	maximal_pdf_point[1] = plume_model.max_a_post_value[1];
-	expected_pdf_point[0] = plume_model.expected_value[0];
-	expected_pdf_point[1] = plume_model.expected_value[1];
+	maximal_pdf_point[0] = plume_model->max_a_post_value[0];
+	maximal_pdf_point[1] = plume_model->max_a_post_value[1];
+	expected_pdf_point[0] = plume_model->expected_value[0];
+	expected_pdf_point[1] = plume_model->expected_value[1];
 	goal_position.x = (maximal_pdf_point[0] + expected_pdf_point[0]) / 2;
 	goal_position.y = (maximal_pdf_point[1] + expected_pdf_point[1]) / 2;
 	goal_position.heading = 0;
@@ -1695,7 +1698,7 @@ void joint_planning()
 void KLD_MAP_distance(float gloabl_local_search_ratio)
 {
 	double best_point[2] = {0};
-	posterior.XYmarginal_distance_combined(current_position, gloabl_local_search_ratio, best_point);
+	posterior->XYmarginal_distance_combined(current_position, gloabl_local_search_ratio, best_point);
 	printf("greedy goal %f %f\n", goal_position.x, goal_position.y);
 	printf("best point %f %f\n", best_point[0], best_point[1]);
 
@@ -1735,7 +1738,7 @@ void goal_outside_obstacles(Position *goal)
 			int pos_coord[2];
 			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
 			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
-			int idx = posterior.indices_to_index(pos_coord);
+			int idx = posterior->indices_to_index(pos_coord);
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
@@ -1773,7 +1776,7 @@ void goal_outside_obstacles(Position *goal)
 						int pos_coord[2];
 						pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
 						pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-						int idx = posterior.indices_to_index(pos_coord);
+						int idx = posterior->indices_to_index(pos_coord);
 						cell_visited_list[idx] = 1;
 					}
 				}
@@ -1795,7 +1798,7 @@ void goal_outside_obstacles(Position *goal)
 			int pos_coord[2];
 			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
 			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
-			int idx = posterior.indices_to_index(pos_coord);
+			int idx = posterior->indices_to_index(pos_coord);
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is outside the region\n", goal->x, goal->y);
@@ -1823,7 +1826,7 @@ void goal_outside_obstacles(Position *goal)
 				int pos_coord[2];
 				pos_coord[0] =  floor((candidates[i].x - source_x_min) / x_resol);
 				pos_coord[1] =  floor((candidates[i].y - source_y_min) / y_resol);
-				int idx = posterior.indices_to_index(pos_coord);
+				int idx = posterior->indices_to_index(pos_coord);
 				if (cell_visited_list[idx] == 0){
 					//if so, then this is the nearest position
 					nearest_unvisited_position.copy_position(candidates[i]);
@@ -1846,7 +1849,7 @@ void goal_outside_obstacles(Position *goal)
 						int pos_coord[2];
 						pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
 						pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-						int idx = posterior.indices_to_index(pos_coord);
+						int idx = posterior->indices_to_index(pos_coord);
 						cell_visited_list[idx] = 1;
 					}
 				}
@@ -1865,7 +1868,7 @@ void goal_outside_obstacles(Position *goal)
 			int pos_coord[2];
 			pos_coord[0] = floor((goal->x - source_x_min) / x_resol);
 			pos_coord[1] = floor((goal->y - source_y_min) / y_resol);
-			int idx = posterior.indices_to_index(pos_coord);
+			int idx = posterior->indices_to_index(pos_coord);
 			cell_visited_list[idx] = 1;
 		}
 		printf(">>> ! position %f %f is too close to current position\n", goal->x, goal->y);
@@ -1890,7 +1893,7 @@ void goal_outside_obstacles(Position *goal)
 				int pos_coord[2];
 				pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
 				pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-				int idx = posterior.indices_to_index(pos_coord);
+				int idx = posterior->indices_to_index(pos_coord);
 				if (cell_visited_list[idx] == 0)
 				{
 					break; // give priority to unvisited cell
@@ -1904,7 +1907,7 @@ void goal_outside_obstacles(Position *goal)
 					int pos_coord[2];
 					pos_coord[0] = floor((candidates[i].x - source_x_min) / x_resol);
 					pos_coord[1] = floor((candidates[i].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
+					int idx = posterior->indices_to_index(pos_coord);
 					cell_visited_list[idx] = 1;
 				}
 			}
@@ -1987,7 +1990,7 @@ void state_read_positions_measurements()
 		int pos_coord[2];
 		pos_coord[0] = floor((goal_position.x - source_x_min) / x_resol);
 		pos_coord[1] = floor((goal_position.y - source_y_min) / y_resol);
-		int idx = posterior.indices_to_index(pos_coord);
+		int idx = posterior->indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 		//printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
@@ -2036,7 +2039,7 @@ void state_measuring()
 					int pos_coord[2];
 					pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
 					pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
+					int idx = posterior->indices_to_index(pos_coord);
 					cell_visited_list[idx] = 1;
 				}
 			}
@@ -2062,7 +2065,7 @@ void state_measuring()
 					int pos_coord[2];
 					pos_coord[0] = floor((sample_in_motion.position[i].x - source_x_min) / x_resol);
 					pos_coord[1] = floor((sample_in_motion.position[i].y - source_y_min) / y_resol);
-					int idx = posterior.indices_to_index(pos_coord);
+					int idx = posterior->indices_to_index(pos_coord);
 					cell_visited_list[idx] = 1;
 				}
 			}
@@ -2100,7 +2103,7 @@ void state_measuring()
 			int pos_coord[2];
 			pos_coord[0] = floor((current_position.x - source_x_min) / x_resol);
 			pos_coord[1] = floor((current_position.y - source_y_min) / y_resol);
-			int idx = posterior.indices_to_index(pos_coord);
+			int idx = posterior->indices_to_index(pos_coord);
 			cell_visited_list[idx] = 1;
 		}
 		if (VERBOSE)
@@ -2215,39 +2218,39 @@ void state_estimating()
 	static long long dummy_est_sum = 0;
 
 	// reinitialize
-	posterior.pdf_reset();
+	posterior->pdf_reset();
 	// estimation
 	if (simulation_parameters.MCMC_or_exhaustive_eval == MCMC)
 	{
 		printf("going for MCMC\n");
-		posterior.MCMC_evaluation(history);
+		posterior->MCMC_evaluation(history);
 	}
 	if (simulation_parameters.MCMC_or_exhaustive_eval == EXHAUSTIVE)
 	{
 		printf("going for exhaustive\n");
-		posterior.exhaustive_evaluation(history); 
+		posterior->exhaustive_evaluation(history); 
 	}
 	// only when using MCMC
-	if (posterior.dirac_flag)
+	if (posterior->dirac_flag)
 	{
 		if (VERBOSE)
 			printf("[%d] exhaustive search!\n", ID);
-		posterior.exhaustive_evaluation(history);
+		posterior->exhaustive_evaluation(history);
 	}
 
-	// printf("sum posterior : %f \n", posterior.sum);
-	posterior.process();
-	posterior.calculate_entropy_and_spread();
+	// printf("sum posterior : %f \n", posterior->sum);
+	posterior->process();
+	posterior->calculate_entropy_and_spread();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
-	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	posterior->log_pdf(posterior_pdf_3D_name, 'a');
 
 	FSM.n_cycles++;
 	if (VERBOSE)
 		printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
 	if (VERBOSE)
-		printf("[%d] entropy : %f\n", ID, posterior.entropy);
+		printf("[%d] entropy : %f\n", ID, posterior->entropy);
 
 	char label[255];
 	sprintf(label, "Iteration: %d\n", FSM.n_cycles);
@@ -2256,7 +2259,7 @@ void state_estimating()
 	sprintf(label2, "Reading: %f\n", sampleBuffer.average_concentration);
 	wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 	char label3[255];
-	sprintf(label3, "Entropy: %.3f\n", posterior.entropy);
+	sprintf(label3, "Entropy: %.3f\n", posterior->entropy);
 	wb_supervisor_set_label(3, label3, 0.1, 0.9, 0.1, 0xFFD966, 0, "Impact");
 
 	long long current_estimation_time = current_timestamp() - time_before_estimating;
@@ -2266,11 +2269,11 @@ void state_estimating()
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
 	// check if time is up
-	//if(FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 || posterior.dirac_flag){
-	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2) )
-	//if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 )
+	//if(FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 || posterior->dirac_flag){
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2) )
+	//if (FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 )
 	{
 		// the end
 		FSM.state = STATE_FINISHED;
@@ -2477,6 +2480,20 @@ void state_obstacle_avoidance()
 	obstacle_avoidance_k4();
 }
 
+PlumeModel* initializePlumeModel() {
+    if (simulation_parameters.plumeModel == DDPM) {
+        return new DeepCFDPlumeModel2D();
+    } else if (simulation_parameters.plumeModel == FDM_PDE) {
+        return new AdeFDMPlumeModel2D();
+    } else if (simulation_parameters.plumeModel == GAUSSIAN_PLUME){
+        return new GaussianPlumeModel2D();
+    } else {
+        printf("Unknown plume model. Exit.\n");
+        exit(1);
+    }
+}
+
+
 // =========================== MAIN ============================== //
 
 int main(int argc, char **argv)
@@ -2511,9 +2528,14 @@ int main(int argc, char **argv)
 	sprintf(label2, "Reading: %d\n", 0);
 	wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 
+	// Initialize the appropriate plume model based on the simulation parameters
+	plume_model = initializePlumeModel();
+	posterior = new Posterior(plume_model);
+
+
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
-	plume_model.initialize_gas_map_and_information_matrix();
-	//plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
+	plume_model->initialize_gas_map_and_information_matrix();
+	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");

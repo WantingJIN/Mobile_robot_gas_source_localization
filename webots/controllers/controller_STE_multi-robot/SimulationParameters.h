@@ -108,6 +108,13 @@ typedef enum gasHitMethod
 	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
+typedef enum plumeModel
+{
+	GAUSSIAN_PLUME = 0,
+	DDPM = 1,
+	FDM_PDE= 2,
+} ePlumeModel;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -134,7 +141,7 @@ class SimulationParameters{
 		int gas_hit_threshold;
 		float R0;
 		int gas_sensor_noise_var;
-	      float sigma;
+	    float sigma;
 		float lambda;
 
 		eEvaluationMethod MCMC_or_exhaustive_eval;
@@ -152,10 +159,12 @@ class SimulationParameters{
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod; 
 
-		SimulationParameters();
+		ePlumeModel plumeModel;
+
+		SimulationParameters(const char *filename);
 		~SimulationParameters();
 
-        	void load_simulation_parameters_from_config(const char *filename);
+        void load_simulation_parameters_from_config(const char *filename);
 		void rewrite_parameters_from_file();
 		void log_simulation_parameters(const char *filename);
 };
