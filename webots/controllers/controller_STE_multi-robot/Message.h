@@ -14,6 +14,7 @@ public:
     int measurement0_goal1; // binary flag that shows what is the values we are sharing
     double buffer[10];
     int buffer_size;
+    int measurement0_goal1; // flag to distinguish if the message is a measurement (0) or a goal (1)
 
     // constructor : everithing set to 0
     Message();

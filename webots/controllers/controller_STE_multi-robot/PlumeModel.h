@@ -66,7 +66,11 @@ public:
 	// PlumeModel(const PlumeModel & another_model);
 
 	// destructor
-	// virtual ~PlumeModel() = 0;
+	virtual ~PlumeModel() = default;
+
+
+	int get_source_position_params_nbr();
+	void get_source_position_params(parameter *source_position_param_list);
 
 	// function that returns concentration using parameters
 	virtual double concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
@@ -77,17 +81,8 @@ public:
 	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) = 0;
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
-
-	// print expected and max a posteriori values on screen
-	virtual void print_expected_val() = 0;
-	virtual void print_max_a_post_val() = 0;
-
-	virtual int get_source_position_params_nbr() = 0;
-	virtual void get_source_position_params(parameter *source_position_param_list) = 0;
-	// virtual void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_map) = 0;
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
-	virtual void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf) = 0;
 	virtual void log_gas_concentration_map(char *filename, char writing_mode) = 0;
 	virtual void initialize_information_matrix() = 0;
 
@@ -104,7 +99,7 @@ public:
 /********************************************************/
 
 // 2D pseudo Gaussian plume model that was initially used in STE (ICRA2019)
-class GaussianPlumeModel2D : public virtual PlumeModel
+class GaussianPlumeModel2D : public PlumeModel
 {
 public:
 	// constructor : default values
@@ -113,60 +108,15 @@ public:
 	// destructor
 	~GaussianPlumeModel2D();
 
-	// returns concentration for a set of parameters and a position
-	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
+	double concentration(Position robot_position, double wind_intensity, double param_list[]) override;
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) override;
+	double approx_concentration(Position robot_position, double wind_intensity) override;
 
-	double approx_concentration(Position robot_position, double wind_intensity);
-
-	// print expected and max a posteriori values on screen
-	void print_expected_val();
-	void print_max_a_post_val();
-
-	int get_source_position_params_nbr();
-	void get_source_position_params(parameter *source_position_param_list);
-
-	void initialize_information_matrix();
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf);
-	void log_gas_concentration_map(char *filename, char writing_mode);
-};
-
-/********************************************************/
-//					NNGaussianPlumeModel2D 				//
-/********************************************************/
-
-// 2D pseudo Gaussian plume model generated using data from webots and NN training in Matlab
-class NNGaussianPlumeModel2D : public virtual PlumeModel
-{
-public:
-	// constructor : default values
-	NNGaussianPlumeModel2D();
-
-	// destructor
-	~NNGaussianPlumeModel2D();
-
-	double myNeuralNetworkFunction(const double x1[3]);
-
-	// returns concentration for a set of parameters and a position
-	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-
-	double approx_concentration(Position robot_position, double wind_intensity);
-
-	// print expected and max a posteriori values on screen
-	void print_expected_val();
-	void print_max_a_post_val();
-
-	int get_source_position_params_nbr();
-	void get_source_position_params(parameter *source_position_param_list);
-
-	void initialize_information_matrix();
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf);
-	void log_gas_concentration_map(char *filename, char writing_mode);
+    // calculate the gas concentration map and information map
+	void initialize_potential_gas_maps() override;
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) override;
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
+	void log_gas_concentration_map(char *filename, char writing_mode) override;
 };
 
 /********************************************************/
@@ -185,48 +135,74 @@ public:
 	// destructor
 	~DeepCFDPlumeModel2D();
 
-	// model
-	torch::Device device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
-	;
-	torch::jit::script::Module DeepCFD;
+	vector<GasDispersionMap> gas_con_map_list;
+	vector<CellMeasurements> cell_lists;
 
-	// load pytorch model
-	void initialize_model_features();
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) override;
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
 
+	double concentration(Position robot_position, double wind_intensity, double param_list[]) override;
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) override;
+    // calculate the gas concentration map and information map
+	void initialize_potential_gas_maps() override;
+	void log_gas_concentration_map(char *filename, char writing_mode) override;
+
+private:
 	// feature
 	torch::Tensor x;
 	torch::Tensor r_torch;
 	torch::Tensor c_torch;
-	vector<GasDispersionMap> gas_con_map_list;
-	vector<CellMeasurements> cell_lists;
+	// model
+	torch::Device device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
+	torch::jit::script::Module DeepCFD;
 
-	// resturns gas concentration map for a set of parameters
-	void initialize_information_matrix();
-	void initialize_gas_concentration_map_list();
+	// load pytorch model
+	void initialize_model_features();
+    void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+    void initialize_gas_concentration_map_list();
 	void initialize_cell_measurement_list();
-	void calculate_gas_con_map_for_each_source_location(GasDispersionMap &gas_con_map);
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
-	void calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf);
-	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
-
-	double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
-	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
-
 	// read from precomputed maps
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
-
 	double approx_concentration(Position robot_position, double wind_intensity);
-
-	// print expected and max a posteriori values on screen
-	void print_expected_val();
-	void print_max_a_post_val();
-
-	int get_source_position_params_nbr();
-	void get_source_position_params(parameter *source_position_param_list);
-	// void random_params(double * random_params);
-	void log_gas_concentration_map(char *filename, char writing_mode);
 };
+
+
+/*************************************************************************************************/
+//	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
+/************************************************************************************************/
+
+// class AdeFDMPlumeModel2D : public virtual PlumeModel
+// {
+// public:
+// 	// constructor : default values
+// 	AdeFDMPlumeModel2D();
+
+// 	AdeFDMPlumeModel2D(const AdeFDMPlumeModel2D &another_model);
+
+// 	// destructor
+// 	~AdeFDMPlumeModel2D();
+
+// 	vector<GasDispersionMap> gas_con_map_list;
+// 	vector<CellMeasurements> cell_lists;
+
+// 	// resturns gas concentration map for a set of parameters
+// 	void initialize_potential_gas_maps();
+// 	void initialize_gas_concentration_map_list();
+// 	void initialize_cell_measurement_list();
+// 	void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+// 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+// 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+
+// 	double concentration(Position robot_position, double wind_intensity, double param_list[]);
+// 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
+// 	// void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
+
+// 	// read from precomputed maps
+// 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
+// 	double approx_concentration(Position robot_position, double wind_intensity);
+
+// 	// void random_params(double * random_params);
+// 	void log_gas_concentration_map(char *filename, char writing_mode);
+// };
 
 #endif
