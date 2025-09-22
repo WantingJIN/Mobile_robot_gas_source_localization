@@ -84,7 +84,7 @@ public:
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
 	virtual void log_gas_concentration_map(char *filename, char writing_mode) = 0;
-	virtual void initialize_information_matrix() = 0;
+	virtual void initialize_gas_map_and_information_matrix() = 0;
 
 	void random_params(double *random_params);
 
@@ -113,7 +113,7 @@ public:
 	double approx_concentration(Position robot_position, double wind_intensity) override;
 
     // calculate the gas concentration map and information map
-	void initialize_potential_gas_maps() override;
+	void initialize_gas_map_and_information_matrix() override;
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) override;
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
 	void log_gas_concentration_map(char *filename, char writing_mode) override;
@@ -144,8 +144,9 @@ public:
 	double concentration(Position robot_position, double wind_intensity, double param_list[]) override;
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) override;
     // calculate the gas concentration map and information map
-	void initialize_potential_gas_maps() override;
+	void initialize_gas_map_and_information_matrix() override;
 	void log_gas_concentration_map(char *filename, char writing_mode) override;
+	double approx_concentration(Position robot_position, double wind_intensity) override;
 
 private:
 	// feature
@@ -163,7 +164,6 @@ private:
 	void initialize_cell_measurement_list();
 	// read from precomputed maps
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
-	double approx_concentration(Position robot_position, double wind_intensity);
 };
 
 

@@ -2237,6 +2237,7 @@ void state_estimating()
 
 	// printf("sum posterior : %f \n", posterior.sum);
 	posterior.process();
+	posterior.calculate_entropy_and_spread();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
@@ -2511,7 +2512,7 @@ int main(int argc, char **argv)
 	wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
-	plume_model.initialize_information_matrix();
+	plume_model.initialize_gas_map_and_information_matrix();
 	//plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// File for saving console messages

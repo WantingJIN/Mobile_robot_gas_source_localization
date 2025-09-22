@@ -44,7 +44,7 @@ R=100 # gas sensor resistance
 sigma=0.4 #noise level for the STE likelihood
 
 # release amount
-for r in 10 53 200 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
+for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
 	for m in 9 #1 2 3 5 10 #0 1  

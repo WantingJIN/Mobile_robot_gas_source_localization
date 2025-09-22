@@ -48,6 +48,9 @@ public:
     void update(double value, double *sample);
     // normalization + entropy + expected value + max a posterior (value and parameter set)
     void process();
+     // entropy and spatial spread calculation
+    void calculate_entropy_and_spread();
+
 
     // efficient sampling through MCMC
     void MCMC_evaluation(struct history history);

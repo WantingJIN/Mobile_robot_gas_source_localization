@@ -352,12 +352,6 @@ void Posterior::calculate_entropy_and_spread()
 		}
 	}
 	entropy = -1 * entropy;
-	// print on screen
-	if (VERBOSE)
-		model->print_expected_val();
-	if (VERBOSE)
-		model->print_max_a_post_val();
-	
 	x_spatial_spread = possible_source_x_index_max - possible_source_x_index_min;
 	y_spatial_spread = possible_source_y_index_max - possible_source_y_index_min;
 }
