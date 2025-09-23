@@ -2269,21 +2269,12 @@ void state_estimating()
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
 	// check if time is up
-	//if(FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 || posterior->dirac_flag){
-	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
-	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
-	if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2) )
-	//if (FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 )
+    bool is_stop_condition_reached = check_stop_condition();
+	if (is_stop_condition_reached)
 	{
-		// the end
 		FSM.state = STATE_FINISHED;
-		// log the finish time stamp
-		end_timestamp = wb_robot_get_time();
-		printf("end time stamp: %f\n", end_timestamp);
-		printf("Current state is STATE_FINISHED\n");
-	}
-	else
-	{
+		return;
+	} else {
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
 	}
@@ -2493,6 +2484,35 @@ PlumeModel* initializePlumeModel() {
     }
 }
 
+bool check_stop_condition()
+{
+	bool is_stop_condition_reached = false;
+	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
+		if (FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 ){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
+		if (FSM.n_cycles == MAX_ITER || (posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
+		if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	}
+	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	if (is_stop_condition_reached)
+	{
+		// log the finish time stamp
+		end_timestamp = wb_robot_get_time();
+		printf("Robot ID [%d]: Stop condition reached!\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
+	}
+	return is_stop_condition_reached;
+}
+
+
 
 // =========================== MAIN ============================== //
 
@@ -2500,6 +2520,10 @@ int main(int argc, char **argv)
 {
 	init();
 	read_obstacle_list();
+
+	// File for saving console messages
+	console_logfile = fopen(console_logfile_name, "a");
+
 	// visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
 	if (my_environment.is_valid(epsilon))
@@ -2536,9 +2560,6 @@ int main(int argc, char **argv)
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
 	plume_model->initialize_gas_map_and_information_matrix();
 	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
-
-	// File for saving console messages
-	console_logfile = fopen(console_logfile_name, "a");
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED)

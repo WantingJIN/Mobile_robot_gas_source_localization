@@ -115,6 +115,12 @@ typedef enum plumeModel
 	FDM_PDE= 2,
 } ePlumeModel;
 
+typedef enum stopCondition{
+	ENTROPY_ONLY = 0,
+	SPREAD_ONLY = 1,
+	ENTROPY_SPREAD = 2,
+} eStopCondition;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -158,6 +164,7 @@ class SimulationParameters{
 		eSimuMode simuMode; 
 		eCalibrationMode calibrationMode;
 		eGasHitMethod gasHitMethod; 
+		eStopCondition stopCondition;
 
 		ePlumeModel plumeModel;
 

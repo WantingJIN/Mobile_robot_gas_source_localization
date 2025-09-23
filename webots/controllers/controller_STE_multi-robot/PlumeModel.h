@@ -21,6 +21,9 @@
 #include <cmath>
 #include "CellMeasurements.h"
 #include "GasDispersionMap.h"
+#include <stdexcept>
+#include <Eigen/Sparse>
+#include <Eigen/SparseLU>
 // #include <eigen3/Eigen/Dense>
 
 // #include "pyhelper.hpp"
@@ -40,6 +43,7 @@ typedef struct
 	double max_a_post_val;
 } parameter;
 
+extern FILE *console_logfile;
 /********************************************************/
 //						PlumeModel 						//
 /********************************************************/
@@ -183,30 +187,29 @@ public:
 	AdeFDMPlumeModel2D();
 
 	AdeFDMPlumeModel2D(const AdeFDMPlumeModel2D &another_model);
-
 	// destructor
+
 	~AdeFDMPlumeModel2D();
 
-	// resturns gas concentration map for a set of parameters
-	// void initialize_gas_map_and_information_matrix();
-	// void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
-	// void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+	using SpMat  = Eigen::SparseMatrix<double>;
+    using Triplet = Eigen::Triplet<double>;
+    
 
-	// double concentration(Position robot_position, double wind_intensity, double param_list[]);
-	// void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std);
-	// // void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg);
-
-	// // read from precomputed maps
-	// // void initialize_gas_concentration_map_list();
-	// // void initialize_cell_measurement_list();
-	// // void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg);
-	// double approx_concentration(Position robot_position, double wind_intensity);
-
-	// // void random_params(double * random_params);
-	// void log_gas_concentration_map(char *filename, char writing_mode);
  
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
+	int Nx_, Ny_, N_;
+	double dx_, dy_;
+    double D_; // diffusion coefficient
+	double Q_; // source strength
+
+	SpMat A_;
+	// u_x per cell (x-advection only, like your original)
+    std::vector<double> u_;
+	Eigen::VectorXd b_;
+    mutable Eigen::SparseLU<SpMat> solver_;
+    bool fact_ok_{false};
+
 };
 
 #endif

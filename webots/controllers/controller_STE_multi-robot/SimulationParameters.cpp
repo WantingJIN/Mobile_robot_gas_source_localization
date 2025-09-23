@@ -120,6 +120,13 @@ ePlumeModel parse_plume_model(const char* str) {
 	fprintf(stderr, "Unknown plume model: %s\n", str);
 	exit(1);
 }
+eStopCondition parse_stop_condition(const char* str) {
+	if (strcmp(str, "ENTROPY_ONLY") == 0) return ENTROPY_ONLY;
+	if (strcmp(str, "SPREAD_ONLY") == 0) return SPREAD_ONLY;
+	if (strcmp(str, "ENTROPY_SPREAD") == 0) return ENTROPY_SPREAD;
+	fprintf(stderr, "Unknown stop condition: %s\n", str);
+	exit(1);
+}
 
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
@@ -192,6 +199,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			lambda = atof(value);
 		} else if (strcmp(key, "plumeModel") == 0) {
 			plumeModel = parse_plume_model(value);
+		} else if (strcmp(key, "stopCondition") == 0) {
+			stopCondition = parse_stop_condition(value);
 		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -247,6 +256,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "sigma %f\n", sigma);
 	fprintf(sim_param_file, "lambda %f\n", lambda);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
+	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fclose(sim_param_file);
 
 }

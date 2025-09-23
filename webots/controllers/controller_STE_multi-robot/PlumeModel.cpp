@@ -562,6 +562,8 @@ AdeFDMPlumeModel2D::~AdeFDMPlumeModel2D()
 }
 
 void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
+	float sx = gas_map.sx;
+	float sy = gas_map.sy;
 	// calculate the gas concentration for each cell
 	for (int i = 0; i < x_nbins; i++)
 	{

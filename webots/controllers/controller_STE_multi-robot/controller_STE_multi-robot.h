@@ -107,6 +107,8 @@ double likelihood_pdf(struct history &history, vector<double> pdf_history_list, 
 double likelihood_MI(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
+bool check_stop_condition();
+
 double randu();
 long long current_timestamp();
 double dist_to_goal(Position goal);
