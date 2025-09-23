@@ -9,11 +9,11 @@ get_filename_component(PROJECT ${CMAKE_SOURCE_DIR} NAME)  # controller directory
 project(${PROJECT})
 
 # compile with libtorch
-set(CMAKE_PREFIX_PATH /home/wjin/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
+set(CMAKE_PREFIX_PATH /home/wanting/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
 # set(MatIO_DIR "/home/wjin/Softwares/matio-1.5.23")
 # The FindMATIO.cmake file is required for the CMAKE to find the matio library.
 # I downloaded it from https://github.com/ami-iit/matio-cpp/blob/master/cmake/FindMATIO.cmake
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};/home/wjin/Workspace/continuous_STE/webots/libraries")
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};/home/wanting/Workspace/kheperaodor/plume_model_learning/webots/libraries")
 
 find_package(MatIO REQUIRED)
 include_directories(${MATIO_INCLUDE_DIRS})

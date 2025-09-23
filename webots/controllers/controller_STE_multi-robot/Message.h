@@ -15,6 +15,7 @@ public:
     double belief_map[MAP_SIZE]; // new atribute to store the belief map value
     double buffer[MAP_SIZE+10]; // augmented buffer size for the belief map value
     int buffer_size;
+    int measurement0_goal1; // flag to indicate if the message contains a measurement (0) or a goal (1)
 
     // constructor : everithing set to 0
     Message();
