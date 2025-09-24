@@ -188,10 +188,15 @@ int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_ele
 		factor = 1;
 	}
 	// error detection
-	if (index < 0 || index >= a_nbr_element)
+	if (index < 0)
 	{
 		printf("ERROR in indices_to_index : index = %d\n", index);
 		index = 0;
+	}
+	if (index >= a_nbr_element)
+	{
+		printf("ERROR in indices_to_index : index = %d - a_nbr_element = %d\n", index, a_nbr_element);
+		index = a_nbr_element - 1;
 	}
 	return index;
 }

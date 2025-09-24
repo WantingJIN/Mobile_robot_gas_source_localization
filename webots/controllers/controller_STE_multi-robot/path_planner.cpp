@@ -89,11 +89,9 @@ void PathPlanner::random_navigation()
 
 bool PathPlanner::position_outside_arena(Position p)
 {
-	bool outside = 0;
-	if (p.x < float(XMIN) || p.x > float(XMAX))
-		outside = 1;
-	if (p.y < float(YMIN) || p.y > float(YMAX))
-		outside = 1;
+	bool outside = 1;
+	if (p.y > float(YMIN) && p.y < float(YMAX) && p.x > float(XMIN) && p.x < float(XMAX))
+		outside = 0;
 	// if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
 }
@@ -334,7 +332,7 @@ void PathPlanner::belief_clustering_planning()
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
 					int pos_coord[2];
-                              position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
+                    position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
 					int idx = posterior->indices_to_index(pos_coord);
 					if (cell_visited_list[idx] == 0)
 					{
@@ -1151,15 +1149,11 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		fprintf(console_logfile, ">>> ! position %f %f is in an obstacle\n", goal->x, goal->y);
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
-		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
-		Position nearest_unvisited_position(*goal); // for testing priority to unvisited cells
 		Position candidates[4] = {Position(obstacles[idx][0], goal->y, 0),
 						  Position(obstacles[idx][2], goal->y, 0),
 						  Position(goal->x, obstacles[idx][1], 0),
 						  Position(goal->x, obstacles[idx][3], 0)};
-
-		int unvisited = 0;
 
 		// for each candidate position
 		for (int i = 0; i < 4; i++)
@@ -1205,9 +1199,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		fprintf(console_logfile, ">>> ! position %f %f is outside the region\n", goal->x, goal->y);
 		// otherwise, lets try 8 different candidates
 		float min_dist = 10000.0;
-		float min_dist_unvisited = 10000.0;
 		Position nearest_position(*goal);
-		Position nearest_unvisited_position(*goal); // to give priority to unvisited cells
 		Position candidates[8] = {Position(float(XMIN + SAFETY_MARGIN), goal->y, 0),
 						  Position(float(XMAX - SAFETY_MARGIN), goal->y, 0),
 						  Position(goal->x, float(YMIN + SAFETY_MARGIN), 0),
@@ -1220,17 +1212,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		for (int i = 0; i < 8; i++)
 		{
 
-			// give priority to unvisited cells but was much slower
-			/*
-			if (goal->distance_from(candidates[i]) <= min_dist_unvisited && simulation_parameters.visitedList == visitedList_ON){
-                        int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
-				if (cell_visited_list[idx] == 0){
-					//if so, then this is the nearest position
-					nearest_unvisited_position.copy_position(candidates[i]);
-					min_dist_unvisited = goal->distance_from(candidates[i]);
-				}
-			}
-			*/
+
 			// check if the distance to candidate is smaller than others
 			if (goal->distance_from(candidates[i]) < min_dist)
 			{

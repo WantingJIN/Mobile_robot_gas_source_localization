@@ -17,10 +17,10 @@
 #define MAX_NB_ROBOTS 5
 // wind tunnel boundaries
 #define XMIN 3.0
-#define YMIN 0.16
+#define YMIN 0
 // #define ZMIN 0.1
-#define XMAX 12.5
-#define YMAX 3.8
+#define XMAX 12.75
+#define YMAX 4
 
 // #define ZMAX 1.9
 //  min and max for each parameter
@@ -69,6 +69,11 @@ extern const char *workspacePath;
 inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
       *idx_x = (int)floor((x - source_x_min) / x_resol);
       *idx_y = (int)floor((y - source_y_min) / y_resol);
+      // put idx_x and idx_y in the range of [0, x_nbins-1] and [0, y_nbins-1]      
+      if (*idx_x < 0)
+            *idx_x = 0; 
+      if (*idx_x >= x_nbins)  
+            *idx_x = x_nbins - 1;
 }
 inline void indices_to_position_2D(int idx_x, int idx_y, float *x, float *y){
       *x = source_x_min + idx_x * x_resol + x_resol / 2.0;
@@ -78,6 +83,11 @@ inline int position_to_index_2D(float x, float y){
       int idx_x = (int)floor((x - source_x_min) / x_resol);
       int idx_y = (int)floor((y - source_y_min) / y_resol);
       int idx = idx_x + idx_y * x_nbins;
+      // put idx in the range of [0, MAP_SIZE-1]
+      if (idx < 0)
+            idx = 0;
+      if (idx >= MAP_SIZE)    
+            idx = MAP_SIZE - 1;
       return idx;
 }
 inline void index_to_position_2D(int idx, float *x, float *y){
@@ -89,9 +99,19 @@ inline void index_to_position_2D(int idx, float *x, float *y){
 inline void index_to_indices_2D(int idx, int *idx_x, int *idx_y){
       *idx_x = idx % x_nbins;
       *idx_y = idx / x_nbins;
+      // put idx_x and idx_y in the range of [0, x_nbins-1] and [0, y_nbins-1]
+      if (*idx_x < 0)
+            *idx_x = 0; 
+      if (*idx_x >= x_nbins)  
+            *idx_x = x_nbins - 1;
 }
 inline int indices_to_index_2D(int idx_x, int idx_y){
       int idx = idx_x + idx_y * x_nbins;
+      // put idx in the range of [0, MAP_SIZE-1]
+      if (idx < 0)
+            idx = 0;
+      if (idx >= MAP_SIZE)    
+            idx = MAP_SIZE - 1;
       return idx;
 }
 

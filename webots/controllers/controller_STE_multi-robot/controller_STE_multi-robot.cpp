@@ -903,9 +903,6 @@ void state_moving()
 			if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
 				{
 				double time_now_time_step_far = wb_robot_get_time();
-				double time_between_movements_time_step_far = time_now_time_step_far - time_after_moving;
-				printf("Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
-				fprintf(console_logfile, "Robot ID [%d]: Far from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_far);
 				// set_wheels_speed(0, 0);
 				sampleBuffer.reset_all();
 				path.clear();
@@ -920,9 +917,6 @@ void state_moving()
 	else 
 	{
 		double time_now_time_step_near = wb_robot_get_time();
-		double time_between_movements_time_step_near = time_now_time_step_near - time_after_moving;
-		printf("Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
-		fprintf(console_logfile, "Robot ID [%d]: Near from goal. Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements_time_step_near);
 		set_wheels_speed(0, 0);
 		sampleBuffer.reset_all();
 		path.clear();
