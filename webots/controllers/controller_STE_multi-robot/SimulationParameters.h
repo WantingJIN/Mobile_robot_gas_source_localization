@@ -125,6 +125,12 @@ typedef enum teamStrategy{
 	DISTRIBUTED = 1,
 	CENTRALIZED = 2,
 } eTeamStrategy;
+typedef enum plumeModel
+{
+	GAUSSIAN_PLUME = 0,
+	DDPM = 1,
+	FDM_PDE= 2,
+} ePlumeModel;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
@@ -163,7 +169,7 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	      float likelihoodSigma;
+	    float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
 		int planning_step;
@@ -183,19 +189,22 @@ class SimulationParameters{
 		eRelativeMethod relativeMethod; 
 		eSimuMode simuMode; 
 		eCalibrationMode calibrationMode;
+
 		eGasHitMethod gasHitMethod;
 		eTeamStrategy teamStrategy;
 
-	      eScoreFun scoreFun;
+	    eScoreFun scoreFun;
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
 		eUpdateGoalPolicy updateGoalPolicy;
 
-		SimulationParameters();
+		ePlumeModel plumeModel;
+
+		SimulationParameters(const char *filename);
 		~SimulationParameters();
 
-        	void load_simulation_parameters_from_config(const char *filename);
+        void load_simulation_parameters_from_config(const char *filename);
 		void read_mapID_from_file();
 		void log_simulation_parameters(const char *filename);
 };

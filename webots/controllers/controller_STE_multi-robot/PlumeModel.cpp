@@ -81,6 +81,18 @@ void PlumeModel::set_max_a_post_value(double *container)
 	}
 }
 
+int PlumeModel::get_source_position_params_nbr()
+{
+	return 2;
+}
+
+void PlumeModel::get_source_position_params(parameter *source_position_param_list)
+{
+	source_position_param_list[0] = param_list[0]; // x
+	source_position_param_list[1] = param_list[1]; // y
+}
+
+
 /********************************************************/
 //					GaussianPlumeModel2D 				//
 /********************************************************/
@@ -133,17 +145,6 @@ GaussianPlumeModel2D::~GaussianPlumeModel2D()
 	delete[] covar_sig_ii;
 }
 
-int GaussianPlumeModel2D::get_source_position_params_nbr()
-{
-	return 2;
-}
-
-void GaussianPlumeModel2D::get_source_position_params(parameter *source_position_param_list)
-{
-	source_position_param_list[0] = param_list[0]; // x
-	source_position_param_list[1] = param_list[1]; // y
-}
-
 // returns concentration for a set of parameters and a position
 double GaussianPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_list[])
 {
@@ -161,10 +162,6 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
 		// std on y and z
 		double sigma_y = param_list[3] * x + param_list[4];
 		double sigma_z = 1; // parameters.a_z * x + parameters.b_z;
-		// double sigma_y = 0.000803  * x*x - 0.004406 * x + 0.1726;
-		// double sigma_z = 0.0006798 * x*x - 0.00244  * x + 0.1562;
-		// double sigma_y = 0.01 * x + 0.1;
-		// double sigma_z = 0.01 * x + 0.1;
 
 		// model : C(x,y,z) = (Q/2pi.u.sigmaY.sigmaZ) * exp (-y^2/2sigmaY^2 - z^2/2sigmaZ^2)
 		double model_value = (param_list[2] / (2 * PI * wind_intensity * sigma_y * sigma_z)) * exp(-((y * y) / (2 * sigma_y * sigma_y)) - ((z * z) / (2 * sigma_z * sigma_z)));
@@ -174,7 +171,7 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
 }
 
 // returns a list of concentrations for ONE set of parameters and A LIST of positions
-void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg)
+void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std)
 {
 	// ASSUMPTION : enough memory is already is already allocated for c_avg
 	for (int i = 0; i < nbr; i++)
@@ -183,42 +180,17 @@ void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nb
 	}
 }
 
-// returns a list of concentrations for A LIST of parameters sets and A LIST of positions
-//  void GaussianPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg){
-//  	//for all source positions
-
-// }
-
-// void GaussianPlumeModel2D::concentration(Position robot_position[], int nbr, double wind_intensity, double param_list[], double * c_avg){
-// 	//ASSUMPTION : enough memory is already is already allocated for c_avg
-// 	for(int i = 0; i < nbr; i++){
-// 		c_avg[i] = concentration(robot_position[i], wind_intensity, param_list);
-// 	}
-// }
 
 double GaussianPlumeModel2D::approx_concentration(Position robot_position, double wind_intensity)
 {
 	return concentration(robot_position, wind_intensity, expected_value);
 }
 
-void GaussianPlumeModel2D::print_expected_val()
-{
-	// printf("Expected value: Q=%f @(%f %f) sigma y: %f %f  \n",
-	// 	 expected_value[2], expected_value[0], expected_value[1], expected_value[3], expected_value[4]);
-}
-
-void GaussianPlumeModel2D::print_max_a_post_val()
-{
-	// printf("MaxApost value: Q=%f @(%f %f) sigma y: %f %f  \n",
-	// 	 max_a_post_value[2], max_a_post_value[0], max_a_post_value[1], max_a_post_value[3], max_a_post_value[4]);
-}
-
 void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) {}
 void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) {}
-void GaussianPlumeModel2D::calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf) {}
 void GaussianPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode) {}
-void GaussianPlumeModel2D::initialize_potential_gas_maps() {}
-
+void GaussianPlumeModel2D::initialize_gas_map_and_information_matrix() {}
+void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) {}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -284,24 +256,13 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D()
 	delete[] covar_sig_ii;
 }
 
-void DeepCFDPlumeModel2D::initialize_potential_gas_maps()
+void DeepCFDPlumeModel2D::initialize_gas_map_and_information_matrix()
 {
 	// initialize the dispersion map list
 	initialize_gas_concentration_map_list();
 
 	// initialize the cell measurements list
 	initialize_cell_measurement_list();
-}
-
-int DeepCFDPlumeModel2D::get_source_position_params_nbr()
-{
-	return 2;
-}
-
-void DeepCFDPlumeModel2D::get_source_position_params(parameter *source_position_param_list)
-{
-	source_position_param_list[0] = param_list[0]; // x
-	source_position_param_list[1] = param_list[1]; // y
 }
 
 void DeepCFDPlumeModel2D::initialize_model_features()
@@ -500,15 +461,6 @@ void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_me
 	}
 }
 
-void DeepCFDPlumeModel2D::calculate_weighted_gas_hit_variance_map(double *gas_hit_variance_map, double *pdf)
-{
-	for (int i = 0; i < cell_lists.size(); i++)
-	{
-		cell_lists[i].calculate_hit_weighted_mean_variance(pdf);
-		gas_hit_variance_map[i] = cell_lists[i].hit_std;
-	}
-}
-
 void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map)
 {
 	float sx = gas_map.sx;
@@ -543,18 +495,6 @@ double DeepCFDPlumeModel2D::approx_concentration(Position robot_position, double
 	return concentration(robot_position, wind_intensity, expected_value);
 }
 
-void DeepCFDPlumeModel2D::print_expected_val()
-{
-	// printf("Expected value: @(%f %f)\n",
-	// 	 expected_value[0], expected_value[1]);
-}
-
-void DeepCFDPlumeModel2D::print_max_a_post_val()
-{
-	// printf("MaxApost value: @(%f %f)\n",
-	// 	 max_a_post_value[0], max_a_post_value[1]);
-}
-
 void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode)
 {
 	for (auto gas_map : gas_con_map_list)
@@ -562,3 +502,76 @@ void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing
 		gas_map.log_map(filename, writing_mode);
 	}
 }
+
+/*************************************************************************************************/
+//	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
+/************************************************************************************************/
+
+AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
+{
+	// number of parameters to estimate
+	nbr_param = 2;
+
+	// allocate memory for the parameters
+	param_list = new parameter[nbr_param];
+
+	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
+	// source_x
+	param_list[0] = parameter{"source_x", source_x_min, source_x_max, x_resol, x_nbins, 0, 0};
+	// source_y
+	param_list[1] = parameter{"source_y", source_y_min, source_y_max, y_resol, y_nbins, 0, 0};
+
+	// initialize expected and max a posteriori values to zero
+	expected_value = new double[nbr_param];
+	max_a_post_value = new double[nbr_param];
+	for (int i = 0; i < nbr_param; i++)
+	{
+		expected_value[i] = 0;
+		max_a_post_value[i] = 0;
+	}
+
+	// MCMC proposal distribution's covariance sigma_i,i
+	covar_sig_ii = new double[nbr_param];
+	covar_sig_ii[0] = 2;   // x
+	covar_sig_ii[1] = 0.1; // y
+}
+AdeFDMPlumeModel2D::AdeFDMPlumeModel2D(const AdeFDMPlumeModel2D &another_model)
+{
+	nbr_param = another_model.nbr_param;
+
+	param_list = new parameter[nbr_param];
+	expected_value = new double[nbr_param];
+	max_a_post_value = new double[nbr_param];
+	covar_sig_ii = new double[nbr_param];
+
+	for (int i = 0; i < nbr_param; i++)
+	{
+		param_list[i] = another_model.param_list[i];
+		expected_value[i] = another_model.expected_value[i];
+		max_a_post_value[i] = another_model.max_a_post_value[i];
+		covar_sig_ii[i] = another_model.covar_sig_ii[i];
+	}
+}
+// destructor
+AdeFDMPlumeModel2D::~AdeFDMPlumeModel2D()
+{
+	delete[] param_list;
+	delete[] expected_value;
+	delete[] max_a_post_value;
+	delete[] covar_sig_ii;
+}
+
+void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
+	float sx = gas_map.sx;
+	float sy = gas_map.sy;
+	// calculate the gas concentration for each cell
+	for (int i = 0; i < x_nbins; i++)
+	{
+		for (int j = 0; j < y_nbins; j++)
+		{
+			
+			gas_map.gasConcentrationMap[i][j] = 0.0;
+		}
+	}
+}
+

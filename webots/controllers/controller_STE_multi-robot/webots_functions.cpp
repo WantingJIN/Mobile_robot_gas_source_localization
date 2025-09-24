@@ -97,9 +97,9 @@ void init()
 	// set the log file names
 	set_logfile_names();
 
-      // load the simulation parameters
-      simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
-      simulation_parameters.read_mapID_from_file();
+    // load the simulation parameters
+    simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
+    simulation_parameters.read_mapID_from_file();
 
 	FILE *sim_param_file;
 	int ok = 0;

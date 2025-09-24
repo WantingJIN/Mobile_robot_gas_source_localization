@@ -329,11 +329,6 @@ void Posterior::process()
 		// marginal
 		source_marginal_pdf[indices_to_index(indices, model->get_source_position_params_nbr(), nbr_element_marginal)] += pdf[i];
 	}
-	// print on screen
-	if (VERBOSE)
-		model->print_expected_val();
-	if (VERBOSE)
-		model->print_max_a_post_val();
 	
 }
 void Posterior::calculate_entropy_and_spread()
@@ -363,7 +358,6 @@ void Posterior::calculate_entropy_and_spread()
 		}
 	}
 	entropy = -1 * entropy;
-	// printf("entropy: %f\n", entropy);
 	x_spatial_spread = possible_source_x_index_max - possible_source_x_index_min;
 	y_spatial_spread = possible_source_y_index_max - possible_source_y_index_min;
 }

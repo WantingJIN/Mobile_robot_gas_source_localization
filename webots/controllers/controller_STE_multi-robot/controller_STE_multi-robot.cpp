@@ -95,17 +95,19 @@ struct history history;
 struct history sample_in_motion;
 
 int sample_counter = 0;
-// plume model
-DeepCFDPlumeModel2D plume_model;
+
+// simulation parameters
+SimulationParameters simulation_parameters("../../data/config.txt");
+
+// Declare a pointer to the base class or common interface for plume models
+PlumeModel* plume_model = nullptr;
 
 int cell_visited_list[MAP_SIZE] = {0};
 
 // current posterior distribution
-Posterior posterior(&plume_model);
-
-// path planner
-PathPlanner path_planner(&plume_model, &posterior, &history);
-
+// Posterior posterior(plume_model);
+Posterior* posterior= nullptr;
+PathPlanner* path_planner = nullptr;
 // robot's ID
 int ID;
 int self_index;
@@ -117,8 +119,6 @@ struct message message;
 struct friends friends[MAX_NB_ROBOTS];
 
 int n_time_step = 0;
-
-SimulationParameters simulation_parameters;
 
 double previous_sensor_reading = 0.0;
 
@@ -333,8 +333,8 @@ void log_expected_a_posteriori()
 {
 	expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "a");
 	fprintf(expected_a_posteriori_logfile, "%d, %f, %f, %f, %f, %f\n", FSM.n_cycles,
-		  plume_model.expected_value[0], plume_model.expected_value[1], plume_model.expected_value[2],
-		  plume_model.expected_value[3], plume_model.expected_value[4]);
+		  plume_model->expected_value[0], plume_model->expected_value[1], plume_model->expected_value[2],
+		  plume_model->expected_value[3], plume_model->expected_value[4]);
 	fclose(expected_a_posteriori_logfile);
 }
 
@@ -342,8 +342,8 @@ void log_max_a_posteriori()
 {
 	max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "a");
 	fprintf(max_a_posteriori_logfile, "%d, %f, %f, %f, %f, %f\n", FSM.n_cycles,
-		  plume_model.max_a_post_value[0], plume_model.max_a_post_value[1], plume_model.max_a_post_value[2],
-		  plume_model.max_a_post_value[3], plume_model.max_a_post_value[4]);
+		  plume_model->max_a_post_value[0], plume_model->max_a_post_value[1], plume_model->max_a_post_value[2],
+		  plume_model->max_a_post_value[3], plume_model->max_a_post_value[4]);
 	fclose(max_a_posteriori_logfile);
 }
 
@@ -351,7 +351,7 @@ void log_entropy()
 {
 	double time = get_exp_time();
 	entropy_logfile = fopen(entropy_logfile_name, "a");
-	fprintf(entropy_logfile, "%f, %f\n", posterior.entropy, time);
+	fprintf(entropy_logfile, "%f, %f\n", posterior->entropy, time);
 	fclose(entropy_logfile);
 }
 
@@ -481,6 +481,32 @@ void state_read_positions_measurements()
 	float f1, f2, f3, f4, f5, f6, f7, f8;
 	double t;
 	char line[256];
+	// int pos_coord[2];
+	// pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
+    //   pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
+	// int real_source_idx = posterior->indices_to_index(pos_coord);
+	// //float sigma = 0.22;// works well for Gaussian CDF
+	// float sigma = 0.35;// works well for Empirical CDF
+	// double sum_tmp = 0;
+	// if (sampleBuffer.average_wind_intensity == 0)
+	// 	printf("NO WIND, BYE BYE!\n");
+
+	// vector<double> model_c_avg(history.size);
+
+	// int nbr = history.size;
+	// float px[nbr], py[nbr];
+	// int idx[nbr], idy[nbr];
+
+	// // get indices in the map
+	// for (int i = 0; i < nbr; i++)
+	// {
+	// 	px[i] = history.position[i].x;
+	// 	py[i] = history.position[i].y;
+	// 	idx[i] = floor((px[i] - source_x_min) / x_resol);
+	// 	idy[i] = floor((py[i] - source_y_min) / y_resol);
+	// }
+
+	// model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
 	// Read the goal position
 	if (!feof(experiment_goalposition_logfile))
@@ -630,29 +656,29 @@ void state_estimating()
 	long long time_before_estimating = current_timestamp();
 
 	// reinitialize
-	posterior.pdf_reset();
+	posterior->pdf_reset();
 	// estimation
 	if (simulation_parameters.BayesianModelingMethod == MCMC)
 	{
 		printf("going for MCMC\n");
-		posterior.MCMC_evaluation(history);
+		posterior->MCMC_evaluation(history);
 	}
 	if (simulation_parameters.BayesianModelingMethod == EXHAUSTIVE)
 	{
 		printf("going for exhaustive\n");
-		posterior.exhaustive_evaluation(history);
+		posterior->exhaustive_evaluation(history);
 	}
 	// only when using MCMC
-	if (posterior.dirac_flag)
+	if (posterior->dirac_flag)
 	{
 		if (VERBOSE)
 			printf("[%d] exhaustive search!\n", ID);
-		posterior.exhaustive_evaluation(history);
+		posterior->exhaustive_evaluation(history);
 	}
 
 	// printf("sum posterior : %f \n", posterior.sum);
-	posterior.normalize();
-	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	posterior->normalize();
+	posterior->log_pdf(posterior_pdf_3D_name, 'a');
 
 	FSM.n_cycles++;
 	if (VERBOSE)
@@ -667,7 +693,7 @@ void state_estimating()
 	sprintf(label2, "Reading: %f\n", sampleBuffer.average_concentration);
 	// wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 	char label3[255];
-	sprintf(label3, "Entropy: %.3f\n", posterior.entropy);
+	sprintf(label3, "Entropy: %.3f\n", posterior->entropy);
 	// wb_supervisor_set_label(3, label3, 0.1, 0.9, 0.1, 0xFFD966, 0, "Impact");
 
 	long long current_estimation_time = current_timestamp() - time_before_estimating;
@@ -680,8 +706,8 @@ void state_estimating()
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
 	{
 		// calculate entropy and spread
-		posterior.process();
-      	posterior.calculate_entropy_and_spread();
+		posterior->process();
+      	posterior->calculate_entropy_and_spread();
 		log_expected_a_posteriori();
 		log_max_a_posteriori();
 		log_entropy();
@@ -727,38 +753,38 @@ void state_updategoal()
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
-		path_planner.maximal_belief_planning();
+		path_planner->maximal_belief_planning();
 		break;
 	case BALANCE_MAXIMAL_EXPECTED:
-		path_planner.balance_expected_maximal_pdf();
+		path_planner->balance_expected_maximal_pdf();
 		break;
 	case RANDOM:
-		path_planner.random_planning();
+		path_planner->random_planning();
 		break;
 	case LAWNMOWER:
-		path_planner.lawnmower_planning();
+		path_planner->lawnmower_planning();
 		break;
 	case BELIEF_CLUSTERING:
-		path_planner.belief_clustering_planning();
+		path_planner->belief_clustering_planning();
 		break;
 	case WEIGHTED_CLUSTERING:
-		path_planner.weighted_belief_clustering();
+		path_planner->weighted_belief_clustering();
 		break;
 	case INFO_CLUSTERING:
-		path_planner.informative_clustering_planning();
+		path_planner->informative_clustering_planning();
 		break;
 	case INFORMATIVE_KLD:
-		path_planner.KLD_informative_goal_selection();
-		path_planner.KLD_distance_balance();
+		path_planner->KLD_informative_goal_selection();
+		path_planner->KLD_distance_balance();
 		break;
 	case SUM_DIJKSTRA_FIX:
-		path_planner.accumulative_Dijkstra();
+		path_planner->accumulative_Dijkstra();
 		break;
 	case SUM_DIJKSTRA_ADP:
-		path_planner.accumulative_Dijkstra();
+		path_planner->accumulative_Dijkstra();
 		break;
 	case MULTI_DIJKSTRA:
-		path = path_planner.multi_objective_Dijkstra();
+		path = path_planner->multi_objective_Dijkstra();
 		use_visibility_path = false;
 		break;
 	default:
@@ -777,7 +803,7 @@ void state_updategoal()
 		{
 
 			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-			path_planner.goal_outside_obstacles(&goal_position);
+			path_planner->goal_outside_obstacles(&goal_position);
 			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 			// find the path using visibility graph
@@ -948,7 +974,7 @@ void state_send_goal()
 		// goal position for Robot [101]
 		goal_position = goal_position_team[0];
 		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		path_planner.goal_outside_obstacles(&goal_position);
+		path_planner->goal_outside_obstacles(&goal_position);
 		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 		// find the path using visibility graph
@@ -1069,7 +1095,7 @@ void state_receive_goal()
 
 	// print goal position for some of the robots
 	// printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-	path_planner.goal_outside_obstacles(&goal_position);
+	path_planner->goal_outside_obstacles(&goal_position);
 	printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 	VisiLibity::Point start(current_position.x, current_position.y);
@@ -1108,10 +1134,10 @@ void state_send_pdf()
 {
 	printf("Robot ID [%d]: STATE_SEND_PDF \n", ID);
 
-	if (posterior.pdf != nullptr)
+	if (posterior->pdf != nullptr)
 	{
 		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send(ID, CENTRAL_MASTER_ID, Position(), -1, Position(), 0, posterior.pdf);
+		Message msg_send(ID, CENTRAL_MASTER_ID, Position(), -1, Position(), 0, posterior->pdf);
 		send_msg(msg_send);
 		// printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
 
@@ -1135,9 +1161,9 @@ void state_receive_pdf()
 
 	if (is_centralized || is_distributed)
 	{
-		if (!printed && posterior.pdf != nullptr)
+		if (!printed && posterior->pdf != nullptr)
 		{
-			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(double));
+			memcpy(belief_maps[self_index], posterior->pdf, MAP_SIZE * sizeof(double));
 			printed = true;
 		}
 
@@ -1250,10 +1276,10 @@ void state_merge_pdf()
 		printf("%f ", belief_map_merged[i]);
 	}
 	printf("\n");
-	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(double));
+	memcpy(posterior->pdf, belief_map_merged, MAP_SIZE * sizeof(double));
       // Check the stopping condition after merging
-	posterior.process();
-      posterior.calculate_entropy_and_spread();
+	posterior->process();
+    posterior->calculate_entropy_and_spread();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
@@ -1285,7 +1311,7 @@ void state_updategoal_team()
 {
 	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
 
-	path_planner.maximal_merged_belief_planning();
+	path_planner->maximal_merged_belief_planning();
 
 	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
 
@@ -1302,14 +1328,14 @@ void state_share_pdf()
 {
     printf("Robot ID [%d]: STATE_SHARE_PDF\n", ID);
 
-    if (posterior.pdf == NULL) {
+    if (posterior->pdf == NULL) {
         printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
     } else {
         for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
             int target_ID = 101 + i;
             if (target_ID == ID) continue; // skip self
 
-            Message msg(ID, target_ID, Position(), -1, Position(), 0, posterior.pdf);
+            Message msg(ID, target_ID, Position(), -1, Position(), 0, posterior->pdf);
             send_msg(msg);
 
             printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
@@ -1329,12 +1355,77 @@ void state_region_allocation()
 		FSM.hook = state_updategoal;
 	}
 }
+
+
+// Broadcast STATE_FINISHED to all teammates
+void broadcast_state_finished()
+{
+    printf("Robot ID [%d]: Broadcasting STATE_FINISHED\n", ID);
+
+    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
+        int target_ID = 101 + i;
+        if (target_ID == ID) continue;  // Skip self
+
+        Message msg(ID, target_ID, Position(), -1, Position(), -1); // -1 for STATE_FINISHED flag
+        send_msg(msg);
+
+        printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
+    }
+}
+
+bool check_stop_condition()
+{
+	bool is_stop_condition_reached = false;
+	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
+		if (FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 ){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
+		if (FSM.n_cycles == MAX_ITER || (posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
+		if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_stop_condition_reached = true;
+		}
+	}
+	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	if (is_stop_condition_reached)
+	{
+		// log the finish time stamp
+		end_timestamp = wb_robot_get_time();
+		printf("Robot ID [%d]: Stop condition reached!\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
+	}
+	return is_stop_condition_reached;
+}
+PlumeModel* initializePlumeModel() {
+    if (simulation_parameters.plumeModel == DDPM) {
+        return new DeepCFDPlumeModel2D();
+    } else if (simulation_parameters.plumeModel == FDM_PDE) {
+        return new AdeFDMPlumeModel2D();
+    } else if (simulation_parameters.plumeModel == GAUSSIAN_PLUME){
+        return new GaussianPlumeModel2D();
+    } else {
+        printf("Unknown plume model. Exit.\n");
+        exit(1);
+    }
+}
+
+
+
+
 // =========================== MAIN ============================== //
 
 int main(int argc, char **argv)
 {
 	init();
 	read_obstacle_list();
+
+	// File for saving console messages
+	console_logfile = fopen(console_logfile_name, "a");
+
 	// visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
 	if (my_environment.is_valid(epsilon))
@@ -1363,12 +1454,15 @@ int main(int argc, char **argv)
 	// sprintf(label2, "Reading: %d\n", 0);
 	// wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 
-	// Precompute gas concentration maps for all possible source locations, resolution 20x20
-	plume_model.initialize_potential_gas_maps();
-	// plume_model.log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
+	// Initialize the appropriate plume model based on the simulation parameters
+	plume_model = initializePlumeModel();
+	posterior = new Posterior(plume_model);
+	path_planner = new PathPlanner(plume_model, posterior, &history);
 
-	// File for saving console messages
-	console_logfile = fopen(console_logfile_name, "a");
+
+	// Precompute gas concentration maps for all possible source locations, resolution 20x20
+	plume_model->initialize_gas_map_and_information_matrix();
+	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// initialize the receiver
 	init_receiver(TIME_STEP);
@@ -1431,47 +1525,4 @@ int main(int argc, char **argv)
 	delete[] obstacles;
 
 	exit(0);
-}
-// Broadcast STATE_FINISHED to all teammates
-void broadcast_state_finished()
-{
-    printf("Robot ID [%d]: Broadcasting STATE_FINISHED\n", ID);
-
-    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-        int target_ID = 101 + i;
-        if (target_ID == ID) continue;  // Skip self
-
-        Message msg(ID, target_ID, Position(), -1, Position(), -1); // -1 for STATE_FINISHED flag
-        send_msg(msg);
-
-        printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
-    }
-}
-
-bool check_stop_condition()
-{
-	bool is_stop_condition_reached = false;
-	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
-		if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 ){
-			is_stop_condition_reached = true;
-		}
-	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
-		if (FSM.n_cycles == MAX_ITER || (posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
-			is_stop_condition_reached = true;
-		}
-	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
-		if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
-			is_stop_condition_reached = true;
-		}
-	}
-	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	if (is_stop_condition_reached)
-	{
-		// log the finish time stamp
-		end_timestamp = wb_robot_get_time();
-		printf("Robot ID [%d]: Stop condition reached!\n", ID);
-		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
-	}
-	return is_stop_condition_reached;
 }

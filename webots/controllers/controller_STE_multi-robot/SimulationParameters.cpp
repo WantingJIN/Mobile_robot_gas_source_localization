@@ -225,37 +225,24 @@ eScoreFun parse_score_fun(const char *str)
 	exit(1);
 }
 
-SimulationParameters::SimulationParameters()
-{
-	// default values
-	// simulation parameters
-	likelihood_error = 30;
-	global_local_search_ratio = 0.5;
-	MCMC_iteration_num = 1000;
-	BayesianModelingMethod = EXHAUSTIVE;
-	number_of_robots = 1;
-	scenario = NO_COM_NO_COOR;
-	map_nbr = 0;
-	samplingMode = CONTINOUS_SAMPLING;
-	processingMode = NO_PROCESSING;
-	gasSensor = PID;
-	planningStrategy = BELIEF_CLUSTERING;
-	gasFeature = GASHIT;
-	visitedList = visitedList_ON;
-	infoFeature = VARIANCE;
-	sampling_period = 1;
-	cluster_entropy_ratio = 10;
-	vel_factor = 10;
-	sampling_dist_thresh = 0.1;
-	relativeMethod = EMPIRICAL_CDF;
-	gasHitMethod = SLIDING_WINDOW_THRES;
-	calibrationMode = OFF;
-	simuMode = ONLINE;
-	R0 = 100;
-	weighting_entropy_ratio = 6;
-	teamStrategy = CENTRALIZED;
-	update_goal_time = 10;
-	stopCondition = ENTROPY_ONLY;
+
+ePlumeModel parse_plume_model(const char* str) {
+	if (strcmp(str, "GAUSSIAN_PLUME") == 0) return GAUSSIAN_PLUME;
+	if (strcmp(str, "DDPM") == 0) return DDPM;
+	if (strcmp(str, "FDM_PDE") == 0) return FDM_PDE;
+	fprintf(stderr, "Unknown plume model: %s\n", str);
+	exit(1);
+}
+eStopCondition parse_stop_condition(const char* str) {
+	if (strcmp(str, "ENTROPY_ONLY") == 0) return ENTROPY_ONLY;
+	if (strcmp(str, "SPREAD_ONLY") == 0) return SPREAD_ONLY;
+	if (strcmp(str, "ENTROPY_SPREAD") == 0) return ENTROPY_SPREAD;
+	fprintf(stderr, "Unknown stop condition: %s\n", str);
+	exit(1);
+}
+
+SimulationParameters::SimulationParameters(const char *filename){
+	load_simulation_parameters_from_config(filename);
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -406,9 +393,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		}
 		else if (strcmp(key, "updateGoalPolicy") == 0) {
 			updateGoalPolicy = parse_update_goal_policy(value);
-		}
-		else
-		{
+		} 
+		else if (strcmp(key, "plumeModel") == 0) {
+			plumeModel = parse_plume_model(value);
+		} else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
 		} 
@@ -469,6 +457,8 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
+	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
+	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fclose(sim_param_file);
 }
 
