@@ -489,9 +489,7 @@ void state_read_positions_measurements()
 		goal_position.x = f1;
 		goal_position.y = f2;
 		goal_position.heading = 0;
-		int pos_coord[2];
-		position_to_indices_2D(goal_position.x, goal_position.y, &pos_coord[0], &pos_coord[1]);
-		int idx = posterior.indices_to_index(pos_coord);
+		int idx = position_to_index_2D(goal_position.x, goal_position.y);
 		cell_visited_list[idx] = 1;
 		// printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
@@ -541,9 +539,7 @@ void state_measuring()
 			// mark the cell as visited
 			if (simulation_parameters.visitedList == visitedList_ON)
 			{
-				int pos_coord[2];
-				position_to_indices_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y, &pos_coord[0], &pos_coord[1]);
-				int idx = posterior.indices_to_index(pos_coord);
+				int idx = position_to_index_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y);
 				cell_visited_list[idx] = 1;
 			}
 		}
@@ -599,9 +595,7 @@ void state_measuring()
 	// mark the current cell as visited
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
-		int pos_coord[2];
-		position_to_indices_2D(current_position.x, current_position.y, &pos_coord[0], &pos_coord[1]);
-		int idx = posterior.indices_to_index(pos_coord);
+		int idx = position_to_index_2D(current_position.x, current_position.y);
 		cell_visited_list[idx] = 1;
 	}
 	// log and save

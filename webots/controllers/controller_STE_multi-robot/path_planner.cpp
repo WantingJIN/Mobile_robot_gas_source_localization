@@ -331,9 +331,7 @@ void PathPlanner::belief_clustering_planning()
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
-					int pos_coord[2];
-                    position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
-					int idx = posterior->indices_to_index(pos_coord);
+                    int idx = position_to_index_2D(candidate_goal[j].x, candidate_goal[j].y);
 					if (cell_visited_list[idx] == 0)
 					{
 						min_dist_to_robot = dist;
@@ -419,9 +417,7 @@ void PathPlanner::informative_clustering_planning()
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
-					int pos_coord[2];
-					position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y, &pos_coord[0], &pos_coord[1]);
-					int idx = posterior->indices_to_index(pos_coord);
+					int idx = position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y);
 					if (cell_visited_list[idx] == 0)
 					{
 						min_dist_to_robot = dist;
