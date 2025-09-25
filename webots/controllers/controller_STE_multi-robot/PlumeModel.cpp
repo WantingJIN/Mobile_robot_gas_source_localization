@@ -578,6 +578,7 @@ void AdeFDMPlumeModel2D::set_parameters(double Nx, double Ny, double D, double Q
 	dy_ = (source_y_max - source_y_min) / (Ny_ - 1);
     
 	Q_ = Q;
+	source_strength_ = Q_ / (dx_ * dy_); // point source strength (mass per area per time)
 	u_.assign(N_, 0.0);
 }
 
@@ -682,7 +683,7 @@ std::vector<double> AdeFDMPlumeModel2D::solve_point_source(double sx, double sy)
 
 
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(N_);
-	b(k_src) = -Q_; // match your sign convention
+	b(k_src) = -source_strength_; // match your sign convention
 
 	Eigen::VectorXd x = solver_.solve(b);
 	if (solver_.info() != Eigen::Success) {

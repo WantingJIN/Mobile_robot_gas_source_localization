@@ -201,8 +201,9 @@ private:
 	int Nx_, Ny_, N_;
 	double dx_, dy_;
     double D_; // diffusion coefficient
-	double Q_; // source strength
+	double Q_; // source quantitity
 	double u_x; // wind speed
+	double source_strength_; // source strength
 
 	SpMat A_;
 	// u_x per cell (x-advection only, like your original)
