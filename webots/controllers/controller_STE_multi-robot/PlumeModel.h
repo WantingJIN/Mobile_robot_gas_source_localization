@@ -194,14 +194,15 @@ public:
 	using SpMat  = Eigen::SparseMatrix<double>;
     using Triplet = Eigen::Triplet<double>;
     
-
  
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
+	// Here, the grid used to solve PDE is different than the grid for the source position estimation
 	int Nx_, Ny_, N_;
 	double dx_, dy_;
     double D_; // diffusion coefficient
 	double Q_; // source strength
+	double u_x; // wind speed
 
 	SpMat A_;
 	// u_x per cell (x-advection only, like your original)
@@ -209,7 +210,23 @@ private:
 	Eigen::VectorXd b_;
     mutable Eigen::SparseLU<SpMat> solver_;
     bool fact_ok_{false};
+	void set_u_field(double u);
+	void assemble_and_factorize();
+	void set_parameters(double Nx, double Ny, double D, double Q);
+	std::vector<double> solve_point_source(double sx, double sy) const;
 
+	// helper functions
+    int grid_indices_to_idx(int i, int j) const { return i + Nx_ * j; }
+	void world_pos_to_grid_indices (double x, double y, int &i, int &j) const {
+		i = clamp_to_grid_x(world_to_i(x));
+		j = clamp_to_grid_y(world_to_j(y));
+	}
+	int clamp_to_grid_x(int i) const { return std::max(0, std::min(i, Nx_ - 1)); }
+	int clamp_to_grid_y(int j) const { return std::max(0, std::min(j, Ny_ - 1)); }
+	int grid_idx(int i, int j) const { return (i < 0 || i >= Nx_ || j < 0 || j >= Ny_) ? -1 : grid_indices_to_idx(i, j); }
+	int world_to_i(double x) const { return (int)floor((x - source_x_min) / dx_); }
+	int world_to_j(double y) const { return (int)floor((y - source_y_min) / dy_); }
+		
 };
 
 #endif

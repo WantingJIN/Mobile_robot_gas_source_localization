@@ -108,17 +108,6 @@ void state_region_allocation();
 
 PlumeModel* initializePlumeModel();
 
-// old
-double likelihood(struct history history, double *parameters, PlumeModel *model);
-// new likelihood with precomputed gas maps
-double likelihood_precomp(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
-// new likelihood for relative concentrations
-double likelihood_rel_con(struct history &history, vector<double> rel_history_meas, double *parameters, int soure_pos_idx, PlumeModel *model);
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, double mean, double stddev);
-double likelihood_pdf(struct history &history, vector<double> pdf_history_list, double *parameters, int soure_pos_idx, PlumeModel *model);
-double likelihood_MI(struct history history, double *parameters, int soure_pos_idx, PlumeModel *model);
-bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
-
 bool check_stop_condition();
 
 double randu();

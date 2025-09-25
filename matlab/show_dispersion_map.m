@@ -1,7 +1,7 @@
 %% read experiment files
 clear all; close all; clc;
 %general_folder='../Results/results_test_1_sense_reverse_model/1/';
-general_folder='../Results/0809_map2/2/1691586291278/101';
+general_folder='../Results/gas_model/PDE/1758790235865/101';
 % experiment_path = uigetdir(general_folder);
 % experiment_file_path = [experiment_path,'/101'];
 experiment_file_path = general_folder;
@@ -36,11 +36,9 @@ real_source_position = params.source_position;
 x=linspace(2.75,12.75,20);
 y=linspace(0,4,20);
 
-
+ f = figure('Position', [601.0000  111.4000  697.6000  1450.6000]);
 % plot gas concentration map
 for i = 1:size(gas_maps, 1) %400
-    
-    f = figure('Position', [601.0000  111.4000  697.6000  1450.6000]);
     
     source_position = gas_maps(i, 1:2);
  
@@ -65,91 +63,93 @@ for i = 1:size(gas_maps, 1) %400
     hold off;
     xlim([0 4])
     ylim([2 13])
-    ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
+    ax = gca; ax.XDir = 'reverse'; ax.YDir = 'reverse';
     ax = gca;
     ax.TitleFontSizeMultiplier = 3;
+    pause;
     drawnow;
     
-    % Save the figure
-    img_filename = [map_folder, '/', num2str(i), '.png'];
-    try
-        saveas(f, img_filename);
-        disp(['Image ', num2str(i), ' saved successfully.']);
-    catch
-        disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
-    end
-    
-    % Close the figure to avoid memory issues
-    close(f);
-    
-    % Check if the image file was successfully created
-    if exist(img_filename, 'file')
-        disp(['Image ', num2str(i), ' saved successfully.']);
-    else
-        disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
-    end
+%     % Save the figure
+%     img_filename = [map_folder, '/', num2str(i), '.png'];
+%     try
+%         saveas(f, img_filename);
+%         disp(['Image ', num2str(i), ' saved successfully.']);
+%     catch
+%         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
+%     end
+%     
+%     % Close the figure to avoid memory issues
+%     close(f);
+%     
+%     % Check if the image file was successfully created
+%     if exist(img_filename, 'file')
+%         disp(['Image ', num2str(i), ' saved successfully.']);
+%     else
+%         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
+%     end
 end
 
 close all
 
-% Plot bin maps
-bin_map_folder=[general_folder '/bin_map'] ;
-if(~exist(bin_map_folder,'dir'))
-    mkdir(bin_map_folder);
-end
-threshold = 1000;
-
-for i = 1:size(gas_maps, 1) %400
+% % Plot bin maps
+% bin_map_folder=[general_folder '/bin_map'] ;
+% if(~exist(bin_map_folder,'dir'))
+%     mkdir(bin_map_folder);
+% end
+% threshold = 1000;
+% 
+% for i = 1:size(gas_maps, 1) %400
+%     
+%     f = figure('Position', [601.0000  111.4000  697.6000  1450.6000]);
+%     
+%     source_position = gas_maps(i, 1:2);
+%  
+%     % be careful: the reshape function will first fill the column and then
+%     % row: Use the revert matrix!!
+%     imagesc(y, x, reshape(gas_maps(i, 3:end)> threshold, 20, 20)');
+%     % imagesc(y, x, reshape(pdf(i,:), 20, 20))
+%     
+%     hold on
+%     % plot(positions(i,3), positions(i,2), 'ko', 'MarkerSize', 25, 'MarkerFaceColor', 'm');
+%     plot(source_position(2), source_position(1), 'p', 'MarkerSize', 40, 'MarkerEdgeColor', 'blue', 'MarkerFaceColor', [51/255 153/255 1]);
+%     hold on
+%     if map_nbr~=0
+%         patch(obstacles_y, obstacles_x, [0 0 0], 'DisplayName', 'Obstacle', 'LineStyle', 'none');
+%     end
+%     axis equal; axis([-0.1, 4.1, 2.4, 12.6]); view(180,90);
+%     title(['Gas concentration \newline      Source position ', num2str(i)]);
+%     xlabel('Y(m)'); ylabel('X(m)');
+%     load MyColormap2; colormap(mymap); colorbar; caxis([0 Inf]);
+%     % annotation(f, 'textbox', [0.254287457153379 0.025796129034299 0.104365076491284 0.0473684201637904], 'String', {'Measurement:', num2str(measurements(i,2))}, 'LineStyle', 'none', 'HorizontalAlignment', 'center', 'FontWeight', 'bold', 'FontSize', 24);
+%     % annotation(f, 'textbox', [0.60287457153379 0.025796129034299 0.104365076491284 0.0473684201637904], 'String', {'Entropy:', num2str(entropy(i,1))}, 'LineStyle', 'none', 'HorizontalAlignment', 'center', 'FontWeight', 'bold', 'FontSize', 24);
+%     hold off;
+%     xlim([0 4])
+%     ylim([2 13])
+%     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
+%     ax = gca;
+%     ax.TitleFontSizeMultiplier = 3;
+%     pause;
+%     drawnow;
     
-    f = figure('Position', [601.0000  111.4000  697.6000  1450.6000]);
-    
-    source_position = gas_maps(i, 1:2);
- 
-    % be careful: the reshape function will first fill the column and then
-    % row: Use the revert matrix!!
-    imagesc(y, x, reshape(gas_maps(i, 3:end)> threshold, 20, 20)');
-    % imagesc(y, x, reshape(pdf(i,:), 20, 20))
-    
-    hold on
-    % plot(positions(i,3), positions(i,2), 'ko', 'MarkerSize', 25, 'MarkerFaceColor', 'm');
-    plot(source_position(2), source_position(1), 'p', 'MarkerSize', 40, 'MarkerEdgeColor', 'blue', 'MarkerFaceColor', [51/255 153/255 1]);
-    hold on
-    if map_nbr~=0
-        patch(obstacles_y, obstacles_x, [0 0 0], 'DisplayName', 'Obstacle', 'LineStyle', 'none');
-    end
-    axis equal; axis([-0.1, 4.1, 2.4, 12.6]); view(180,90);
-    title(['Gas concentration \newline      Source position ', num2str(i)]);
-    xlabel('Y(m)'); ylabel('X(m)');
-    load MyColormap2; colormap(mymap); colorbar; caxis([0 Inf]);
-    % annotation(f, 'textbox', [0.254287457153379 0.025796129034299 0.104365076491284 0.0473684201637904], 'String', {'Measurement:', num2str(measurements(i,2))}, 'LineStyle', 'none', 'HorizontalAlignment', 'center', 'FontWeight', 'bold', 'FontSize', 24);
-    % annotation(f, 'textbox', [0.60287457153379 0.025796129034299 0.104365076491284 0.0473684201637904], 'String', {'Entropy:', num2str(entropy(i,1))}, 'LineStyle', 'none', 'HorizontalAlignment', 'center', 'FontWeight', 'bold', 'FontSize', 24);
-    hold off;
-    xlim([0 4])
-    ylim([2 13])
-    ax = gca; ax.XDir = 'reverse'; ax.YDir = 'normal';
-    ax = gca;
-    ax.TitleFontSizeMultiplier = 3;
-    drawnow;
-    
-    % Save the figure
-    img_filename = [bin_map_folder, '/', num2str(i), '.png'];
-    try
-        saveas(f, img_filename);
-        disp(['Image ', num2str(i), ' saved successfully.']);
-    catch
-        disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
-    end
-    
-    % Close the figure to avoid memory issues
-    close(f);
-    
-    % Check if the image file was successfully created
-    if exist(img_filename, 'file')
-        disp(['Image ', num2str(i), ' saved successfully.']);
-    else
-        disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
-    end
-end
+%     % Save the figure
+%     img_filename = [bin_map_folder, '/', num2str(i), '.png'];
+%     try
+%         saveas(f, img_filename);
+%         disp(['Image ', num2str(i), ' saved successfully.']);
+%     catch
+%         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
+%     end
+%     
+%     % Close the figure to avoid memory issues
+%     close(f);
+%     
+%     % Check if the image file was successfully created
+%     if exist(img_filename, 'file')
+%         disp(['Image ', num2str(i), ' saved successfully.']);
+%     else
+%         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
+%     end
+% end
 
 close all
 % for i = 1:size(gas_maps, 1)

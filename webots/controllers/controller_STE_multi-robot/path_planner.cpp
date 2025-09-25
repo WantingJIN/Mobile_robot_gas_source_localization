@@ -90,7 +90,7 @@ void PathPlanner::random_navigation()
 bool PathPlanner::position_outside_arena(Position p)
 {
 	bool outside = 1;
-	if (p.y > float(YMIN) && p.y < float(YMAX) && p.x > float(XMIN) && p.x < float(XMAX))
+	if (p.y >= float(YMIN + SAFETY_MARGIN) && p.y <= float(YMAX - SAFETY_MARGIN) && p.x >= float(XMIN + SAFETY_MARGIN) && p.x < float(XMAX - SAFETY_MARGIN))
 		outside = 0;
 	// if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
@@ -417,7 +417,7 @@ void PathPlanner::informative_clustering_planning()
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
-					int idx = position_to_indices_2D(candidate_goal[j].x, candidate_goal[j].y);
+					int idx = position_to_index_2D(candidate_goal[j].x, candidate_goal[j].y);
 					if (cell_visited_list[idx] == 0)
 					{
 						min_dist_to_robot = dist;

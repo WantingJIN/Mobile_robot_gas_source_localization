@@ -233,13 +233,6 @@ ePlumeModel parse_plume_model(const char* str) {
 	fprintf(stderr, "Unknown plume model: %s\n", str);
 	exit(1);
 }
-eStopCondition parse_stop_condition(const char* str) {
-	if (strcmp(str, "ENTROPY_ONLY") == 0) return ENTROPY_ONLY;
-	if (strcmp(str, "SPREAD_ONLY") == 0) return SPREAD_ONLY;
-	if (strcmp(str, "ENTROPY_SPREAD") == 0) return ENTROPY_SPREAD;
-	fprintf(stderr, "Unknown stop condition: %s\n", str);
-	exit(1);
-}
 
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);

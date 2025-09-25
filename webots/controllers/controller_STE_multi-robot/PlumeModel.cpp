@@ -534,7 +534,14 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	covar_sig_ii = new double[nbr_param];
 	covar_sig_ii[0] = 2;   // x
 	covar_sig_ii[1] = 0.1; // y
+	// FIXME - hard-coded wind speed
+	u_x = -0.75;
+	// double Nx, double Ny, double D, double Q
+	set_parameters(100, 40, 0.008, 763.0);
+	set_u_field(u_x);
+	assemble_and_factorize();
 }
+
 AdeFDMPlumeModel2D::AdeFDMPlumeModel2D(const AdeFDMPlumeModel2D &another_model)
 {
 	nbr_param = another_model.nbr_param;
@@ -561,16 +568,153 @@ AdeFDMPlumeModel2D::~AdeFDMPlumeModel2D()
 	delete[] covar_sig_ii;
 }
 
+void AdeFDMPlumeModel2D::set_parameters(double Nx, double Ny, double D, double Q)
+{
+	Nx_ = Nx;
+	Ny_ = Ny;
+	N_ = Nx_ * Ny_;
+	D_ = D;
+	dx_ = (source_x_max - source_x_min) / (Nx_ - 1);
+	dy_ = (source_y_max - source_y_min) / (Ny_ - 1);
+    
+	Q_ = Q;
+	u_.assign(N_, 0.0);
+}
+
+
+void AdeFDMPlumeModel2D::set_u_field(double u)
+{
+	 for (int j = 0; j < Ny_; ++j) {
+            for (int i = 0; i < Nx_; ++i) {
+                u_[grid_idx(i,j)] = u;
+            }
+        }
+}
+
+
+void AdeFDMPlumeModel2D::assemble_and_factorize() {
+	std::vector<Triplet> T;
+	T.reserve(5 * N_);
+
+	const double dx2 = dx_ * dx_;
+	const double dy2 = dy_ * dy_;
+	const double a_s_base = D_ / dy2;
+	const double a_n_base = D_ / dy2;
+    // NOTE: order:first scan x axis then y axis
+	for (int j = 0; j < Ny_; ++j) {
+		for (int i = 0; i < Nx_; ++i) {
+			const int k = grid_idx(i,j);
+
+			// Boundaries
+			if (i == Nx_ - 1) {
+				// inflow (Dirichlet)
+				T.emplace_back(k, k, 1.0);
+				continue;
+			}
+			if (i == 0) {
+				// outflow: C(i) - C(i+1) = 0
+				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i+1,j), -1.0);
+				continue;
+			}
+			if (j == 0) {
+				// bottom: C(i,j) - C(i,j+1) = 0
+				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i, j+1), -1.0);
+				continue;
+			}
+			if (j == Ny_ - 1) {
+				// top: C(i,j) - C(i,j-1) = 0
+				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i, j-1), -1.0);
+				continue;
+			}
+
+			// Interior cell
+			const double u = u_[k];
+
+			// Diffusion (y)
+			const double a_s = a_s_base;
+			const double a_n = a_n_base;
+
+			// Upwind advection + diffusion (x)
+			double a_w, a_e;
+			if (u > 0.0) {
+				// flow left -> right
+				a_w =  u / dx_ + D_ / dx2;
+				a_e =           D_ / dx2;
+			} else {
+				// flow right -> left
+				a_w =           D_ / dx2;
+				a_e = -u / dx_ + D_ / dx2;
+			}
+
+			const double a_p = -(a_w + a_e + a_s + a_n);
+
+			// Fill row k
+			T.emplace_back(k, grid_idx(i-1, j), a_w);
+			T.emplace_back(k, grid_idx(i+1, j), a_e);
+			T.emplace_back(k, grid_idx(i, j-1), a_s);
+			T.emplace_back(k, grid_idx(i, j+1), a_n);
+			T.emplace_back(k, k, a_p);
+		}
+	}
+
+	A_.resize(N_, N_);
+	A_.setFromTriplets(T.begin(), T.end());
+	A_.makeCompressed();
+
+	// Factorize once
+	solver_.analyzePattern(A_);
+	solver_.factorize(A_);
+	if (solver_.info() != Eigen::Success) {
+		throw std::runtime_error("SparseLU factorization failed");
+	}
+	fact_ok_ = true;
+}
+
+std::vector<double> AdeFDMPlumeModel2D::solve_point_source(double sx, double sy) const {
+	if (!fact_ok_) throw std::runtime_error("Call assemble_and_factorize() first");
+
+	int si, sj;
+	world_pos_to_grid_indices(sx, sy, si, sj);
+	const int k_src = grid_indices_to_idx(si, sj);
+
+
+	Eigen::VectorXd b = Eigen::VectorXd::Zero(N_);
+	b(k_src) = -Q_; // match your sign convention
+
+	Eigen::VectorXd x = solver_.solve(b);
+	if (solver_.info() != Eigen::Success) {
+		throw std::runtime_error("Linear solve failed");
+	}
+
+	std::vector<double> C(N_);
+	for (int k = 0; k < N_; ++k) C[k] = x(k);
+	return C;
+}
+
 void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
 	float sx = gas_map.sx;
 	float sy = gas_map.sy;
-	// calculate the gas concentration for each cell
-	for (int i = 0; i < x_nbins; i++)
+
+	// calculate the gas concentration for each cell in the map
+	// NOTE: The resolution of the gasConcentrationMap is different than the FDM grid resolution
+
+	std::vector<double> C = solve_point_source(sx, sy);
+
+	for (int map_i = 0; map_i < x_nbins; map_i++)
 	{
-		for (int j = 0; j < y_nbins; j++)
+		for (int map_j = 0; map_j < y_nbins; map_j++)
 		{
-			
-			gas_map.gasConcentrationMap[i][j] = 0.0;
+			// Convert map indices to map index
+			float px, py;
+			indices_to_position_2D(map_i, map_j, &px, &py);
+			int grid_i, grid_j;
+			world_pos_to_grid_indices(px, py, grid_i, grid_j);
+			int idx = grid_indices_to_idx(grid_i, grid_j);
+			float con = C[idx];
+			gas_map.gasConcentrationMap[map_i][map_j] = con;
 		}
 	}
 }

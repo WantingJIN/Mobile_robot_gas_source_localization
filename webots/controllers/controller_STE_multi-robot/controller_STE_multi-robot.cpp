@@ -17,7 +17,7 @@
 #include "path_planner.h"
 // #include "aStar.h"
 #include "visilibity.hpp"
-// #include <webots/supervisor.h>
+#include <webots/supervisor.h>
 
 using namespace std;
 
@@ -686,16 +686,6 @@ void state_estimating()
 	// if (VERBOSE)
 	// 	printf("[%d] entropy : %f\n", ID, posterior.entropy);
 
-	char label[255];
-	sprintf(label, "Iteration: %d\n", FSM.n_cycles);
-	// wb_supervisor_set_label(2, label, 0.1, 0.8, 0.1, 0x61A8E8, 0, "Impact");
-	char label2[255];
-	sprintf(label2, "Reading: %f\n", sampleBuffer.average_concentration);
-	// wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
-	char label3[255];
-	sprintf(label3, "Entropy: %.3f\n", posterior->entropy);
-	// wb_supervisor_set_label(3, label3, 0.1, 0.9, 0.1, 0xFFD966, 0, "Impact");
-
 	long long current_estimation_time = current_timestamp() - time_before_estimating;
 	// printf("Current estimation time is : %lld\n", current_estimation_time);
 
@@ -711,6 +701,14 @@ void state_estimating()
 		log_expected_a_posteriori();
 		log_max_a_posteriori();
 		log_entropy();
+
+		char label[255];
+		sprintf(label, "Iteration: %d\n", FSM.n_cycles);
+		wb_supervisor_set_label(1, label, 0.1, 0.8, 0.1, 0x61A8E8, 0, "Impact");
+		char label2[255];
+		sprintf(label2, "Entropy: %.3f\n", posterior->entropy);
+		wb_supervisor_set_label(2, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
+
 		
 		bool is_stop_condition_reached = check_stop_condition();
 		if (is_stop_condition_reached)
@@ -1389,7 +1387,7 @@ bool check_stop_condition()
 			is_stop_condition_reached = true;
 		}
 	}
-	// printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
 	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
 	if (is_stop_condition_reached)
 	{
