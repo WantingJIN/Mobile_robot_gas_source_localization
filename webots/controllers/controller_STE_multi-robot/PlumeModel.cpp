@@ -689,6 +689,8 @@ void AdeFDMPlumeModel2D::assemble_and_factorize() {
 	const double dy2 = dy_ * dy_;
 	const double a_s_base = D_ / dy2;
 	const double a_n_base = D_ / dy2;
+	const double a_w_base = D_ / dx2;
+	const double a_e_base = D_ / dx2;
     // NOTE: order:first scan x axis then y axis
 	for (int j = 0; j < Ny_; ++j) {
 		for (int i = 0; i < Nx_; ++i) {
@@ -721,21 +723,27 @@ void AdeFDMPlumeModel2D::assemble_and_factorize() {
 
 			// Interior cell
 			const double u = u_[k];
+			const double v = v_[k];
 
-			// Diffusion (y)
-			const double a_s = a_s_base;
-			const double a_n = a_n_base;
-
-			// Upwind advection + diffusion (x)
-			double a_w, a_e;
+			// advection + diffusion
+			double a_s = a_s_base;
+			double a_n = a_n_base;
+			double a_w = a_w_base;
+			double a_e = a_e_base;
+	
 			if (u > 0.0) {
 				// flow left -> right
-				a_w =  u / dx_ + D_ / dx2;
-				a_e =           D_ / dx2;
+				a_w +=  u / dx_ ;
 			} else {
 				// flow right -> left
-				a_w =           D_ / dx2;
-				a_e = -u / dx_ + D_ / dx2;
+				a_e += -u / dx_;
+			}
+			if (v > 0.0) {
+				// flow bottom -> top
+				a_s +=  v / dy_ ;
+			} else {
+				// flow top -> bottom
+				a_n += -v / dy_;
 			}
 
 			const double a_p = -(a_w + a_e + a_s + a_n);
