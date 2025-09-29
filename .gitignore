@@ -21,9 +21,18 @@ webots/controllers/controller_STE_video
 openfoam/training_random/training_random_win*/*
 !openfoam/training_random/training_random_win*/0
 !openfoam/test_maps/map*/map*_wind0
+
+# Ignore everything under map*/ recursively
+openfoam/test_maps/map*/**
+
+# But keep the directories themselves so Git can check inside
+!openfoam/test_maps/map*/
+!openfoam/test_maps/map0/*.sh
+!openfoam/test_maps/map0/map0_wind0/**
 !openfoam/test_maps/map*/map*_wind*/
-openfoam/test_maps/map*/map*_wind*/**
+# Allow only txt and csv inside map*_wind*
 !openfoam/test_maps/map*/map*_wind*/*.txt
+!openfoam/test_maps/map*/map*_wind*/*.csv
 openfoam/simulation_comparision/*
 openfoam/simscale
 openfoam/AutoGDM
