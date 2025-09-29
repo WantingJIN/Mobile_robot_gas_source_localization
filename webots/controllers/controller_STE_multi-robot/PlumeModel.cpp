@@ -538,7 +538,8 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	u_x = -0.75;
 	// double Nx, double Ny, double D, double Q
 	set_parameters(100, 40, 0.008, 400.0);
-	set_u_field(u_x);
+	//set_u_field_uniform(u_x);
+	set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	assemble_and_factorize();
 }
 
@@ -580,10 +581,11 @@ void AdeFDMPlumeModel2D::set_parameters(double Nx, double Ny, double D, double Q
 	Q_ = Q;
 	source_strength_ = Q_ / (dx_ * dy_); // point source strength (mass per area per time)
 	u_.assign(N_, 0.0);
+	v_.assign(N_, 0.0);
 }
 
 
-void AdeFDMPlumeModel2D::set_u_field(double u)
+void AdeFDMPlumeModel2D::set_u_field_uniform(double u)
 {
 	 for (int j = 0; j < Ny_; ++j) {
             for (int i = 0; i < Nx_; ++i) {
@@ -591,6 +593,92 @@ void AdeFDMPlumeModel2D::set_u_field(double u)
             }
         }
 }
+
+void AdeFDMPlumeModel2D::load_csv(const std::string& filename,
+                         std::vector<double>& xs,
+                         std::vector<double>& ys,
+                         std::vector<double>& us,
+                         std::vector<double>& vs) {
+	std::ifstream file(filename);
+	if (!file.is_open()) throw std::runtime_error("Cannot open file " + filename);
+
+	std::string line;
+	bool first = true;
+	while (std::getline(file, line)) {
+		if (first) { first = false; continue; } // skip header
+		std::stringstream ss(line);
+		std::string cell;
+		std::vector<std::string> tokens;
+		while (std::getline(ss, cell, ',')) tokens.push_back(cell);
+		if (tokens.size() < 4) continue;
+
+		xs.push_back(std::stod(tokens[0]));
+		ys.push_back(std::stod(tokens[1]));
+		us.push_back(std::stod(tokens[2]));
+		vs.push_back(std::stod(tokens[3]));
+	}
+	file.close();
+}
+
+    // Bilinear interpolation helper
+double AdeFDMPlumeModel2D::bilinear(double x, double y,
+                           const std::vector<double>& X,
+                           const std::vector<double>& Y,
+                           const std::vector<double>& F,
+                           int Nx, int Ny) {
+        // find cell indices
+        auto itx = std::lower_bound(X.begin(), X.end(), x);
+        auto ity = std::lower_bound(Y.begin(), Y.end(), y);
+
+        int i1 = std::max(0, int(itx - X.begin() - 1));
+        int j1 = std::max(0, int(ity - Y.begin() - 1));
+        int i2 = std::min(Nx - 1, i1 + 1);
+        int j2 = std::min(Ny - 1, j1 + 1);
+
+        double x1 = X[i1], x2 = X[i2];
+        double y1 = Y[j1], y2 = Y[j2];
+
+        double Q11 = F[j1 + i1 * Ny];
+        double Q21 = F[j1 + i2 * Ny];
+        double Q12 = F[j2 + i1 * Ny];
+        double Q22 = F[j2 + i2 * Ny];
+
+        double tx = (x - x1) / (x2 - x1 + 1e-12);
+        double ty = (y - y1) / (y2 - y1 + 1e-12);
+	
+        return (1 - tx) * (1 - ty) * Q11 +
+               tx * (1 - ty) * Q21 +
+               (1 - tx) * ty * Q12 +
+               tx * ty * Q22;
+}
+
+    // Set wind field from CSV, resampled to (Nx_, Ny_)
+void AdeFDMPlumeModel2D::set_u_field_from_csv(const std::string& filename,
+							int Nx_src, int Ny_src) {
+	std::vector<double> xs, ys, us, vs;
+	load_csv(filename, xs, ys, us, vs);
+
+	// build sorted unique X and Y from source
+	std::vector<double> Xs, Ys;
+	Xs.reserve(Nx_src); Ys.reserve(Ny_src);
+	for (int i = 0; i < Nx_src; ++i){
+		Xs.push_back(xs[i*Ny_src]);  // first row 
+	}   
+	for (int j = 0; j < Ny_src; ++j){
+		Ys.push_back(ys[j]); // first col
+	} 
+
+	for (int j = 0; j < Ny_; ++j) {
+		for (int i = 0; i < Nx_; ++i) {
+			double xt = source_x_min + dx_ * i;
+			double yt = source_y_min + dy_ * j;
+			u_[grid_idx(i,j)] = bilinear(xt, yt, Xs, Ys, us, Nx_src, Ny_src);
+			v_[grid_idx(i,j)] = bilinear(xt, yt, Xs, Ys, vs, Nx_src, Ny_src);
+			fprintf(console_logfile, "u[%d,%d] = %f, v[%d,%d] = %f\n", i, j, u_[grid_idx(i,j)], i, j, v_[grid_idx(i,j)]);
+		}
+	}
+}
+
 
 
 void AdeFDMPlumeModel2D::assemble_and_factorize() {

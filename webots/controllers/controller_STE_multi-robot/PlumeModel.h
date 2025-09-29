@@ -202,19 +202,33 @@ private:
 	double dx_, dy_;
     double D_; // diffusion coefficient
 	double Q_; // source quantitity
-	double u_x; // wind speed
+	double u_x; // uniform wind speed
 	double source_strength_; // source strength
 
 	SpMat A_;
 	// u_x per cell (x-advection only, like your original)
     std::vector<double> u_;
+	std::vector<double> v_;
 	Eigen::VectorXd b_;
     mutable Eigen::SparseLU<SpMat> solver_;
     bool fact_ok_{false};
-	void set_u_field(double u);
+	void set_u_field_uniform(double u);
 	void assemble_and_factorize();
 	void set_parameters(double Nx, double Ny, double D, double Q);
 	std::vector<double> solve_point_source(double sx, double sy) const;
+	static void load_csv(const std::string& filename,
+                         std::vector<double>& xs,
+                         std::vector<double>& ys,
+                         std::vector<double>& us,
+                         std::vector<double>& vs);
+
+	void set_u_field_from_csv(const std::string& filename, int Nx_src, int Ny_src);
+	// Bilinear interpolation helper
+	static double bilinear(double x, double y,
+                           const std::vector<double>& X,
+                           const std::vector<double>& Y,
+                           const std::vector<double>& F,
+                           int Nx, int Ny);
 
 	// helper functions
     int grid_indices_to_idx(int i, int j) const { return i + Nx_ * j; }
