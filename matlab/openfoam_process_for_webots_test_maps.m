@@ -17,7 +17,7 @@ folder_list = folder_list([folder_list.isdir]);
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','0'}));
 
 %% for all maps i
-for maps = 0:length(folder_list)-1
+for maps = 10 % 0:length(folder_list)-1
     close all;
     folder = [general_folder 'map' num2str(maps) '/map' num2str(maps) '_wind0.75/'];
     
@@ -128,8 +128,55 @@ for maps = 0:length(folder_list)-1
     wind_x2D(flow_def == -50 | flow_def == 2) = 0;
     wind_y2D(flow_def == -50 | flow_def == 2) = 0;
     % save
-    save([folder '/wind_map.mat'], 'X', 'Y', 'wind_x2D', 'wind_y2D');
+    save([folder '/wind_map.mat'], 'WX', 'WY', 'wind_x2D', 'wind_y2D');
+    % 2) Save a single long-format CSV with columns: X, Y, U, V
+    T = table(WX(:), WY(:), wind_x2D(:), wind_y2D(:),'VariableNames', {'X','Y','Ux','Uy'});
+    writetable(T, fullfile(folder, ['wind_map_2D_' num2str(maps) '.csv']));
     
+    %% Load wind map data with headers
+    filename = fullfile(folder, ['wind_map_2D_' num2str(maps) '.csv']);
+    T = readtable(filename);
+
+    % Extract columns
+    X_sub = T.X;
+    Y_sub = T.Y;
+    U_sub = T.Ux;
+    V_sub = T.Uy;
+
+    %% Reconstruct grid (assuming structured mesh)
+    x_vals = unique(X_sub);
+    y_vals = unique(Y_sub);
+    [Xg, Yg] = meshgrid(x_vals, y_vals);
+
+    % Pivot U and V onto the mesh
+    Ug = reshape(U_sub, length(y_vals), length(x_vals));
+    Vg = reshape(V_sub, length(y_vals), length(x_vals));
+
+    %% Plot heatmaps
+    figure('Color','w','Position',[100 100 1400 450]);
+
+    subplot(1,3,1);
+    imagesc(x_vals, y_vals, Ug); axis xy equal tight;
+    title('U_x'); xlabel('X'); ylabel('Y'); colorbar;
+
+    subplot(1,3,2);
+    imagesc(x_vals, y_vals, Vg); axis xy equal tight;
+    title('U_y'); xlabel('X'); ylabel('Y'); colorbar;
+
+    subplot(1,3,3);
+    imagesc(x_vals, y_vals, hypot(Ug,Vg)); axis xy equal tight;
+    title('|U|'); xlabel('X'); ylabel('Y'); colorbar;
+
+    %% Plot quiver (downsampled for readability)
+    figure('Color','w');
+    ds = max(1, round(min(size(Xg))/40)); % downsample step
+    quiver(Xg(1:ds:end,1:ds:end), Yg(1:ds:end,1:ds:end), ...
+           Ug(1:ds:end,1:ds:end), Vg(1:ds:end,1:ds:end), 'AutoScale','on');
+    axis equal tight;
+    xlabel('X'); ylabel('Y'); title('Wind vectors (quiver)'); grid on;
+
+
+
     %% obstacles
     obstacle_flag = ismembertol([X(:),Y(:),Z(:)], CC, 'ByRows', true);
     figure();
@@ -138,19 +185,19 @@ for maps = 0:length(folder_list)-1
     Y2 = Y(:,:,1);
     Z2 = Z(:,:,1);
     obstacle_map = sum(reshape(obstacle_flag.*2,length(y),length(x),length(z)),3) > 20;
-    
+
     % the walls around the map
     obstacle_map(X2==step/2 | round(X2,4)==16-step/2 | Y2==step/2 | round(Y2,4)==4-step/2) = 0;
-    
+
     % display
     imagesc(X2(:),Y2(:),obstacle_map);
     % colormap(gray);
     axis equal; axis tight;
     hold on;
-    
+
     % save
     save([folder '/' num2str(maps) '_obstacle.mat'], 'X2', 'Y2', 'obstacle_map');
-    
+
     %% stream
     wind_x = zeros(length(y), length(x), length(z));
     wind_y = zeros(length(y), length(x), length(z));
@@ -160,18 +207,18 @@ for maps = 0:length(folder_list)-1
         wind_y(find(y==CC(j,2)), find(x==CC(j,1)),find(z==CC(j,3))) = U(j,2);
         wind_z(find(y==CC(j,2)), find(x==CC(j,1)),find(z==CC(j,3))) = U(j,3);
     end
-    
+
     % plot
     [starty,startz] = meshgrid(0:0.5:4, 0.5:0.5:1.5);
     streamline(X,Y,Z, wind_x,wind_y,wind_z, 15.9*ones(size(starty)),starty,startz);
     % hold off;
-    
+
     % save data
     d = [wind_x(:),wind_y(:),wind_z(:)]';
     fileID = fopen([folder '/' num2str(maps) '.txt'],'w');
     fprintf(fileID,'%d\r\n',length(d));
     fprintf(fileID,'%f %f %f\r\n',d);
-    fclose(fileID);
+        fclose(fileID);
     
     %% wind magnitude
     mag = sqrt(wind_x.^2 + wind_y.^2);
@@ -201,6 +248,7 @@ for maps = 0:length(folder_list)-1
     %% save
     saveas(gcf,[folder '/' num2str(maps) '.png']);
 end
+
 
 %% helper function
 function idx = closest_idx(array, value)
