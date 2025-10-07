@@ -276,12 +276,12 @@ void go_to_goal(Position goal)
 // show the measurement history on screen
 void history_print(struct history history)
 {
-	// printf("_____ Sample History _____ \n");
-	// for (int i = 0; i < history.size; i++)
-	// {
-	// 	printf("%d : %f @ (%f, %f)\n", i, history.measurement[i], history.position[i].x, history.position[i].y);
-	// }
-	// printf("__________________________ \n");
+	printf("_____ Sample History _____ \n");
+	for (int i = 0; i < history.size; i++)
+	{
+		printf("%d : %f @ (%f, %f)\n", i, history.measurement[i], history.position[i].x, history.position[i].y);
+	}
+	printf("__________________________ \n");
 }
 
 void read_obstacle_list()
@@ -629,7 +629,6 @@ void state_measuring()
 		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 	log_position();
 	log_measurements();
-
 
 	// // send it to friends
 	// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)

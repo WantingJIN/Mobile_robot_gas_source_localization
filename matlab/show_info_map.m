@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/mzarias/Workspace/MT_Marc/Results/test/9';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/global_vs_locals/local_map_absolute/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -37,9 +37,16 @@ position_history = dlmread([experiment_file_path, '/position_history.csv']); %po
 entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
 if clustering~=0
-    cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv'])
+    cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv']);
 end
 real_source_position = params.source_position;
+
+% read the range of the estimation parameter
+estimation_range = params.min_maxs;
+xmin = estimation_range(3);
+xmax = estimation_range(4);
+ymin = estimation_range(5);
+ymax = estimation_range(6);
 
 %if clustering~=0
 % if (params.gas_feature == 0)
@@ -55,8 +62,8 @@ if (params.planning_strategy == 5)
     gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 end 
 
-x=linspace(3,12.75,20);
-y=linspace(0,4,20);
+x=linspace(xmin,xmax,20);
+y=linspace(ymin,ymax,20);
 
 trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
@@ -90,7 +97,7 @@ for i=1:size(pdf,1)
     hold on
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on
-    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
     xlim([0 4])
     ylim([2 13])
@@ -110,49 +117,49 @@ for i=1:size(pdf,1)
 
     % -------plot information map of each iter------------%
     % the last iteration the information map won't update
-    if i == size(pdf,1)
-         imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
-         if params.planning_strategy == 5
-             if clustering~=0
-                cluster_num = cluster_bounding_boxes(i-1,1);
-                if cluster_num > 0
-                    for cluster_idx = 1 : cluster_num
-                        x1 = cluster_bounding_boxes(i-1, 3 + (cluster_idx-1)*4);
-                        y1 = cluster_bounding_boxes(i-1, 4 + (cluster_idx-1)*4);
-                        x2 = cluster_bounding_boxes(i-1, 5 + (cluster_idx-1)*4);
-                        y2 = cluster_bounding_boxes(i-1, 6 + (cluster_idx-1)*4);
-                        rectangle('Position',[y1 x1 (y2-y1) (x2-x1)], 'EdgeColor',"#A2142F",'LineWidth',2)
-                        hold on
-                    end
-                end
-             end
-         end
-    else
-        if params.planning_strategy == 5
-            if clustering~=0
-                cluster_num = cluster_bounding_boxes(i,1);
-                ratio = cluster_bounding_boxes(i,2);
-                gas_information_map_this_iteration = gas_information_map(i,1:end);
-                max_gas = max(gas_information_map_this_iteration);
-                min_gas = min(gas_information_map_this_iteration);
-                threshold = ((max_gas-min_gas)*ratio +min_gas);
-                gas_information_map_this_iteration(gas_information_map_this_iteration < threshold) = 0;
-                imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas
-                if cluster_num > 0
-                    for cluster_idx = 1 : cluster_num
-                        disp(cluster_idx)
-                        disp(cluster_num)
-                        x1 = cluster_bounding_boxes(i, 3 + (cluster_idx-1)*4);
-                        y1 = cluster_bounding_boxes(i, 4 + (cluster_idx-1)*4);
-                        x2 = cluster_bounding_boxes(i, 5 + (cluster_idx-1)*4);
-                        y2 = cluster_bounding_boxes(i, 6 + (cluster_idx-1)*4);
-                        rectangle('Position',[y1 x1 (y2-y1) (x2-x1)],'EdgeColor', "#FFB300",'LineWidth',2)
-                        hold on
-                    end
-                end
-            end
-        end
-    end
+%     if i == size(pdf,1)
+%          imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
+%          if params.planning_strategy == 5
+%              if clustering~=0
+%                 cluster_num = cluster_bounding_boxes(i-1,1);
+%                 if cluster_num > 0
+%                     for cluster_idx = 1 : cluster_num
+%                         x1 = cluster_bounding_boxes(i-1, 3 + (cluster_idx-1)*4);
+%                         y1 = cluster_bounding_boxes(i-1, 4 + (cluster_idx-1)*4);
+%                         x2 = cluster_bounding_boxes(i-1, 5 + (cluster_idx-1)*4);
+%                         y2 = cluster_bounding_boxes(i-1, 6 + (cluster_idx-1)*4);
+%                         rectangle('Position',[y1 x1 (y2-y1) (x2-x1)], 'EdgeColor',"#A2142F",'LineWidth',2)
+%                         hold on
+%                     end
+%                 end
+%              end
+%          end
+%     else
+%         if params.planning_strategy == 5
+%             if clustering~=0
+%                 cluster_num = cluster_bounding_boxes(i,1);
+%                 ratio = cluster_bounding_boxes(i,2);
+%                 gas_information_map_this_iteration = gas_information_map(i,1:end);
+%                 max_gas = max(gas_information_map_this_iteration);
+%                 min_gas = min(gas_information_map_this_iteration);
+%                 threshold = ((max_gas-min_gas)*ratio +min_gas);
+%                 gas_information_map_this_iteration(gas_information_map_this_iteration < threshold) = 0;
+%                 imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas
+%                 if cluster_num > 0
+%                     for cluster_idx = 1 : cluster_num
+%                         disp(cluster_idx)
+%                         disp(cluster_num)
+%                         x1 = cluster_bounding_boxes(i, 3 + (cluster_idx-1)*4);
+%                         y1 = cluster_bounding_boxes(i, 4 + (cluster_idx-1)*4);
+%                         x2 = cluster_bounding_boxes(i, 5 + (cluster_idx-1)*4);
+%                         y2 = cluster_bounding_boxes(i, 6 + (cluster_idx-1)*4);
+%                         rectangle('Position',[y1 x1 (y2-y1) (x2-x1)],'EdgeColor', "#FFB300",'LineWidth',2)
+%                         hold on
+%                     end
+%                 end
+%             end
+%         end
+%     end
      % -------plot relativegas measurements of each iter------------%
     if (gas_feature == 2)
         scatter(position_history(:,3),position_history(:,2),30,relative_measurements(i,:),'MarkerFaceColor','flat','MarkerEdgeColor','k');
@@ -170,7 +177,7 @@ for i=1:size(pdf,1)
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
     hold on
-    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);

@@ -23,10 +23,17 @@
 
 #define MAX_NB_ROBOTS   3
 #define STEP_SIZE       64
-#define YMIN            0.0
-#define YMAX            4.0
-#define XMIN            2.75
-#define XMAX            12.75
+// #define YMIN            0.0
+// #define YMAX            4.0
+// #define XMIN            2.75
+// #define XMAX            12.75
+
+//NOTE: test local map
+#define ARENA_YMIN            0.0
+#define ARENA_YMAX            2.0
+#define ARENA_XMIN            3.0
+#define ARENA_XMAX            5.0
+
 #define SAFETY_MARGIN   0.2
 #define VERBOSE         1
 //#define TIMEOUT         600000 // miliseconds
@@ -145,7 +152,7 @@ int main(void){
         printf("The source is in an obstacle, randomizing the position!!!\n");
         do{
             source_position[0] = 12.7;
-            source_position[1] = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
+            source_position[1] = (((double)rand() / (double)RAND_MAX) * (ARENA_YMAX - ARENA_YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_YMIN;
             source_position[2] = 0.13;
         }while(is_in_obstacle_list(source_position[0], source_position[1], obstacles, nbr_obs) != -1);
     }
@@ -162,8 +169,8 @@ int main(void){
     for(int i=0; i<number_of_robots; i++){
         double robot_position[3] = {0};
         do{
-            robot_position[0] = (((double)rand() / (double)RAND_MAX) * (5 - XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + XMIN;
-            robot_position[1] = (((double)rand() / (double)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + YMIN;
+            robot_position[0] = (((double)rand() / (double)RAND_MAX) * (5 - ARENA_XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_XMIN;
+            robot_position[1] = (((double)rand() / (double)RAND_MAX) * (ARENA_YMAX - ARENA_YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_YMIN;
             robot_position[2] = 0;
         }while(is_in_obstacle_list(robot_position[0], robot_position[1], obstacles, nbr_obs) != -1);
         wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("n",i+101)),"translation"), robot_position);

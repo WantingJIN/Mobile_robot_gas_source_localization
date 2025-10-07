@@ -9,6 +9,7 @@ webots/data/obstacle_list.txt
 webots/data/source_pos.txt
 webots/data/wind_map_2D.csv
 webots/data/plugin_parameters/wind_map.txt
+webots/controllers/supervisor_target/supervisor_target
 
 # Results
 Results/**

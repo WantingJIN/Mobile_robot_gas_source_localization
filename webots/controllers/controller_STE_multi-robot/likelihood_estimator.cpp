@@ -26,13 +26,21 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 	{
 		px[i] = history.position[i].x;
 		py[i] = history.position[i].y;
-		position_to_indices_2D(px[i], py[i], &idx[i], &idy[i]);
-		// idx should be between 0 and x_nbins-1
-		if (idx[i] < 0) idx[i] = 0;
-		if (idx[i] >= x_nbins) idx[i] = x_nbins - 1;
-		// idy should be between 0 and y_nbins-1
-		if (idy[i] < 0) idy[i] = 0;
-		if (idy[i] >= y_nbins) idy[i] = y_nbins - 1;
+		int idx_, idy_;
+		position_to_indices_2D(px[i], py[i], &idx_, &idy_);
+		// if (idx_ == -1 || idy_ == -1)
+		// {
+		// 	printf("point out of the estimation region, does not take into account!\n");
+		// 	// remove it from the history list
+		// 	history.size--;
+		// 	history.position.erase(history.position.begin() + i);
+		// 	history.measurement.erase(history.measurement.begin() + i);
+		// 	history.FSM_iter.erase(history.FSM_iter.begin() + i);
+
+		// } else {
+			idx[i] = idx_;
+			idy[i] = idy_;
+		// }
 	}
 
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
@@ -70,7 +78,20 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 	{
 		px[i] = history.position[i].x;
 		py[i] = history.position[i].y;
-		position_to_indices_2D(px[i], py[i], &idx[i], &idy[i]);
+		int idx_, idy_;
+		position_to_indices_2D(px[i], py[i], &idx_, &idy_);
+		// if (idx_ == -1 || idy_ == -1)
+		// {
+		// 	printf("point out of the estimation region, does not take into account!\n");
+		// 	// remove it from history list
+		// 	history.size--;
+		// 	history.position.erase(history.position.begin() + i);
+		// 	history.measurement.erase(history.measurement.begin() + i);
+		// 	history.FSM_iter.erase(history.FSM_iter.begin() + i);
+		// } else {
+		idx[i] = idx_;
+		idy[i] = idy_;
+		// }
 	}
 
 	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
@@ -228,7 +249,20 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	{
 		px[i] = history.position[i].x;
 		py[i] = history.position[i].y;
-		position_to_indices_2D(px[i], py[i], &idx[i], &idy[i]);
+		int idx_, idy_;
+		position_to_indices_2D(px[i], py[i], &idx_, &idy_);
+		// if (idx_ == -1 || idy_ == -1)
+		// {
+		// 	printf("point out of the estimation region, does not take into account!\n");
+		// 	// remove it from history list
+		// 	history.size--;
+		// 	history.position.erase(history.position.begin() + i);
+		// 	history.measurement.erase(history.measurement.begin() + i);
+		// 	history.FSM_iter.erase(history.FSM_iter.begin() + i);
+		// } else {
+		idx[i] = idx_;
+		idy[i] = idy_;
+		// }
 	}
 
 	// extract predicted concentration values by model

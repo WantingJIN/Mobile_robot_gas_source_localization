@@ -234,6 +234,13 @@ ePlumeModel parse_plume_model(const char* str) {
 	exit(1);
 }
 
+eEstimationScale parse_estimation_scale(const char* str) {
+	if (strcmp(str, "LOCAL") == 0) return LOCAL;
+	if (strcmp(str, "GLOBAL") == 0) return GLOBAL;
+	fprintf(stderr, "Unknown estimation scale: %s\n", str);
+	exit(1);
+}
+
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
 }
@@ -389,7 +396,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		} 
 		else if (strcmp(key, "plumeModel") == 0) {
 			plumeModel = parse_plume_model(value);
-		} else {
+		} 
+		else if (strcmp(key, "estimationScale") == 0) {
+			estimationScale = parse_estimation_scale(value);
+		}
+		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
 		} 
@@ -449,9 +460,11 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
+	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);
+	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
-	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
+	fprintf(sim_param_file, "estimation_scale %d\n", estimationScale);
 	fclose(sim_param_file);
 }
 
