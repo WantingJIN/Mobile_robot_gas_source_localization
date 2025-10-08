@@ -39,7 +39,7 @@ position_history = dlmread([experiment_file_path, '/position_history.csv']); %po
 entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
 if clustering~=0
-    cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv'])
+    cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv']);
 end
 real_source_position = params.source_position;
 
@@ -47,8 +47,8 @@ if (params.planning_strategy == 5)
     gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 end 
 
-x=linspace(3,12.75,20);
-y=linspace(0,4,20);
+x=linspace(xmin,xmax,20);
+y=linspace(ymin,ymax,20);
 
 trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
@@ -83,7 +83,7 @@ for i=1:size(pdf,1)
     hold on
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on
-    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
     % -------plot absolute/relative gas measurements of each iter------------%
     % Extract the iteration numbers (last column)
@@ -167,7 +167,7 @@ for i=1:size(pdf,1)
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
     hold on
-    plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
+    plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);

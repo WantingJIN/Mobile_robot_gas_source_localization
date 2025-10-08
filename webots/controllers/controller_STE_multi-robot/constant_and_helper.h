@@ -29,8 +29,8 @@
 #define source_x_min 3.0
 #define source_y_min 0.0
 // #define source_z_min  0
-#define source_x_max 12.75
-#define source_y_max 4.0
+#define source_x_max 5.0
+#define source_y_max 2.0
 // #define source_z_max  2
 #define a_y_min 0.01
 #define a_y_max 0.05
@@ -74,6 +74,16 @@ inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
             *idx_x = 0; 
       if (*idx_x >= x_nbins)  
             *idx_x = x_nbins - 1;
+      if (*idx_y < 0)
+            *idx_y = 0;
+      if (*idx_y >= y_nbins)
+            *idx_y = y_nbins - 1;
+
+      // if (*idx_y < 0 || *idx_y > y_nbins)
+      //       *idx_y = -1; // invalid
+      // if (*idx_x < 0 || *idx_x > x_nbins)
+      //       *idx_x = -1; // invalid
+      
 }
 inline void indices_to_position_2D(int idx_x, int idx_y, float *x, float *y){
       *x = source_x_min + idx_x * x_resol + x_resol / 2.0;
@@ -88,6 +98,9 @@ inline int position_to_index_2D(float x, float y){
             idx = 0;
       if (idx >= MAP_SIZE)    
             idx = MAP_SIZE - 1;
+
+      // if (idx < 0 || idx > MAP_SIZE)
+      //       idx = -1; // invalid
       return idx;
 }
 inline void index_to_position_2D(int idx, float *x, float *y){

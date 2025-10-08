@@ -144,6 +144,12 @@ typedef enum updataGoalPolicy{
 	BELIEF_DIFF = 2,
 } eUpdateGoalPolicy;
 
+typedef enum estimationScale
+{
+	LOCAL = 0,
+	GLOBAL = 1,
+} eEstimationScale;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -200,6 +206,7 @@ class SimulationParameters{
 		eUpdateGoalPolicy updateGoalPolicy;
 
 		ePlumeModel plumeModel;
+		eEstimationScale estimationScale;
 
 		SimulationParameters(const char *filename);
 		~SimulationParameters();

@@ -2,8 +2,8 @@ clear all; clc; close all;
 dataTable = table();
 %% dispatch the result to target folder
 % the general folder
-general_folder = '/home/wjin/Workspace/continuous_STE/Results/';
-dispatched_folder = [general_folder,'algo_test'];
+general_folder = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/';
+dispatched_folder = [general_folder,'global_vs_locals/local_map_relative'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -122,11 +122,35 @@ for i = 1:numExperiments
         case 1
             sensor_mode = "MOX";
     end
+    
+    plume_model_idx = params.plume_model;
+    plume_model = "";
+    switch plume_model_idx
+        case 0
+            plume_model = "Gaussian";
+        case 1
+            plume_model = "DDPM";
+        case 2
+            plume_model = "PDE";
+    end
+    
+    gas_feature_idx = params.gas_feature;
+    gas_feature = "";
+    switch gas_feature_idx
+        case 0
+            gas_feature = "absolute_value";
+        case 1 
+            gas_feature = "gas_hit";
+        case 2
+            gas_feature = "relative_value";
+    end
+            
+        
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error);
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error'};
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error, gas_feature, plume_model);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error', 'gas_feature', 'plume_model'};
     
     % Append the temporary table to the main dataTable
     dataTable = [dataTable; tempTable];
@@ -139,7 +163,9 @@ writetable(dataTable, [dispatched_folder '/experiment_data.csv']); % Save as CSV
 disp('Experiment data saved.');
 
 %% plot the result for this folder 
-f = figure('Position',[-1561         656         2015         1215]);
+f = figure('Position',[-1561         656         1115         350]);
+ax = axes;
+ax.Position = [0.13, 0.2, 0.775, 0.7];  
 custom_color = [44,136,217]./255;
 subplot(1,5,1)
 plot([0 length(unique(dataTable.Map))], [0 0], 'g');
@@ -149,7 +175,7 @@ lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
-ylim([-1,10])
+ylim([-10,10])
 xlabel('Map number');
 ylabel('Error (m)');
 title('Error on x');
@@ -161,7 +187,7 @@ lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'r');
 set(findobj(gca,'type','line'),'linew',1.2)
 grid on;
-ylim([-3,4])
+ylim([-4,4])
 xlabel('Map number');
 title('Error on y');
 ylabel('Error (m)');
@@ -199,7 +225,6 @@ grid on;
 xlabel('Map number');
 title('Traveling distance');
 ylabel('Distance (m)');
-
 hold on
 
 %% calculate success rate
@@ -210,14 +235,26 @@ for i = 1: size (dataTable.x_error,1)
     end
 end
 success_rate = success_case/size(dataTable.x_error,1);
-
+% After calculating success_rate
 annotation(f,'textbox',...
-    [0.25 0.01 0.504365076491284 0.0473684201637904],...
-    'String',{'Success rate:',num2str(success_rate)},...
+    [0.4, 0.01, 0.2, 0.05],...   % lower y makes it below plots
+    'String',{['Success rate: ', num2str(success_rate)]},...
     'LineStyle','none',...
     'HorizontalAlignment','center',...
     'FontWeight','bold',...
     'FontSize',12,...
     'FitBoxToText','off');
+xLimits = xlim;
+yLimits = ylim;
+% 
+% % Place text at bottom center (data coordinates)
+% xPos = mean(xLimits);      % middle of x-axis
+% yPos = yLimits(1);         % bottom of y-axis
+% offset = 0.15 * range(yLimits);  % a little above the axis line
+% 
+% text(xPos, yPos, 'My Annotation', ...
+%     'HorizontalAlignment', 'center', ...
+%     'VerticalAlignment', 'bottom', ...
+%     'FontSize', 12);
 
 saveas(f,[dispatched_folder '/test_maps_results_comparison.png']);
