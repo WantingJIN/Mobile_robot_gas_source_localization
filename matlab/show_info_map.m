@@ -2,7 +2,8 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/mzarias/Workspace/MT_Marc/Results/test/9';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_relative_2nd_test/0';
+% general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -31,8 +32,9 @@ if map_nbr~=0
 end
 measurements = dlmread([experiment_file_path, '/measurement_history.csv']); %measurement_historyobstacles_x
 if (gas_feature == 2)
-    relative_measurements = dlmread([experiment_file_path, '/relative_measurements.csv']);
+    relative_measurements = dlmread([experiment_file_path, '/relative_history_meas.csv']);
 end
+
 position_history = dlmread([experiment_file_path, '/position_history.csv']); %position_history
 entropy = dlmread([experiment_file_path, '/entropy.csv']);
 positions = dlmread([experiment_file_path, '/goal_position.csv']);
@@ -40,16 +42,6 @@ if clustering~=0
     cluster_bounding_boxes = dlmread([experiment_file_path, '/clustering_bounding_boxes.csv'])
 end
 real_source_position = params.source_position;
-
-%if clustering~=0
-% if (params.gas_feature == 0)
-    % use gas concentration as gas feature
-    %gas_information_map = dlmread([experiment_file_path,'/gas_information_map.csv']);
-% end
-% if (params.gas_feature == 1)
-%     gas_information_map = dlmread([experiment_file_path,'/gas_hit_variance_map.csv']);
-% end
-%end
 
 if (params.planning_strategy == 5)
     gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
@@ -62,12 +54,12 @@ trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
 
 %% show measurement
-f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
+ f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
 subplot(1,3,1)
-if (gas_feature == 1 )
-    scatter(position_history(:,3),position_history(:,2),30,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-elseif (gas_feature == 0 || gas_feature == 2)
+if (gas_feature == 0 )
     scatter(position_history(:,3),position_history(:,2),30,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+elseif (gas_feature == 2)
+    scatter(position_history(:,3),position_history(:,2),30,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
 end
 load MyColormap2; colormap(mymap); 
 axis equal; axis([-0.1,4.1,2.4,12.6]);
@@ -79,6 +71,7 @@ ylim([2 13])
 ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
 title(['        Trajectory \newline and Measurements']);
 ax.TitleFontSizeMultiplier = 2;
+
 
 %% show pdf
 for i=1:size(pdf,1)
@@ -92,21 +85,29 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
     hold on
+    % -------plot absolute/relative gas measurements of each iter------------%
+    % Extract the iteration numbers (last column)
+    iteration_col = measurements(:, end);
+    % Find indices of all measurements up to iteration k
+    idx_until_current_idx = max(find(iteration_col <= i-1));
+    
+    if (gas_feature == 0)
+        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+    end
+    if (gas_feature == 2)
+        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+        hold on
+    end
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     axis equal; axis([-0.1,4.1,2.4,12.6]);
-    view(180,90);  colormap(mymap); 
+    view(180,90);  
+    load MyColormap2; colormap(mymap); 
     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
     ax.TitleFontSizeMultiplier = 2;
     
     subplot(1,3,3)
-    % -------plot gas measurements of each iter------------%
-%     if (gas_feature == 1)
-%         scatter(position_history(:,3),position_history(:,2),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-%     elseif (gas_feature == 0 || gas_feature == 2)
-%         scatter(position_history(:,3),position_history(:,2),10,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-%     end
 
     % -------plot information map of each iter------------%
     % the last iteration the information map won't update
@@ -153,11 +154,7 @@ for i=1:size(pdf,1)
             end
         end
     end
-     % -------plot relativegas measurements of each iter------------%
-    if (gas_feature == 2)
-        scatter(position_history(:,3),position_history(:,2),30,relative_measurements(i,:),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-        hold on
-    end
+
 
     plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
     hold on
@@ -188,7 +185,6 @@ for i=1:size(pdf,1)
     ax.TitleFontSizeMultiplier = 2;
     pause
     drawnow
-
     % Save the figure
 %     img_filename = [anim_folder, '/', num2str(i), '.png'];
 %     try
@@ -204,7 +200,6 @@ end
 % Close the figure 
 close(f1);
 close all
-
 %% show visited list
 if visited_list_true~=0
     disp('show visited list') 
@@ -214,7 +209,7 @@ if visited_list_true~=0
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on
     plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
-    if (gas_feature == 1)
+    if (gas_feature == 2)
         scatter(position_history(:,3),position_history(:,2),10,measurements(:,3),'MarkerFaceColor','flat','MarkerEdgeColor','k');
     elseif (gas_feature == 0)
         scatter(position_history(:,3),position_history(:,2),10,measurements(:,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
@@ -244,29 +239,3 @@ if visited_list_true~=0
     %close(f);
     close all
 end 
-
-%% show dispersion map
-% f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-% for i=1:size(gas_information_map,1)
-%     imagesc(y,x,reshape(gas_information_map(i,1:end-1),params.nbins(1), params.nbins(2)))
-%     hold on
-%     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
-%     hold on
-%     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
-%     hold on
-%     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
-%     hold on
-%     axis equal; axis([-0.1,4.1,2.4,12.6]);view(180,90);
-%     title(['Concentration Variance Map \newline           iteration ', num2str(i)]);
-%     xlabel('Y(m)'); ylabel('X(m)');
-%     load MyColormap2; colormap(mymap); colorbar;caxis([0 Inf]);
-%     hold off;
-%     xlim([0 4])
-%     ylim([2 13])
-%     ax = gca; ax.XDir = 'reverse'; ax.YDir = 'reverse';
-%     ax = gca;
-%     ax.TitleFontSizeMultiplier = 3;
-%     pause;
-%     drawnow
-% %     saveas(f, [anim_folder,'/',num2str(i),'.png']);
-% end

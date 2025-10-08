@@ -595,6 +595,7 @@ void set_logfile_names()
 	sprintf(acc_info_map_logfile_name, "%s/acc_info_map.csv", folder_name);
 	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
 	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
+	sprintf(relative_history_meas_logfile_name, "%s/relative_history_meas.csv", folder_name);
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);

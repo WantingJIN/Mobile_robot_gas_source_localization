@@ -62,6 +62,7 @@ char gas_information_map_logfile_name[512];
 char scores_map_logfile_name[512];
 char distance_map_logfile_name[512];
 char acc_info_map_logfile_name[512];
+char relative_history_meas_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -679,6 +680,8 @@ void state_estimating()
 	// printf("sum posterior : %f \n", posterior.sum);
 	posterior->normalize();
 	posterior->log_pdf(posterior_pdf_3D_name, 'a');
+	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
+		posterior->log_relative_history_meas(relative_history_meas_logfile_name, 'a', history.relative_meas);
 
 	FSM.n_cycles++;
 	if (VERBOSE)

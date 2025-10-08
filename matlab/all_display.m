@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/info_planning/MOX/map0/belief_clustering');
+folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_relative_2nd_test/0');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -275,7 +275,7 @@ for i=1:exp_number
     saveas(f2all,[folder_name '/trajectory.png']);
     saveas(f0,[folder_name '/estimation_evolution.png']);    
     
-    %close(f1all); 
-    %lose(f2all);
-    %close(f0);
+    close(f1all); 
+    close(f2all);
+    close(f0);
 end
