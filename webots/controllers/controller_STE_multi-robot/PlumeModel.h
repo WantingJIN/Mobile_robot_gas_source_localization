@@ -28,6 +28,7 @@
 
 // #include "pyhelper.hpp"
 using namespace std;
+using std::vector;
 
 #define PI 3.14159265358979
 
@@ -77,8 +78,8 @@ public:
 	void get_source_position_params(parameter *source_position_param_list);
 
 	// function that returns concentration using parameters
-	virtual double concentration(Position robot_position, double wind_intensity, double param_list[]) = 0;
-	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) = 0;
+	virtual double concentration(Position robot_position, double wind_intensity, double param_value[]) = 0;
+	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) = 0;
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 	// read from precomputed maps
@@ -112,8 +113,8 @@ public:
 	// destructor
 	~GaussianPlumeModel2D();
 
-	double concentration(Position robot_position, double wind_intensity, double param_list[]) override;
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) override;
+	double concentration(Position robot_position, double wind_intensity, double param_value[]) override;
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
 	double approx_concentration(Position robot_position, double wind_intensity) override;
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) override;
 
@@ -147,8 +148,8 @@ public:
 	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) override;
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
 
-	double concentration(Position robot_position, double wind_intensity, double param_list[]) override;
-	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std) override;
+	double concentration(Position robot_position, double wind_intensity, double param_value[]) override;
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
     // calculate the gas concentration map and information map
 	void initialize_gas_map_and_information_matrix() override;
 	void log_gas_concentration_map(char *filename, char writing_mode) override;
@@ -239,8 +240,8 @@ private:
 	int clamp_to_grid_x(int i) const { return std::max(0, std::min(i, Nx_ - 1)); }
 	int clamp_to_grid_y(int j) const { return std::max(0, std::min(j, Ny_ - 1)); }
 	int grid_idx(int i, int j) const { return (i < 0 || i >= Nx_ || j < 0 || j >= Ny_) ? -1 : grid_indices_to_idx(i, j); }
-	int world_to_i(double x) const { return (int)floor((x - source_x_min) / dx_); }
-	int world_to_j(double y) const { return (int)floor((y - source_y_min) / dy_); }
+	int world_to_i(double x) const { return (int)floor((x - source_bounds.x_min) / dx_); }
+	int world_to_j(double y) const { return (int)floor((y - source_bounds.y_min) / dy_); }
 		
 };
 

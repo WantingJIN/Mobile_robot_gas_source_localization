@@ -108,9 +108,9 @@ GaussianPlumeModel2D::GaussianPlumeModel2D()
 
 	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	// source_x
-	param_list[0] = parameter{"source_x", source_x_min, source_x_max, x_resol, x_nbins, 0, 0};
+	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
 	// source_y
-	param_list[1] = parameter{"source_y", source_y_min, source_y_max, y_resol, y_nbins, 0, 0};
+	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
 	// Q
 	param_list[2] = parameter{"Q", Q_min, Q_max, Q_resol, Q_nbins, 0, 0};
 	// sigma_a
@@ -146,12 +146,12 @@ GaussianPlumeModel2D::~GaussianPlumeModel2D()
 }
 
 // returns concentration for a set of parameters and a position
-double GaussianPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_list[])
+double GaussianPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_value[])
 {
 	// ASSUMPTION : X is towards the wind speed
 	// notation simplification (axis rotation, hence the signs)
-	double x = param_list[0] - robot_position.x;
-	double y = param_list[1] - robot_position.y;
+	double x = param_value[0] - robot_position.x;
+	double y = param_value[1] - robot_position.y;
 	double z = 0; // robot_position[2] - parameters.source_position[2];
 
 	// verify if the point is not before the source
@@ -160,23 +160,23 @@ double GaussianPlumeModel2D::concentration(Position robot_position, double wind_
 	else
 	{
 		// std on y and z
-		double sigma_y = param_list[3] * x + param_list[4];
+		double sigma_y = param_value[3] * x + param_value[4];
 		double sigma_z = 1; // parameters.a_z * x + parameters.b_z;
 
 		// model : C(x,y,z) = (Q/2pi.u.sigmaY.sigmaZ) * exp (-y^2/2sigmaY^2 - z^2/2sigmaZ^2)
-		double model_value = (param_list[2] / (2 * PI * wind_intensity * sigma_y * sigma_z)) * exp(-((y * y) / (2 * sigma_y * sigma_y)) - ((z * z) / (2 * sigma_z * sigma_z)));
+		double model_value = (param_value[2] / (2 * PI * wind_intensity * sigma_y * sigma_z)) * exp(-((y * y) / (2 * sigma_y * sigma_y)) - ((z * z) / (2 * sigma_z * sigma_z)));
 
 		return model_value;
 	}
 }
 
 // returns a list of concentrations for ONE set of parameters and A LIST of positions
-void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std)
+void GaussianPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std)
 {
 	// ASSUMPTION : enough memory is already is already allocated for c_avg
 	for (int i = 0; i < nbr; i++)
 	{
-		c_avg[i] = concentration(robot_position[i], wind_intensity, param_list);
+		c_avg[i] = concentration(robot_position[i], wind_intensity, param_value);
 	}
 }
 
@@ -206,9 +206,9 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D()
 
 	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	// source_x
-	param_list[0] = parameter{"source_x", source_x_min, source_x_max, x_resol, x_nbins, 0, 0};
+	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
 	// source_y
-	param_list[1] = parameter{"source_y", source_y_min, source_y_max, y_resol, y_nbins, 0, 0};
+	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
 
 	// initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
@@ -322,11 +322,11 @@ void DeepCFDPlumeModel2D::initialize_model_features()
 // }
 
 // returns concentration for ONE set of parameters and ONE position
-double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_list[])
+double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_value[])
 {
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-	float sx = param_list[0];
-	float sy = param_list[1];
+	float sx = param_value[0];
+	float sy = param_value[1];
 	float px = robot_position.x;
 	float py = robot_position.y;
 	double c_avg = 0;
@@ -355,12 +355,12 @@ double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_i
 }
 
 // returns a list of concentrations for ONE set of parameters and A LIST of positions
-void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_list[], vector<float> &c_avg, vector<float> &c_std)
+void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std)
 {
 	// nbr here stands for the number of gathered measurements instead of the number of robots
 
-	float sx = param_list[0];
-	float sy = param_list[1];
+	float sx = param_value[0];
+	float sy = param_value[1];
 	float px[nbr];
 	float py[nbr];
 
@@ -409,9 +409,9 @@ void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list()
 	// initialize gas dispersion list
 	// calculate the gas concentration map for each possible source location
 	// first scan y axis then x axis; the same order as the pdf
-	for (int j = 0; j < y_nbins; j++)
+	for (int j = 0; j < source_bounds.y_nbins; j++)
 	{
-		for (int i = 0; i < x_nbins; i++)
+		for (int i = 0; i < source_bounds.x_nbins; i++)
 		{
 			GasDispersionMap gas_map(i, j);
 			calculate_gas_concentration_map(gas_map);
@@ -424,9 +424,9 @@ void DeepCFDPlumeModel2D::initialize_gas_concentration_map_list()
 void DeepCFDPlumeModel2D::initialize_cell_measurement_list()
 {
 	// initialize cell meausurements list
-	for (int j = 0; j < y_nbins; j++)
+	for (int j = 0; j < source_bounds.y_nbins; j++)
 	{
-		for (int i = 0; i < x_nbins; i++)
+		for (int i = 0; i < source_bounds.x_nbins; i++)
 		{
 			CellMeasurements cell_measurements(i, j);
 			cell_lists.push_back(cell_measurements);
@@ -477,9 +477,9 @@ void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_
 	// time(&start);
 	at::Tensor output = DeepCFD(inputs).toTensor();
 	// calculate the gas concentration for each cell
-	for (int i = 0; i < x_nbins; i++)
+	for (int i = 0; i < source_bounds.x_nbins; i++)
 	{
-		for (int j = 0; j < y_nbins; j++)
+		for (int j = 0; j < source_bounds.y_nbins; j++)
 		{
 			float px, py;
 			indices_to_position_2D(i, j, &px, &py);
@@ -517,9 +517,9 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 
 	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	// source_x
-	param_list[0] = parameter{"source_x", source_x_min, source_x_max, x_resol, x_nbins, 0, 0};
+	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
 	// source_y
-	param_list[1] = parameter{"source_y", source_y_min, source_y_max, y_resol, y_nbins, 0, 0};
+	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
 
 	// initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
@@ -575,8 +575,8 @@ void AdeFDMPlumeModel2D::set_parameters(double Nx, double Ny, double D, double Q
 	Ny_ = Ny;
 	N_ = Nx_ * Ny_;
 	D_ = D;
-	dx_ = (source_x_max - source_x_min) / (Nx_ - 1);
-	dy_ = (source_y_max - source_y_min) / (Ny_ - 1);
+	dx_ = (source_bounds.x_max - source_bounds.x_min) / (Nx_ - 1);
+	dy_ = (source_bounds.y_max - source_bounds.y_min) / (Ny_ - 1);
     
 	Q_ = Q;
 	source_strength_ = Q_ / (dx_ * dy_); // point source strength (mass per area per time)
@@ -670,8 +670,8 @@ void AdeFDMPlumeModel2D::set_u_field_from_csv(const std::string& filename,
 
 	for (int j = 0; j < Ny_; ++j) {
 		for (int i = 0; i < Nx_; ++i) {
-			double xt = source_x_min + dx_ * i;
-			double yt = source_y_min + dy_ * j;
+			double xt = source_bounds.x_min + dx_ * i;
+			double yt = source_bounds.y_min + dy_ * j;
 			u_[grid_idx(i,j)] = bilinear(xt, yt, Xs, Ys, us, Nx_src, Ny_src);
 			v_[grid_idx(i,j)] = bilinear(xt, yt, Xs, Ys, vs, Nx_src, Ny_src);
 			// fprintf(console_logfile, "u[%d,%d] = %f, v[%d,%d] = %f\n", i, j, u_[grid_idx(i,j)], i, j, v_[grid_idx(i,j)]);
@@ -800,9 +800,9 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
 
 	std::vector<double> C = solve_point_source(sx, sy);
 
-	for (int map_i = 0; map_i < x_nbins; map_i++)
+	for (int map_i = 0; map_i < source_bounds.x_nbins; map_i++)
 	{
-		for (int map_j = 0; map_j < y_nbins; map_j++)
+		for (int map_j = 0; map_j < source_bounds.y_nbins; map_j++)
 		{
 			// Convert map indices to map index
 			float px, py;

@@ -9,6 +9,7 @@
 // for storing debugging info
 extern FILE *console_logfile;
 extern SimulationParameters simulation_parameters;
+extern SourceBounds source_bounds;
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -334,9 +335,9 @@ void Posterior::process()
 void Posterior::calculate_entropy_and_spread()
 {
 	entropy = 0;
-	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_min = source_bounds.x_nbins;
 	double possible_source_x_index_max = 0;
-	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_min = source_bounds.y_nbins;
 	double possible_source_y_index_max = 0;
 	int indices[nbr_dimension];
 	for (int i = 0; i < nbr_element; i++)

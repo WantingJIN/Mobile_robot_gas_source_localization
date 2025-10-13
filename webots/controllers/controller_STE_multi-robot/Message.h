@@ -2,7 +2,10 @@
 #define MESSAGE_H
 
 #include "Position.h"
+#include <vector>
 
+using namespace std;
+using std::vector;
 class Message
 {
 public:
@@ -12,8 +15,8 @@ public:
     double concentration;
     Position goal;
     int finish_flag; // binary flag for finished state
-    double belief_map[MAP_SIZE]; // new atribute to store the belief map value
-    double buffer[MAP_SIZE+10]; // augmented buffer size for the belief map value
+    double * belief_map; // new atribute to store the belief map value
+    double * buffer; // augmented buffer size for the belief map value
     int buffer_size;
     int measurement0_goal1; // flag to indicate if the message contains a measurement (0) or a goal (1)
 
@@ -24,7 +27,7 @@ public:
     Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag);
     
     // constructor : with belief map value
-    Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, double _belief_map[MAP_SIZE]);
+    Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag, double *_belief_map);
     Message(const void *m_buffer);
 
     void params_to_buffer();

@@ -6,6 +6,8 @@
 using namespace std;
 extern char clustering_bounding_boxes_logfile_name[512];
 FILE *clustering_bounding_boxes_logfile;
+extern SourceBounds source_bounds;
+
 DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
 {
 	x_epsilon = x_eps;
@@ -91,11 +93,11 @@ void DBSCAN::expandCluster(CellPoint &cell, vector<int> &neighbors, int clusterI
 	// }
 }
 
-void DBSCAN::run(double information[])
+void DBSCAN::run(double *information)
 {
 	double max_info = 0;
 	double min_info = 100000;
-	for (int i = 0; i < MAP_SIZE; i++)
+	for (int i = 0; i < source_bounds.map_size; i++)
 	{
 		if (information[i] > max_info)
 		{
@@ -107,11 +109,11 @@ void DBSCAN::run(double information[])
 		}
 	}
 	// first fill y then fill x
-	for (int j = 0; j < y_nbins; j++)
+	for (int j = 0; j < source_bounds.y_nbins; j++)
 	{
-		for (int i = 0; i < x_nbins; i++)
+		for (int i = 0; i < source_bounds.x_nbins; i++)
 		{
-			if (information[j * y_nbins + i] > ratio * (max_info - min_info) + min_info)
+			if (information[j * source_bounds.y_nbins + i] > ratio * (max_info - min_info) + min_info)
 			{
 				CellPoint cell;
 				indices_to_position_2D(i, j, &cell.x, &cell.y);
@@ -173,10 +175,10 @@ pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPo
 
 	for (auto &point : points)
 	{
-		minX = min(minX, point.x - float(x_resol / 2));
-		minY = min(minY, point.y - float(y_resol / 2));
-		maxX = max(maxX, point.x + float(x_resol / 2));
-		maxY = max(maxY, point.y + float(y_resol / 2));
+		minX = min(minX, point.x - float(source_bounds.x_resol / 2));
+		minY = min(minY, point.y - float(source_bounds.y_resol / 2));
+		maxX = max(maxX, point.x + float(source_bounds.x_resol / 2));
+		maxY = max(maxY, point.y + float(source_bounds.y_resol / 2));
 	}
 
 	CellPoint topLeft = {minX, minY, clusterId};
