@@ -88,11 +88,6 @@ void init()
 
 	// previous reading initialization
 	previous_sensor_value = 0.0;
-
-	// initialize the current position
-	get_gps_position(&current_position);
-	goal_position.copy_position(current_position);
-	printf("initial goal position %f %f %f\n", goal_position.x, goal_position.y, goal_position.heading);
       
 	// set the log file names
 	set_logfile_names();
@@ -124,7 +119,7 @@ void init()
 	}else if (simulation_parameters.simuMode == OFFLINE){
 		char experiment_source_pos_logfile_name[512];
 		char* source_str = (char*) malloc(100 * sizeof(char)); 
-            sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
+        sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
 		printf("%s\n",experiment_source_pos_logfile_name);
 		if (access(experiment_source_pos_logfile_name, F_OK) != -1) {
 			FILE * sim_param_file = fopen(experiment_source_pos_logfile_name, "r");
@@ -156,6 +151,11 @@ void init()
 		cleaning_up();
 		exit(0);
 	}
+
+	next_iteration_time();
+	// initialize the current position
+	get_gps_position(&current_position);
+	goal_position.copy_position(current_position);
       
 	if (simulation_parameters.simuMode == ONLINE){
 		// set the state to wait for stationary plume

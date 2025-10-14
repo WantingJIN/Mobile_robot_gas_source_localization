@@ -1452,8 +1452,14 @@ void init_estimation_bound(){
 		local_ymin = std::max(local_ymin, YMIN);
 		local_xmax = std::min(local_xmax, XMAX);
 		local_ymax = std::min(local_ymax, YMAX);
+		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
 		set_source_bounds(&source_bounds, 
 						local_xmin, local_ymin, local_xmax, local_ymax, 10, 10);
+
+		FILE * sim_param_file = fopen(config_logfile_name, "a");
+	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
+	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	    fclose(sim_param_file);
 	} 
 }
 
