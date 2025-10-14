@@ -17,6 +17,7 @@ Message::Message()
     //initial belief map to 0
     belief_map = new double[source_bounds.map_size]();
     buffer = new double[source_bounds.map_size + 10](); // buffer size to hold all parameters + belief map
+    memset(belief_map, 0, sizeof(belief_map)); 
     params_to_buffer();
     buffer_size = 0;
 }
@@ -24,12 +25,15 @@ Message::Message()
 // constructor: standard
 Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _concentration, Position _goal, int _flag)
 {
+    printf("Creating standard message from %d to %d\n", _sender_ID, _receiver_ID);
     sender_ID = _sender_ID;
     receiver_ID = _receiver_ID;
     position.copy_position(_position);
     concentration = _concentration;
     goal.copy_position(_goal);
     finish_flag = _flag;
+    belief_map = new double[source_bounds.map_size]();
+    buffer = new double[source_bounds.map_size + 10](); // buffer size to hold all parameters + belief map
     params_to_buffer();
     buffer_size = sizeof(double) * 11;
 }
@@ -44,6 +48,8 @@ Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _c
     concentration = _concentration;
     goal.copy_position(_goal);
     finish_flag = _flag;
+    belief_map = new double[source_bounds.map_size]();
+    buffer = new double[source_bounds.map_size + 10](); // buffer size to hold all parameters + belief map
     belief_map = _belief_map;
     params_to_buffer();
     buffer_size = sizeof(double) * 410;
@@ -53,6 +59,7 @@ Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _c
 Message::Message(const void *m_buffer)
 {
     buffer_size = sizeof(double) * 410;
+    buffer = new double[source_bounds.map_size + 10](); // buffer size to hold all parameters + belief map
     memcpy(buffer, m_buffer, buffer_size);
     buffer_to_params();
 }

@@ -595,7 +595,7 @@ void state_measuring()
 	history.measurement.push_back(sampleBuffer.average_concentration);
 	history.FSM_iter.push_back(FSM.n_cycles);
 	history.size++;
-	history_print(history);
+	//history_print(history);
 
 	// mark the current cell as visited
 	if (simulation_parameters.visitedList == visitedList_ON)
