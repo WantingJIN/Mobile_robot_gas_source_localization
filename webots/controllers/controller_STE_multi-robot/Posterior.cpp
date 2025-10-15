@@ -572,6 +572,17 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 	printf("best mariginal: %f, %f\n", best_point[0], best_point[1]);
 }
 
+bool Posterior::is_converged_on_boundary(){
+	// check if the posterior is converged on the boundary of the search space
+	if (model->max_a_post_value[0] < model->param_list[0].lower_limit + 2 * model->param_list[0].resolution ||
+		model->max_a_post_value[0] > model->param_list[0].upper_limit - 2 * model->param_list[0].resolution ||
+		model->max_a_post_value[1] < model->param_list[1].lower_limit + 2 * model->param_list[1].resolution ||
+		model->max_a_post_value[1] > model->param_list[1].upper_limit - 2 * model->param_list[1].resolution)
+		return true;
+	else
+		return false;
+}
+
 // log the posterior pdf
 void Posterior::log_pdf(const char *file_name, char writing_mode)
 {

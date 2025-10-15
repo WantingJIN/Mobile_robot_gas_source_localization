@@ -20,6 +20,7 @@ inline constexpr double WHEEL_RADIUS = 0.021;  // meters (K4)
 inline constexpr double AXLE_LENGTH = 0.1054;  // meters (K4)
 inline constexpr int ODOR_FILTER_LENGTH = 150; // ~10 sec
 inline constexpr int MAX_ITER = 30;
+inline constexpr int MAX_RELOCATIONS = 5;
 inline constexpr double MAX_SPEED = 47.61;     // K4 speed constant
 inline constexpr int SENSOR_NUMBER = 8;
 inline constexpr int MAX_NB_ROBOTS = 5;

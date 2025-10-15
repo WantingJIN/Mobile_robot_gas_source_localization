@@ -68,6 +68,8 @@ public:
     void log_marginal_pdf(const char *file_name, char writing_mode);
     void log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas);
 
+    bool is_converged_on_boundary();
+
 
 };
 

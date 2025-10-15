@@ -162,11 +162,13 @@ void init()
 		FSM.state = STATE_WAITFORPLUME;
 		FSM.hook = state_waiting;
 		FSM.n_cycles = 0;
+		FSM.n_relocations = 0;
 	} else if (simulation_parameters.simuMode == OFFLINE){
 		// set the state to measuring
 		FSM.state = STATE_READ_INITIAL;
 		FSM.hook = state_read_initial_position_measurement;
 		FSM.n_cycles = 0;
+		FSM.n_relocations = 0;
 	}
 }
 

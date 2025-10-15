@@ -48,6 +48,19 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 	acc_info_map = new double[_map_size];	
 }
 
+void PathPlanner::reset_planning_bound(SourceBounds source_bounds)
+{
+	_xnbins = source_bounds.x_nbins;
+	_ynbins = source_bounds.y_nbins;
+	_xresol = source_bounds.x_resol;
+	_yresol = source_bounds.y_resol;
+	_map_size = source_bounds.map_size;
+	_xmin = source_bounds.x_min;
+	_ymin = source_bounds.y_min;	
+	_xmax = source_bounds.x_max;	
+	_ymax = source_bounds.y_max;	
+}
+
 PathPlanner:: ~PathPlanner()
 {
 }

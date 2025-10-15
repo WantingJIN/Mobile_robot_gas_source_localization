@@ -690,11 +690,52 @@ void state_estimating()
 		wb_supervisor_set_label(2, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 
 		
-		bool is_stop_condition_reached = check_stop_condition();
-		if (is_stop_condition_reached)
+		bool is_converge_condition_reached = check_converge_condition();
+		if (is_converge_condition_reached)
 		{
-			FSM.state = STATE_FINISHED;
-			return;
+			// FSM.state = STATE_FINISHED;
+			// return;
+			if (simulation_parameters.estimationScale == GLOBAL || FSM.n_cycles == MAX_ITER){
+				FSM.state = STATE_FINISHED;
+				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+				fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+				broadcast_state_finished();
+				return;
+			} else {
+				// Change the estimation range and move robot to new area
+				// reset the posterior and plume range
+				// if the estimation converge inside the estimation range, then stop
+				// if the estimation converge on the boundary, then it need to be checked
+				// Also set a maximum number of relocations
+				if (posterior->is_converged_on_boundary() && (FSM.n_relocations < MAX_RELOCATIONS)){
+					FSM.n_relocations++;
+					// move the robot to the converged position
+					goal_position.x = plume_model->max_a_post_value[0];
+					goal_position.y = plume_model->max_a_post_value[1];
+					goal_position.heading = 0;
+					Message msg(ID, 0, goal_position, -1, goal_position, 0);
+					send_msg(msg);
+					printf("Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
+					fprintf(console_logfile, "Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
+					FSM.state = STATE_MOVING;
+					FSM.hook = state_moving;
+
+					printf("The estimation converged on the boundary, change the estimation range and relocate robot \n");
+					fprintf(console_logfile, "The estimation converged on the boundary, change the estimation range and relocate robot \n");
+					set_es
+					plume_model->reset_estimation_ranges(source_bounds);
+					plume_model->calculate_gas_map_and_information_matrix();
+					posterior->pdf_reset();
+					path_planner->reset_planning_bound(source_bounds);
+				} else {
+					FSM.state = STATE_FINISHED;
+					printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+					fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+					broadcast_state_finished();
+					return;
+				}
+				
+			}
 		} else {
 			FSM.state = STATE_UPDATEGOAL;
 			FSM.hook = state_updategoal;
@@ -1378,6 +1419,35 @@ bool check_stop_condition()
 	}
 	return is_stop_condition_reached;
 }
+
+bool check_converge_condition()
+{
+	bool is_converge_condition_reached = false;
+	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
+		if (posterior->entropy < 0.1 ){
+			is_converge_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
+		if ((posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_converge_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
+		if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_converge_condition_reached = true;
+		}
+	}
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	if (is_converge_condition_reached)
+	{
+		// log the finish time stamp
+		end_timestamp = wb_robot_get_time();
+		printf("Robot ID [%d]: Stop condition reached!\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
+	}
+	return is_converge_condition_reached;
+}
+
 PlumeModel* initializePlumeModel() {
     if (simulation_parameters.plumeModel == DDPM) {
         return new DeepCFDPlumeModel2D();
@@ -1432,6 +1502,35 @@ void set_source_bounds(SourceBounds *bounds,
     // Compute resolutions safely (avoid division by zero)
     bounds->x_resol = (x_nbins > 0) ? (x_max - x_min) / x_nbins : 0.0;
     bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
+}
+
+void set_source_bounds_centered_with_location(SourceBound *bounds, Position pos){
+        double local_xmin = pos.x - 3.0;
+		double local_ymin = pos.y - 1.0;
+		double local_xmax = pos.x + 3.0;
+		double local_ymax = pos.y + 1.0;
+		// make sure the local bounds are within the global bounds
+		local_xmin = std::max(local_xmin, XMIN);
+		local_ymin = std::max(local_ymin, YMIN);
+		local_xmax = std::min(local_xmax, XMAX);
+		local_ymax = std::min(local_ymax, YMAX);
+		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
+}
+void set_source_esimation_grid(SourceBound *bounds, int x_bins, int y_bins){
+	bounds->x_nbins = x_nbins;
+    bounds->y_nbins = y_nbins;
+
+	bounds->map_size = x_nbins * y_nbins;
+}
+void set_source_estimation_range(SourceBound *bounds, double x_min, double x_max, double y_min, double y_max){
+	bounds->x_min = x_min;
+    bounds->y_min = y_min;
+    bounds->x_max = x_max;
+    bounds->y_max = y_max;
+	  // Compute resolutions safely (avoid division by zero)
+    bounds->x_resol = (x_nbins > 0) ? (x_max - x_min) / x_nbins : 0.0;
+    bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
+
 }
 
 void init_estimation_bound(){
@@ -1501,7 +1600,7 @@ int main(int argc, char **argv)
 	path_planner = new PathPlanner(plume_model, posterior, &history);
 
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
-	plume_model->initialize_gas_map_and_information_matrix();
+	plume_model->calculate_gas_map_and_information_matrix();
 	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// initialize the receiver
