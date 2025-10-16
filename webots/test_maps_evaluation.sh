@@ -46,7 +46,7 @@ sigma=0.4 #noise level for the STE likelihood
 for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
-	for m in 10 #1 2 3 5 10 #0 1  
+	for m in 0 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
 		# for likelihood in 2000 3000
@@ -73,7 +73,7 @@ do
 			# sed -i "s/^weighting_entropy_ratio *= *.*/weighting_entropy_ratio = $weighting_entropy_ratio/" "$config_file"
 			# wind map and obstacle list
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/wind_map_2D_"$m".csv data/plugin_parameters/wind_map_2D.csv
+			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/wind_map_2D_"$m".csv data/wind_map_2D.csv
 			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
 			cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
