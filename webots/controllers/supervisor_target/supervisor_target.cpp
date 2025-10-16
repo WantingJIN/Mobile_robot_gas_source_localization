@@ -30,9 +30,9 @@
 
 //NOTE: test local map
 #define ARENA_YMIN            0.0
-#define ARENA_YMAX            2.0
-#define ARENA_XMIN            3.0
-#define ARENA_XMAX            5.0
+#define ARENA_YMAX            4.0
+#define ARENA_XMIN            2.75
+#define ARENA_XMAX            12.75
 
 #define SAFETY_MARGIN   0.2
 #define VERBOSE         1
