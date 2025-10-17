@@ -537,7 +537,7 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	// FIXME - hard-coded wind speed
 	u_x = -0.75;
 	// double Nx, double Ny, double D, double Q
-	set_parameters(100, 40, 0.008, 400.0);
+	set_parameters(100, 40, 0.008, 1500.0);
 	//set_u_field_uniform(u_x);
 	set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	assemble_and_factorize();

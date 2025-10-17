@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_relative_2nd_test/0';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/DDPM_absolute_2nd_test/10';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
@@ -47,6 +47,11 @@ if (params.planning_strategy == 5)
     gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 end 
 
+xmin = 3.0;
+xmax = 12.75;
+ymin = 0.0;
+ymax = 4.0; 
+
 x=linspace(xmin,xmax,20);
 y=linspace(ymin,ymax,20);
 
@@ -85,25 +90,13 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
-    % -------plot absolute/relative gas measurements of each iter------------%
-    % Extract the iteration numbers (last column)
-    iteration_col = measurements(:, end);
-    % Find indices of all measurements up to iteration k
-    idx_until_current_idx = max(find(iteration_col <= i-1));
-    
-    if (gas_feature == 0)
-        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-    end
-    if (gas_feature == 2)
-        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-        hold on
-    end
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);  
     load MyColormap2; colormap(mymap); 
+    colorbar;caxis([0 Inf]);
     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
     ax.TitleFontSizeMultiplier = 2;
     
@@ -112,22 +105,7 @@ for i=1:size(pdf,1)
     % -------plot information map of each iter------------%
     % the last iteration the information map won't update
     if i == size(pdf,1)
-         imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(1), params.nbins(2))); hold on
-         if params.planning_strategy == 5
-             if clustering~=0
-                cluster_num = cluster_bounding_boxes(i-1,1);
-                if cluster_num > 0
-                    for cluster_idx = 1 : cluster_num
-                        x1 = cluster_bounding_boxes(i-1, 3 + (cluster_idx-1)*4);
-                        y1 = cluster_bounding_boxes(i-1, 4 + (cluster_idx-1)*4);
-                        x2 = cluster_bounding_boxes(i-1, 5 + (cluster_idx-1)*4);
-                        y2 = cluster_bounding_boxes(i-1, 6 + (cluster_idx-1)*4);
-                        rectangle('Position',[y1 x1 (y2-y1) (x2-x1)], 'EdgeColor',"#A2142F",'LineWidth',2)
-                        hold on
-                    end
-                end
-             end
-         end
+         imagesc(y,x,reshape(gas_information_map(i,1:end),params.nbins(1), params.nbins(2))); hold on
     else
         if params.planning_strategy == 5
             if clustering~=0
@@ -141,7 +119,6 @@ for i=1:size(pdf,1)
                 imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas
                 if cluster_num > 0
                     for cluster_idx = 1 : cluster_num
-                        disp(cluster_idx)
                         disp(cluster_num)
                         x1 = cluster_bounding_boxes(i, 3 + (cluster_idx-1)*4);
                         y1 = cluster_bounding_boxes(i, 4 + (cluster_idx-1)*4);
@@ -169,6 +146,19 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
+    % -------plot absolute/relative gas measurements of each iter------------%
+    % Extract the iteration numbers (last column)
+    iteration_col = measurements(:, end);
+    % Find indices of all measurements up to iteration k
+    idx_until_current_idx = max(find(iteration_col <= i-1));
+    
+    if (gas_feature == 0)
+        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+    end
+    if (gas_feature == 2)
+        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+        hold on
+    end
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);
 %     if (params.info_feature == 0)

@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_relative_2nd_test/0';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_absolute_2nd_test/0';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
@@ -59,7 +59,7 @@ trajectory = [positions(1,:); trajectory];
 
 %% save it to a video
 v = VideoWriter([experiment_path, '/pdf.avi']);  % Output file name (can also use .mp4) v = VideoWriter('output_video.mp4', 'MPEG-4');
-v.FrameRate = 10;                % Adjust frame rate (frames per second)
+v.FrameRate = 5;                % Adjust frame rate (frames per second)
 open(v);
 
 %% show pdf
@@ -74,50 +74,25 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',25,'MarkerFaceColor','m');
     hold on
-    % -------plot absolute/relative gas measurements of each iter------------%
-    % Extract the iteration numbers (last column)
-    iteration_col = measurements(:, end);
-    % Find indices of all measurements up to iteration k
-    idx_until_current_idx = max(find(iteration_col <= i-1));
-    
-    if (gas_feature == 0)
-        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-    end
-    if (gas_feature == 2)
-        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-        hold on
-    end
+   
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);  
     load MyColormap2; colormap(mymap); 
+    colorbar;caxis([0 Inf]);
     title(['Posterior pdf on X and Y \newline           iteration ', num2str(i)]);
     ax.TitleFontSizeMultiplier = 2;
     
     
-      subplot(1,2,2)
+    subplot(1,2,2)
 
     % -------plot information map of each iter------------%
     % the last iteration the information map won't update
     if i == size(pdf,1)
-         imagesc(y,x,reshape(gas_information_map(i-1,1:end),params.nbins(2), params.nbins(3))); hold on
-         if params.planning_strategy == 5
-             if clustering~=0
-                cluster_num = cluster_bounding_boxes(i-1,1);
-                if cluster_num > 0
-                    for cluster_idx = 1 : cluster_num
-                        x1 = cluster_bounding_boxes(i-1, 3 + (cluster_idx-1)*4);
-                        y1 = cluster_bounding_boxes(i-1, 4 + (cluster_idx-1)*4);
-                        x2 = cluster_bounding_boxes(i-1, 5 + (cluster_idx-1)*4);
-                        y2 = cluster_bounding_boxes(i-1, 6 + (cluster_idx-1)*4);
-                        rectangle('Position',[y1 x1 (y2-y1) (x2-x1)], 'EdgeColor',"#A2142F",'LineWidth',2)
-                        hold on
-                    end
-                end
-             end
-         end
+         imagesc(y,x,reshape(gas_information_map(i,1:end),params.nbins(2), params.nbins(3))); hold on
+
     else
         if params.planning_strategy == 5
             if clustering~=0
@@ -144,21 +119,21 @@ for i=1:size(pdf,1)
             end
         end
     end
-
+   
     % Extract the iteration numbers (last column)
     iteration_col = measurements(:, end);
     % Find indices of all measurements up to iteration k
     idx_until_current_idx = max(find(iteration_col <= i-1));
-    
-    if (gas_feature == 0)
-        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-    end
-    if (gas_feature == 2)
-        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
-        hold on
-    end
-    plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
-    hold on
+ 
+%     if (gas_feature == 0)
+%         scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+%     end
+%     if (gas_feature == 2)
+%         scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+%         hold on
+%     end
+%     plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
+%     hold on
     %rectplot = @(x1,y1,x2,y2) rectangle('Position',[x1 y1 x2 y2]);
     
    
@@ -170,6 +145,8 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
+    
+   
     axis equal; axis([-0.1,4.1,2.4,12.6]);
     view(180,90);
 %     if (params.info_feature == 0)
@@ -177,16 +154,18 @@ for i=1:size(pdf,1)
 %     elseif (params.info_feature == 1)
      title(['Belief clustering result \newline           iteration ', num2str(i)]);
 %     end
-    xlabel('Y(m)'); ylabel('X(m)');     load MyColormap2; colormap(mymap); 
-    colorbar;caxis([0 Inf]);
+    xlabel('Y(m)'); ylabel('X(m)');    
     hold off;
     xlim([0 4])
     ylim([2 13])
+    load MyColormap2; colormap(mymap); 
+    colorbar;caxis([0 Inf]); 
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
     ax.TitleFontSizeMultiplier = 2;
     
 
     drawnow
+    pause
     frame = getframe(gcf);  % Capture the current figure
     writeVideo(v, frame);   % Write the frame to the video
 
