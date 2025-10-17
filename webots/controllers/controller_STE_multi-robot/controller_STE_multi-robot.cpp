@@ -701,7 +701,8 @@ void state_estimating()
 				fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
 				broadcast_state_finished();
 				return;
-			} else {
+			} 
+			else {
 				// Change the estimation range and move robot to new area
 				// reset the posterior and plume range
 				// if the estimation converge inside the estimation range, then stop
@@ -722,7 +723,10 @@ void state_estimating()
 
 					printf("The estimation converged on the boundary, change the estimation range and relocate robot \n");
 					fprintf(console_logfile, "The estimation converged on the boundary, change the estimation range and relocate robot \n");
-					set_es
+					// NOTE - complied but didn't try to run 
+					// TODO - save the estimation range for every iteration
+					// TODO - should keep the same resolution as the global map for fair comparison
+					set_source_bounds_centered_with_location(&source_bounds, goal_position.x, goal_position.y);
 					plume_model->reset_estimation_ranges(source_bounds);
 					plume_model->calculate_gas_map_and_information_matrix();
 					posterior->pdf_reset();
@@ -1504,32 +1508,33 @@ void set_source_bounds(SourceBounds *bounds,
     bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
 }
 
-void set_source_bounds_centered_with_location(SourceBound *bounds, Position pos){
-        double local_xmin = pos.x - 3.0;
-		double local_ymin = pos.y - 1.0;
-		double local_xmax = pos.x + 3.0;
-		double local_ymax = pos.y + 1.0;
+void set_source_bounds_centered_with_location(SourceBounds *bounds, double px, double py){
+        double local_xmin = px - 3.0;
+		double local_ymin = py - 1.0;
+		double local_xmax = px + 3.0;
+		double local_ymax = py + 1.0;
 		// make sure the local bounds are within the global bounds
 		local_xmin = std::max(local_xmin, XMIN);
 		local_ymin = std::max(local_ymin, YMIN);
 		local_xmax = std::min(local_xmax, XMAX);
 		local_ymax = std::min(local_ymax, YMAX);
+		set_source_estimation_range(bounds, local_xmin, local_xmax, local_ymin, local_ymax);
 		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
 }
-void set_source_esimation_grid(SourceBound *bounds, int x_bins, int y_bins){
-	bounds->x_nbins = x_nbins;
-    bounds->y_nbins = y_nbins;
+void set_source_esimation_grid(SourceBounds *bounds, int x_bins, int y_bins){
+	bounds->x_nbins = x_bins;
+    bounds->y_nbins = y_bins;
 
-	bounds->map_size = x_nbins * y_nbins;
+	bounds->map_size = x_bins * y_bins;
 }
-void set_source_estimation_range(SourceBound *bounds, double x_min, double x_max, double y_min, double y_max){
+void set_source_estimation_range(SourceBounds *bounds, double x_min, double x_max, double y_min, double y_max){
 	bounds->x_min = x_min;
     bounds->y_min = y_min;
     bounds->x_max = x_max;
     bounds->y_max = y_max;
 	  // Compute resolutions safely (avoid division by zero)
-    bounds->x_resol = (x_nbins > 0) ? (x_max - x_min) / x_nbins : 0.0;
-    bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
+    bounds->x_resol = (bounds->x_nbins > 0) ? (x_max - x_min) / bounds->x_nbins : 0.0;
+    bounds->y_resol = (bounds->y_nbins > 0) ? (y_max - y_min) / bounds->y_nbins : 0.0;
 
 }
 
@@ -1541,19 +1546,7 @@ void init_estimation_bound(){
 	}
 	if (simulation_parameters.estimationScale == LOCAL){
         // TODO: whether it is better to fixed the number of bins or the resolution?
-		// local estimation around the initial position
-		double local_xmin = current_position.x - 3.0;
-		double local_ymin = current_position.y - 1.0;
-		double local_xmax = current_position.x + 3.0;
-		double local_ymax = current_position.y + 1.0;
-		// make sure the local bounds are within the global bounds
-		local_xmin = std::max(local_xmin, XMIN);
-		local_ymin = std::max(local_ymin, YMIN);
-		local_xmax = std::min(local_xmax, XMAX);
-		local_ymax = std::min(local_ymax, YMAX);
-		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
-		set_source_bounds(&source_bounds, 
-						local_xmin, local_ymin, local_xmax, local_ymax, 10, 10);
+		set_source_bounds_centered_with_location(&source_bounds, current_position.x, current_position.y);
 
 		FILE * sim_param_file = fopen(config_logfile_name, "a");
 	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);

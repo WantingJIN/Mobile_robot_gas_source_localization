@@ -191,6 +191,7 @@ void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_v
 void GaussianPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode) {}
 void GaussianPlumeModel2D::calculate_gas_map_and_information_matrix() {}
 void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, double wind_intensity, int soure_pos_idx, vector<double> &c_avg) {}
+void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
