@@ -38,7 +38,7 @@ extern WbDeviceTag sensors[SENSOR_NUMBER];
 
 // Global Variables
 extern struct sObject robot;
-extern struct sObject source;
+//extern struct sObject source;
 extern struct sOdometryTrack ot;
 
 // log files

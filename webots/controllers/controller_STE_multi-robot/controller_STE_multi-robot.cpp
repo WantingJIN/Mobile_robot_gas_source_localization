@@ -103,8 +103,6 @@ SimulationParameters simulation_parameters("../../data/config.txt");
 // Declare a pointer to the base class or common interface for plume models
 PlumeModel* plume_model = nullptr;
 
-int cell_visited_list[MAP_SIZE] = {0};
-
 // current posterior distribution
 // Posterior posterior(plume_model);
 Posterior* posterior= nullptr;
@@ -158,10 +156,16 @@ double real_source_pos[3] = {0, 0, 0};
 
 bool use_visibility_path = true;
 
+// define the source bound for the estimation
+SourceBounds source_bounds;
+
 // store the belief maps of the whole team
-static double belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
-static int received_flags[MAX_NB_ROBOTS] = {0};
-static double belief_map_merged[MAP_SIZE] = {0};
+std::vector<std::vector<double>> belief_maps;
+std::vector<int> received_flags;
+// merged belief map
+std::vector<double> belief_map_merged;
+// visited list
+std::vector<int> cell_visited_list;
 
 bool printed = false;
 bool entered_state_receive_pdf = false;
@@ -392,7 +396,7 @@ void log_visited_list()
 {
 	visited_list_logfile = fopen(visited_list_logfile_name, "a");
 
-	for (int i = 0; i < MAP_SIZE; i++)
+	for (int i = 0; i < source_bounds.map_size; i++)
 		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
 
 	fprintf(visited_list_logfile, "\n");
@@ -482,32 +486,6 @@ void state_read_positions_measurements()
 	float f1, f2, f3, f4, f5, f6, f7, f8;
 	double t;
 	char line[256];
-	// int pos_coord[2];
-	// pos_coord[0] = floor((real_source_pos[0] - source_x_min) / x_resol);
-    //   pos_coord[1] = floor((real_source_pos[1] - source_y_min) / y_resol);
-	// int real_source_idx = posterior->indices_to_index(pos_coord);
-	// //float sigma = 0.22;// works well for Gaussian CDF
-	// float sigma = 0.35;// works well for Empirical CDF
-	// double sum_tmp = 0;
-	// if (sampleBuffer.average_wind_intensity == 0)
-	// 	printf("NO WIND, BYE BYE!\n");
-
-	// vector<double> model_c_avg(history.size);
-
-	// int nbr = history.size;
-	// float px[nbr], py[nbr];
-	// int idx[nbr], idy[nbr];
-
-	// // get indices in the map
-	// for (int i = 0; i < nbr; i++)
-	// {
-	// 	px[i] = history.position[i].x;
-	// 	py[i] = history.position[i].y;
-	// 	idx[i] = floor((px[i] - source_x_min) / x_resol);
-	// 	idy[i] = floor((py[i] - source_y_min) / y_resol);
-	// }
-
-	// model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
 
 	// Read the goal position
 	if (!feof(experiment_goalposition_logfile))
@@ -617,7 +595,7 @@ void state_measuring()
 	history.measurement.push_back(sampleBuffer.average_concentration);
 	history.FSM_iter.push_back(FSM.n_cycles);
 	history.size++;
-	history_print(history);
+	//history_print(history);
 
 	// mark the current cell as visited
 	if (simulation_parameters.visitedList == visitedList_ON)
@@ -712,11 +690,52 @@ void state_estimating()
 		wb_supervisor_set_label(2, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
 
 		
-		bool is_stop_condition_reached = check_stop_condition();
-		if (is_stop_condition_reached)
+		bool is_converge_condition_reached = check_converge_condition();
+		if (is_converge_condition_reached)
 		{
-			FSM.state = STATE_FINISHED;
-			return;
+			// FSM.state = STATE_FINISHED;
+			// return;
+			if (simulation_parameters.estimationScale == GLOBAL || FSM.n_cycles == MAX_ITER){
+				FSM.state = STATE_FINISHED;
+				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+				fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+				broadcast_state_finished();
+				return;
+			} else {
+				// Change the estimation range and move robot to new area
+				// reset the posterior and plume range
+				// if the estimation converge inside the estimation range, then stop
+				// if the estimation converge on the boundary, then it need to be checked
+				// Also set a maximum number of relocations
+				if (posterior->is_converged_on_boundary() && (FSM.n_relocations < MAX_RELOCATIONS)){
+					FSM.n_relocations++;
+					// move the robot to the converged position
+					goal_position.x = plume_model->max_a_post_value[0];
+					goal_position.y = plume_model->max_a_post_value[1];
+					goal_position.heading = 0;
+					Message msg(ID, 0, goal_position, -1, goal_position, 0);
+					send_msg(msg);
+					printf("Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
+					fprintf(console_logfile, "Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
+					FSM.state = STATE_MOVING;
+					FSM.hook = state_moving;
+
+					printf("The estimation converged on the boundary, change the estimation range and relocate robot \n");
+					fprintf(console_logfile, "The estimation converged on the boundary, change the estimation range and relocate robot \n");
+					set_es
+					plume_model->reset_estimation_ranges(source_bounds);
+					plume_model->calculate_gas_map_and_information_matrix();
+					posterior->pdf_reset();
+					path_planner->reset_planning_bound(source_bounds);
+				} else {
+					FSM.state = STATE_FINISHED;
+					printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+					fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+					broadcast_state_finished();
+					return;
+				}
+				
+			}
 		} else {
 			FSM.state = STATE_UPDATEGOAL;
 			FSM.hook = state_updategoal;
@@ -1163,7 +1182,7 @@ void state_receive_pdf()
 	{
 		if (!printed && posterior->pdf != nullptr)
 		{
-			memcpy(belief_maps[self_index], posterior->pdf, MAP_SIZE * sizeof(double));
+			belief_maps[self_index].assign(posterior->pdf, posterior->pdf + source_bounds.map_size);
 			printed = true;
 		}
 
@@ -1195,7 +1214,7 @@ void state_receive_pdf()
 			// Skip self and invalid indices
 			if (sender_ID != ID && sender_index >= 0 && sender_index < MAX_NB_ROBOTS)
 			{
-				memcpy(belief_maps[sender_index], &buffer[10], MAP_SIZE * sizeof(double));
+				belief_maps[sender_index].assign(&buffer[10], &buffer[10] + source_bounds.map_size);
 				received_flags[sender_index] = 1;
 			}
 
@@ -1237,7 +1256,7 @@ void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
 	// Initialize to 1.0 for multiplicative identity
-	for (int i = 0; i < MAP_SIZE; i++)
+	for (int i = 0; i < source_bounds.map_size; i++)
 	{
 		belief_map_merged[i] = 1.0;
 	}
@@ -1248,7 +1267,7 @@ void state_merge_pdf()
 		if (r == self_index)
 			continue; // Skip self
 
-		for (int i = 0; i < MAP_SIZE; i++)
+		for (int i = 0; i < source_bounds.map_size; i++)
 		{
 			belief_map_merged[i] *= belief_maps[r][i];
 		}
@@ -1256,14 +1275,14 @@ void state_merge_pdf()
 
 	// normalize belief map
 	double sum = 0.0;
-	for (int i = 0; i < MAP_SIZE; i++)
+	for (int i = 0; i < source_bounds.map_size; i++)
 	{
 		sum += belief_map_merged[i];
 	}
 
 	if (sum > 0)
 	{
-		for (int i = 0; i < MAP_SIZE; i++)
+		for (int i = 0; i < source_bounds.map_size; i++)
 		{
 			belief_map_merged[i] /= sum;
 		}
@@ -1271,13 +1290,13 @@ void state_merge_pdf()
 
 	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
 	printf("Robot ID [%d]: Merged belief map is: \n", ID);
-	for (int i = 0; i < MAP_SIZE; i++)
+	for (int i = 0; i < source_bounds.map_size; i++)
 	{
 		printf("%f ", belief_map_merged[i]);
 	}
 	printf("\n");
-	memcpy(posterior->pdf, belief_map_merged, MAP_SIZE * sizeof(double));
-      // Check the stopping condition after merging
+	belief_map_merged.assign(posterior->pdf, posterior->pdf + source_bounds.map_size);
+    // Check the stopping condition after merging
 	posterior->process();
     posterior->calculate_entropy_and_spread();
 	log_expected_a_posteriori();
@@ -1400,6 +1419,35 @@ bool check_stop_condition()
 	}
 	return is_stop_condition_reached;
 }
+
+bool check_converge_condition()
+{
+	bool is_converge_condition_reached = false;
+	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
+		if (posterior->entropy < 0.1 ){
+			is_converge_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
+		if ((posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_converge_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
+		if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
+			is_converge_condition_reached = true;
+		}
+	}
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	if (is_converge_condition_reached)
+	{
+		// log the finish time stamp
+		end_timestamp = wb_robot_get_time();
+		printf("Robot ID [%d]: Stop condition reached!\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
+	}
+	return is_converge_condition_reached;
+}
+
 PlumeModel* initializePlumeModel() {
     if (simulation_parameters.plumeModel == DDPM) {
         return new DeepCFDPlumeModel2D();
@@ -1413,25 +1461,13 @@ PlumeModel* initializePlumeModel() {
     }
 }
 
-
-
-
-// =========================== MAIN ============================== //
-
-int main(int argc, char **argv)
-{
-	init();
-	read_obstacle_list();
-
-	// File for saving console messages
-	console_logfile = fopen(console_logfile_name, "a");
-
+void check_visibility_environment() {
 	// visibility graph (visilibity library)
+	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 	std::cout << "Validating environment model . . . ";
 	if (my_environment.is_valid(epsilon))
 		std::cout << "OK" << std::endl;
-	else
-	{
+	else {
 		std::cout << std::endl
 			    << "Warning:  Environment model "
 			    << "is invalid." << std::endl
@@ -1446,22 +1482,125 @@ int main(int argc, char **argv)
 			    << std::endl;
 		exit(0);
 	}
-	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
-	// char label[255];
-	// sprintf(label, "Iteration: %d\n", 0);
-	// wb_supervisor_set_label(2, label, 0.1, 0.8, 0.1, 0x61A8E8, 0, "Impact");
-	// char label2[255];
-	// sprintf(label2, "Reading: %d\n", 0);
-	// wb_supervisor_set_label(1, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
+}
 
+
+void set_source_bounds(SourceBounds *bounds,
+                        double x_min, double y_min,
+                        double x_max, double y_max,
+                        int x_nbins, int y_nbins)
+{
+    bounds->x_min = x_min;
+    bounds->y_min = y_min;
+    bounds->x_max = x_max;
+    bounds->y_max = y_max;
+    bounds->x_nbins = x_nbins;
+    bounds->y_nbins = y_nbins;
+
+	bounds->map_size = x_nbins * y_nbins;
+
+    // Compute resolutions safely (avoid division by zero)
+    bounds->x_resol = (x_nbins > 0) ? (x_max - x_min) / x_nbins : 0.0;
+    bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
+}
+
+void set_source_bounds_centered_with_location(SourceBound *bounds, Position pos){
+        double local_xmin = pos.x - 3.0;
+		double local_ymin = pos.y - 1.0;
+		double local_xmax = pos.x + 3.0;
+		double local_ymax = pos.y + 1.0;
+		// make sure the local bounds are within the global bounds
+		local_xmin = std::max(local_xmin, XMIN);
+		local_ymin = std::max(local_ymin, YMIN);
+		local_xmax = std::min(local_xmax, XMAX);
+		local_ymax = std::min(local_ymax, YMAX);
+		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
+}
+void set_source_esimation_grid(SourceBound *bounds, int x_bins, int y_bins){
+	bounds->x_nbins = x_nbins;
+    bounds->y_nbins = y_nbins;
+
+	bounds->map_size = x_nbins * y_nbins;
+}
+void set_source_estimation_range(SourceBound *bounds, double x_min, double x_max, double y_min, double y_max){
+	bounds->x_min = x_min;
+    bounds->y_min = y_min;
+    bounds->x_max = x_max;
+    bounds->y_max = y_max;
+	  // Compute resolutions safely (avoid division by zero)
+    bounds->x_resol = (x_nbins > 0) ? (x_max - x_min) / x_nbins : 0.0;
+    bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
+
+}
+
+void init_estimation_bound(){
+	// in case of global estimation
+	if (simulation_parameters.estimationScale == GLOBAL){
+		set_source_bounds(&source_bounds, 
+						XMIN, YMIN, XMAX, YMAX, 20, 20);
+	}
+	if (simulation_parameters.estimationScale == LOCAL){
+        // TODO: whether it is better to fixed the number of bins or the resolution?
+		// local estimation around the initial position
+		double local_xmin = current_position.x - 3.0;
+		double local_ymin = current_position.y - 1.0;
+		double local_xmax = current_position.x + 3.0;
+		double local_ymax = current_position.y + 1.0;
+		// make sure the local bounds are within the global bounds
+		local_xmin = std::max(local_xmin, XMIN);
+		local_ymin = std::max(local_ymin, YMIN);
+		local_xmax = std::min(local_xmax, XMAX);
+		local_ymax = std::min(local_ymax, YMAX);
+		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
+		set_source_bounds(&source_bounds, 
+						local_xmin, local_ymin, local_xmax, local_ymax, 10, 10);
+
+		FILE * sim_param_file = fopen(config_logfile_name, "a");
+	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
+	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	    fclose(sim_param_file);
+	} 
+}
+
+
+void init_belief_maps_for_team(){
+	belief_maps.assign(simulation_parameters.number_of_robots, std::vector<double>(source_bounds.map_size, 0.0));
+	belief_map_merged.assign(source_bounds.map_size, 0.0);
+	received_flags.assign(simulation_parameters.number_of_robots, 0);
+}
+
+void init_visited_list(){
+	cell_visited_list.assign(source_bounds.map_size, 0.0);
+}
+	
+
+// =========================== MAIN ============================== //
+
+int main(int argc, char **argv)
+{
+	init();
+	read_obstacle_list();
+    check_visibility_environment();
+	// init the estimation bound depending on global or local estimation
+	init_estimation_bound();
+	// if multi-robot and using team strategy, initialize the belief maps for each robot
+	if (simulation_parameters.number_of_robots > 1 && (simulation_parameters.teamStrategy == CENTRALIZED || simulation_parameters.teamStrategy == DISTRIBUTED)){
+		init_belief_maps_for_team();
+	}
+    // if using visited list, initialize the visited list
+	if (simulation_parameters.visitedList == visitedList_ON){
+		init_visited_list();
+	}
+
+    // File for saving console messages
+	console_logfile = fopen(console_logfile_name, "a");
 	// Initialize the appropriate plume model based on the simulation parameters
 	plume_model = initializePlumeModel();
 	posterior = new Posterior(plume_model);
 	path_planner = new PathPlanner(plume_model, posterior, &history);
 
-
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
-	plume_model->initialize_gas_map_and_information_matrix();
+	plume_model->calculate_gas_map_and_information_matrix();
 	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	// initialize the receiver

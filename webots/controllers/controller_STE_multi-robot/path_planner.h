@@ -5,8 +5,9 @@
 #include "controller_STE_multi-robot.h"
 #include "Posterior.h"
 #include "PlumeModel.h"
+#include <vector>
 
-
+using std::vector;
 struct ComparePosition {
       bool operator()(const std::pair<double, Position>& a, const std::pair<double, Position>& b) {
           return a.first > b.first; // Min-heap: prioritize lower cost
@@ -25,11 +26,16 @@ private:
     PlumeModel *plume_model;
     struct history *history;
 
-    double gas_information_map[MAP_SIZE] = {0};
-    double scores_map[MAP_SIZE] = {0};
-    double distance_map[MAP_SIZE] = {0};
-    double acc_info_map[MAP_SIZE] = {0}; 
-
+    double *gas_information_map;
+    double *scores_map;
+    double *distance_map;
+    double *acc_info_map; 
+     
+    // range and resolution of the map
+    int _xnbins, _ynbins;
+    double _xresol, _yresol;
+    double _xmin, _ymin, _xmax, _ymax;
+    int _map_size;
     // helper functions
     void reset_metrics();
     double index_distance(int x_idx_diff, int y_idx_diff);
@@ -43,7 +49,7 @@ private:
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::list<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom);
-    void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, int *cell_visited_list);
+    void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> cell_visited_list);
     std::vector<Position> findOptimalPath(Position start, double target[2]);
     //
 public:
@@ -53,6 +59,7 @@ public:
 
     PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history);
     ~PathPlanner();
+    void reset_planning_bound(SourceBounds source_bounds);
 
     void maximal_belief_planning();
     void random_navigation();

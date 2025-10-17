@@ -47,13 +47,16 @@ if (params.planning_strategy == 5)
     gas_information_map = dlmread([experiment_file_path,'/posterior_pdf_3D.csv']);
 end 
 
-xmin = 3.0;
-xmax = 12.75;
-ymin = 0.0;
-ymax = 4.0; 
+% read the range of the estimation parameter
+estimation_range = params.min_maxs;
+xmin = estimation_range(3);
+xmax = estimation_range(4);
+ymin = estimation_range(5);
+ymax = estimation_range(6);
 
-x=linspace(xmin,xmax,20);
-y=linspace(ymin,ymax,20);
+
+x=linspace(xmin,xmax,params.nbins(2));
+y=linspace(ymin,ymax,params.nbins(3));
 
 trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
@@ -81,7 +84,7 @@ ax.TitleFontSizeMultiplier = 2;
 %% show pdf
 for i=1:size(pdf,1)
     subplot(1,3,2)
-    imagesc(y,x,reshape(pdf(i,:),params.nbins(1),params.nbins(2)));
+    imagesc(y,x,reshape(pdf(i,:),params.nbins(2),params.nbins(3)));
     if map_nbr~=0
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
@@ -90,6 +93,7 @@ for i=1:size(pdf,1)
     hold on
     plot(positions(i,3),positions(i,2),'ko','MarkerSize',10,'MarkerFaceColor','m');
     hold on
+    % -------plot absolute/relative gas measurements of each iter------------%
     xlim([0 4])
     ylim([2 13])
     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
@@ -116,7 +120,7 @@ for i=1:size(pdf,1)
                 min_gas = min(gas_information_map_this_iteration);
                 threshold = ((max_gas-min_gas)*ratio +min_gas);
                 gas_information_map_this_iteration(gas_information_map_this_iteration < threshold) = 0;
-                imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(1), params.nbins(2))); hold on % uncomment to plot gas
+                imagesc(y,x,reshape(gas_information_map_this_iteration,params.nbins(2), params.nbins(3))); hold on % uncomment to plot gas
                 if cluster_num > 0
                     for cluster_idx = 1 : cluster_num
                         disp(cluster_num)
@@ -132,7 +136,18 @@ for i=1:size(pdf,1)
         end
     end
 
-
+    % Extract the iteration numbers (last column)
+    iteration_col = measurements(:, end);
+    % Find indices of all measurements up to iteration k
+    idx_until_current_idx = max(find(iteration_col <= i-1));
+    
+    if (gas_feature == 0)
+        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30, measurements(1:idx_until_current_idx,2),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+    end
+    if (gas_feature == 2)
+        scatter(position_history(1:idx_until_current_idx,3),position_history(1:idx_until_current_idx,2),30,relative_measurements(i,1:idx_until_current_idx),'MarkerFaceColor','flat','MarkerEdgeColor','k');
+        hold on
+    end
     plot(trajectory(:,3),trajectory(:,2),'DisplayName','Trajectory','LineWidth',1,'LineStyle','--','Color',[1 0.600000023841858 0.7843137383461]);%lines
     hold on
     %rectplot = @(x1,y1,x2,y2) rectangle('Position',[x1 y1 x2 y2]);
@@ -194,7 +209,7 @@ close all
 if visited_list_true~=0
     disp('show visited list') 
     f =figure('Position',[601.0000  111.4000  697.6000  1450.6000]);
-    imagesc(y,x,reshape(visited_list(1,1:end-1),params.nbins(1),params.nbins(2)));
+    imagesc(y,x,reshape(visited_list(1,1:end-1),params.nbins(2),params.nbins(3)));
     hold on
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on

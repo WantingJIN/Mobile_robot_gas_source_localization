@@ -2,82 +2,114 @@
 #define CONSTANT_H
 #include <math.h>
 // Constant variables
-#define BOUND(x, a, b) (((x) < (a)) ? (a) : ((x) > (b)) ? (b) \
-                                                        : (x))
-#define PI 3.14159265358979
-#define TIME_STEP 64           // adjusts the speed (ms)
-#define SAFETY_MARGIN 0.2       // how far in meters are you ready to approach the walls
-#define WHEEL_RADIUS 0.021     // K4: 0.021 		//K3: 0.0205	  // Wheel radius (meters)
-#define AXLE_LENGTH 0.1054     // K4: 0.0527×2 	//K3: 0.08841
-#define ODOR_FILTER_LENGTH 150 //~10sec //number of measurements before averaging
-// #define ODOR_FILTER_LENGTH 	1 //~10sec //number of measurements before averaging
-#define MAX_ITER 30
-#define MAX_SPEED 47.61 // K3: 35748.4
-#define SENSOR_NUMBER 8
-#define MAX_NB_ROBOTS 5
-// wind tunnel boundaries
-#define XMIN 3.0
-#define YMIN 0
-// #define ZMIN 0.1
-#define XMAX 12.75
-#define YMAX 4
+template <typename T>
+constexpr T BOUND(const T& x, const T& a, const T& b) noexcept {
+    return (x < a) ? a : (x > b ? b : x);
+    // Alternatively, if using C++17 or newer, you can just use:
+    // return std::clamp(x, a, b);
+}
 
-// #define ZMAX 1.9
-//  min and max for each parameter
-#define Q_min 80.0
-#define Q_max 100.0
-#define source_x_min 3.0
-#define source_y_min 0.0
-// #define source_z_min  0
-#define source_x_max 12.75
-#define source_y_max 4.0
-// #define source_z_max  2
-#define a_y_min 0.01
-#define a_y_max 0.05
-#define b_y_min 0.05
-#define b_y_max 0.1
-// #define a_z_min  0.01
-// #define a_z_max  0.05
-// #define b_z_min  0.1
-// #define b_z_max  0.5
-//  number of bins for posterior PDF
-#define Q_nbins 20 //(Q_max - Q_min) /20
-#define x_nbins 20 //(source_x_max - source_x_min)/0.1 //0.1 m is the granuality
-#define y_nbins 20 //(source_y_max - source_y_min)/0.1 //0.1 m is the granuality
-// #define z_nbins 	10 //(source_z_max - source_z_min)/0.1 //0.1 m is the granuality
-#define a_y_nbins 10 //(a_y_max - a_y_min) / 0.0025
-#define b_y_nbins 10 //(b_y_max - b_y_min) / 0.025
-// #define a_z_nbins 	10 //(a_z_max - a_z_min) / 0.0025
-// #define b_z_nbins 	10 //(b_z_max - b_z_min) / 0.025
-// resolution of the estimated terms
-#define Q_resol (static_cast<double>(Q_max - Q_min) / Q_nbins)
-#define x_resol (static_cast<double>(source_x_max - source_x_min) / x_nbins)
-#define y_resol (static_cast<double>(source_y_max - source_y_min) / y_nbins)
-#define a_y_resol (static_cast<double>(a_y_max - a_y_min) / a_y_nbins)
-#define b_y_resol (static_cast<double>(b_y_max - b_y_min) / b_y_nbins)
-#define MAX_DISTANCE 10.77 // from (2.75,0) to (12.75,4)
-#define MAP_SIZE x_nbins * y_nbins // number of cells in the map
-#define CENTRAL_MASTER_ID 101
+// ------------------------------------------------------------
+// 🔢 General constants
+// ------------------------------------------------------------
+inline constexpr double PI = 3.14159265358979;
+inline constexpr int TIME_STEP = 64;           // milliseconds
+inline constexpr double SAFETY_MARGIN = 0.2;   // meters
+inline constexpr double WHEEL_RADIUS = 0.021;  // meters (K4)
+inline constexpr double AXLE_LENGTH = 0.1054;  // meters (K4)
+inline constexpr int ODOR_FILTER_LENGTH = 150; // ~10 sec
+inline constexpr int MAX_ITER = 30;
+inline constexpr int MAX_RELOCATIONS = 5;
+inline constexpr double MAX_SPEED = 47.61;     // K4 speed constant
+inline constexpr int SENSOR_NUMBER = 8;
+inline constexpr int MAX_NB_ROBOTS = 5;
 
-#define VERBOSE 1
+// ------------------------------------------------------------
+// 🌬️ Wind tunnel boundaries
+// ------------------------------------------------------------
+inline constexpr double XMIN = 3.0;
+inline constexpr double YMIN = 0.0;
+inline constexpr double XMAX = 12.75;
+inline constexpr double YMAX = 4.0;
+// inline constexpr double ZMIN = 0.1;
+// inline constexpr double ZMAX = 1.9;
 
-#define TIMEOUT 1000 * 1000 // miliseconds
+// ------------------------------------------------------------
+// 📈 Parameter ranges
+// ------------------------------------------------------------
+inline constexpr double Q_min = 80.0;
+inline constexpr double Q_max = 100.0;
+
+inline constexpr double a_y_min = 0.01;
+inline constexpr double a_y_max = 0.05;
+inline constexpr double b_y_min = 0.05;
+inline constexpr double b_y_max = 0.1;
+
+// ------------------------------------------------------------
+// 📊 Number of bins
+// ------------------------------------------------------------
+inline constexpr int Q_nbins = 20;
+inline constexpr int a_y_nbins = 10;
+inline constexpr int b_y_nbins = 10;
+
+// ------------------------------------------------------------
+// 🧮 Derived quantities (computed at compile time)
+// ------------------------------------------------------------
+inline constexpr double Q_resol = (Q_max - Q_min) / Q_nbins;
+inline constexpr double a_y_resol = (a_y_max - a_y_min) / a_y_nbins;
+inline constexpr double b_y_resol = (b_y_max - b_y_min) / b_y_nbins;
+
+// ------------------------------------------------------------
+// 📏 Geometry and map
+// ------------------------------------------------------------
+inline constexpr double MAX_DISTANCE = 10.77; // from (2.75,0) to (12.75,4)
+// inline constexpr int MAP_SIZE = x_nbins * y_nbins;
+
+// ------------------------------------------------------------
+// 💡 Miscellaneous
+// ------------------------------------------------------------
+inline constexpr int CENTRAL_MASTER_ID = 101;
+inline constexpr bool VERBOSE = true;
+inline constexpr int TIMEOUT = 1000 * 1000; // microseconds
 
 // declare the global parameter - the root path of the project
 extern const char *workspacePath;
 
+// declare the gloabl paramter - the estimation bound of the gas source
+typedef struct {
+    float x_min;
+    float y_min;
+    float x_max;
+    float y_max;
+    int x_nbins;
+    int y_nbins;
+    int map_size; // derived = x_nbins * y_nbins
+
+    float x_resol;  // derived = (x_max - x_min) / x_nbins
+    float y_resol;  // derived = (y_max - y_min) / y_nbins
+} SourceBounds;
+
+// Function to initialize SourceBounds and compute resolutions
+void set_source_bounds(SourceBounds *bounds,
+                        double x_min, double y_min,
+                        double x_max, double y_max,
+                        int x_nbins, int y_nbins);
+
+extern SourceBounds source_bounds;
+
+// inline functions for position to index and vice versa
 inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
-      *idx_x = (int)floor((x - source_x_min) / x_resol);
-      *idx_y = (int)floor((y - source_y_min) / y_resol);
+      *idx_x = (int)floor((x - source_bounds.x_min) / source_bounds.x_resol);
+      *idx_y = (int)floor((y - source_bounds.y_min) / source_bounds.y_resol);
       // put idx_x and idx_y in the range of [0, x_nbins-1] and [0, y_nbins-1]      
       if (*idx_x < 0)
             *idx_x = 0; 
-      if (*idx_x >= x_nbins)  
-            *idx_x = x_nbins - 1;
+      if (*idx_x >= source_bounds.x_nbins)  
+            *idx_x = source_bounds.x_nbins - 1;
       if (*idx_y < 0)
             *idx_y = 0;
-      if (*idx_y >= y_nbins)
-            *idx_y = y_nbins - 1;
+      if (*idx_y >= source_bounds.y_nbins)
+            *idx_y = source_bounds.y_nbins - 1;
 
       // if (*idx_y < 0 || *idx_y > y_nbins)
       //       *idx_y = -1; // invalid
@@ -86,45 +118,45 @@ inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
       
 }
 inline void indices_to_position_2D(int idx_x, int idx_y, float *x, float *y){
-      *x = source_x_min + idx_x * x_resol + x_resol / 2.0;
-      *y = source_y_min + idx_y * y_resol + y_resol / 2.0;
+      *x = source_bounds.x_min + idx_x * source_bounds.x_resol + source_bounds.x_resol / 2.0;
+      *y = source_bounds.y_min + idx_y * source_bounds.y_resol + source_bounds.y_resol / 2.0;
 }
 inline int position_to_index_2D(float x, float y){
-      int idx_x = (int)floor((x - source_x_min) / x_resol);
-      int idx_y = (int)floor((y - source_y_min) / y_resol);
-      int idx = idx_x + idx_y * x_nbins;
+      int idx_x = (int)floor((x - source_bounds.x_min) / source_bounds.x_resol);
+      int idx_y = (int)floor((y - source_bounds.y_min) / source_bounds.y_resol);
+      int idx = idx_x + idx_y * source_bounds.x_nbins;
       // put idx in the range of [0, MAP_SIZE-1]
       if (idx < 0)
             idx = 0;
-      if (idx >= MAP_SIZE)    
-            idx = MAP_SIZE - 1;
+      if (idx >= source_bounds.map_size)    
+            idx = source_bounds.map_size - 1;
 
       // if (idx < 0 || idx > MAP_SIZE)
       //       idx = -1; // invalid
       return idx;
 }
 inline void index_to_position_2D(int idx, float *x, float *y){
-      int idx_x = idx % x_nbins;
-      int idx_y = idx / x_nbins;
-      *x = source_x_min + idx_x * x_resol + x_resol / 2.0;
-      *y = source_y_min + idx_y * y_resol + y_resol / 2.0;
+      int idx_x = idx % source_bounds.x_nbins;
+      int idx_y = idx / source_bounds.x_nbins;
+      *x = source_bounds.x_min + idx_x * source_bounds.x_resol + source_bounds.x_resol / 2.0;
+      *y = source_bounds.y_min + idx_y * source_bounds.y_resol + source_bounds.y_resol / 2.0;
 }
 inline void index_to_indices_2D(int idx, int *idx_x, int *idx_y){
-      *idx_x = idx % x_nbins;
-      *idx_y = idx / x_nbins;
+      *idx_x = idx % source_bounds.x_nbins;
+      *idx_y = idx / source_bounds.x_nbins;
       // put idx_x and idx_y in the range of [0, x_nbins-1] and [0, y_nbins-1]
       if (*idx_x < 0)
             *idx_x = 0; 
-      if (*idx_x >= x_nbins)  
-            *idx_x = x_nbins - 1;
+      if (*idx_x >= source_bounds.x_nbins)  
+            *idx_x = source_bounds.x_nbins - 1;
 }
 inline int indices_to_index_2D(int idx_x, int idx_y){
-      int idx = idx_x + idx_y * x_nbins;
+      int idx = idx_x + idx_y * source_bounds.x_nbins;
       // put idx in the range of [0, MAP_SIZE-1]
       if (idx < 0)
             idx = 0;
-      if (idx >= MAP_SIZE)    
-            idx = MAP_SIZE - 1;
+      if (idx >= source_bounds.map_size)    
+            idx = source_bounds.map_size - 1;
       return idx;
 }
 

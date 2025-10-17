@@ -88,11 +88,6 @@ void init()
 
 	// previous reading initialization
 	previous_sensor_value = 0.0;
-
-	// initialize the current position
-	get_gps_position(&current_position);
-	goal_position.copy_position(current_position);
-	printf("initial goal position %f %f %f\n", goal_position.x, goal_position.y, goal_position.heading);
       
 	// set the log file names
 	set_logfile_names();
@@ -124,7 +119,7 @@ void init()
 	}else if (simulation_parameters.simuMode == OFFLINE){
 		char experiment_source_pos_logfile_name[512];
 		char* source_str = (char*) malloc(100 * sizeof(char)); 
-            sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
+        sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
 		printf("%s\n",experiment_source_pos_logfile_name);
 		if (access(experiment_source_pos_logfile_name, F_OK) != -1) {
 			FILE * sim_param_file = fopen(experiment_source_pos_logfile_name, "r");
@@ -135,16 +130,16 @@ void init()
 	}
 
 
-      // experiment results folder
+    // experiment results folder
 	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
-    	experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
+    experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
 	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
 
 	// write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
-	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
-	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	//fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
+	//fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
 	fclose(sim_param_file);
@@ -156,17 +151,24 @@ void init()
 		cleaning_up();
 		exit(0);
 	}
+
+	next_iteration_time();
+	// initialize the current position
+	get_gps_position(&current_position);
+	goal_position.copy_position(current_position);
       
 	if (simulation_parameters.simuMode == ONLINE){
 		// set the state to wait for stationary plume
 		FSM.state = STATE_WAITFORPLUME;
 		FSM.hook = state_waiting;
 		FSM.n_cycles = 0;
+		FSM.n_relocations = 0;
 	} else if (simulation_parameters.simuMode == OFFLINE){
 		// set the state to measuring
 		FSM.state = STATE_READ_INITIAL;
 		FSM.hook = state_read_initial_position_measurement;
 		FSM.n_cycles = 0;
+		FSM.n_relocations = 0;
 	}
 }
 

@@ -53,6 +53,7 @@ typedef enum state
 struct FSM
 {
 	int n_cycles;
+	int n_relocations;
 	eState state;
 	void (*hook)();
 };
@@ -109,11 +110,11 @@ void state_region_allocation();
 PlumeModel* initializePlumeModel();
 
 bool check_stop_condition();
+bool check_converge_condition();
 
 double randu();
 long long current_timestamp();
 double dist_to_goal(Position goal);
-bool check_stop_condition();
 
 // double target_evaluation(double position[][3]);
 // void get_gps_position(Position external_gps_position);

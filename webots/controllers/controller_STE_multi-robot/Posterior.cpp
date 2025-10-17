@@ -9,6 +9,7 @@
 // for storing debugging info
 extern FILE *console_logfile;
 extern SimulationParameters simulation_parameters;
+extern SourceBounds source_bounds;
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -334,9 +335,9 @@ void Posterior::process()
 void Posterior::calculate_entropy_and_spread()
 {
 	entropy = 0;
-	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_min = source_bounds.x_nbins;
 	double possible_source_x_index_max = 0;
-	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_min = source_bounds.y_nbins;
 	double possible_source_y_index_max = 0;
 	int indices[nbr_dimension];
 	for (int i = 0; i < nbr_element; i++)
@@ -569,6 +570,17 @@ void Posterior::XYmarginal_distance_combined(Position current_position, double r
 	}
 
 	printf("best mariginal: %f, %f\n", best_point[0], best_point[1]);
+}
+
+bool Posterior::is_converged_on_boundary(){
+	// check if the posterior is converged on the boundary of the search space
+	if (model->max_a_post_value[0] < model->param_list[0].lower_limit + 2 * model->param_list[0].resolution ||
+		model->max_a_post_value[0] > model->param_list[0].upper_limit - 2 * model->param_list[0].resolution ||
+		model->max_a_post_value[1] < model->param_list[1].lower_limit + 2 * model->param_list[1].resolution ||
+		model->max_a_post_value[1] > model->param_list[1].upper_limit - 2 * model->param_list[1].resolution)
+		return true;
+	else
+		return false;
 }
 
 // log the posterior pdf
