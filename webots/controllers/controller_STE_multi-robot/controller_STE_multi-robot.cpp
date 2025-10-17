@@ -1546,6 +1546,7 @@ void init_estimation_bound(){
 	}
 	if (simulation_parameters.estimationScale == LOCAL){
         // TODO: whether it is better to fixed the number of bins or the resolution?
+		set_source_esimation_grid(&source_bounds, 10, 10);
 		set_source_bounds_centered_with_location(&source_bounds, current_position.x, current_position.y);
 
 		FILE * sim_param_file = fopen(config_logfile_name, "a");
