@@ -150,6 +150,13 @@ typedef enum estimationScale
 	GLOBAL = 1,
 } eEstimationScale;
 
+typedef enum windEstimationMethod
+{
+	GROUND_TRUTH = 0,
+	GAUSSIAN_KERNEL = 1,
+} eWindEstimationMethod;
+
+
 // parameters to estimate
 struct parameters_set
 {
@@ -207,6 +214,7 @@ class SimulationParameters{
 
 		ePlumeModel plumeModel;
 		eEstimationScale estimationScale;
+		eWindEstimationMethod windEstimationMethod;
 
 		SimulationParameters(const char *filename);
 		~SimulationParameters();

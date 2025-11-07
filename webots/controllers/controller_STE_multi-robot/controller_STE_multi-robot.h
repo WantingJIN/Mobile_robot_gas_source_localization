@@ -67,7 +67,9 @@ struct history
 	// Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
 	// double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
 	vector<Position> position;
-	vector<double> measurement;
+	vector<double> gas_meas;
+	vector<double> wind_meas_u;
+	vector<double> wind_meas_v;
 	vector<int> gas_hit_event;
 	vector<double> relative_meas;
 };

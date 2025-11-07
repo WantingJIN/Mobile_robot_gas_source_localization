@@ -34,4 +34,5 @@ stopCondition = ENTROPY_ONLY
 updateGoalPolicy = GOAL_REACHED
 updateGoalTime = 5
 plumeModel = FDM_PDE
-estimationScale = GLOBAL
+estimationScale = LOCAL
+windEstimationMethod = GROUND_TRUTH

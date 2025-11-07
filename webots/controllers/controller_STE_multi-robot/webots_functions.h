@@ -109,7 +109,7 @@ extern SimulationParameters simulation_parameters;
 
 void init();
 void odor_read(double *sensor_reading, double &odor_concentration);
-void wind_read(double *intensity, double *angle);
+void wind_read(double *intensity, double *angle, double *wind_x, double *wind_y, double *wind_z);
 void get_gps_position(Position *external_gps_position);
 void update_position();
 int obstacle_or_not();

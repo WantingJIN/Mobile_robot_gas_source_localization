@@ -128,6 +128,7 @@ GasMap2D gas_map(0.2, 4, 1, 0.75, 0.3);
 // obstacles definitions
 int nbr_obs = 4;
 float margin = 0.16;
+// std::vector<std::array<float, 4>> obstacles;
 float **obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
@@ -284,7 +285,7 @@ void history_print(struct history history)
 	printf("_____ Sample History _____ \n");
 	for (int i = 0; i < history.size; i++)
 	{
-		printf("%d : %f @ (%f, %f)\n", i, history.measurement[i], history.position[i].x, history.position[i].y);
+		printf("%d : %f @ (%f, %f)\n", i, history.gas_meas[i], history.position[i].x, history.position[i].y);
 	}
 	printf("__________________________ \n");
 }
@@ -297,12 +298,24 @@ void read_obstacle_list()
 	infile >> nbr_obs;
 	printf("There is %d obsatcle in total:\n", nbr_obs);
 	// allocate memory for obstacle list array
-	obstacles = new float *[nbr_obs];
-	// read all obstacles now
+	int nbr_obs;
+	infile >> nbr_obs;
+	// obstacles.resize(nbr_obs);
+
+	// for (int i = 0; i < nbr_obs; ++i) {
+	// 	infile >> obstacles[i][0] >> obstacles[i][1]
+	// 		>> obstacles[i][2] >> obstacles[i][3];
+	// 	for (int j = 0; j < 2; ++j)
+	// 		obstacles[i][j] -= margin;
+	// 	for (int j = 2; j < 4; ++j)
+	// 		obstacles[i][j] += margin;
+	// }
+	obstacles = new float*[nbr_obs];
 	for (int i = 0; i < nbr_obs; i++)
 	{
 		obstacles[i] = new float[4];
 		infile >> obstacles[i][0] >> obstacles[i][1] >> obstacles[i][2] >> obstacles[i][3];
+		// add margin
 		obstacles[i][0] -= margin;
 		obstacles[i][1] -= margin;
 		obstacles[i][2] += margin;
@@ -377,15 +390,15 @@ void log_history()
 	{
 		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
-			fprintf(measurement_history_logfile, "%d, %f, %d\n", i, history.measurement[i], history.FSM_iter[i]);
+			fprintf(measurement_history_logfile, "%d, %f, %d\n", i, history.gas_meas[i], history.FSM_iter[i]);
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-			fprintf(measurement_history_logfile, "%d, %f, %f, %d\n", i, history.measurement[i], history.relative_meas[i], history.FSM_iter[i]);
+			fprintf(measurement_history_logfile, "%d, %f, %f, %d\n", i, history.gas_meas[i], history.relative_meas[i], history.FSM_iter[i]);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
-			fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.measurement[i], history.gas_hit_event[i], history.FSM_iter[i]);
+			fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.gas_meas[i], history.gas_hit_event[i], history.FSM_iter[i]);
 		}
 	}
 
@@ -466,7 +479,7 @@ void state_read_initial_position_measurement()
 		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 		fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
 		history.size++;
-		history.measurement.push_back(f4);
+		history.gas_meas.push_back(f4);
 		fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
 		history.position.push_back({f6, f7, f8});
 		current_position.x = f6;
@@ -502,7 +515,7 @@ void state_read_positions_measurements()
 		{
 			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
 			history.size++;
-			history.measurement.push_back(f4);
+			history.gas_meas.push_back(f4);
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
 			history.position.push_back({f6, f7, f8});
 			current_position.x = f6;
@@ -536,9 +549,13 @@ void state_measuring()
 			// if there is some post-processing, then use the sample from the gas map
 			// otherwise, use the raw sample from the robot
 			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-				history.measurement.push_back(sample_from_map[i]);
+				history.gas_meas.push_back(sample_from_map[i]);
 			else
-				history.measurement.push_back(sample_in_motion.measurement[i]);
+				history.gas_meas.push_back(sample_in_motion.gas_meas[i]);
+			// store wind measurements
+			history.wind_meas_u.push_back(sample_in_motion.wind_meas_u[i]);
+			history.wind_meas_v.push_back(sample_in_motion.wind_meas_v[i]);
+
 			history.FSM_iter.push_back(FSM.n_cycles);
 			history.size++;
 			// mark the cell as visited
@@ -550,7 +567,9 @@ void state_measuring()
 		}
 
 		sample_in_motion.position.clear();
-		sample_in_motion.measurement.clear();
+		sample_in_motion.gas_meas.clear();
+		sample_in_motion.wind_meas_u.clear();
+		sample_in_motion.wind_meas_v.clear();
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 	}
@@ -565,7 +584,7 @@ void state_measuring()
 			double odor_concentration = 0.0;
 			odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 			// measuring wind
-			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle, &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
 			// printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
 			// add samples to buffers
 			sampleBuffer.add_all_to_buffer();
@@ -584,7 +603,7 @@ void state_measuring()
 		double odor_concentration = 0.0;
 		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		// measuring wind
-		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle, &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
 		// printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
 		// add samples to buffers
 		sampleBuffer.add_all_to_buffer();
@@ -592,7 +611,9 @@ void state_measuring()
 	}
 
 	history.position.push_back({current_position.x, current_position.y, 0});
-	history.measurement.push_back(sampleBuffer.average_concentration);
+	history.gas_meas.push_back(sampleBuffer.average_concentration);
+	history.wind_meas_u.push_back(sampleBuffer.average_wind_vx);
+	history.wind_meas_v.push_back(sampleBuffer.average_wind_vy);
 	history.FSM_iter.push_back(FSM.n_cycles);
 	history.size++;
 	//history_print(history);
@@ -889,7 +910,13 @@ void state_moving()
 		// sample and run kernel
 		double sensor_reading = 0.0;
 		double odor_concentration = 0.0;
+		double wind_intensity = 0.0;
+		double wind_angle = 0.0;
+		double wind_vx = 0.0;
+		double wind_vy = 0.0;
+		double wind_vz = 0.0;
 		odor_read(&sensor_reading, odor_concentration);
+		wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
 			reverse_sensor_model(sensor_reading, previous_sensor_reading);
@@ -905,7 +932,9 @@ void state_moving()
 			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
 			//{
 			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-			sample_in_motion.measurement.push_back(sensor_reading);
+			sample_in_motion.gas_meas.push_back(sensor_reading);
+			sample_in_motion.wind_meas_u.push_back(wind_vx);
+			sample_in_motion.wind_meas_v.push_back(wind_vy);
 			sample_in_motion.size++;
 			last_measurement_pos.x = current_position.x;
 			last_measurement_pos.y = current_position.y;

@@ -20,6 +20,15 @@ public:
     double *wind_angle_buffer;
     double instant_wind_angle;
     double average_wind_angle;
+    double *wind_vx_buffer;
+    double instant_wind_vx;
+    double average_wind_vx;
+    double *wind_vy_buffer;
+    double instant_wind_vy;
+    double average_wind_vy;
+    double *wind_vz_buffer;
+    double instant_wind_vz;
+    double average_wind_vz;
     //!\ angle must be in radian [0,2PI]
 
     // default constructor

@@ -241,6 +241,13 @@ eEstimationScale parse_estimation_scale(const char* str) {
 	exit(1);
 }
 
+eWindEstimationMethod parse_wind_estimation_method(const char* str) {
+	if (strcmp(str, "GROUND_TRUTH") == 0) return GROUND_TRUTH;
+	if (strcmp(str, "GAUSSIAN_KERNEL") == 0) return GAUSSIAN_KERNEL;
+	fprintf(stderr, "Unknown wind estimation method: %s\n", str);
+	exit(1);
+}
+
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
 }
@@ -400,6 +407,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "estimationScale") == 0) {
 			estimationScale = parse_estimation_scale(value);
 		}
+        else if (strcmp(key, "windEstimationMethod") == 0)
+		{
+			windEstimationMethod = parse_wind_estimation_method(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -465,6 +476,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
 	fprintf(sim_param_file, "estimation_scale %d\n", estimationScale);
+	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fclose(sim_param_file);
 }
 

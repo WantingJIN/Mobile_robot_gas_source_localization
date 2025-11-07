@@ -13,6 +13,13 @@ SampleBuffer::SampleBuffer()
 	average_wind_intensity = 0;
 	instant_wind_angle = 0;
 	average_wind_angle = 0;
+	instant_wind_vx = 0;
+	average_wind_vx = 0;
+	instant_wind_vy = 0;
+	average_wind_vy = 0;
+	instant_wind_vz = 0;
+	average_wind_vz = 0;
+
 
 	n_samples = 0;
 
@@ -21,6 +28,9 @@ SampleBuffer::SampleBuffer()
 	concentration_buffer = (double *)calloc(buffer_length, sizeof(double));
 	wind_intensity_buffer = (double *)calloc(buffer_length, sizeof(double));
 	wind_angle_buffer = (double *)calloc(buffer_length, sizeof(double));
+	wind_vx_buffer = (double *)calloc(buffer_length, sizeof(double));
+	wind_vy_buffer = (double *)calloc(buffer_length, sizeof(double));
+	wind_vz_buffer = (double *)calloc(buffer_length, sizeof(double));
 }
 
 SampleBuffer::SampleBuffer(int length)
@@ -31,6 +41,12 @@ SampleBuffer::SampleBuffer(int length)
 	average_wind_intensity = 0;
 	instant_wind_angle = 0;
 	average_wind_angle = 0;
+	instant_wind_vx = 0;
+	average_wind_vx = 0;
+	instant_wind_vy = 0;
+	average_wind_vy = 0;
+	instant_wind_vz = 0;
+	average_wind_vz = 0;
 
 	n_samples = 0;
 
@@ -39,6 +55,9 @@ SampleBuffer::SampleBuffer(int length)
 	concentration_buffer = (double *)calloc(buffer_length, sizeof(double));
 	wind_intensity_buffer = (double *)calloc(buffer_length, sizeof(double));
 	wind_angle_buffer = (double *)calloc(buffer_length, sizeof(double));
+	wind_vx_buffer = (double *)calloc(buffer_length, sizeof(double));
+	wind_vy_buffer = (double *)calloc(buffer_length, sizeof(double));
+	wind_vz_buffer = (double *)calloc(buffer_length, sizeof(double));
 }
 
 SampleBuffer::SampleBuffer(const SampleBuffer &to_copy_from)
@@ -50,6 +69,12 @@ SampleBuffer::SampleBuffer(const SampleBuffer &to_copy_from)
 	average_wind_intensity = to_copy_from.average_wind_intensity;
 	instant_wind_angle = to_copy_from.instant_wind_angle;
 	average_wind_angle = to_copy_from.average_wind_angle;
+	instant_wind_vx = to_copy_from.instant_wind_vx;
+	average_wind_vx = to_copy_from.average_wind_vx;
+	instant_wind_vy = to_copy_from.instant_wind_vy;
+	average_wind_vy = to_copy_from.average_wind_vy;
+	instant_wind_vz = to_copy_from.instant_wind_vz;
+	average_wind_vz = to_copy_from.average_wind_vz;
 
 	n_samples = to_copy_from.n_samples;
 
@@ -66,6 +91,16 @@ SampleBuffer::SampleBuffer(const SampleBuffer &to_copy_from)
 	wind_angle_buffer = (double *)calloc(buffer_length, sizeof(double));
 	for (i = 0; i < buffer_length; i++)
 		wind_angle_buffer[i] = to_copy_from.wind_angle_buffer[i];
+	wind_vx_buffer = (double *)calloc(buffer_length, sizeof(double));
+	for (i = 0; i < buffer_length; i++)
+		wind_vx_buffer[i] = to_copy_from.wind_vx_buffer[i];
+	wind_vy_buffer = (double *)calloc(buffer_length, sizeof(double));
+	for (i = 0; i < buffer_length; i++)
+		wind_vy_buffer[i] = to_copy_from.wind_vy_buffer[i];
+	wind_vz_buffer = (double *)calloc(buffer_length, sizeof(double));
+	for (i = 0; i < buffer_length; i++)
+		wind_vz_buffer[i] = to_copy_from.wind_vz_buffer[i];
+	
 }
 
 SampleBuffer::~SampleBuffer()
@@ -73,6 +108,9 @@ SampleBuffer::~SampleBuffer()
 	free(concentration_buffer);
 	free(wind_intensity_buffer);
 	free(wind_angle_buffer);
+	free(wind_vx_buffer);
+	free(wind_vy_buffer);
+	free(wind_vz_buffer);
 }
 
 void SampleBuffer::set_buffer_length(int length)
@@ -82,6 +120,9 @@ void SampleBuffer::set_buffer_length(int length)
 	concentration_buffer = (double *)realloc(concentration_buffer, buffer_length * sizeof(double));
 	wind_intensity_buffer = (double *)realloc(wind_intensity_buffer, buffer_length * sizeof(double));
 	wind_angle_buffer = (double *)realloc(wind_angle_buffer, buffer_length * sizeof(double));
+	wind_vx_buffer = (double *)realloc(wind_vx_buffer, buffer_length * sizeof(double));
+	wind_vy_buffer = (double *)realloc(wind_vy_buffer, buffer_length * sizeof(double));
+	wind_vz_buffer = (double *)realloc(wind_vz_buffer, buffer_length * sizeof(double));
 }
 
 void SampleBuffer::reset_all()
@@ -92,6 +133,10 @@ void SampleBuffer::reset_all()
 	average_wind_intensity = 0;
 	instant_wind_angle = 0;
 	average_wind_angle = 0;
+	instant_wind_vx = 0;
+	average_wind_vx = 0;
+	instant_wind_vy = 0;
+
 
 	n_samples = 0;
 }
@@ -115,6 +160,12 @@ void SampleBuffer::add_wind_to_buffer()
 	wind_intensity_buffer[n_samples] = instant_wind_intensity;
 	average_wind_intensity += instant_wind_intensity;
 	wind_angle_buffer[n_samples] = instant_wind_angle;
+	wind_vx_buffer[n_samples] = instant_wind_vx;
+	average_wind_vx += instant_wind_vx;
+	wind_vy_buffer[n_samples] = instant_wind_vy;
+	average_wind_vy += instant_wind_vy;
+	wind_vz_buffer[n_samples] = instant_wind_vz;
+	average_wind_vz += instant_wind_vz;
 	n_samples++;
 }
 
@@ -150,4 +201,8 @@ void SampleBuffer::average_wind()
 	}
 	average_wind_angle = atan2(tmp_sin / n_samples, tmp_cos / n_samples);
 	// averaging technique from https://rosettacode.org/wiki/Averages/Mean_angle
+	average_wind_vx /= n_samples;
+	average_wind_vy /= n_samples;
+	average_wind_vz /= n_samples;
+
 }

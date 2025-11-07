@@ -318,7 +318,7 @@ void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX
 		MOX_sensor_reading = 0;
 }
 
-void wind_read(double *intensity, double *angle)
+void wind_read(double *intensity, double *angle, double *vx, double *vy, double *vz)
 {
 	struct vect3D
 	{
@@ -337,6 +337,9 @@ void wind_read(double *intensity, double *angle)
 	// convert the 3D vector from the sensor to intensity and heading
 	*intensity = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 	*angle = 0;
+	*vx = v.x;
+	*vy = v.y;
+	*vz = v.z;
 }
 
 void get_gps_position(Position *external_gps_position)
@@ -441,10 +444,10 @@ void receive_from_friends()
 		{
 			// std::cout << "COMMUNICATION++++++++++++++++++" << std::endl;
 			// put the relelvant values in history
-			history.measurement[history.size] = msg.concentration;
+			history.gas_meas[history.size] = msg.concentration;
 			// memcpy(history.position[history.size], msg.position, sizeof(double)*3);
 			history.position[history.size].copy_position(msg.position);
-			// printf("I, robot %d, received concentration %f at (%f,%f,%f) from robot %d.\n", ID, history.measurement[history.size], history.position[history.size][0], history.position[history.size][1], history.position[history.size][2], msg.sender_ID);
+			// printf("I, robot %d, received concentration %f at (%f,%f,%f) from robot %d.\n", ID, history.gas_meas[history.size], history.position[history.size][0], history.position[history.size][1], history.position[history.size][2], msg.sender_ID);
 			history.size++;
 		}
 		else
