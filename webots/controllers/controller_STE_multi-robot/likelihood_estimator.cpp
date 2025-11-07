@@ -43,8 +43,7 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 		// }
 	}
 
-	//model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, source_pos_idx, model_c_avg);
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, source_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, source_pos_idx, model_c_avg);
 
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
@@ -95,8 +94,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 		// }
 	}
 
-	//model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, soure_pos_idx, model_c_avg);
-	model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, soure_pos_idx, model_c_avg);
 
 	vector<double> rel_model_list;
 	vector<double> pdf_model_list;
@@ -268,8 +266,8 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	}
 
 	// extract predicted concentration values by model
-	//model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, soure_pos_idx, model_c_avg);
-    model->retrieve_hist_measurements(idx, idy, history.size, sampleBuffer.average_wind_intensity, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, soure_pos_idx, model_c_avg);
+    
 	int history_hit;
 	int model_hit;
 
