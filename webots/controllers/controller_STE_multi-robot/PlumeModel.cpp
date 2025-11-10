@@ -38,7 +38,7 @@
 //  	delete[] max_a_post_value;
 //  	delete[] covar_sig_ii;
 //  }
-
+using SpMat  = Eigen::SparseMatrix<double>;
 void PlumeModel::random_params(double *rnd_params)
 {
 	for (int i = 0; i < nbr_param; i++)
@@ -353,7 +353,7 @@ double DeepCFDPlumeModel2D::concentration(Position robot_position, double wind_i
 	// NOTE: The input tensor must be a float tensor
 	inputs.push_back(x_trans.to(torch::kFloat).to(device));
 	// std::cout << x_trans[0][1] << std::endl;
-	//  Execute the model and turn its output into a tensor.
+	//  Execute the model and turn its output into a tensor.calculate_gas_concentration_map_list
 	at::Tensor output = DeepCFD(inputs).toTensor();
 	// std::cout << output << std::endl;
 
@@ -561,10 +561,11 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 												  source_bounds.y_min, source_bounds.y_max,
 												  Nx_, Ny_, obstacles, nbr_obs);
 		// first intialize as uniform wind field
-		set_u_field_uniform(u_x);
+		//set_u_field_uniform(u_x);
+		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
+	assemble_and_factorize(1);
 
-	assemble_and_factorize();
 }
 
 AdeFDMPlumeModel2D::AdeFDMPlumeModel2D(const AdeFDMPlumeModel2D &another_model)
@@ -612,20 +613,28 @@ void AdeFDMPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nb
 {
 	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
 		// update the wind field based on the historical wind measurements
-		wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.8, 1.0, 0.0);
-		assemble_and_factorize();
+		// wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.1, 0.8);
+		// auto U_field = wind_estimator_->getU();
+		// auto V_field = wind_estimator_->getV();
+		// for (int i = 0; i < Nx_; ++i) {
+   		// 	for (int j = 0; j < Ny_; ++j) {
+        // 		int index = grid_idx(i,j);
+        // 		u_[index] = static_cast<double>(U_field[j][i]);
+		// 		v_[index] = static_cast<double>(V_field[j][i]);
+    	// 	}	
+		// }
+		assemble_and_factorize(0);
 		// recalculate the gas concentration map list based on the updated wind field
 		// TODO - may also need to update the information matrix
-		gas_con_map_list.clear();
-		calculate_gas_concentration_map_list();
-		return;
+		// gas_con_map_list.clear();
+		//calculate_gas_concentration_map_list();
 	}
-	else if (simulation_parameters.windEstimationMethod == GROUND_TRUTH){
-		for (int i = 0; i < nbr; i++)
-		{
-			c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
-		}
+	
+	for (int i = 0; i < nbr; i++)
+	{
+		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
 	}
+	
 }
 
 
@@ -642,7 +651,7 @@ void AdeFDMPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds)
 	cell_lists.clear();
 	// reload the wind filed
 	set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
-	assemble_and_factorize();
+	//assemble_and_factorize(0);
 }
 
 
@@ -651,6 +660,7 @@ void AdeFDMPlumeModel2D::set_u_field_uniform(double u)
 	 for (int j = 0; j < Ny_; ++j) {
             for (int i = 0; i < Nx_; ++i) {
                 u_[grid_idx(i,j)] = u;
+				v_[grid_idx(i,j)] = 0.0;
             }
         }
 }
@@ -742,91 +752,109 @@ void AdeFDMPlumeModel2D::set_u_field_from_csv(const std::string& filename,
 
 
 
-void AdeFDMPlumeModel2D::assemble_and_factorize() {
-	std::vector<Triplet> T;
-	T.reserve(5 * N_);
+void AdeFDMPlumeModel2D::assemble_and_factorize(bool first_time) {
+	//Factorize once
+	// solver_= std::make_unique<Eigen::SparseLU<SpMat>>();
+	// destroy old solver
+	// solver_.~SparseLU<SpMat>();
 
-	const double dx2 = dx_ * dx_;
-	const double dy2 = dy_ * dy_;
-	const double a_s_base = D_ / dy2;
-	const double a_n_base = D_ / dy2;
-	const double a_w_base = D_ / dx2;
-	const double a_e_base = D_ / dx2;
-    // NOTE: order:first scan x axis then y axis
-	for (int j = 0; j < Ny_; ++j) {
-		for (int i = 0; i < Nx_; ++i) {
-			const int k = grid_idx(i,j);
+	// // reconstruct a new one in the same memory location
+	// new (&solver_) Eigen::SparseLU<SpMat>();
 
-			// Boundaries
-			if (i == Nx_ - 1) {
-				// inflow (Dirichlet)
-				T.emplace_back(k, k, 1.0);
-				continue;
-			}
-			if (i == 0) {
-				// outflow: C(i) - C(i+1) = 0
-				T.emplace_back(k, k, 1.0);
-				T.emplace_back(k, grid_idx(i+1,j), -1.0);
-				continue;
-			}
-			if (j == 0) {
-				// bottom: C(i,j) - C(i,j+1) = 0
-				T.emplace_back(k, k, 1.0);
-				T.emplace_back(k, grid_idx(i, j+1), -1.0);
-				continue;
-			}
-			if (j == Ny_ - 1) {
-				// top: C(i,j) - C(i,j-1) = 0
-				T.emplace_back(k, k, 1.0);
-				T.emplace_back(k, grid_idx(i, j-1), -1.0);
-				continue;
-			}
 
-			// Interior cell
-			const double u = u_[k];
-			const double v = v_[k];
+	if (first_time) {
+		std::vector<Triplet> T;
+		T.reserve(5 * N_);
 
-			// advection + diffusion
-			double a_s = a_s_base;
-			double a_n = a_n_base;
-			double a_w = a_w_base;
-			double a_e = a_e_base;
-	
-			if (u > 0.0) {
-				// flow left -> right
-				a_w +=  u / dx_ ;
-			} else {
-				// flow right -> left
-				a_e += -u / dx_;
+		const double dx2 = dx_ * dx_;
+		const double dy2 = dy_ * dy_;
+		const double a_s_base = D_ / dy2;
+		const double a_n_base = D_ / dy2;
+		const double a_w_base = D_ / dx2;
+		const double a_e_base = D_ / dx2;
+		// NOTE: order:first scan x axis then y axis
+		for (int j = 0; j < Ny_; ++j) {
+			for (int i = 0; i < Nx_; ++i) {
+				const int k = grid_idx(i,j);
+
+				// Boundaries
+				if (i == Nx_ - 1) {
+					// inflow (Dirichlet)  inlet C = 0
+					T.emplace_back(k, k, 1.0);
+					continue;
+				}
+				if (i == 0) {
+					// outflow: C(i) - C(i+1) = 0
+					T.emplace_back(k, k, 1.0);
+					T.emplace_back(k, grid_idx(i+1,j), -1.0);
+					continue;
+				}
+				if (j == 0) {
+					// bottom: C(i,j) - C(i,j+1) = 0
+					T.emplace_back(k, k, 1.0);
+					T.emplace_back(k, grid_idx(i, j+1), -1.0);
+					continue;
+				}
+				if (j == Ny_ - 1) {
+					// top: C(i,j) - C(i,j-1) = 0
+					T.emplace_back(k, k, 1.0);
+					T.emplace_back(k, grid_idx(i, j-1), -1.0);
+					continue;
+				}
+
+				// Interior cell
+				const double u = u_[k];
+				const double v = v_[k];
+
+				// advection + diffusion
+				double a_s = a_s_base;
+				double a_n = a_n_base;
+				double a_w = a_w_base;
+				double a_e = a_e_base;
+		
+				if (u > 0.0) {
+					// flow left -> right
+					a_w +=  u / dx_ ;
+				} else {
+					// flow right -> left
+					a_e += -u / dx_;
+				}
+				if (v > 0.0) {
+					// flow bottom -> top
+					a_s +=  v / dy_ ;
+				} else {
+					// flow top -> bottom
+					a_n += -v / dy_;
+				}
+
+				const double a_p = -(a_w + a_e + a_s + a_n);
+
+				// Fill row k
+				T.emplace_back(k, grid_idx(i-1, j), a_w);
+				T.emplace_back(k, grid_idx(i+1, j), a_e);
+				T.emplace_back(k, grid_idx(i, j-1), a_s);
+				T.emplace_back(k, grid_idx(i, j+1), a_n);
+				T.emplace_back(k, k, a_p);
 			}
-			if (v > 0.0) {
-				// flow bottom -> top
-				a_s +=  v / dy_ ;
-			} else {
-				// flow top -> bottom
-				a_n += -v / dy_;
-			}
-
-			const double a_p = -(a_w + a_e + a_s + a_n);
-
-			// Fill row k
-			T.emplace_back(k, grid_idx(i-1, j), a_w);
-			T.emplace_back(k, grid_idx(i+1, j), a_e);
-			T.emplace_back(k, grid_idx(i, j-1), a_s);
-			T.emplace_back(k, grid_idx(i, j+1), a_n);
-			T.emplace_back(k, k, a_p);
 		}
+
+		A_.resize(N_, N_);
+		A_.setZero();
+		A_.setFromTriplets(T.begin(), T.end());
+		A_.makeCompressed();
+	    // if (solver_.info() != Eigen::Success) {
+		// 	std::cerr << "Previous factorization failed, resetting solver\n";
+		// 	// solver_ = Eigen::SparseLU<SpMat>();
+		// 	solver_.analyzePattern(A_);
+		// }
+		// solver_.compute(A_);
+		// solver_.analyzePattern(A_);
+		// solver_.factorize(A_);
+		//solver.compute(A_);
+		solver_.compute(A_);
 	}
-
-	A_.resize(N_, N_);
-	A_.setFromTriplets(T.begin(), T.end());
-	A_.makeCompressed();
-
-	// Factorize once
-	solver_.analyzePattern(A_);
-	solver_.factorize(A_);
 	if (solver_.info() != Eigen::Success) {
-		throw std::runtime_error("SparseLU factorization failed");
+			throw std::runtime_error("SparseLU factorization failed");
 	}
 	fact_ok_ = true;
 }

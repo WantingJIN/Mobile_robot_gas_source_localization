@@ -32,8 +32,7 @@ public:
 
     // Abstract methods to be implemented by derived classes
     virtual void estimateField(int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas,
-                               float sigma = 0.2, float c = 0.5,
-                               float U_bg = 0.0, float V_bg = 0.0) = 0;
+                               float sigma = 0.2, float alpha = 0.1, float c = 0.5) = 0;
 
     virtual void applyDivergenceFreeProjection(int max_iter = 500, float tol = 1e-4) = 0;
 
@@ -53,7 +52,9 @@ protected:
     std::vector<std::vector<float>> X, Y;
     std::vector<std::vector<float>> D;    // signed distance field
     std::vector<std::vector<float>> Nx, Ny;
-    std::vector<std::vector<float>> U_field, V_field, W_field;
+    std::vector<std::vector<float>> U_field, V_field, W_field; 
+    float U_global_ = 0.0;
+    float V_global_ = 0.0;
 
     // Grid generation
     void buildGrid() {
@@ -76,8 +77,9 @@ public:
                   float ** obstacles, int obs_nbr);
 
     void estimateField(int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas,
-                       float sigma = 0.2, float c = 0.5,
-                       float U_bg = 0.0, float V_bg = 0.0) override;
+                               float sigma = 0.2, float alpha = 0.1, float c = 0.5) override;
+
+    void calculateGlobalWind(float &U_global, float &V_global);
 
     void applyDivergenceFreeProjection(int max_iter = 500, float tol = 1e-4) override;
 

@@ -63,12 +63,31 @@ void GaussianWindEstimator::computeNormals() {
 // ============================================================
 
 // FIXME - the recalculation of global wind flow is not here
+// TODO - improvement: only proceed the new measured wind data and update the wind field estimation
 void GaussianWindEstimator::estimateField(
-    int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas,
-    float sigma, float c, float U_bg, float V_bg)
+        int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas,
+        float sigma, float alpha, float c)
 {
-    float dx = this->dx, dy = this->dy;
+    // ==========================================================
+    // Step 1: Update background (global average) wind
+    // ==========================================================
+    float mean_U = 0.0, mean_V = 0.0;
+    if (!u_meas.empty()) {
+        for (int i = 0; i < u_meas.size(); ++i) {
+            mean_U += u_meas[i];
+            mean_V += v_meas[i];
+        }
+        mean_U /= u_meas.size();
+        mean_V /= v_meas.size();
 
+        // Exponential moving average
+        U_global_ = (1.0 - alpha) * U_global_ + alpha * mean_U;
+        V_global_ = (1.0 - alpha) * V_global_ + alpha * mean_V;
+    }
+
+    // ==========================================================
+    // Step 2: Interpolation with updated background
+    // ==========================================================
     U_field.assign(ny, std::vector<float>(nx, 0.0));
     V_field.assign(ny, std::vector<float>(nx, 0.0));
     W_field.assign(ny, std::vector<float>(nx, 0.0));
@@ -104,8 +123,8 @@ void GaussianWindEstimator::estimateField(
                 U_field[j][i] /= W_field[j][i];
                 V_field[j][i] /= W_field[j][i];
             } else {
-                U_field[j][i] = U_bg;
-                V_field[j][i] = V_bg;
+                U_field[j][i] = U_global_;
+                V_field[j][i] = V_global_;
             }
 }
 

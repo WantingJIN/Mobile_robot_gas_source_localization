@@ -297,19 +297,6 @@ void read_obstacle_list()
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	printf("There is %d obsatcle in total:\n", nbr_obs);
-	// allocate memory for obstacle list array
-	int nbr_obs;
-	infile >> nbr_obs;
-	// obstacles.resize(nbr_obs);
-
-	// for (int i = 0; i < nbr_obs; ++i) {
-	// 	infile >> obstacles[i][0] >> obstacles[i][1]
-	// 		>> obstacles[i][2] >> obstacles[i][3];
-	// 	for (int j = 0; j < 2; ++j)
-	// 		obstacles[i][j] -= margin;
-	// 	for (int j = 2; j < 4; ++j)
-	// 		obstacles[i][j] += margin;
-	// }
 	obstacles = new float*[nbr_obs];
 	for (int i = 0; i < nbr_obs; i++)
 	{
@@ -747,11 +734,11 @@ void state_estimating()
 					// NOTE - complied but didn't try to run 
 					// TODO - save the estimation range for every iteration
 					// TODO - should keep the same resolution as the global map for fair comparison
-					set_source_bounds_centered_with_location(&source_bounds, goal_position.x, goal_position.y);
-					plume_model->reset_estimation_ranges(source_bounds);
-					plume_model->calculate_gas_map_and_information_matrix();
-					posterior->pdf_reset();
-					path_planner->reset_planning_bound(source_bounds);
+					// set_source_bounds_centered_with_location(&source_bounds, goal_position.x, goal_position.y);
+					// plume_model->reset_estimation_ranges(source_bounds);
+					// plume_model->calculate_gas_map_and_information_matrix();
+					// posterior->pdf_reset();
+					// path_planner->reset_planning_bound(source_bounds);
 				} else {
 					FSM.state = STATE_FINISHED;
 					printf("Robot ID [%d]: STATE_FINISHED\n", ID);

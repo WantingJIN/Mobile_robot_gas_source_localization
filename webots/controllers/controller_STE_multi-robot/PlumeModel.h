@@ -207,7 +207,6 @@ public:
     using Triplet = Eigen::Triplet<double>;
     void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg) override;
- 
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
 	// Here, the grid used to solve PDE is different than the grid for the source position estimation
@@ -227,7 +226,7 @@ private:
     mutable Eigen::SparseLU<SpMat> solver_;
     bool fact_ok_{false};
 	void set_u_field_uniform(double u);
-	void assemble_and_factorize();
+	void assemble_and_factorize(bool first_time);
 	void set_parameters(double Nx, double Ny, double D, double Q);
 	std::vector<double> solve_point_source(double sx, double sy) const;
 	static void load_csv(const std::string& filename,
