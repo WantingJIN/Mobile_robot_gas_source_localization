@@ -28,22 +28,12 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 		py[i] = history.position[i].y;
 		int idx_, idy_;
 		position_to_indices_2D(px[i], py[i], &idx_, &idy_);
-		// if (idx_ == -1 || idy_ == -1)
-		// {
-		// 	printf("point out of the estimation region, does not take into account!\n");
-		// 	// remove it from the history list
-		// 	history.size--;
-		// 	history.position.erase(history.position.begin() + i);
-		// 	history.gas_meas.erase(history.gas_meas.begin() + i);
-		// 	history.FSM_iter.erase(history.FSM_iter.begin() + i);
+		idx[i] = idx_;
+		idy[i] = idy_;
 
-		// } else {
-			idx[i] = idx_;
-			idy[i] = idy_;
-		// }
 	}
 
-	model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, source_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, source_pos_idx, model_c_avg);
 
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
@@ -58,7 +48,7 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 
 	// float sigma = 0.22;// works well for Gaussian CDF
@@ -94,7 +84,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int soure
 		// }
 	}
 
-	model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, source_pos_idx, model_c_avg);
 
 	vector<double> rel_model_list;
 	vector<double> pdf_model_list;
@@ -232,7 +222,7 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 	}
 }
 
-double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model)
+double likelihood_gas_hit(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	double sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
@@ -266,7 +256,7 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 	}
 
 	// extract predicted concentration values by model
-	model->retrieve_hist_measurements(idx, idy, history.size, history.wind_meas_u, history.wind_meas_v, soure_pos_idx, model_c_avg);
+	model->retrieve_hist_measurements(idx, idy, history.size, source_pos_idx, model_c_avg);
     
 	int history_hit;
 	int model_hit;

@@ -36,3 +36,4 @@ updateGoalTime = 5
 plumeModel = FDM_PDE
 estimationScale = GLOBAL
 windEstimationMethod = GAUSSIAN_KERNEL
+windInfo = WIND_ONLINE

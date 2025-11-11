@@ -248,6 +248,13 @@ eWindEstimationMethod parse_wind_estimation_method(const char* str) {
 	exit(1);
 }
 
+eWindInfo parse_wind_info(const char* str) {
+	if (strcmp(str, "WIND_OFFLINE") == 0) return WIND_OFFLINE;
+	if (strcmp(str, "WIND_ONLINE") == 0) return WIND_ONLINE;
+	fprintf(stderr, "Unknown wind info: %s\n", str);
+	exit(1);
+}
+
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
 }
@@ -411,6 +418,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			windEstimationMethod = parse_wind_estimation_method(value);
 		}
+		else if (strcmp(key, "windInfo") == 0)
+		{
+			windInfo = parse_wind_info(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -476,6 +487,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
 	fprintf(sim_param_file, "estimation_scale %d\n", estimationScale);
+	fprintf(sim_param_file, "wind_info %d\n", windInfo);
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fclose(sim_param_file);
 }

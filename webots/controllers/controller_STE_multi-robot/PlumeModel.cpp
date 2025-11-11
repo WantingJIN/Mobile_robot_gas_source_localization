@@ -190,8 +190,9 @@ void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_c
 void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) {}
 void GaussianPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode) {}
 void GaussianPlumeModel2D::calculate_gas_map_and_information_matrix() {}
-void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg) {}
+void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) {}
 void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
+void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -409,7 +410,7 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 	}
 }
 
-void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg)
+void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg)
 {
 	for (int i = 0; i < nbr; i++)
 	{
@@ -516,6 +517,7 @@ void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing
 		gas_map.log_map(filename, writing_mode);
 	}
 }
+void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 
 /*************************************************************************************************/
 //	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
@@ -609,27 +611,8 @@ void AdeFDMPlumeModel2D::set_parameters(double Nx, double Ny, double D, double Q
 	v_.assign(N_, 0.0);
 }
 
-void AdeFDMPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg)
-{
-	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
-		// update the wind field based on the historical wind measurements
-		// wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.1, 0.8);
-		// auto U_field = wind_estimator_->getU();
-		// auto V_field = wind_estimator_->getV();
-		// for (int i = 0; i < Nx_; ++i) {
-   		// 	for (int j = 0; j < Ny_; ++j) {
-        // 		int index = grid_idx(i,j);
-        // 		u_[index] = static_cast<double>(U_field[j][i]);
-		// 		v_[index] = static_cast<double>(V_field[j][i]);
-    	// 	}	
-		// }
-		assemble_and_factorize(0);
-		// recalculate the gas concentration map list based on the updated wind field
-		// TODO - may also need to update the information matrix
-		// gas_con_map_list.clear();
-		//calculate_gas_concentration_map_list();
-	}
-	
+void AdeFDMPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg)
+{	
 	for (int i = 0; i < nbr; i++)
 	{
 		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
@@ -753,15 +736,10 @@ void AdeFDMPlumeModel2D::set_u_field_from_csv(const std::string& filename,
 
 
 void AdeFDMPlumeModel2D::assemble_and_factorize(bool first_time) {
-	//Factorize once
-	// solver_= std::make_unique<Eigen::SparseLU<SpMat>>();
-	// destroy old solver
-	// solver_.~SparseLU<SpMat>();
 
-	// // reconstruct a new one in the same memory location
-	// new (&solver_) Eigen::SparseLU<SpMat>();
-
-
+	if (!first_time){
+		printf("Assembling and factorizing the ADE FDM matrix...\n");
+	}
 	if (first_time) {
 		std::vector<Triplet> T;
 		T.reserve(5 * N_);
@@ -842,17 +820,10 @@ void AdeFDMPlumeModel2D::assemble_and_factorize(bool first_time) {
 		A_.setZero();
 		A_.setFromTriplets(T.begin(), T.end());
 		A_.makeCompressed();
-	    // if (solver_.info() != Eigen::Success) {
-		// 	std::cerr << "Previous factorization failed, resetting solver\n";
-		// 	// solver_ = Eigen::SparseLU<SpMat>();
-		// 	solver_.analyzePattern(A_);
-		// }
-		// solver_.compute(A_);
-		// solver_.analyzePattern(A_);
-		// solver_.factorize(A_);
-		//solver.compute(A_);
-		solver_.compute(A_);
+		solver_.analyzePattern(A_);
 	}
+
+	solver_.factorize(A_);
 	if (solver_.info() != Eigen::Success) {
 			throw std::runtime_error("SparseLU factorization failed");
 	}
@@ -883,7 +854,7 @@ std::vector<double> AdeFDMPlumeModel2D::solve_point_source(double sx, double sy)
 void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map){
 	float sx = gas_map.sx;
 	float sy = gas_map.sy;
-
+    //printf("Calculating gas concentration map for source at (%.2f, %.2f)...\n", sx, sy);
 	// calculate the gas concentration for each cell in the map
 	// NOTE: The resolution of the gasConcentrationMap is different than the FDM grid resolution
 
@@ -905,3 +876,25 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
 	}
 }
 
+void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v)
+{
+	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
+		// update the wind field based on the historical wind measurements
+		wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.1, 0.8);
+		auto U_field = wind_estimator_->getU();
+		auto V_field = wind_estimator_->getV();
+		for (int i = 0; i < Nx_; ++i) {
+   			for (int j = 0; j < Ny_; ++j) {
+        		int index = grid_idx(i,j);
+        		u_[index] = static_cast<double>(U_field[j][i]);
+				v_[index] = static_cast<double>(V_field[j][i]);
+    		}	
+		}
+		// set_u_field_uniform(u_x);
+		assemble_and_factorize(0);
+	}
+	// recalculate the gas concentration map list based on the updated wind field
+		// TODO - may also need to update the information matrix
+	gas_con_map_list.clear();
+	calculate_gas_concentration_map_list();
+}

@@ -450,6 +450,21 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	double sample[nbr_dimension];
 	vector<double> slope_history_meas;
+    
+	// FIXME - temporary arrays for measurement positions
+	int nbr = history.size;
+	int idx[nbr], idy[nbr];
+
+	// get indices in the map
+	for (int i = 0; i < nbr; i++)
+	{
+		idx[i] = history.position[i].x_idx;
+		idy[i] = history.position[i].y_idx;
+	}	
+	if (simulation_parameters.windInfo == WIND_ONLINE)
+	{
+		model->update_wind_field_and_gas_concentration_map(idx, idy, history.wind_meas_u, history.wind_meas_v);
+	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);

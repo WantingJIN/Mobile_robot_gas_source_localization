@@ -90,7 +90,7 @@ public:
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 	// read from precomputed maps
-	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg) = 0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) = 0;
 
 	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
 	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
@@ -98,6 +98,8 @@ public:
 	virtual void log_gas_concentration_map(char *filename, char writing_mode) = 0;
 	virtual void calculate_gas_map_and_information_matrix() = 0;
 	virtual void reset_estimation_ranges(SourceBounds source_bounds) = 0;
+
+	virtual void update_wind_field_and_gas_concentration_map(int idx[], int idy[],vector<double> wind_meas_u, vector<double> wind_meas_v) = 0;
 
 	void random_params(double *random_params);
 
@@ -124,8 +126,8 @@ public:
 	double concentration(Position robot_position, double wind_intensity, double param_value[]) override;
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
 	double approx_concentration(Position robot_position, double wind_intensity) override;
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg) override;
-
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
+    void update_wind_field_and_gas_concentration_map(int idx[], int idy[],vector<double> wind_meas_u, vector<double> wind_meas_v) override;
 
     // calculate the gas concentration map and information map
 	void calculate_gas_map_and_information_matrix() override;
@@ -169,8 +171,9 @@ public:
 	void calculate_gas_concentration_map_list();
 	void calculate_cell_measurement_list();
 	// read from precomputed maps
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg) override;
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
+	void update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) override;
 
 private:
 	// feature
@@ -206,7 +209,9 @@ public:
 	using SpMat  = Eigen::SparseMatrix<double>;
     using Triplet = Eigen::Triplet<double>;
     void reset_estimation_ranges(SourceBounds source_bounds) override;
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, vector<double> wind_meas_u, vector<double> wind_meas_v, int soure_pos_idx, vector<double> &c_avg) override;
+	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
+	void update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) override;
+
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
 	// Here, the grid used to solve PDE is different than the grid for the source position estimation
