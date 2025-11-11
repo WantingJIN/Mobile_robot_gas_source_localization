@@ -556,15 +556,14 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	int Ny = 40;
 	// double Nx, double Ny, double D, double Q
 	set_parameters(Nx, Ny, 0.008, 1500.0);
-	if (simulation_parameters.windEstimationMethod == GROUND_TRUTH){
+	if (simulation_parameters.windInfo == WIND_OFFLINE){
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	} else if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
 		wind_estimator_ = new GaussianWindEstimator(source_bounds.x_min, source_bounds.x_max,
 												  source_bounds.y_min, source_bounds.y_max,
 												  Nx_, Ny_, obstacles, nbr_obs);
 		// first intialize as uniform wind field
-		//set_u_field_uniform(u_x);
-		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+		set_u_field_uniform(u_x);
 	}
 	assemble_and_factorize(1);
 
@@ -857,8 +856,8 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
     //printf("Calculating gas concentration map for source at (%.2f, %.2f)...\n", sx, sy);
 	// calculate the gas concentration for each cell in the map
 	// NOTE: The resolution of the gasConcentrationMap is different than the FDM grid resolution
-
 	std::vector<double> C = solve_point_source(sx, sy);
+	// assign the gas concentration to the gas map
 
 	for (int map_i = 0; map_i < param_list[0].nbins; map_i++)    //x_nbins
 	{
@@ -878,23 +877,38 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
 
 void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v)
 {
-	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
-		// update the wind field based on the historical wind measurements
-		wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.1, 0.8);
-		auto U_field = wind_estimator_->getU();
-		auto V_field = wind_estimator_->getV();
-		for (int i = 0; i < Nx_; ++i) {
-   			for (int j = 0; j < Ny_; ++j) {
-        		int index = grid_idx(i,j);
-        		u_[index] = static_cast<double>(U_field[j][i]);
-				v_[index] = static_cast<double>(V_field[j][i]);
-    		}	
-		}
-		// set_u_field_uniform(u_x);
-		assemble_and_factorize(0);
+	// update the wind field based on the historical wind measurements
+	// log the time used for wind estimation
+	auto start = std::chrono::high_resolution_clock::now();
+	wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.1, 0.8);
+	auto U_field = wind_estimator_->getU();
+	auto V_field = wind_estimator_->getV();
+	for (int i = 0; i < Nx_; ++i) {
+		for (int j = 0; j < Ny_; ++j) {
+			int index = grid_idx(i,j);
+			u_[index] = static_cast<double>(U_field[j][i]);
+			v_[index] = static_cast<double>(V_field[j][i]);
+		}	
 	}
-	// recalculate the gas concentration map list based on the updated wind field
-		// TODO - may also need to update the information matrix
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	printf("Wind field updated in %ld ms.\n", duration);
+	// re-assemble and factorize the ADE FDM matrix with the updated wind field
+    
+	// long time to assemble and factorize
+	auto start_assemble = std::chrono::high_resolution_clock::now();
+	assemble_and_factorize(0);
+	auto end_assemble = std::chrono::high_resolution_clock::now();
+	auto duration_assemble = std::chrono::duration_cast<std::chrono::milliseconds>(end_assemble - start_assemble).count();
+	printf("ADE FDM matrix re-assembled and factorized in %ld ms.\n", duration_assemble);
+	
+	// recalculate the gas concentration map list based on the updated wind field	
+	// TODO - may also need to update the information matrix
+	// log time used for gas concentration map calculation
+	auto start_gas_map = std::chrono::high_resolution_clock::now();
 	gas_con_map_list.clear();
 	calculate_gas_concentration_map_list();
+	auto end_gas_map = std::chrono::high_resolution_clock::now();
+	auto duration_gas_map = std::chrono::duration_cast<std::chrono::milliseconds>(end_gas_map - start_gas_map).count();
+	printf("Gas concentration map list recalculated in %ld ms.\n", duration_gas_map);
 }

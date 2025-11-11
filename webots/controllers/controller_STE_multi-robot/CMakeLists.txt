@@ -21,8 +21,15 @@ find_package(Torch REQUIRED NO_DEFAULT_PATH PATHS ${CMAKE_PREFIX_PATH})
 
 include_directories(../../libraries/khepera4)
 include_directories(/usr/include/eigen3)
-include_directories(/usr/include/python3.8)
+find_path(SUPERLU_INCLUDE_DIR slu_Cnames.h
+          PATHS /usr/include /usr/include/superlu /usr/local/include /opt/homebrew/include
+          PATH_SUFFIXES superlu)
 
+find_library(SUPERLU_LIBRARY superlu
+             PATHS /usr/lib /usr/local/lib /opt/homebrew/lib $ENV{CONDA_PREFIX}/lib)
+
+
+include_directories(/usr/include/python3.8)
 find_package(Python3 REQUIRED)
 set(PYTHON_EXECUTABLE /usr/bin/python3)
 include_directories(${PYTHON3_INCLUDE_DIRS})
@@ -48,6 +55,7 @@ target_link_libraries(${PROJECT} ${PYTHON3_LIBRARIES})
 target_link_libraries(${PROJECT} -g -lk4_webots -lgsl -lgslcblas)
 target_link_libraries(${PROJECT} "${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT} ${MATIO_LIBRARIES})
+target_link_libraries(${PROJECT} ${SUPERLU_LIBRARY})
 
 set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
 

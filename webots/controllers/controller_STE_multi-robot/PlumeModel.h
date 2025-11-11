@@ -24,6 +24,8 @@
 #include <stdexcept>
 #include <Eigen/Sparse>
 #include <Eigen/SparseLU>
+//#include <Eigen/PardisoSupport>
+#include <Eigen/SuperLUSupport>
 // #include <eigen3/Eigen/Dense>
 #include "SimulationParameters.h"
 #include "WindEstimator.h"
@@ -224,11 +226,14 @@ private:
     WindEstimator* wind_estimator_ = nullptr;
 
 	SpMat A_;
+	// Eigen::VectorXd b = Eigen::VectorXd::Zero(N_);
+	// Eigen::VectorXd x = Eigen::VectorXd::Zero(N_); // solution vector
 	// u_x per cell (x-advection only, like your original)
     std::vector<double> u_;
 	std::vector<double> v_;
-	Eigen::VectorXd b_;
-    mutable Eigen::SparseLU<SpMat> solver_;
+	// Eigen::VectorXd b_;
+    //mutable Eigen::SparseLU<SpMat> solver_;
+	mutable Eigen::SuperLU<SpMat> solver_;
     bool fact_ok_{false};
 	void set_u_field_uniform(double u);
 	void assemble_and_factorize(bool first_time);
