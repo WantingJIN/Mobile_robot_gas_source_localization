@@ -878,9 +878,10 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], 
 	// update the wind field based on the historical wind measurements
 	// log the time used for wind estimation
 	auto start = std::chrono::high_resolution_clock::now();
-	wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.50, 0.9, 0.5);
+	wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.30, 1.0, 0.5);
 	auto U_field = wind_estimator_->getU();
 	auto V_field = wind_estimator_->getV();
+	auto W_field = wind_estimator_->getW();
 	for (int i = 0; i < Nx_; ++i) {
 		for (int j = 0; j < Ny_; ++j) {
 			int index = grid_idx(i,j);

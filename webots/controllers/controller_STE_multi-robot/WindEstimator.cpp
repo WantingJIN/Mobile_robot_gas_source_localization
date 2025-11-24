@@ -56,6 +56,40 @@ void GaussianWindEstimator::computeNormals() {
             Nx[j][i] = dDx / mag;
             Ny[j][i] = dDy / mag;
         }
+
+    // for the boundaries, use forward/backward difference
+    for (int j = 0; j < ny; ++j) {
+        // left boundary
+        {
+            int i = 0;
+            float dDx = (D[j][i+1] - D[j][i]) / dx;
+            float dDy;
+            if (j == 0)
+                dDy = (D[j+1][i] - D[j][i]) / dy;
+            else if (j == ny - 1)
+                dDy = (D[j][i] - D[j-1][i]) / dy;
+            else
+                dDy = (D[j+1][i] - D[j-1][i]) / (2*dy);
+            float mag = std::sqrt(dDx*dDx + dDy*dDy) + 1e-12;
+            Nx[j][i] = dDx / mag;
+            Ny[j][i] = dDy / mag;
+        }
+        // right boundary
+        {
+            int i = nx - 1;
+            float dDx = (D[j][i] - D[j][i-1]) / dx;
+            float dDy;
+            if (j == 0)
+                dDy = (D[j+1][i] - D[j][i]) / dy;
+            else if (j == ny - 1)
+                dDy = (D[j][i] - D[j-1][i]) / dy;
+            else
+                dDy = (D[j+1][i] - D[j-1][i]) / (2*dy);
+            float mag = std::sqrt(dDx*dDx + dDy*dDy) + 1e-12;
+            Nx[j][i] = dDx / mag;
+            Ny[j][i] = dDy / mag;
+        }
+    }
 }
 
 // ============================================================
@@ -102,32 +136,36 @@ void GaussianWindEstimator::estimateField(
         // FIXME -  check here; why j and i are swapped?
         float d_local = std::abs(D[idy_i][idx_i]);
         float n_x = Nx[idy_i][idx_i], n_y = Ny[idy_i][idx_i];
-        float beta = 1.0 + c / (d_local + 1e-3);
+        //printf("idy_i: %f, idx_i: %f, n_x: %f, n_y: %f \n", idy_i, idx_i, n_x, n_y);
+        float beta = 1.0 + c / (d_local + 1e-12);
 
         for (int jj = 0; jj < ny; ++jj)
             for (int ii = 0; ii < nx; ++ii) {
                 float dx_ = X[jj][ii] - x_i;
                 float dy_ = Y[jj][ii] - y_i;
-                // FIXME - temporary disable anisotropic kernel
                 float r_n = dx_ * n_x + dy_ * n_y;
                 float r_t = -dx_ * n_y + dy_ * n_x;
                 float w = std::exp(-(r_t*r_t + beta*r_n*r_n) / (2*sigma*sigma));
-                //float w = std::exp(-(dx_*dx_ + dy_*dy_) / (2 * sigma*sigma));
                 U_field[jj][ii] += w * U_i;
                 V_field[jj][ii] += w * V_i;
                 W_field[jj][ii] += w;
             }
     }
 
-    for (int j = 0; j < ny; ++j)
-        for (int i = 0; i < nx; ++i)
+    for (int j = 0; j < ny; ++j){
+        for (int i = 0; i < nx; ++i) {
             if (W_field[j][i] > 1e-6) {
                 U_field[j][i] /= W_field[j][i];
                 V_field[j][i] /= W_field[j][i];
             } else {
-                U_field[j][i] = U_global_;
-                V_field[j][i] = V_global_;
+                //U_field[j][i] = U_global_;
+                //V_field[j][i] = V_global_;
+                U_field[j][i] = 0.0;
+                V_field[j][i] = 0.0;
             }
+            
+        }
+    }
 }
 
 // ============================================================

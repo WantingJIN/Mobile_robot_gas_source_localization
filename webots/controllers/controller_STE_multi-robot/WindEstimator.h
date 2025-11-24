@@ -39,6 +39,7 @@ public:
     // Accessors
     const std::vector<std::vector<float>>& getU() const { return U_field; }
     const std::vector<std::vector<float>>& getV() const { return V_field; }
+    const std::vector<std::vector<float>>& getW() const { return W_field; }
     const std::vector<std::vector<float>>& getSDF() const { return D; }
 
 protected:
@@ -73,7 +74,7 @@ protected:
 // ============================================================
 class GaussianWindEstimator : public WindEstimator {
 public:
-    GaussianWindEstimator(float xmin, float xmax, float ymin, float ymax, int Nx, int Ny,
+    GaussianWindEstimator(float xmin, float xmax, float ymin, float ymax, int nx, int ny,
                   float ** obstacles, int obs_nbr);
 
     void estimateField(int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas,
