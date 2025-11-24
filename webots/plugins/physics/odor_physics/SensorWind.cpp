@@ -33,7 +33,7 @@ void THISCLASS::OnSimulationStep() {
 	// Get the position of the sensor
 	const dReal *p = dGeomGetPosition(mWebotsInterface.mGeometryID);
 	const Point3 position(p[0], p[1], p[2]);
-
+	//std::cout << "Sensor position: " << p[0] << ", " << p[1] << ", " << p[2] << std::endl;
 	// Get the orientation of the sensor
 	dQuaternion orientation;
 	dGeomGetQuaternion(mWebotsInterface.mGeometryID, orientation);
@@ -44,8 +44,8 @@ void THISCLASS::OnSimulationStep() {
 
 	// Get the raw concentration at the current point
 	Point3 wind = mSimulation->mWindField->GetWindSpeed(position);
-	//std::cout << "Wind before: " << wind << std::endl;
-	qRotateVector(orientation, wind);
+	//std::cout << "Wind ground truth: " << wind.x << ", " << wind.y << ", " << wind.z << std::endl;
+	//qRotateVector(orientation, wind);
 	//std::cout << "Wind after: " << wind << std::endl;
 	
 	//printf("wind1 %f %f %f\n", wind.x, wind.y, wind.z);
