@@ -138,8 +138,8 @@ void init()
 	// write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
-	//fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
-	//fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	// fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
+	// fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	fprintf(sim_param_file, "max_iter_number %d\n", MAX_ITER);
 	fprintf(sim_param_file, "release_amount %d\n", release_amount);
 	fclose(sim_param_file);
@@ -336,7 +336,7 @@ void wind_read(double *intensity, double *angle, double *vx, double *vy, double 
 	}
 	// convert the 3D vector from the sensor to intensity and heading
 	*intensity = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-	*angle = 0;
+	*angle = atan2(v.y, v.x); ;
 	*vx = v.x;
 	*vy = v.y;
 	*vz = v.z;
@@ -593,6 +593,7 @@ void set_logfile_names()
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
 	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
+	sprintf(gas_concentration_maps_log_root, "%s/gas_concentration_map", folder_name);
 	sprintf(gas_information_map_logfile_name, "%s/gas_information_map.csv", folder_name);
 	sprintf(experiment_time_logfile_name, "%s/experiment_time.csv", folder_name);
 	sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
@@ -601,6 +602,8 @@ void set_logfile_names()
 	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
 	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
 	sprintf(relative_history_meas_logfile_name, "%s/relative_history_meas.csv", folder_name);
+	sprintf(wind_field_u_logfile_name, "%s/wind_field_u.csv", folder_name);
+	sprintf(wind_field_v_logfile_name, "%s/wind_field_v.csv", folder_name);
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);

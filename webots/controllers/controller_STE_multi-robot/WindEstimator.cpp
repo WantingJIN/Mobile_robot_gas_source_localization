@@ -108,9 +108,11 @@ void GaussianWindEstimator::estimateField(
             for (int ii = 0; ii < nx; ++ii) {
                 float dx_ = X[jj][ii] - x_i;
                 float dy_ = Y[jj][ii] - y_i;
+                // FIXME - temporary disable anisotropic kernel
                 float r_n = dx_ * n_x + dy_ * n_y;
                 float r_t = -dx_ * n_y + dy_ * n_x;
                 float w = std::exp(-(r_t*r_t + beta*r_n*r_n) / (2*sigma*sigma));
+                //float w = std::exp(-(dx_*dx_ + dy_*dy_) / (2 * sigma*sigma));
                 U_field[jj][ii] += w * U_i;
                 V_field[jj][ii] += w * V_i;
                 W_field[jj][ii] += w;

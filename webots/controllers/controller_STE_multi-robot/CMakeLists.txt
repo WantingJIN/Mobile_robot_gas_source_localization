@@ -28,6 +28,12 @@ find_path(SUPERLU_INCLUDE_DIR slu_Cnames.h
 find_library(SUPERLU_LIBRARY superlu
              PATHS /usr/lib /usr/local/lib /opt/homebrew/lib $ENV{CONDA_PREFIX}/lib)
 
+if (SUPERLU_INCLUDE_DIR AND SUPERLU_LIBRARY)
+    message(STATUS "Found SuperLU: ${SUPERLU_LIBRARY}")
+    include_directories(${SUPERLU_INCLUDE_DIR})
+else()
+    message(FATAL_ERROR "SuperLU not found. Please install it (e.g., sudo apt install libsuperlu-dev)")
+endif()
 
 include_directories(/usr/include/python3.8)
 find_package(Python3 REQUIRED)

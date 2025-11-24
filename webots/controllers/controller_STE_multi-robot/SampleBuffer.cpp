@@ -136,6 +136,9 @@ void SampleBuffer::reset_all()
 	instant_wind_vx = 0;
 	average_wind_vx = 0;
 	instant_wind_vy = 0;
+	average_wind_vy = 0;
+	instant_wind_vz = 0;
+	average_wind_vz = 0;
 
 
 	n_samples = 0;

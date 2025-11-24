@@ -10,6 +10,9 @@
 extern FILE *console_logfile;
 extern SimulationParameters simulation_parameters;
 extern SourceBounds source_bounds;
+extern char wind_field_u_logfile_name[512];
+extern char wind_field_v_logfile_name[512];
+extern char gas_concentration_maps_log_root[512];
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -464,6 +467,10 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	if (simulation_parameters.windInfo == WIND_ONLINE)
 	{
 		model->update_wind_field_and_gas_concentration_map(idx, idy, history.wind_meas_u, history.wind_meas_v);
+		model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, 'a');
+		char gas_concentration_map_each_cycle_logfile_name[600];
+		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, FSM.n_cycles);
+		model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{

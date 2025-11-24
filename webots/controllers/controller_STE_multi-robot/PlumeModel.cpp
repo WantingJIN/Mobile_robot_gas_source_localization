@@ -193,6 +193,7 @@ void GaussianPlumeModel2D::calculate_gas_map_and_information_matrix() {}
 void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) {}
 void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
 void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
+void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char writing_mode){}
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -518,7 +519,7 @@ void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing
 	}
 }
 void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
-
+void DeepCFDPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char writing_mode){}
 /*************************************************************************************************/
 //	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
 /************************************************************************************************/
@@ -563,9 +564,9 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 												  source_bounds.y_min, source_bounds.y_max,
 												  Nx_, Ny_, obstacles, nbr_obs);
 		// first intialize as uniform wind field
-		set_u_field_uniform(u_x);
+		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
-	assemble_and_factorize(1);
+	assemble_and_factorize();
 
 }
 
@@ -633,7 +634,7 @@ void AdeFDMPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds)
 	cell_lists.clear();
 	// reload the wind filed
 	set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
-	//assemble_and_factorize(0);
+	//assemble_and_factorize();
 }
 
 
@@ -734,93 +735,89 @@ void AdeFDMPlumeModel2D::set_u_field_from_csv(const std::string& filename,
 
 
 
-void AdeFDMPlumeModel2D::assemble_and_factorize(bool first_time) {
+void AdeFDMPlumeModel2D::assemble_and_factorize() {
 
-	if (!first_time){
-		printf("Assembling and factorizing the ADE FDM matrix...\n");
-	}
-	if (first_time) {
-		std::vector<Triplet> T;
-		T.reserve(5 * N_);
+	std::vector<Triplet> T;
+	T.reserve(5 * N_);
 
-		const double dx2 = dx_ * dx_;
-		const double dy2 = dy_ * dy_;
-		const double a_s_base = D_ / dy2;
-		const double a_n_base = D_ / dy2;
-		const double a_w_base = D_ / dx2;
-		const double a_e_base = D_ / dx2;
-		// NOTE: order:first scan x axis then y axis
-		for (int j = 0; j < Ny_; ++j) {
-			for (int i = 0; i < Nx_; ++i) {
-				const int k = grid_idx(i,j);
+	const double dx2 = dx_ * dx_;
+	const double dy2 = dy_ * dy_;
+	const double a_s_base = D_ / dy2;
+	const double a_n_base = D_ / dy2;
+	const double a_w_base = D_ / dx2;
+	const double a_e_base = D_ / dx2;
+	// NOTE: order:first scan x axis then y axis
+	for (int j = 0; j < Ny_; ++j) {
+		for (int i = 0; i < Nx_; ++i) {
+			const int k = grid_idx(i,j);
 
-				// Boundaries
-				if (i == Nx_ - 1) {
-					// inflow (Dirichlet)  inlet C = 0
-					T.emplace_back(k, k, 1.0);
-					continue;
-				}
-				if (i == 0) {
-					// outflow: C(i) - C(i+1) = 0
-					T.emplace_back(k, k, 1.0);
-					T.emplace_back(k, grid_idx(i+1,j), -1.0);
-					continue;
-				}
-				if (j == 0) {
-					// bottom: C(i,j) - C(i,j+1) = 0
-					T.emplace_back(k, k, 1.0);
-					T.emplace_back(k, grid_idx(i, j+1), -1.0);
-					continue;
-				}
-				if (j == Ny_ - 1) {
-					// top: C(i,j) - C(i,j-1) = 0
-					T.emplace_back(k, k, 1.0);
-					T.emplace_back(k, grid_idx(i, j-1), -1.0);
-					continue;
-				}
-
-				// Interior cell
-				const double u = u_[k];
-				const double v = v_[k];
-
-				// advection + diffusion
-				double a_s = a_s_base;
-				double a_n = a_n_base;
-				double a_w = a_w_base;
-				double a_e = a_e_base;
-		
-				if (u > 0.0) {
-					// flow left -> right
-					a_w +=  u / dx_ ;
-				} else {
-					// flow right -> left
-					a_e += -u / dx_;
-				}
-				if (v > 0.0) {
-					// flow bottom -> top
-					a_s +=  v / dy_ ;
-				} else {
-					// flow top -> bottom
-					a_n += -v / dy_;
-				}
-
-				const double a_p = -(a_w + a_e + a_s + a_n);
-
-				// Fill row k
-				T.emplace_back(k, grid_idx(i-1, j), a_w);
-				T.emplace_back(k, grid_idx(i+1, j), a_e);
-				T.emplace_back(k, grid_idx(i, j-1), a_s);
-				T.emplace_back(k, grid_idx(i, j+1), a_n);
-				T.emplace_back(k, k, a_p);
+			// Boundaries
+			if (i == Nx_ - 1) {
+				// inflow (Dirichlet)  inlet C = 0
+				T.emplace_back(k, k, 1.0);
+				continue;
 			}
-		}
+			if (i == 0) {
+				// outflow: C(i) - C(i+1) = 0
+				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i+1,j), -1.0);
+				continue;
+			}
+			if (j == 0) {
+				// bottom: C(i,j) - C(i,j+1) = 0
+				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i, j+1), -1.0);
+				continue;
+			}
+			if (j == Ny_ - 1) {
+				// top: C(i,j) - C(i,j-1) = 0
+				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i, j-1), -1.0);
+				continue;
+			}
 
-		A_.resize(N_, N_);
-		A_.setZero();
-		A_.setFromTriplets(T.begin(), T.end());
-		A_.makeCompressed();
-		solver_.analyzePattern(A_);
+			// Interior cell
+			const double u = u_[k];
+			const double v = v_[k];
+
+			// advection + diffusion
+			double a_s = a_s_base;
+			double a_n = a_n_base;
+			double a_w = a_w_base;
+			double a_e = a_e_base;
+	
+			if (u > 0.0) {
+				// flow left -> right
+				a_w +=  u / dx_ ;
+			} else {
+				// flow right -> left
+				a_e += -u / dx_;
+			}
+			if (v > 0.0) {
+				// flow bottom -> top
+				a_s +=  v / dy_ ;
+			} else {
+				// flow top -> bottom
+				a_n += -v / dy_;
+			}
+
+			const double a_p = -(a_w + a_e + a_s + a_n);
+
+			// Fill row k
+			T.emplace_back(k, grid_idx(i-1, j), a_w);
+			T.emplace_back(k, grid_idx(i+1, j), a_e);
+			T.emplace_back(k, grid_idx(i, j-1), a_s);
+			T.emplace_back(k, grid_idx(i, j+1), a_n);
+			T.emplace_back(k, k, a_p);
+		}
 	}
+
+	A_.resize(N_, N_);
+	A_.setZero();
+	A_.setFromTriplets(T.begin(), T.end());
+	A_.makeCompressed();
+	solver_.analyzePattern(A_);
+	
 
 	solver_.factorize(A_);
 	if (solver_.info() != Eigen::Success) {
@@ -857,6 +854,7 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
 	// calculate the gas concentration for each cell in the map
 	// NOTE: The resolution of the gasConcentrationMap is different than the FDM grid resolution
 	std::vector<double> C = solve_point_source(sx, sy);
+
 	// assign the gas concentration to the gas map
 
 	for (int map_i = 0; map_i < param_list[0].nbins; map_i++)    //x_nbins
@@ -880,7 +878,7 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], 
 	// update the wind field based on the historical wind measurements
 	// log the time used for wind estimation
 	auto start = std::chrono::high_resolution_clock::now();
-	wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.3, 0.1, 0.8);
+	wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.50, 0.9, 0.5);
 	auto U_field = wind_estimator_->getU();
 	auto V_field = wind_estimator_->getV();
 	for (int i = 0; i < Nx_; ++i) {
@@ -894,10 +892,9 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], 
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	printf("Wind field updated in %ld ms.\n", duration);
 	// re-assemble and factorize the ADE FDM matrix with the updated wind field
-    
 	// long time to assemble and factorize
 	auto start_assemble = std::chrono::high_resolution_clock::now();
-	assemble_and_factorize(0);
+	assemble_and_factorize();
 	auto end_assemble = std::chrono::high_resolution_clock::now();
 	auto duration_assemble = std::chrono::duration_cast<std::chrono::milliseconds>(end_assemble - start_assemble).count();
 	printf("ADE FDM matrix re-assembled and factorized in %ld ms.\n", duration_assemble);
@@ -911,4 +908,22 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], 
 	auto end_gas_map = std::chrono::high_resolution_clock::now();
 	auto duration_gas_map = std::chrono::duration_cast<std::chrono::milliseconds>(end_gas_map - start_gas_map).count();
 	printf("Gas concentration map list recalculated in %ld ms.\n", duration_gas_map);
+}
+
+void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char writing_mode)
+{
+	// log u field
+	FILE *file_u = fopen(filename_u, &writing_mode);
+	for (int i = 0; i < N_-1; i++) {
+		fprintf(file_u, "%f,", u_[i]);
+	}
+	fprintf(file_u, "%f \n", u_[N_-1]);
+	fclose(file_u);
+	// log v field
+	FILE *file_v = fopen(filename_v, &writing_mode);
+	for (int i = 0; i < N_-1; i++) {
+		fprintf(file_v, "%f,", v_[i]);
+	}
+	fprintf(file_v, "%f \n", v_[N_-1]);		
+	fclose(file_v);
 }

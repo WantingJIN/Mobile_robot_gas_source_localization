@@ -55,6 +55,7 @@ char entropy_logfile_name[512];
 char config_logfile_name[512];
 char trajectory_logfile_name[512];
 char gas_concentration_map_logfile_name[512];
+char gas_concentration_maps_log_root[512];
 char experiment_time_logfile_name[512];
 char visited_list_logfile_name[512];
 char clustering_bounding_boxes_logfile_name[512];
@@ -63,6 +64,8 @@ char scores_map_logfile_name[512];
 char distance_map_logfile_name[512];
 char acc_info_map_logfile_name[512];
 char relative_history_meas_logfile_name[512];
+char wind_field_u_logfile_name[512];
+char wind_field_v_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -377,15 +380,15 @@ void log_history()
 	{
 		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
-			fprintf(measurement_history_logfile, "%d, %f, %d\n", i, history.gas_meas[i], history.FSM_iter[i]);
+			fprintf(measurement_history_logfile, "%d, %f, %d, %f, %f\n", i, history.gas_meas[i], history.FSM_iter[i], history.wind_meas_u[i], history.wind_meas_v[i]);
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-			fprintf(measurement_history_logfile, "%d, %f, %f, %d\n", i, history.gas_meas[i], history.relative_meas[i], history.FSM_iter[i]);
+			fprintf(measurement_history_logfile, "%d, %f, %f, %d, %f, %f\n", i, history.gas_meas[i], history.relative_meas[i], history.FSM_iter[i], history.wind_meas_u[i], history.wind_meas_v[i]);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{
-			fprintf(measurement_history_logfile, "%d, %f, %d, %d\n", i, history.gas_meas[i], history.gas_hit_event[i], history.FSM_iter[i]);
+			fprintf(measurement_history_logfile, "%d, %f, %d, %d, %f, %f\n", i, history.gas_meas[i], history.gas_hit_event[i], history.FSM_iter[i], history.wind_meas_u[i], history.wind_meas_v[i]);
 		}
 	}
 
@@ -591,7 +594,6 @@ void state_measuring()
 		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
 		// measuring wind
 		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle, &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
-		// printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
 		// add samples to buffers
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
@@ -699,11 +701,11 @@ void state_estimating()
 
 		
 		bool is_converge_condition_reached = check_converge_condition();
-		if (is_converge_condition_reached)
+		if (is_converge_condition_reached || FSM.n_cycles == MAX_ITER)
 		{
 			// FSM.state = STATE_FINISHED;
 			// return;
-			if (simulation_parameters.estimationScale == GLOBAL || FSM.n_cycles == MAX_ITER){
+			if (simulation_parameters.estimationScale == GLOBAL){
 				FSM.state = STATE_FINISHED;
 				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
 				fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
@@ -904,6 +906,7 @@ void state_moving()
 		double wind_vz = 0.0;
 		odor_read(&sensor_reading, odor_concentration);
 		wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
+		//printf("instant wind intensity: %f, wind angle: %f, wind vx: %f, wind vy: %f, wind vz: %f\n", wind_intensity, wind_angle, wind_vx, wind_vy, wind_vz);
 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
 		{
 			reverse_sensor_model(sensor_reading, previous_sensor_reading);
@@ -1559,6 +1562,10 @@ void init_estimation_bound(){
 	if (simulation_parameters.estimationScale == GLOBAL){
 		set_source_bounds(&source_bounds, 
 						XMIN, YMIN, XMAX, YMAX, 20, 20);
+		FILE * sim_param_file = fopen(config_logfile_name, "a");
+	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
+	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	    fclose(sim_param_file);
 	}
 	if (simulation_parameters.estimationScale == LOCAL){
         // TODO: whether it is better to fixed the number of bins or the resolution?

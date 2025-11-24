@@ -102,6 +102,7 @@ public:
 	virtual void reset_estimation_ranges(SourceBounds source_bounds) = 0;
 
 	virtual void update_wind_field_and_gas_concentration_map(int idx[], int idy[],vector<double> wind_meas_u, vector<double> wind_meas_v) = 0;
+	virtual void log_wind_field(char *filename_u, char *filename_v, char writing_mode) = 0;
 
 	void random_params(double *random_params);
 
@@ -137,6 +138,7 @@ public:
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
 	void log_gas_concentration_map(char *filename, char writing_mode) override;
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
+	void log_wind_field(char *filename_u, char *filename_v, char writing_mode) override;
 };
 
 /********************************************************/
@@ -176,6 +178,7 @@ public:
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) override;
+	void log_wind_field(char *filename_u, char *filename_v, char writing_mode) override;
 
 private:
 	// feature
@@ -213,7 +216,7 @@ public:
     void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) override;
-
+    void log_wind_field(char *filename_u, char *filename_v, char writing_mode) override;
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
 	// Here, the grid used to solve PDE is different than the grid for the source position estimation
@@ -236,7 +239,7 @@ private:
 	mutable Eigen::SuperLU<SpMat> solver_;
     bool fact_ok_{false};
 	void set_u_field_uniform(double u);
-	void assemble_and_factorize(bool first_time);
+	void assemble_and_factorize();
 	void set_parameters(double Nx, double Ny, double D, double Q);
 	std::vector<double> solve_point_source(double sx, double sy) const;
 	static void load_csv(const std::string& filename,
