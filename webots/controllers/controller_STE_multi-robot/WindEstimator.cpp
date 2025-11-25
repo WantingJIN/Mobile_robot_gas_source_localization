@@ -158,10 +158,8 @@ void GaussianWindEstimator::estimateField(
                 U_field[j][i] /= W_field[j][i];
                 V_field[j][i] /= W_field[j][i];
             } else {
-                //U_field[j][i] = U_global_;
-                //V_field[j][i] = V_global_;
-                U_field[j][i] = 0.0;
-                V_field[j][i] = 0.0;
+                U_field[j][i] = U_global_;
+                V_field[j][i] = V_global_;
             }
             
         }
