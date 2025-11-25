@@ -10,8 +10,8 @@ WorldInfo {
   physics "odor_physics"
 }
 Viewpoint {
-  orientation -0.0015196439063931734 0.6232703559043535 0.7820049578699986 3.10506874718362
-  position 7.4242659694326285 19.41422506699584 4.942990994022454
+  orientation 0.058515765871327806 0.5794263399185117 0.8129212887808569 2.9342969832870907
+  position 2.6897822735433206 5.851419050513276 1.4849278394690728
 }
 Background {
   skyColor [
@@ -246,7 +246,7 @@ DEF n101 Khepera4 {
       channel 601
     }
     DEF SENSOR_ODOR_0 Receiver {
-      translation 0 0.07 -0.05
+      translation 0 0.1 -0.05
       children [
         Shape {
           appearance Appearance {
@@ -266,7 +266,7 @@ DEF n101 Khepera4 {
       }
     }
     DEF SENSOR_WIND_0 Receiver {
-      translation 0 0.07 0
+      translation 0 0.1 0
       rotation 0 0 1 0
       children [
         Shape {
@@ -309,7 +309,7 @@ DEF n102 Khepera4 {
       channel 601
     }
     DEF SENSOR_ODOR_1 Receiver {
-      translation 0 0.07 -0.05
+      translation 0 0.1 -0.05
       children [
         Shape {
           appearance Appearance {
@@ -330,7 +330,7 @@ DEF n102 Khepera4 {
       channel 1
     }
     DEF SENSOR_WIND_1 Receiver {
-      translation 0 0.07 0
+      translation 0 0.1 0
       rotation 0 0 1 0
       children [
         Shape {
@@ -373,7 +373,7 @@ DEF n103 Khepera4 {
       channel 601
     }
     DEF SENSOR_ODOR_2 Receiver {
-      translation 0 0.07 -0.05
+      translation 0 0.1 -0.05
       children [
         Shape {
           appearance Appearance {
@@ -394,7 +394,7 @@ DEF n103 Khepera4 {
       channel 2
     }
     DEF SENSOR_WIND_2 Receiver {
-      translation 0 0.07 0
+      translation 0 0.1 0
       rotation 0 0 1 0
       children [
         Shape {
