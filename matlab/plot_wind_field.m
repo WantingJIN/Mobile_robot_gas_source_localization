@@ -1,8 +1,8 @@
-% Plots robot trajectory with collected measurements, posterior PDF map and
+ % Plots robot trajectory with collected measurements, posterior PDF map and
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/online_wind_estimation/anistropy_wind_estimation_relative_sigma_0.5_c_0.5/10';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/online_wind_estimation/istropic_wind_background_average_relative/10';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
@@ -44,7 +44,7 @@ Ny = 40;
 x=linspace(xmin,xmax,Nx);
 y=linspace(ymin,ymax,Ny);
 [X, Y] = meshgrid(y, x);   % note: meshgrid swaps (row,col)
-
+ 
 % Load data
 u = dlmread([experiment_file_path, '/wind_field_u.csv']);   % size: Nx × Ny
 v = dlmread([experiment_file_path, '/wind_field_v.csv']);   % size: Nx × Ny
@@ -55,7 +55,7 @@ trajectory = [positions(1,:); trajectory];
 
  f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
 
-%% show pdf
+ %% show pdf
 for i=1:size(u,1)
     U = reshape(u(i,:) , Nx , Ny);
     V = reshape(v(i,:) , Nx , Ny);
@@ -77,12 +77,12 @@ for i=1:size(u,1)
     hold on;
     % Optionally downsample vectors for clarity
 %     ds = max(floor(Nx/20),1);  % reduce density if grid is large
-    ds = 1;
+    ds = 3;
     quiver(X(1:ds:end, 1:ds:end), ...
            Y(1:ds:end, 1:ds:end), ...
            V(1:ds:end, 1:ds:end), ...
            U(1:ds:end, 1:ds:end), ...
-           'k', 'LineWidth', 1.5, 'AutoScaleFactor', 1);
+           'k', 'LineWidth', 1.2, 'AutoScaleFactor', 1);
     hold on;
 
    
