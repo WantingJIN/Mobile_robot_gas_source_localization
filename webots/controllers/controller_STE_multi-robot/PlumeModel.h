@@ -102,7 +102,8 @@ public:
 	virtual void reset_estimation_ranges(SourceBounds source_bounds) = 0;
 
 	virtual void update_wind_field_and_gas_concentration_map(int idx[], int idy[],vector<double> wind_meas_u, vector<double> wind_meas_v) = 0;
-	virtual void log_wind_field(char *filename_u, char *filename_v, char writing_mode) = 0;
+	virtual void log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode) = 0;
+	virtual double get_wind_estimation_confidence(int soure_pos_idx) = 0;
 
 	void random_params(double *random_params);
 
@@ -138,7 +139,8 @@ public:
 	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
 	void log_gas_concentration_map(char *filename, char writing_mode) override;
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
-	void log_wind_field(char *filename_u, char *filename_v, char writing_mode) override;
+	void log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode) override;
+	double get_wind_estimation_confidence(int soure_pos_idx) override;
 };
 
 /********************************************************/
@@ -178,7 +180,8 @@ public:
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) override;
-	void log_wind_field(char *filename_u, char *filename_v, char writing_mode) override;
+	void log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode) override;
+	double get_wind_estimation_confidence(int soure_pos_idx) override;
 
 private:
 	// feature
@@ -216,7 +219,8 @@ public:
     void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) override;
-    void log_wind_field(char *filename_u, char *filename_v, char writing_mode) override;
+    void log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode) override;
+	double get_wind_estimation_confidence(int soure_pos_idx) override;
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
 	// Here, the grid used to solve PDE is different than the grid for the source position estimation
@@ -234,6 +238,7 @@ private:
 	// u_x per cell (x-advection only, like your original)
     std::vector<double> u_;
 	std::vector<double> v_;
+	std::vector<double> w_;
 	// Eigen::VectorXd b_;
     //mutable Eigen::SparseLU<SpMat> solver_;
 	mutable Eigen::SuperLU<SpMat> solver_;

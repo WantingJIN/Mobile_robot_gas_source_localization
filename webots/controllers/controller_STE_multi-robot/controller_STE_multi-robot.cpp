@@ -66,6 +66,7 @@ char acc_info_map_logfile_name[512];
 char relative_history_meas_logfile_name[512];
 char wind_field_u_logfile_name[512];
 char wind_field_v_logfile_name[512];
+char wind_field_w_logfile_name[512];
 
 // text file for storing some prints for debugging
 char console_logfile_name[512];
@@ -439,7 +440,7 @@ void state_waiting()
 	static int counter = 0;
 	counter++;
 
-	if (counter > 300)
+	if (counter > 400)
 	{
 		FSM.state = STATE_MEASURING;
 		FSM.hook = state_measuring;

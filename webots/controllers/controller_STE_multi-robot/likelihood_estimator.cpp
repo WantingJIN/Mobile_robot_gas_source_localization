@@ -39,8 +39,20 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 	for (int i = 0; i < history.size; i++)
 	{
 		sum_tmp += pow(history.gas_meas[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
-		// if (source_pos_idx == 0)
-		// 	fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.gas_meas[i], model_c_avg[i]);
+	}
+
+	// if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+	// 	sigmaE = simulation_parameters.likelihood_error;
+	// }
+	// else 
+	if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// dynamic uncertainty based on wind estimation confidence
+		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+		if (wind_confidence < 1e-3){
+			// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
+			sum_tmp = 0.1; // very high likelihood
+		}
+	
 	}
 
 	return (exp(-0.5 * sum_tmp));
@@ -51,8 +63,18 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 double likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 
-	// float sigma = 0.22;// works well for Gaussian CDF
-	float sigma = 0.35; // works well for Empirical CDF
+	// float sigma = 0.22; // works well for Gaussian CDF
+	// float sigma = 0.49; // works well for Normalization
+	float sigma = simulation_parameters.likelihoodSigma;
+    // if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+	// 	sigma = simulation_parameters.likelihoodSigma;
+	// }
+	// else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+	// 	// dynamic uncertainty based on wind estimation confidence
+	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+	// 	sigma = simulation_parameters.likelihoodSigma * (1.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
+	// }
+
 	double sum_tmp = 0;
 	if (sampleBuffer.average_wind_intensity == 0)
 		printf("NO WIND, BYE BYE!\n");
@@ -93,7 +115,6 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-		sigma = 0.49; // works well for Normalization
 		for (int i = 0; i < history.size; i++)
 		{
 			rel_hist_val = history.relative_meas[i];
@@ -109,7 +130,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 		{
 			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE)
@@ -120,7 +141,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 		{
 			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM)
@@ -134,7 +155,18 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 			// NOTE: take into account the measurement number information, to avoid the algorithm converge to fast to local minima
 			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2) / (history.size + 1);
 		}
-		sum_tmp /= simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma;
+		sum_tmp /= sigma * sigma;
+	}
+
+
+	if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// dynamic uncertainty based on wind estimation confidence
+		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+		if (wind_confidence < 1e-3){
+			// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
+			sum_tmp = 0.001; // very high likelihood
+		}
+	
 	}
 	return (exp(-0.5 * sum_tmp));
 }

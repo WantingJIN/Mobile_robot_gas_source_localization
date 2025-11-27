@@ -66,6 +66,7 @@ extern char acc_info_map_logfile_name[512];
 extern char relative_history_meas_logfile_name[512];
 extern char wind_field_u_logfile_name[512];
 extern char wind_field_v_logfile_name[512];
+extern char wind_field_w_logfile_name[512];
 
 // read logfile from the experiment
 extern char logfile_folder_name[256];

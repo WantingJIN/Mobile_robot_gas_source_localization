@@ -255,6 +255,13 @@ eWindInfo parse_wind_info(const char* str) {
 	exit(1);
 }
 
+eModelUncertainty parse_model_uncertainty(const char* str) {
+	if (strcmp(str, "FIXED_UNCERTAINTY") == 0) return FIXED_UNCERTAINTY;
+	if (strcmp(str, "DYNAMIC_UNCERTAINTY") == 0) return DYNAMIC_UNCERTAINTY;
+	fprintf(stderr, "Unknown model uncertainty: %s\n", str);
+	exit(1);
+}
+
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
 }
@@ -422,6 +429,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			windInfo = parse_wind_info(value);
 		}
+        else if (strcmp(key, "modelUncertainty") == 0)
+		{
+			modelUncertainty = parse_model_uncertainty(value);
+		}
+
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -489,6 +501,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "estimation_scale %d\n", estimationScale);
 	fprintf(sim_param_file, "wind_info %d\n", windInfo);
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
+	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
 	fclose(sim_param_file);
 }
 

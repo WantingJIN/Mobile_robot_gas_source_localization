@@ -154,6 +154,7 @@ typedef enum windEstimationMethod
 {
 	GROUND_TRUTH = 0,
 	GAUSSIAN_KERNEL = 1,
+	BASEFLOW_CORRECTION = 2,
 } eWindEstimationMethod;
 
 typedef enum windInfo
@@ -161,6 +162,11 @@ typedef enum windInfo
 	WIND_OFFLINE = 0,
 	WIND_ONLINE = 1,
 } eWindInfo;
+
+typedef enum modelUncertainty{
+	FIXED_UNCERTAINTY = 0,
+	DYNAMIC_UNCERTAINTY = 1,
+} eModelUncertainty;
 
 // parameters to estimate
 struct parameters_set
@@ -222,6 +228,7 @@ class SimulationParameters{
 		
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
+		eModelUncertainty modelUncertainty;
 
 		SimulationParameters(const char *filename);
 		~SimulationParameters();

@@ -193,7 +193,8 @@ void GaussianPlumeModel2D::calculate_gas_map_and_information_matrix() {}
 void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) {}
 void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
 void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
-void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char writing_mode){}
+void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
+double GaussianPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -519,7 +520,8 @@ void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing
 	}
 }
 void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
-void DeepCFDPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char writing_mode){}
+void DeepCFDPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
+double DeepCFDPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
 /*************************************************************************************************/
 //	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
 /************************************************************************************************/
@@ -609,6 +611,7 @@ void AdeFDMPlumeModel2D::set_parameters(double Nx, double Ny, double D, double Q
 	source_strength_ = Q_ / (dx_ * dy_); // point source strength (mass per area per time)
 	u_.assign(N_, 0.0);
 	v_.assign(N_, 0.0);
+	w_.assign(N_, 0.0);
 }
 
 void AdeFDMPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg)
@@ -887,8 +890,11 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], 
 			int index = grid_idx(i,j);
 			u_[index] = static_cast<double>(U_field[j][i]);
 			v_[index] = static_cast<double>(V_field[j][i]);
+			w_[index] = static_cast<double>(W_field[j][i]); // placeholder
 		}	
 	}
+
+
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	printf("Wind field updated in %ld ms.\n", duration);
@@ -911,7 +917,7 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], 
 	printf("Gas concentration map list recalculated in %ld ms.\n", duration_gas_map);
 }
 
-void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char writing_mode)
+void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode)
 {
 	// log u field
 	FILE *file_u = fopen(filename_u, &writing_mode);
@@ -927,4 +933,22 @@ void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char
 	}
 	fprintf(file_v, "%f \n", v_[N_-1]);		
 	fclose(file_v);
+	// log w field
+	FILE *file_w = fopen(filename_w, &writing_mode);
+	for (int i = 0; i < N_-1; i++) {
+		fprintf(file_w, "%f,", w_[i]);
+	}
+	fprintf(file_w, "%f \n", w_[N_-1]);		
+	fclose(file_w);
+}
+
+double AdeFDMPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx)
+{
+	// convert the estimated grid indices to map index
+	float source_x, source_y;
+	index_to_position_2D(soure_pos_idx, &source_x, &source_y);
+	int grid_i, grid_j;
+	world_pos_to_grid_indices(source_x, source_y, grid_i, grid_j);
+	int index = grid_indices_to_idx(grid_i, grid_j);
+	return w_[index];
 }
