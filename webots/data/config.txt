@@ -37,4 +37,4 @@ plumeModel = FDM_PDE
 estimationScale = GLOBAL
 windEstimationMethod = GAUSSIAN_KERNEL
 windInfo = WIND_ONLINE
-modelUncertainty = FIXED_UNCERTAINTY
+modelUncertainty = DYNAMIC_UNCERTAINTY

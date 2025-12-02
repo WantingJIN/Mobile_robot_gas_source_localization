@@ -34,7 +34,7 @@ public:
     virtual ~WindEstimator() = default;
 
     // Abstract methods to be implemented by derived classes
-    virtual void estimateField(int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas) = 0;
+    virtual void estimateField(std::vector<float> meas_x, std::vector<float> meas_y, std::vector<double> u_meas, std::vector<double> v_meas) = 0;
 
     // Accessors
     const std::vector<std::vector<float>>& getU() const { return U_field_; }
@@ -62,6 +62,17 @@ protected:
                 Y_[j][i] = ymin_ + j * dy_;
             }
     }
+    // helper functions; convert between world position and (wind estimation) grid indices
+    int grid_indices_to_idx(int i, int j) const { return i + nx_ * j; }
+	void world_pos_to_grid_indices (double x, double y, int &i, int &j) const {
+		i = clamp_to_grid_x(world_to_i(x));
+		j = clamp_to_grid_y(world_to_j(y));
+	}
+	int clamp_to_grid_x(int i) const { return std::max(0, std::min(i, nx_ - 1)); }
+	int clamp_to_grid_y(int j) const { return std::max(0, std::min(j, ny_ - 1)); }
+	int grid_idx(int i, int j) const { return (i < 0 || i >= nx_ || j < 0 || j >= ny_) ? -1 : grid_indices_to_idx(i, j); }
+	int world_to_i(double x) const { return (int)floor((x - source_bounds.x_min) / dx_); }
+	int world_to_j(double y) const { return (int)floor((y - source_bounds.y_min) / dy_); }
 };
 
 // ============================================================
@@ -73,7 +84,7 @@ public:
                   float ** obstacles, int obs_nbr, float sigma = 0.2, float alpha = 0.1, float c = 0.5);
 
 
-    void estimateField(int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas) override;
+    void estimateField(std::vector<float> meas_x, std::vector<float> meas_y, std::vector<double> u_meas, std::vector<double> v_meas) override;
 
 
 private:
@@ -93,9 +104,9 @@ private:
 class BaseflowCorrectionWindEstimator : public WindEstimator {
 public:
     BaseflowCorrectionWindEstimator(float xmin, float xmax, float ymin, float ymax, int nx, int ny,
-                  float ** obstacles, int obs_nbr); 
+                  float ** obstacles, int obs_nbr, float RbfLengthScale = 1.0, double lambda = 4.0); 
 
-    void estimateField(int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas) override;
+    void estimateField(std::vector<float> meas_x, std::vector<float> meas_y, std::vector<double> u_meas, std::vector<double> v_meas) override;
 
 private:
     // --- grid parameters ---
@@ -108,9 +119,12 @@ private:
     Eigen::MatrixXd u0_, v0_;      // base flow
 
     // --- RBF basis ---
-    std::vector<Eigen::MatrixXd> basisU_; // size M, each ny_ x nx_
-    std::vector<Eigen::MatrixXd> basisV_; // size M, each ny_ x nx_
-
+    float RbfLengthScale_;
+    std::vector<Eigen::MatrixXd> rbfU_; // size M, each ny_ x nx_
+    std::vector<Eigen::MatrixXd> rbfV_; // size M, each ny_ x nx_
+    
+    // --- regularization parameters ---
+    double lambda_;
     // --- estimated field ---
     Eigen::MatrixXd u_est_, v_est_;
 
@@ -126,7 +140,7 @@ private:
     void buildRbfBasis(const std::vector<Eigen::Vector2d> &centers,
                        double lengthScale);
 
-    void buildDesignMatrix(const int idx[], const int idy[],
+    void buildDesignMatrix(const std::vector<int> &idx, const std::vector<int> &idy,
                            const std::vector<double> &u_meas,
                            const std::vector<double> &v_meas,
                            Eigen::MatrixXd &H,

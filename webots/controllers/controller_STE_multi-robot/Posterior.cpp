@@ -457,17 +457,17 @@ void Posterior::exhaustive_evaluation(struct history &history)
     
 	// FIXME - temporary arrays for measurement positions
 	int nbr = history.size;
-	int idx[nbr], idy[nbr];
+	vector<float> meas_x(nbr), meas_y(nbr);
 
 	// get indices in the map
 	for (int i = 0; i < nbr; i++)
 	{
-		idx[i] = history.position[i].x_idx;
-		idy[i] = history.position[i].y_idx;
+		meas_x[i] = history.position[i].x;
+		meas_y[i] = history.position[i].y;
 	}	
 	if (simulation_parameters.windInfo == WIND_ONLINE)
 	{
-		model->update_wind_field_and_gas_concentration_map(idx, idy, history.wind_meas_u, history.wind_meas_v);
+		model->update_wind_field_and_gas_concentration_map(meas_x, meas_y, history.wind_meas_u, history.wind_meas_v);
 		model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
 		char gas_concentration_map_each_cycle_logfile_name[600];
 		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, FSM.n_cycles);

@@ -192,7 +192,7 @@ void GaussianPlumeModel2D::log_gas_concentration_map(char *filename, char writin
 void GaussianPlumeModel2D::calculate_gas_map_and_information_matrix() {}
 void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) {}
 void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
-void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
+void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
 double GaussianPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
 /********************************************************/
@@ -519,7 +519,7 @@ void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing
 		gas_map.log_map(filename, writing_mode);
 	}
 }
-void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v) {}
+void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void DeepCFDPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
 double DeepCFDPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
 /*************************************************************************************************/
@@ -561,15 +561,23 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	set_parameters(Nx, Ny, 0.008, 1500.0);
 	if (simulation_parameters.windInfo == WIND_OFFLINE){
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
-	} else if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
+	}
+	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
 		wind_estimator_ = new GaussianWindEstimator(source_bounds.x_min, source_bounds.x_max,
 												  source_bounds.y_min, source_bounds.y_max,
-												  Nx_, Ny_, obstacles, nbr_obs);
-		// first intialize as uniform wind field
+												  Nx_, Ny_, obstacles, nbr_obs, 0.30, 1.0, 0.5);
+		// first intialize as ground truth wind field
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
-	assemble_and_factorize();
+	if (simulation_parameters.windEstimationMethod == BASEFLOW_CORRECTION){
+		wind_estimator_ = new BaseflowCorrectionWindEstimator(source_bounds.x_min, source_bounds.x_max,
+												  source_bounds.y_min, source_bounds.y_max,
+												  Nx_, Ny_, obstacles, nbr_obs, 1.0, 4.0);
+		// first intialize as ground truth wind field
+		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+	}
 
+	assemble_and_factorize();
 }
 
 AdeFDMPlumeModel2D::AdeFDMPlumeModel2D(const AdeFDMPlumeModel2D &another_model)
@@ -876,12 +884,12 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
 	}
 }
 
-void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(int idx[], int idy[], vector<double> wind_meas_u, vector<double> wind_meas_v)
+void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v)
 {
 	// update the wind field based on the historical wind measurements
 	// log the time used for wind estimation
 	auto start = std::chrono::high_resolution_clock::now();
-	wind_estimator_->estimateField(idx, idy, wind_meas_u, wind_meas_v, 0.30, 1.0, 0.5);
+	wind_estimator_->estimateField(meas_x, meas_y, wind_meas_u, wind_meas_v);
 	auto U_field = wind_estimator_->getU();
 	auto V_field = wind_estimator_->getV();
 	auto W_field = wind_estimator_->getW();

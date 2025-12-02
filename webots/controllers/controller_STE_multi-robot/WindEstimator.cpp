@@ -98,7 +98,7 @@ void GaussianWindEstimator::computeNormals() {
 
 // TODO - improvement: only proceed the new measured wind data and update the wind field estimation
 void GaussianWindEstimator::estimateField(
-        int idx[], int idy[], std::vector<double> u_meas, std::vector<double> v_meas)
+        std::vector<float> meas_x, std::vector<float> meas_y, std::vector<double> u_meas, std::vector<double> v_meas)
 {
     // ==========================================================
     // Step 1: Update background (global average) wind
@@ -124,12 +124,14 @@ void GaussianWindEstimator::estimateField(
     V_field_.assign(ny_, std::vector<float>(nx_, 0.0));
     W_field_.assign(ny_, std::vector<float>(nx_, 0.0));
 
+    // convert measurement positions to grid indices
+
     for (int i = 0; i < u_meas.size(); ++i) {
-        float idx_i = idx[i], idy_i = idy[i], U_i = u_meas[i], V_i = v_meas[i];
-        // int j = std::clamp(static_cast<int>(std::round(y_i / dy)), 0, ny - 1);
-        // int i = std::clamp(static_cast<int>(std::round(x_i / dx)), 0, nx - 1);
-        float x_i, y_i;
-        indices_to_position_2D(idx_i, idy_i, &x_i, &y_i);
+        float U_i = u_meas[i], V_i = v_meas[i];
+        float x_i = meas_x[i], y_i = meas_y[i];
+        int idx_i, idy_i;
+        world_pos_to_grid_indices(meas_x[i], meas_y[i], idx_i, idy_i);
+    
         
         float d_local = std::abs(D_[idy_i][idx_i]);
         float n_x = Nx_[idy_i][idx_i], n_y = Ny_[idy_i][idx_i];
@@ -203,11 +205,10 @@ void GaussianWindEstimator::applyDivergenceFreeProjection(int max_iter, float to
 /******************************Base flow + online correction*************************************/
 
 BaseflowCorrectionWindEstimator::BaseflowCorrectionWindEstimator(
-    float xmin, float xmax, float ymin, float ymax, int nx, int ny, float** obstacles, int obs_nbr)
-    : WindEstimator(xmin, xmax, ymin, ymax, nx, ny, obstacles, obs_nbr)
+    float xmin, float xmax, float ymin, float ymax, int nx, int ny, float** obstacles, int obs_nbr, float RbfLengthScale, double lambda)
+    : WindEstimator(xmin, xmax, ymin, ymax, nx, ny, obstacles, obs_nbr), RbfLengthScale_(RbfLengthScale), lambda_(lambda)
 {
     N_ = nx_ * ny_;
-    buildGrid();
 
     // Copy obstacles
 
@@ -217,12 +218,9 @@ BaseflowCorrectionWindEstimator::BaseflowCorrectionWindEstimator(
 
     // Build RBF basis (similar to Python: spacing ~ 1.0, length scale ~ 1.0)
     std::vector<Eigen::Vector2d> centers;
-    double spacingX = 1.0;
-    double spacingY = 1.0;
-    double rbfLengthScale = 1.0;
-
-    buildRbfCenters(centers, spacingX, spacingY);
-    buildRbfBasis(centers, rbfLengthScale);
+    //center locations, and x, y spacing; now the spacing are defined the same length scale
+    buildRbfCenters(centers, RbfLengthScale_, RbfLengthScale_);
+    buildRbfBasis(centers, RbfLengthScale_);
 
     // Initialize estimated field as base flow (can be overwritten in estimateField)
     u_est_ = u0_;
@@ -404,14 +402,14 @@ void BaseflowCorrectionWindEstimator::buildRbfBasis(
     double lengthScale)
 {
     const int M = static_cast<int>(centers.size());
-    basisU_.resize(M);
-    basisV_.resize(M);
+    rbfU_.resize(M);
+    rbfV_.resize(M);
 
     double l2 = lengthScale * lengthScale;
 
     for (int m = 0; m < M; ++m) {
-        basisU_[m].setZero(ny_, nx_);
-        basisV_[m].setZero(ny_, nx_);
+        rbfU_[m].setZero(ny_, nx_);
+        rbfV_[m].setZero(ny_, nx_);
 
         double cx = centers[m](0);
         double cy = centers[m](1);
@@ -423,13 +421,13 @@ void BaseflowCorrectionWindEstimator::buildRbfBasis(
                 double dx = xx - cx;
                 double dy = yy - cy;
                 double r2 = dx * dx + dy * dy;
-                double psi = std::exp(-r2 / (2.0 * l2));
+                double xi = std::exp(-r2 / (2.0 * l2));
 
-                double u = -(yy - cy) / l2 * psi;  // d psi / dy
-                double v =  (xx - cx) / l2 * psi;  // - d psi / dx
+                double u = -(yy - cy) / l2 * xi;  // d xi / dy
+                double v =  (xx - cx) / l2 * xi;  // - d xi / dx
 
-                basisU_[m](j, i) = u;
-                basisV_[m](j, i) = v;
+                rbfU_[m](j, i) = u;
+                rbfV_[m](j, i) = v;
             }
         }
     }
@@ -437,7 +435,7 @@ void BaseflowCorrectionWindEstimator::buildRbfBasis(
 
 // Build H, z, w (grid-based, no interpolation: idx/idy directly index cells)
 void BaseflowCorrectionWindEstimator::buildDesignMatrix(
-    const int idx[], const int idy[],
+    const std::vector<int> &idx, const std::vector<int> &idy,
     const std::vector<double> &u_meas,
     const std::vector<double> &v_meas,
     Eigen::MatrixXd &H,
@@ -445,7 +443,7 @@ void BaseflowCorrectionWindEstimator::buildDesignMatrix(
     Eigen::VectorXd &w) const
 {
     const int K = static_cast<int>(u_meas.size());
-    const int M = static_cast<int>(basisU_.size());
+    const int M = static_cast<int>(rbfU_.size());
 
     H.resize(2 * K, 1 + M);
     z.resize(2 * K);
@@ -455,6 +453,7 @@ void BaseflowCorrectionWindEstimator::buildDesignMatrix(
     z.setZero();
     w.setOnes();      // you can change weights downstream if you want
 
+    //FIXME - be careful with idx, maybe it is not the grid index but the measurement index
     for (int k = 0; k < K; ++k) {
         int i = idx[k];
         int j = idy[k];
@@ -467,14 +466,14 @@ void BaseflowCorrectionWindEstimator::buildDesignMatrix(
         int row_u = 2 * k;
         H(row_u, 0) = u0k;
         for (int m = 0; m < M; ++m)
-            H(row_u, 1 + m) = basisU_[m](j, i);
+            H(row_u, 1 + m) = rbfU_[m](j, i);
         z(row_u) = u_meas[k];
 
         // v-row
         int row_v = 2 * k + 1;
         H(row_v, 0) = v0k;
         for (int m = 0; m < M; ++m)
-            H(row_v, 1 + m) = basisV_[m](j, i);
+            H(row_v, 1 + m) = rbfV_[m](j, i);
         z(row_v) = v_meas[k];
         
         // TODO: hard-coded weights with respect to x axis of the sampling location
@@ -501,7 +500,7 @@ Eigen::VectorXd BaseflowCorrectionWindEstimator::solveRegularizedLS(
 
     for (int i = 0; i < H.rows(); ++i) {
         Hw.row(i) *= sqrtw(i);
-        zw(i)     *= sqrtw(i);
+        zw(i)     *=    (i);
     }
 
     // normal equations: (H^T H + lam*Reg) theta = H^T z
@@ -519,26 +518,35 @@ Eigen::VectorXd BaseflowCorrectionWindEstimator::solveRegularizedLS(
 // ==================== public API ====================
 
 void BaseflowCorrectionWindEstimator::estimateField(
-    int idx[], int idy[],
+    std::vector<float> meas_x, std::vector<float> meas_y,
     std::vector<double> u_meas,
     std::vector<double> v_meas)
 {
+    U_field_.assign(ny_, std::vector<float>(nx_, 0.0));
+    V_field_.assign(ny_, std::vector<float>(nx_, 0.0));
+    W_field_.assign(ny_, std::vector<float>(nx_, 0.0));
+    
     if (u_meas.size() != v_meas.size()) {
         std::cerr << "estimateField: u_meas and v_meas size mismatch" << std::endl;
         return;
     }
 
     // 1) Build design matrix
+    // convert measurement positions to grid indices 
+    std::vector<int> idx(u_meas.size()), idy(u_meas.size());
+    for (int i = 0; i < u_meas.size(); ++i) {
+        world_pos_to_grid_indices(meas_x[i], meas_y[i], idx[i], idy[i]);
+    }
+
     Eigen::MatrixXd H;
     Eigen::VectorXd z, w;
     buildDesignMatrix(idx, idy, u_meas, v_meas, H, z, w);
 
     // 2) Solve for theta = [S, a_1, ..., a_M]^T
-    double lambda = 4.0;   // same as Python example
-    Eigen::VectorXd theta = solveRegularizedLS(H, z, w, lambda);
+    Eigen::VectorXd theta = solveRegularizedLS(H, z, w, lambda_);
 
     double S_hat = theta(0);
-    int    M     = static_cast<int>(basisU_.size());
+    int    M     = static_cast<int>(rbfU_.size());
 
     std::cout << "Estimated S_hat = " << S_hat << std::endl;
 
@@ -548,8 +556,8 @@ void BaseflowCorrectionWindEstimator::estimateField(
 
     for (int m = 0; m < M; ++m) {
         double a = theta(1 + m);
-        u_est_.noalias() += a * basisU_[m];
-        v_est_.noalias() += a * basisV_[m];
+        u_est_.noalias() += a * rbfU_[m];
+        v_est_.noalias() += a * rbfV_[m];
     }
 
     // Zero inside obstacles
@@ -569,7 +577,4 @@ void BaseflowCorrectionWindEstimator::estimateField(
             V_field_[j][i] = static_cast<float>(v_est_(j, i));
         }
     }
-
 }
-
-

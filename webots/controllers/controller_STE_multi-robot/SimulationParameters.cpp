@@ -244,6 +244,7 @@ eEstimationScale parse_estimation_scale(const char* str) {
 eWindEstimationMethod parse_wind_estimation_method(const char* str) {
 	if (strcmp(str, "GROUND_TRUTH") == 0) return GROUND_TRUTH;
 	if (strcmp(str, "GAUSSIAN_KERNEL") == 0) return GAUSSIAN_KERNEL;
+	if (strcmp(str, "BASEFLOW_CORRECTION") == 0) return BASEFLOW_CORRECTION;
 	fprintf(stderr, "Unknown wind estimation method: %s\n", str);
 	exit(1);
 }
