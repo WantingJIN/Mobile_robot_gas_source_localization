@@ -29,6 +29,7 @@ void GaussianWindEstimator::computeSDF() {
 
             for (const auto& o : obstacles_) {
                 float xmin = o[0], ymin = o[1], xmax = o[2], ymax = o[3];
+                printf("Obstacle: [%f, %f, %f, %f]\n", xmin, ymin, xmax, ymax);
                 float dxo = std::max({xmin - x, (float)0.0, x - xmax});
                 float dyo = std::max({ymin - y, (float)0.0, y - ymax});
                 float unsigned_d = std::sqrt(dxo*dxo + dyo*dyo);
@@ -48,7 +49,7 @@ void GaussianWindEstimator::computeSDF() {
 void GaussianWindEstimator::computeNormals() {
     Nx_.assign(ny_, std::vector<float>(nx_, 0.0));
     Ny_.assign(ny_, std::vector<float>(nx_, 0.0));
-    for (int j = 1; j < ny_ - 1; ++j)
+    for (int j = 1; j < ny_ - 1; ++j) {
         for (int i = 1; i < nx_ - 1; ++i) {
             float dDx = (D_[j][i+1] - D_[j][i-1]) / (2*dx_);
             float dDy = (D_[j+1][i] - D_[j-1][i]) / (2*dy_);
@@ -56,6 +57,7 @@ void GaussianWindEstimator::computeNormals() {
             Nx_[j][i] = dDx / mag;
             Ny_[j][i] = dDy / mag;
         }
+    }
 
     // for the boundaries, use forward/backward difference
     for (int j = 0; j < ny_; ++j) {
@@ -90,6 +92,20 @@ void GaussianWindEstimator::computeNormals() {
             Ny_[j][i] = dDy / mag;
         }
     }
+    // log D_, Nx and Ny in to three files for debugging
+    // FILE* D_logfile = fopen("D.csv", "w");
+    // FILE* Nx_logfile = fopen("Nx.csv", "w");
+    // FILE* Ny_logfile = fopen("Ny.csv", "w");
+    // for (int j = 0; j < ny_; ++j) {
+    //     for (int i = 0; i < nx_; ++i) {
+    //         fprintf(D_logfile, "%f,", D_[j][i]);    
+    //         fprintf(Nx_logfile, "%f,", Nx_[j][i]);
+    //         fprintf(Ny_logfile, "%f,", Ny_[j][i]);
+    //     }
+    // }
+    // fclose(D_logfile);
+    // fclose(Nx_logfile);
+    // fclose(Ny_logfile);
 }
 
 // ============================================================
@@ -135,19 +151,22 @@ void GaussianWindEstimator::estimateField(
         
         float d_local = std::abs(D_[idy_i][idx_i]);
         float n_x = Nx_[idy_i][idx_i], n_y = Ny_[idy_i][idx_i];
-        //printf("idy_i: %f, idx_i: %f, n_x: %f, n_y: %f \n", idy_i, idx_i, n_x, n_y);
-        float beta = 1.0 + c_ / (d_local + 1e-12);
-        for (int jj = 0; jj < ny_; ++jj)
+        float beta = 1.0 + c_ / (d_local + 1e-3);
+        for (int jj = 0; jj < ny_; ++jj) {
             for (int ii = 0; ii < nx_; ++ii) {
                 float dx_ = X_[jj][ii] - x_i;
                 float dy_ = Y_[jj][ii] - y_i;
                 float r_n = dx_ * n_x + dy_ * n_y;
                 float r_t = -dx_ * n_y + dy_ * n_x;
+                // FIXME: still we have something very wired when the samples is very close to the obstacle
+                // Now we set beta to 0.0 manually
                 float w = std::exp(-(r_t*r_t + beta*r_n*r_n) / (2*sigma_*sigma_));
+                //float w = std::exp(-(dx_*dx_ + dy_*dy_) / (2*sigma_*sigma_));
                 U_field_[jj][ii] += w * U_i;
                 V_field_[jj][ii] += w * V_i;
                 W_field_[jj][ii] += w;
             }
+        }   
     }
 
     for (int j = 0; j < ny_; ++j){
@@ -479,9 +498,9 @@ void BaseflowCorrectionWindEstimator::buildDesignMatrix(
         // TODO: hard-coded weights with respect to x axis of the sampling location
         // Example of down-weighting downstream region (like x > 6.0)
         double weight = 1.0;
-        if (X_[j][i] < 10.0) {
-            weight = 0.5;
-        }
+        // if (X_[j][i] < 10.0) {
+        //     weight = 0.5;
+        // }
         w(row_u) = weight;
         w(row_v) = weight;
     }
@@ -536,6 +555,7 @@ void BaseflowCorrectionWindEstimator::estimateField(
     std::vector<int> idx(u_meas.size()), idy(u_meas.size());
     for (int i = 0; i < u_meas.size(); ++i) {
         world_pos_to_grid_indices(meas_x[i], meas_y[i], idx[i], idy[i]);
+        printf("Measurement (%d) %f, %f at (%f, %f) -> grid index (%d, %d)\n", i, u_meas[i], v_meas[i], meas_x[i], meas_y[i], idx[i], idy[i]);
     }
 
     Eigen::MatrixXd H;
@@ -543,7 +563,9 @@ void BaseflowCorrectionWindEstimator::estimateField(
     buildDesignMatrix(idx, idy, u_meas, v_meas, H, z, w);
 
     // 2) Solve for theta = [S, a_1, ..., a_M]^T
-    Eigen::VectorXd theta = solveRegularizedLS(H, z, w, lambda_);
+    double lambda = lambda_;
+    //  * exp(-0.01 * u_meas.size()); // adaptive regularization based on number of measurements
+    Eigen::VectorXd theta = solveRegularizedLS(H, z, w, lambda);
 
     double S_hat = theta(0);
     int    M     = static_cast<int>(rbfU_.size());

@@ -488,6 +488,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 	}
 	// for each element of the pdf
+	printf("for each element of the pdf\n");
 	for (i = 0; i < nbr_element; i++)
 	{
 		// convert index 'i' to set of parameter values 'sample'
@@ -511,6 +512,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		// add the new value to the sum
 		sum += pdf[i];
 	}
+	printf("exhaustive_evaluation done\n");
 }
 
 // relative entropy calculation between one posterior pdf and another P

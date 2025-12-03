@@ -434,7 +434,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			modelUncertainty = parse_model_uncertainty(value);
 		}
-
+		else if (strcmp(key, "experimental_logname") == 0) 
+		{
+			strcpy(experimental_logname, value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);

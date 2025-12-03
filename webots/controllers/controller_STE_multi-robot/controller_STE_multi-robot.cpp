@@ -306,11 +306,6 @@ void read_obstacle_list()
 	{
 		obstacles[i] = new float[4];
 		infile >> obstacles[i][0] >> obstacles[i][1] >> obstacles[i][2] >> obstacles[i][3];
-		// add margin
-		obstacles[i][0] -= margin;
-		obstacles[i][1] -= margin;
-		obstacles[i][2] += margin;
-		obstacles[i][3] += margin;
 	}
 
 	for (int i = 0; i < nbr_obs; i++)
@@ -329,12 +324,12 @@ void log_position()
 	fclose(goalposition_logfile);
 }
 
-void log_measurements()
+void log_measurements(int n_cycle, float x, float y, double wind_u, double wind_v, double concentration)
 {
 	// int i = 0;
 	double time = wb_robot_get_time();
 	measurements_logfile = fopen(measurements_logfile_name, "a");
-	fprintf(measurements_logfile, "%d, %f, %f, %f\n", FSM.n_cycles, sampleBuffer.average_wind_intensity, sampleBuffer.average_concentration, time);
+	fprintf(measurements_logfile, "%d, %f, %f, %lf, %lf, %lf\n", n_cycle, x, y, wind_u, wind_v, concentration);
 	fclose(measurements_logfile);
 }
 
@@ -555,6 +550,8 @@ void state_measuring()
 				int idx = position_to_index_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y);
 				cell_visited_list[idx] = 1;
 			}
+			log_measurements(FSM.n_cycles, sample_in_motion.position[i].x, sample_in_motion.position[i].y,
+							 sample_in_motion.wind_meas_u[i], sample_in_motion.wind_meas_v[i], sample_in_motion.gas_meas[i]);
 		}
 
 		sample_in_motion.position.clear();
@@ -607,7 +604,8 @@ void state_measuring()
 	history.FSM_iter.push_back(FSM.n_cycles);
 	history.size++;
 	//history_print(history);
-
+	log_measurements(FSM.n_cycles, current_position.x, current_position.y,
+						sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy, sampleBuffer.average_concentration);
 	// mark the current cell as visited
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
@@ -618,7 +616,6 @@ void state_measuring()
 	if (VERBOSE)
 		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 	log_position();
-	log_measurements();
 
 	// // send it to friends
 	// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
@@ -665,8 +662,9 @@ void state_estimating()
 		posterior->exhaustive_evaluation(history);
 	}
 
-	// printf("sum posterior : %f \n", posterior.sum);
+	printf("sum posterior : %f \n", posterior->sum);
 	posterior->normalize();
+	printf("sum posterior after normalization : %f \n", posterior->sum);
 	posterior->log_pdf(posterior_pdf_3D_name, 'a');
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		posterior->log_relative_history_meas(relative_history_meas_logfile_name, 'a', history.relative_meas);

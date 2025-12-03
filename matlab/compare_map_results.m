@@ -3,7 +3,7 @@ dataTable = table();
 %% dispatch the result to target folder
 % the general folder
 general_folder = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/';
-dispatched_folder = [general_folder,'global_vs_locals/local_map_relative'];
+dispatched_folder = [general_folder,'online_wind_estimation/baseflow_correction_same_weighting'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -82,7 +82,10 @@ for i = 1:numExperiments
     convergence_list(1) = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
     % time taken for each run 
     measurements = dlmread([folder_name, '/' num2str(ID(1)), '/measurements.csv']);
-    exp_time = measurements(end,4);
+    % Read all lines from the file
+    lines = readlines([folder_name, '/' num2str(ID(1)), '/experiment_time.csv']);
+    % Option A: assume "total time" is the last line
+    totalTime = sscanf(lines(end-1), "total time (s): %f");
     % traveling_distance
     trajectory = dlmread([folder_name, '/' num2str(ID(1)), '/trajectory.csv']);
     traj_length_sum = 0;
@@ -149,7 +152,7 @@ for i = 1:numExperiments
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error, gas_feature, plume_model);
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, totalTime, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error, gas_feature, plume_model);
     tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error', 'gas_feature', 'plume_model'};
     
     % Append the temporary table to the main dataTable

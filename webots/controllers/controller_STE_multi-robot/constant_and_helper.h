@@ -64,6 +64,7 @@ inline constexpr double b_y_resol = (b_y_max - b_y_min) / b_y_nbins;
 // ------------------------------------------------------------
 inline constexpr double MAX_DISTANCE = 10.77; // from (2.75,0) to (12.75,4)
 // inline constexpr int MAP_SIZE = x_nbins * y_nbins;
+inline constexpr float OBS_MARGIN = 0.16;
 
 // ------------------------------------------------------------
 // 💡 Miscellaneous

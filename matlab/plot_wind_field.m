@@ -2,17 +2,18 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/online_wind_estimation/istropic_wind_background_average_relative/10';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/online_wind_estimation/anisotropic_Gaussian_dynamic_sigma_relative/10';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
+anim_folder = general_folder;
 
 params = my_text2struct([experiment_file_path,'/param_log.csv']);       
 
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
 
 map_folder=[general_folder '/map'];
-map_nbr = params.map_nbr;
+map_nbr = params.map_nbr; 
 if map_nbr~=0
     obst_file = ['../openfoam/test_maps/map' num2str(map_nbr) '/map' num2str(map_nbr) '_wind0.75/' num2str(map_nbr) '_obstacles.txt'];
     obst_fileID = fopen(obst_file);
@@ -53,7 +54,7 @@ v = dlmread([experiment_file_path, '/wind_field_v.csv']);   % size: Nx × Ny
 trajectory = dlmread([experiment_file_path, '/trajectory.csv']);
 trajectory = [positions(1,:); trajectory];
 
- f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
+f1 =figure('Position',[301.0000  100.4000  1500.6000  800.6000]);
 
  %% show pdf
 for i=1:size(u,1)
@@ -149,6 +150,13 @@ for i=1:size(u,1)
 %     ylim([2 13])
 %     ax = gca; ax.XDir = 'normal'; ax.YDir = 'reverse';
 %     ax.TitleFontSizeMultiplier = 2;
+%     img_filename = [anim_folder, '/', num2str(i), '.png'];
+%     try
+%         saveas(f1, img_filename);
+%         disp(['Image ', num2str(i), ' saved successfully.']);
+%     catch
+%         disp(['Error: Image ', num2str(i), ' not saved. Check the folder permissions or file path.']);
+%     end
     pause
     drawnow
 

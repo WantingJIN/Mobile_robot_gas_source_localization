@@ -87,7 +87,7 @@ double Position::distance_from(Position p)
 
 bool Position::is_in_obstacle(float obs_xmin, float obs_xmax, float obs_ymin, float obs_ymax)
 {
-	if (x > obs_xmin && x < obs_xmax && y > obs_ymin && y < obs_ymax)
+	if (x > obs_xmin - OBS_MARGIN && x < obs_xmax + OBS_MARGIN && y > obs_ymin - OBS_MARGIN && y < obs_ymax + OBS_MARGIN)
 		return true;
 	else
 		return false;

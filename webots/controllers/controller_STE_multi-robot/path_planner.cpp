@@ -1179,10 +1179,10 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		// otherwise, lets try 4 different candidates
 		float min_dist = 10000.0;
 		Position nearest_position(*goal);
-		Position candidates[4] = {Position(obstacles[idx][0], goal->y, 0),
-						  Position(obstacles[idx][2], goal->y, 0),
-						  Position(goal->x, obstacles[idx][1], 0),
-						  Position(goal->x, obstacles[idx][3], 0)};
+		Position candidates[4] = {Position(obstacles[idx][0] - OBS_MARGIN, goal->y, 0),
+						  Position(obstacles[idx][2] + OBS_MARGIN, goal->y, 0),
+						  Position(goal->x, obstacles[idx][1] - OBS_MARGIN, 0),
+						  Position(goal->x, obstacles[idx][3] + OBS_MARGIN, 0)};
 
 		// for each candidate position
 		for (int i = 0; i < 4; i++)

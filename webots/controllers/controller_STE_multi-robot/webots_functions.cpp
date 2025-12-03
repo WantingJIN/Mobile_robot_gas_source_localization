@@ -127,6 +127,8 @@ void init()
 			if(ok) printf("source of gas : %lf %lf %lf\n", real_source_pos[0], real_source_pos[1], real_source_pos[2]);
 			fclose(sim_param_file);  
 		}
+		free(source_str);
+		printf("offline mode: real source pos loaded from file\n");
 	}
 
 
@@ -610,9 +612,10 @@ void set_logfile_names()
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
-	// log name of the experiment and scan
-      sprintf(logfile_folder_name, "%s/Results/rel_con_MOX_cdf/rel_con_MOX_source_boundary_cdf/10/1712062974290/101", workspacePath);
-	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
+	// log name of the experiment
+    sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
+	printf("logfile_folder_name: %s\n", logfile_folder_name);
+	sprintf(experiment_measurements_logfile_name, "%s/measurements.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
 
