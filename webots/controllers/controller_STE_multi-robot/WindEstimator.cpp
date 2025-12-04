@@ -92,20 +92,6 @@ void GaussianWindEstimator::computeNormals() {
             Ny_[j][i] = dDy / mag;
         }
     }
-    // log D_, Nx and Ny in to three files for debugging
-    // FILE* D_logfile = fopen("D.csv", "w");
-    // FILE* Nx_logfile = fopen("Nx.csv", "w");
-    // FILE* Ny_logfile = fopen("Ny.csv", "w");
-    // for (int j = 0; j < ny_; ++j) {
-    //     for (int i = 0; i < nx_; ++i) {
-    //         fprintf(D_logfile, "%f,", D_[j][i]);    
-    //         fprintf(Nx_logfile, "%f,", Nx_[j][i]);
-    //         fprintf(Ny_logfile, "%f,", Ny_[j][i]);
-    //     }
-    // }
-    // fclose(D_logfile);
-    // fclose(Nx_logfile);
-    // fclose(Ny_logfile);
 }
 
 // ============================================================
@@ -498,9 +484,9 @@ void BaseflowCorrectionWindEstimator::buildDesignMatrix(
         // TODO: hard-coded weights with respect to x axis of the sampling location
         // Example of down-weighting downstream region (like x > 6.0)
         double weight = 1.0;
-        // if (X_[j][i] < 10.0) {
-        //     weight = 0.5;
-        // }
+        if (X_[j][i] < 10.0) {
+            weight = 0.5;
+        }
         w(row_u) = weight;
         w(row_v) = weight;
     }
@@ -519,16 +505,15 @@ Eigen::VectorXd BaseflowCorrectionWindEstimator::solveRegularizedLS(
 
     for (int i = 0; i < H.rows(); ++i) {
         Hw.row(i) *= sqrtw(i);
-        zw(i)     *=    (i);
+        zw(i) *= sqrtw(i);
     }
 
     // normal equations: (H^T H + lam*Reg) theta = H^T z
     Eigen::MatrixXd Reg = Eigen::MatrixXd::Identity(p, p);
     Reg(0, 0) = 0.0;   // do not regularize S
 
-    Eigen::MatrixXd A = Hw.transpose() * Hw + lambda * Reg;
+    Eigen::MatrixXd A = Hw.transpose() * Hw +lambda * Reg;
     Eigen::VectorXd b = Hw.transpose() * zw;
-
     Eigen::LDLT<Eigen::MatrixXd> ldlt(A);
     Eigen::VectorXd theta = ldlt.solve(b);
     return theta;
@@ -555,7 +540,6 @@ void BaseflowCorrectionWindEstimator::estimateField(
     std::vector<int> idx(u_meas.size()), idy(u_meas.size());
     for (int i = 0; i < u_meas.size(); ++i) {
         world_pos_to_grid_indices(meas_x[i], meas_y[i], idx[i], idy[i]);
-        printf("Measurement (%d) %f, %f at (%f, %f) -> grid index (%d, %d)\n", i, u_meas[i], v_meas[i], meas_x[i], meas_y[i], idx[i], idy[i]);
     }
 
     Eigen::MatrixXd H;
@@ -563,14 +547,14 @@ void BaseflowCorrectionWindEstimator::estimateField(
     buildDesignMatrix(idx, idy, u_meas, v_meas, H, z, w);
 
     // 2) Solve for theta = [S, a_1, ..., a_M]^T
-    double lambda = lambda_;
-    //  * exp(-0.01 * u_meas.size()); // adaptive regularization based on number of measurements
+    double lambda = lambda_* exp(-0.01 * u_meas.size()); // adaptive regularization based on number of measurements
     Eigen::VectorXd theta = solveRegularizedLS(H, z, w, lambda);
 
     double S_hat = theta(0);
     int    M     = static_cast<int>(rbfU_.size());
 
     std::cout << "Estimated S_hat = " << S_hat << std::endl;
+    std::cout << "Estimated a coefficients: ";
 
     // 3) Rebuild field on full grid
     u_est_ = S_hat * u0_;
@@ -580,7 +564,9 @@ void BaseflowCorrectionWindEstimator::estimateField(
         double a = theta(1 + m);
         u_est_.noalias() += a * rbfU_[m];
         v_est_.noalias() += a * rbfV_[m];
+        std::cout << a << " ";
     }
+    std::cout << std::endl;
 
     // Zero inside obstacles
     for (int j = 0; j < ny_; ++j) {
