@@ -1,6 +1,8 @@
 #ifndef POSITION_H
 #define POSITION_H
 #include "constant_and_helper.h"
+#include <vector>
+using std::vector;
 class Position
 {
 public:
@@ -35,7 +37,23 @@ public:
     int is_in_obstacle_list(float ** obs_list, int nbr_obs);
     
     void calculate_index();
+    
+    double dist_to_goal(Position goal);
 
+};
+
+struct history
+{
+	int size;
+	vector<int> FSM_iter;
+	// Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	// double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
+	vector<Position> position;
+	vector<double> gas_meas;
+	vector<double> wind_meas_u;
+	vector<double> wind_meas_v;
+	vector<int> gas_hit_event;
+	vector<double> relative_meas;
 };
 
 #endif

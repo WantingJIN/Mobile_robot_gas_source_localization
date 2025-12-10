@@ -46,6 +46,7 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 	scores_map = new double[_map_size];
 	distance_map = new double[_map_size];
 	acc_info_map = new double[_map_size];	
+	reach_end_of_fix_path = false;
 }
 
 void PathPlanner::reset_planning_bound(SourceBounds source_bounds)
@@ -223,8 +224,7 @@ void PathPlanner::lawnmower_planning()
 	}
 	if (goal_position.x > XMAX - SAFETY_MARGIN - 0.05)
 	{
-		FSM.state = STATE_FINISHED;
-		printf("FINISHED \n");
+		reach_end_of_fix_path = true;
 	}
 }
 
@@ -342,7 +342,7 @@ void PathPlanner::belief_clustering_planning()
 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
 			for (int i = 0; i < 4; i++)
 			{
-				double dist = dist_to_goal(cluster_vertex[i]);
+				double dist = current_position.dist_to_goal(cluster_vertex[i]);
 				if (dist > max_dist_to_robot)
 				{
 					max_dist_to_robot = dist;
@@ -357,7 +357,7 @@ void PathPlanner::belief_clustering_planning()
 		bool find_goal = false;
 		for (int j = 0; j < candidate_goal.size(); j++)
 		{
-			double dist = dist_to_goal(candidate_goal[j]);
+			double dist = current_position.dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
@@ -428,7 +428,7 @@ void PathPlanner::informative_clustering_planning()
 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
 			for (int i = 0; i < 4; i++)
 			{
-				double dist = dist_to_goal(cluster_vertex[i]);
+				double dist = current_position.dist_to_goal(cluster_vertex[i]);
 				if (dist > max_dist_to_robot)
 				{
 					max_dist_to_robot = dist;
@@ -443,7 +443,7 @@ void PathPlanner::informative_clustering_planning()
 		bool find_goal = false;
 		for (int j = 0; j < candidate_goal.size(); j++)
 		{
-			double dist = dist_to_goal(candidate_goal[j]);
+			double dist = current_position.dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
 			{
 				if (simulation_parameters.visitedList == visitedList_ON)
@@ -912,7 +912,7 @@ double PathPlanner::evaluate_cluster(const pair<CellPoint, CellPoint> &cluster)
 	Position centroid(centroid_idx_x, centroid_idx_y, 0);
 
 	// Calculate the traveling distance to the centroid
-	double TD = dist_to_goal(centroid); // en m
+	double TD = current_position.dist_to_goal(centroid); // en m
     double TD_min = 0;
 	double x_range = _xmax - _xmin;
 	double y_range = _ymax - _ymin;
@@ -1025,111 +1025,6 @@ void PathPlanner::balance_expected_maximal_pdf()
 	goal_position.heading = 0;
 }
 
-// void joint_planning()
-// {
-// 	// std::cout<<"joint_planning"<<std::endl;
-// 	//  2 robots, 2 possibilities
-// 	if (simulation_parameters.number_of_robots == 2)
-// 	{
-// 		if (pt_distance(current_position, friends[0].goal) + pt_distance(friends[0].position, goal_position) < pt_distance(current_position, goal_position) + pt_distance(friends[0].position, friends[0].goal))
-// 		{
-// 			// printf("let's swap ************************************************\n");
-// 			// swap the goal positions
-// 			// inform the other guy
-// 			// wb_emitter_set_channel(emitter, 10);
-// 			Message msg(ID, friends[0].ID, current_position, -1, goal_position, 1);
-// 			// wb_emitter_send(emitter, msg.buffer, msg.buffer_size);
-// 			send_msg(msg);
-// 			// change mine as well
-// 			goal_position.copy_position(friends[0].goal);
-// 			// printf("my new goal %f %f %f , my friend's new goal \n", goal_position[0], goal_position[1], goal_position[2]);
-// 		}
-// 	}
-// 	// 3 robots, 6 possibilites
-// 	if (simulation_parameters.number_of_robots == 3)
-// 	{
-// 		if (std::isnan(friends[0].goal.x) || std::isnan(friends[0].goal.y) || std::isnan(friends[1].goal.x) || std::isnan(friends[1].goal.y))
-// 			return;
-// 		int new_dist = 0, min_dist = 0;
-// 		Position my_new_goal;
-// 		Position friend_1_new_goal;
-// 		Position friend_2_new_goal;
-// 		my_new_goal.copy_position(goal_position);
-// 		friend_1_new_goal.copy_position(friends[0].goal);
-// 		friend_2_new_goal.copy_position(friends[1].goal);
-// 		// printf("our old goals : mine %f %f %f, friend 1: %f %f %f, friend 2: %f %f %f \n", goal_position[0], goal_position[1], goal_position[2], friends[0].goal[0], friends[0].goal[1], friends[0].goal[2], friends[1].goal[0],friends[1].goal[1],friends[1].goal[2]);
-
-// 		// 0 : no swap
-// 		min_dist = pt_distance(current_position, goal_position) + pt_distance(friends[0].position, friends[0].goal) + pt_distance(friends[1].position, friends[1].goal);
-// 		// 1 : friends swap
-// 		new_dist = pt_distance(current_position, goal_position) + pt_distance(friends[0].position, friends[1].goal) + pt_distance(friends[1].position, friends[0].goal);
-// 		if (new_dist < min_dist)
-// 		{
-// 			// printf("we are in 1\n");
-// 			min_dist = new_dist;
-// 			my_new_goal.copy_position(goal_position);
-// 			friend_1_new_goal.copy_position(friends[1].goal);
-// 			friend_2_new_goal.copy_position(friends[0].goal);
-// 		}
-// 		// 2 : I swap with friend1, friend1 swaps with friend2
-// 		new_dist = pt_distance(current_position, friends[0].goal) + pt_distance(friends[0].position, friends[1].goal) + pt_distance(friends[1].position, goal_position);
-// 		if (new_dist < min_dist)
-// 		{
-// 			// printf("we are in 2\n");
-// 			min_dist = new_dist;
-// 			my_new_goal.copy_position(friends[0].goal);
-// 			friend_1_new_goal.copy_position(friends[1].goal);
-// 			friend_2_new_goal.copy_position(goal_position);
-// 		}
-// 		// 3 : I swap with friend1
-// 		new_dist = pt_distance(current_position, friends[0].goal) + pt_distance(friends[0].position, goal_position) + pt_distance(friends[1].position, friends[1].goal);
-// 		if (new_dist < min_dist)
-// 		{
-// 			// printf("we are in 3\n");
-// 			min_dist = new_dist;
-// 			my_new_goal.copy_position(friends[0].goal);
-// 			friend_1_new_goal.copy_position(goal_position);
-// 			friend_2_new_goal.copy_position(friends[1].goal);
-// 		}
-// 		// 4 : I swap with friend2, friend2 swaps with friend1
-// 		new_dist = pt_distance(current_position, friends[1].goal) + pt_distance(friends[0].position, goal_position) + pt_distance(friends[1].position, friends[0].goal);
-// 		if (new_dist < min_dist)
-// 		{
-// 			// printf("we are in 4\n");
-// 			min_dist = new_dist;
-// 			my_new_goal.copy_position(friends[1].goal);
-// 			friend_1_new_goal.copy_position(goal_position);
-// 			friend_2_new_goal.copy_position(friends[0].goal);
-// 		}
-// 		// 5 : I swap with friend2
-// 		new_dist = pt_distance(current_position, friends[1].goal) + pt_distance(friends[0].position, friends[0].goal) + pt_distance(friends[1].position, goal_position);
-// 		if (new_dist < min_dist)
-// 		{
-// 			// printf("we are in 5\n");
-// 			min_dist = new_dist;
-// 			my_new_goal.copy_position(friends[1].goal);
-// 			friend_1_new_goal.copy_position(friends[0].goal);
-// 			friend_2_new_goal.copy_position(goal_position);
-// 		}
-
-// 		// printf("Our new goals : mine %f %f %f, friend 1: %f %f %f, friend 2: %f %f %f \n", goal_position[0], goal_position[1], goal_position[2], friends[0].goal[0], friends[0].goal[1], friends[0].goal[2], friends[1].goal[0],friends[1].goal[1],friends[1].goal[2]);
-
-// 		// inform the other guys if any changes
-// 		if (friend_1_new_goal.x != friends[0].goal.x || friend_1_new_goal.y != friends[0].goal.y)
-// 		{
-// 			Message msg1(ID, friends[0].ID, current_position, -1, friend_1_new_goal, 1);
-// 			send_msg(msg1);
-// 		} // else printf("no change for friend %d\n", friends[0].ID);
-// 		if (friend_2_new_goal.x != friends[1].goal.x || friend_2_new_goal.y != friends[1].goal.y)
-// 		{
-// 			Message msg2(ID, friends[1].ID, current_position, -1, friend_2_new_goal, 1);
-// 			send_msg(msg2);
-// 		} // else printf("no change for friend %d\n", friends[1].ID);
-
-// 		// change mine as well
-// 		goal_position.copy_position(my_new_goal);
-// 	}
-// }
 
 void PathPlanner::KLD_distance_balance()
 {
@@ -1311,10 +1206,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 		goal->copy_position(nearest_position);
 	}
-
-	// change the goal position using the pointer
-	// printf(">>> Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
-	// fprintf(console_logfile, ">>> Outside arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
 }
 
 

@@ -1,8 +1,6 @@
 #include "PlumeModel.h"
 #include "Posterior.h"
 
-
-extern SampleBuffer sampleBuffer;
 // likelihood function
 double likelihood(struct history &history, double *parameters, PlumeModel *model);
 double likelihood_precomp(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model);

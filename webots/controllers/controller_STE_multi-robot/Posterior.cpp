@@ -441,11 +441,6 @@ void Posterior::MCMC_evaluation(struct history history)
 	}
 	memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
 
-	// print of screen
-	if (acceptance_rate == 0 && VERBOSE)
-		printf("prior : %d, likelihood : %f, p_acceptance: %f \n", prior(sample, nbr_dimension, model), sample_likelihood, p_acceptance);
-	if (FSM.state == STATE_ESTIMATING && VERBOSE)
-		printf("acceptance rate : %f  \n", (float)acceptance_rate / count);
 }
 
 // exhaustive evaluation of all the values of the posterior pdf
@@ -470,7 +465,8 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		model->update_wind_field_and_gas_concentration_map(meas_x, meas_y, history.wind_meas_u, history.wind_meas_v);
 		model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
 		char gas_concentration_map_each_cycle_logfile_name[600];
-		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, FSM.n_cycles);
+		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
+		iter ++;
 		model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)

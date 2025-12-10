@@ -398,7 +398,7 @@ void obstacle_avoidance_k4()
 	double range = 1024;
 
 	// if no obstacle,
-	if (obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05)
+	if (obstacle_or_not() == 0 || current_position.dist_to_goal(goal_position) <= 0.05)
 	{
 		// printf("no obstacle anymore..XXXXXXX\n");
 		// wb_differential_wheels_set_speed(0,0);

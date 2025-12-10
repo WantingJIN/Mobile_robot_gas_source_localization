@@ -60,20 +60,6 @@ struct FSM
 extern struct FSM FSM;
 
 // measurement history
-struct history
-{
-	int size;
-	vector<int> FSM_iter;
-	// Position position[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	// double measurement[MAX_SAMPLE_NUMBER*MAX_NB_ROBOTS];
-	vector<Position> position;
-	vector<double> gas_meas;
-	vector<double> wind_meas_u;
-	vector<double> wind_meas_v;
-	vector<int> gas_hit_event;
-	vector<double> relative_meas;
-};
-
 // message structure
 struct message
 {
@@ -114,9 +100,7 @@ PlumeModel* initializePlumeModel();
 bool check_stop_condition();
 bool check_converge_condition();
 
-double randu();
 long long current_timestamp();
-double dist_to_goal(Position goal);
 
 // double target_evaluation(double position[][3]);
 // void get_gps_position(Position external_gps_position);

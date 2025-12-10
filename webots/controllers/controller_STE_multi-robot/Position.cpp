@@ -105,3 +105,12 @@ int Position::is_in_obstacle_list(float ** obs_list, int nbr_obs)
 	}
 	return -1;
 }
+
+// Euclidean distance between current position to the goal position
+double Position::dist_to_goal(Position goal)
+{
+	double dx, dy;
+	dx = goal.x - x;
+	dy = goal.y - y;
+	return sqrt(dx * dx + dy * dy);
+}

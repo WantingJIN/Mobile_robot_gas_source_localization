@@ -205,13 +205,6 @@ double randn(double mu, double sigma)
 	return (mu + sigma * (double)X1);
 }
 
-// random value sampled from a uniform distribution
-double randu()
-{
-	// random variable between 0 and 1
-	return (double)rand() / (double)RAND_MAX;
-}
-
 // get the current time in timestamp (ms)
 long long current_timestamp()
 {
@@ -236,15 +229,6 @@ double min_distance(Position p1, Position g1, Position p2, Position g2)
 		return d_swap;
 	else
 		return d_original;
-}
-
-// Euclidean distance between current position to the goal position
-double dist_to_goal(Position goal)
-{
-	double dx, dy;
-	dx = goal.x - current_position.x;
-	dy = goal.y - current_position.y;
-	return sqrt(dx * dx + dy * dy);
 }
 
 // calculate wheel speeds to go toward goal position
@@ -497,7 +481,7 @@ void state_read_positions_measurements()
 		cell_visited_list[idx] = 1;
 		// printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
-		while (dist_to_goal(goal_position) > 0.05)
+		while (current_position.dist_to_goal(goal_position) > 0.05)
 		{
 			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
 			history.size++;
@@ -700,7 +684,8 @@ void state_estimating()
 
 		
 		bool is_converge_condition_reached = check_converge_condition();
-		if (is_converge_condition_reached || FSM.n_cycles == MAX_ITER)
+		bool is_path_end = path_planner->reach_end_of_fix_path; // only for fixed path like lawnmower
+		if (is_converge_condition_reached || is_path_end || FSM.n_cycles == MAX_ITER)
 		{
 			// FSM.state = STATE_FINISHED;
 			// return;
@@ -933,7 +918,7 @@ void state_moving()
 	// verify if arrived to the goal if applicable
 	// fprintf(console_logfile, "check dist to end goal \n");
 	// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-	if (dist_to_goal(goal_position) > 0.05)
+	if (current_position.dist_to_goal(goal_position) > 0.05)
 	{
 
 		if (i == path.end())
@@ -942,7 +927,7 @@ void state_moving()
 		}
 
 		// move
-		if (dist_to_goal(*i) <= 0.05 && i != path.end())
+		if (current_position.dist_to_goal(*i) <= 0.05 && i != path.end())
 		{
 			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
@@ -1005,7 +990,7 @@ void state_send_goal()
 	if (FSM.state != STATE_FINISHED)
 	{
 		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
+		// if (current_position.dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
 		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");

@@ -2,9 +2,10 @@
 
 #ifndef PATH_PLANNER_H
 #define PATH_PLANNER_H
-#include "controller_STE_multi-robot.h"
+// #include "controller_STE_multi-robot.h"
 #include "Posterior.h"
 #include "PlumeModel.h"
+#include "Dbscan.h"
 #include <vector>
 
 using std::vector;
@@ -54,8 +55,8 @@ private:
     //
 public:
     
-    //////////////////////////////
-
+    /////////////////////////////////!SECTION/////////////////////////////////
+    bool reach_end_of_fix_path;
 
     PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history);
     ~PathPlanner();

@@ -90,6 +90,7 @@ typedef struct {
     float y_resol;  // derived = (y_max - y_min) / y_nbins
 } SourceBounds;
 
+
 // Function to initialize SourceBounds and compute resolutions
 void set_source_bounds(SourceBounds *bounds,
                         double x_min, double y_min,
@@ -97,6 +98,13 @@ void set_source_bounds(SourceBounds *bounds,
                         int x_nbins, int y_nbins);
 
 extern SourceBounds source_bounds;
+
+// random value sampled from a uniform distribution
+inline double randu()
+{
+	// random variable between 0 and 1
+	return (double)rand() / (double)RAND_MAX;
+}
 
 // inline functions for position to index and vice versa
 inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){

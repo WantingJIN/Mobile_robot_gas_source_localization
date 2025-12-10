@@ -12,8 +12,6 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
 	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
 
 	vector<double> model_c_avg(history.size);
 
@@ -75,9 +73,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	// 	sigma = simulation_parameters.likelihoodSigma * (1.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
 	// }
 
-	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
+	double sum_tmp = 0; 
 
 	vector<double> model_c_avg(history.size);
 
@@ -176,13 +172,22 @@ double likelihood(struct history &history, double *parameters, PlumeModel *model
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
 	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
 
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	vector<float> model_c_avg(history.size);
 	vector<float> model_c_std(history.size);
-	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
+	// calculate the average wind intensity from the history measurements
+	double average_wind_u = 0, average_wind_v = 0, average_wind_intensity = 0;
+	for (int i = 0; i < history.size; i++)
+	{
+		average_wind_u += history.wind_meas_u[i];
+		average_wind_v += history.wind_meas_v[i];
+	}
+	average_wind_u /= history.size;
+	average_wind_v /= history.size;
+	average_wind_intensity = sqrt(average_wind_u * average_wind_u + average_wind_v * average_wind_v);
+
+	model->concentration(history.position, history.size, average_wind_intensity, parameters, model_c_avg, model_c_std);
 
 	for (int i = 0; i < history.size; i++)
 	{
@@ -257,9 +262,6 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 double likelihood_gas_hit(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	double sum_tmp = 0;
-	if (sampleBuffer.average_wind_intensity == 0)
-		printf("NO WIND, BYE BYE!\n");
-
 	vector<double> model_c_avg(history.size);
 
 	int nbr = history.size;

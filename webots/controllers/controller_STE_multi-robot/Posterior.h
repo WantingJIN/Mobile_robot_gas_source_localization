@@ -1,7 +1,7 @@
 #ifndef POSTERIOR_H
 #define POSTERIOR_H
 
-#include "controller_STE_multi-robot.h"
+// #include "controller_STE_multi-robot.h"
 #include "PlumeModel.h"
 #include "Position.h"
 #include "likelihood_estimator.h"
@@ -22,6 +22,7 @@ public:
     int nbr_element_marginal;
     double *source_marginal_pdf;
     PlumeModel *model;
+    int iter = 0;
 
     // constructor : uniform distribution
     Posterior(PlumeModel *input_model);
