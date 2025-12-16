@@ -1,0 +1,12 @@
+vicon_median_length: 20
+control_rate: 20.
+max_lin_vel: 1.
+max_agl_vel: 1.
+lin_accuracy: 0.05
+agl_accuracy: 0.1
+control_turning_P: 1
+control_turning_offset: 0.2
+control_driving_P: 1.
+control_driving_offset: 0.2
+control_tracking_P: 0.5
+control_tracking_I: 0.01

@@ -88,3 +88,9 @@ Khepera/Data/gas_concentration_maps.csv
 # matlab
 *.asv
 
+# ros file
+ros2/build/
+ros2/install/
+ros2/log/
+
+**/log/**
