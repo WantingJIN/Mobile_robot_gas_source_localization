@@ -1,7 +1,7 @@
 #include <math.h>
 // #include "nvwa/debug_new.h"
-#include "GasDispersionMap.h"
 #include <fstream>
+#include "ste_package/GasDispersionMap.h"
 
 extern SourceBounds source_bounds;
 GasDispersionMap::GasDispersionMap(int index_sx, int index_sy)

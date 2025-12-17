@@ -1,4 +1,4 @@
-#include "SimulationParameters.h"
+#include "ste_package/SimulationParameters.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -150,13 +150,11 @@ eRelativeMethod parse_relative_method(const char *str)
 	fprintf(stderr, "Unknown relative method: %s\n", str);
 	exit(1);
 }
-eSimuMode parse_simu_mode(const char *str)
-{
-	if (strcmp(str, "ONLINE") == 0)
-		return ONLINE;
-	if (strcmp(str, "OFFLINE") == 0)
-		return OFFLINE;
-	fprintf(stderr, "Unknown simulation mode: %s\n", str);
+eWorkingMode parse_work_mode(const char* str) {
+	if (strcmp(str, "OFFLINE") == 0) return OFFLINE;
+	if (strcmp(str, "EXPERIMENT") == 0) return EXPERIMENT;
+	if (strcmp(str, "VIDEO") == 0) return VIDEO;
+	fprintf(stderr, "Unknown work mode: %s\n", str);
 	exit(1);
 }
 eCalibrationMode parse_calibration_mode(const char *str)
@@ -372,9 +370,9 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			R0 = atof(value);
 		}
-		else if (strcmp(key, "simuMode") == 0)
+		else if (strcmp(key, "workingMode") == 0)
 		{
-			simuMode = parse_simu_mode(value);
+			workingMode = parse_work_mode(value);
 		}
 		else if (strcmp(key, "likelihoodSigma") == 0)
 		{
@@ -485,7 +483,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "vel_factor %f\n", vel_factor);
 	fprintf(sim_param_file, "sampling_dist_thresh %f\n", sampling_dist_thresh);
 	fprintf(sim_param_file, "relative_method %d\n", relativeMethod);
-	fprintf(sim_param_file, "simu_mode %d\n", simuMode);
+	fprintf(sim_param_file, "working_mode %d\n", workingMode);
 	fprintf(sim_param_file, "calibration_mode %d\n", calibrationMode);
 	fprintf(sim_param_file, "gas_hit_method %d\n", gasHitMethod);
 	fprintf(sim_param_file, "gas_hit_threshold %d\n", gas_hit_threshold);

@@ -1,4 +1,4 @@
-#include "likelihood_estimator.h"
+#include "ste_package/likelihood_estimator.h"
 
 extern int nbr_obs;
 extern float margin;

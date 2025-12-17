@@ -9,17 +9,23 @@
 // custom libraries
 #include <fstream>
 #include <iostream>
-#include "controller_STE_multi-robot.h"
+#include <chrono>
+#include <memory>
+#include "ste_package/ste_node.h"
 // #include "nvwa/debug_new.h"
-#include "Posterior.h"
-#include "Message.h"
-#include "webots_functions.h"
-#include "path_planner.h"
+#include "ste_package/Posterior.h"
+#include "ste_package/Message.h"
+#include "ste_package/robot_functions.h"
+#include "ste_package/path_planner.h"
 // #include "aStar.h"
-#include "visilibity.hpp"
-#include <webots/supervisor.h>
+#include "ste_package/visilibity.hpp"
+
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
+
 
 using namespace std;
+using namespace std::chrono_literals;
 
 // Global Variables
 
@@ -111,9 +117,11 @@ PlumeModel* plume_model = nullptr;
 // Posterior posterior(plume_model);
 Posterior* posterior= nullptr;
 PathPlanner* path_planner = nullptr;
+
+RosBridge ros;
+
 // robot's ID
 int ID;
-int self_index;
 
 // message structure
 struct message message;
@@ -166,44 +174,9 @@ SourceBounds source_bounds;
 
 // store the belief maps of the whole team
 std::vector<std::vector<double>> belief_maps;
-std::vector<int> received_flags;
-// merged belief map
-std::vector<double> belief_map_merged;
 // visited list
 std::vector<int> cell_visited_list;
-
-bool printed = false;
-bool entered_state_receive_pdf = false;
 // =========================== FUNCTIONS ================================ //
-// random value sampled from a normal distribution
-double randn(double mu, double sigma)
-{
-	// taken from https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
-	double U1, U2, W, mult;
-	static double X1, X2;
-	static int call = 0;
-
-	if (call == 1)
-	{
-		call = !call;
-		return (mu + sigma * (double)X2);
-	}
-
-	do
-	{
-		U1 = -1 + ((double)rand() / RAND_MAX) * 2;
-		U2 = -1 + ((double)rand() / RAND_MAX) * 2;
-		W = pow(U1, 2) + pow(U2, 2);
-	} while (W >= 1 || W == 0);
-
-	mult = sqrt((-2 * log(W)) / W);
-	X1 = U1 * mult;
-	X2 = U2 * mult;
-
-	call = !call;
-
-	return (mu + sigma * (double)X1);
-}
 
 // get the current time in timestamp (ms)
 long long current_timestamp()
@@ -213,58 +186,6 @@ long long current_timestamp()
 	long long milliseconds = te.tv_sec * 1000LL + te.tv_usec / 1000; // caculate milliseconds
 	// printf("milliseconds: %lld\n", milliseconds);
 	return milliseconds;
-}
-
-// Euclidean distance between two points
-double pt_distance(Position p1, Position p2)
-{
-	return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
-}
-// min distance between two robots position (p1 and p2) and their goals (g1 and g2)
-double min_distance(Position p1, Position g1, Position p2, Position g2)
-{
-	double d_original = pt_distance(p1, g1) + pt_distance(p2, g2);
-	double d_swap = pt_distance(p1, g2) + pt_distance(p2, g1);
-	if (d_swap < d_original)
-		return d_swap;
-	else
-		return d_original;
-}
-
-// calculate wheel speeds to go toward goal position
-void go_to_goal(Position goal)
-{
-	// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, goal.x,goal.y);
-	// vector to the goal
-	double movement[2];
-	movement[0] = (goal.x - current_position.x);
-	movement[1] = (goal.y - current_position.y);
-	// printf("movement : %f %f \n", movement[0], movement[1]);
-
-	// vector to the goal in robot coordinates
-	float x = movement[0] * cosf(current_position.heading) + movement[1] * sinf(current_position.heading);  // x in robot coordinates
-	float z = -movement[0] * sinf(current_position.heading) + movement[1] * cosf(current_position.heading); // z in robot coordinates
-	float bearing = atan2(z, x) - PI / 2;
-	// printf("bearing : %f \n", bearing/PI*180);
-
-	double k_rho = 0.2;		// gain for linear velocity
-	double k_theta = k_rho * 5.0; // gain for angular velocity; 5.0 is the ratio between the two gains, where is a good value to reach the goal
-	// angular and linear velocity
-	// the maximal speed of Khepera is 0.8m/s, so that the maximal velocity factor is 4
-	float w = simulation_parameters.vel_factor * k_theta * sinf(bearing);
-
-	// ORIGINAL CONTROLLER
-	float u = simulation_parameters.vel_factor * k_rho * cosf(bearing); // default vel factor is 1
-
-	// LINEAR VELOCITY CONTROLLER
-	// int dir = (cosf(bearing)>0)-(cosf(bearing)<0);
-	// float u = simulation_parameters.vel_factor * dir * (abs(bearing)<=0.2) + (abs(bearing)>0.2) * 0.2 * cosf(bearing); //simulation_parameters.vel_factor * 0.2 * cosf(bearing);
-
-	// printf("linear v : %f; angular w : %f \n", u, w);
-	//  wheels speed
-	speed[0] = (u - AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS;
-	speed[1] = (u + AXLE_LENGTH * w / 2.0) / WHEEL_RADIUS;
-	// printf("speed : %f %f \n", speed[0], speed[1]);
 }
 
 // show the measurement history on screen
@@ -303,7 +224,7 @@ void read_obstacle_list()
 void log_position()
 {
 	// get current clock time
-	double time = current_timestamp() / 1000.0;
+	double time = current_timestamp();
 	goalposition_logfile = fopen(goalposition_logfile_name, "a");
 	fprintf(goalposition_logfile, "%d, %f, %f, %f, %f\n", FSM.n_cycles, current_position.x, current_position.y, current_position.heading, time);
 	fclose(goalposition_logfile);
@@ -312,7 +233,6 @@ void log_position()
 void log_measurements(int n_cycle, float x, float y, double wind_u, double wind_v, double concentration)
 {
 	// int i = 0;
-	double time = wb_robot_get_time();
 	measurements_logfile = fopen(measurements_logfile_name, "a");
 	fprintf(measurements_logfile, "%d, %f, %f, %lf, %lf, %lf\n", n_cycle, x, y, wind_u, wind_v, concentration);
 	fclose(measurements_logfile);
@@ -338,7 +258,7 @@ void log_max_a_posteriori()
 
 void log_entropy()
 {
-	double time = get_exp_time();
+	double time = current_timestamp();
 	entropy_logfile = fopen(entropy_logfile_name, "a");
 	fprintf(entropy_logfile, "%f, %f\n", posterior->entropy, time);
 	fclose(entropy_logfile);
@@ -390,7 +310,7 @@ void log_visited_list()
 
 void log_trajectory(Position p)
 {
-	double time = wb_robot_get_time();
+	double time = current_timestamp();
 	trajectory_logfile = fopen(trajectory_logfile_name, "a");
 	fprintf(trajectory_logfile, "%d, %f, %f, %f, %f\n", FSM.n_cycles, p.x, p.y, p.heading, time);
 	fclose(trajectory_logfile);
@@ -414,209 +334,35 @@ void log_experiment_time()
 }
 
 // ============================== STATES ================================= //
-void state_waiting()
-{
-	// initial waiting for the plume to get established
-	static int counter = 0;
-	counter++;
 
-	if (counter > 400)
-	{
-		FSM.state = STATE_MEASURING;
-		FSM.hook = state_measuring;
-		// log start timestamp of the first measuring state (static variable)
-		start_timestamp = wb_robot_get_time();
-		printf("start timestamp: %f\n", start_timestamp);
-		time_before_measuring = start_timestamp;
-	}
+void state_initializing(){
+	printf("Robot ID [%d]: STATE_INITIALIZING \n", ID);
+    // TODO: establish baseline measurements
+	// Radom Start position
+	float start_x = 0.0;
+	float start_y = 5.0;
+	goal_position.set_to(start_x, start_y, 0.0);
+	ros.publishWaypoint(start_x, start_y, 0.0);
+	FSM.state = STATE_LISTENING;
+	FSM.hook  = state_listening;
 }
 
-void state_read_initial_position_measurement()
-{
-	printf("Enter state read initial position\n");
-	int d, iter;
-	float f1, f2, f3, f4, f5, f6, f7, f8;
-	double t;
-	char line[256];
-	start_timestamp = wb_robot_get_time();
 
-	// Read the goal position
-	if (!feof(experiment_goalposition_logfile))
-	{
-		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
-		goal_position.x = f1;
-		goal_position.y = f2;
-		goal_position.heading = 0;
-		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
-		fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
-		history.size++;
-		history.gas_meas.push_back(f4);
-		fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
-		history.position.push_back({f6, f7, f8});
-		current_position.x = f6;
-		current_position.y = f7;
-		current_position.heading = f8;
-		printf("measurement @ position (%f, %f, %f) is %f\n", current_position.x, current_position.y, current_position.heading, f4);
+void state_listening(){
+	printf("Receiving measurements... \n");
+    if (ros.getCurrentPose(&current_position.x, &current_position.y, &current_position.heading)){
+		while (current_position.dist_to_goal(goal_position) > 0.05){
+			current_position.calculate_index();
+		    printf("Current Position: x = %f, y = %f, heading = %f\n", current_position.x, current_position.y, current_position.heading);
+		    // pushback the result into history
+		}
 	}
-	sampleBuffer.average_wind_intensity = 1;
-	FSM.state = STATE_ESTIMATING;
-	FSM.hook = state_estimating;
+		
+	FSM.state = STATE_LISTENING;
+	FSM.hook  = state_listening;
+		
 }
 
-void state_read_positions_measurements()
-{
-	printf("Enter state read goal and measurment\n");
-	int d, iter;
-	float f1, f2, f3, f4, f5, f6, f7, f8;
-	double t;
-	char line[256];
-
-	// Read the goal position
-	if (!feof(experiment_goalposition_logfile))
-	{
-		fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t);
-		goal_position.x = f1;
-		goal_position.y = f2;
-		goal_position.heading = 0;
-		int idx = position_to_index_2D(goal_position.x, goal_position.y);
-		cell_visited_list[idx] = 1;
-		// printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
-
-		while (current_position.dist_to_goal(goal_position) > 0.05)
-		{
-			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d", &d, &f4, &f5, &iter);
-			history.size++;
-			history.gas_meas.push_back(f4);
-			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
-			history.position.push_back({f6, f7, f8});
-			current_position.x = f6;
-			current_position.y = f7;
-			current_position.heading = f8;
-			// printf("measurement @ position (%f, %f, %f) is %f\n", current_position.x, current_position.y, current_position.heading,f4);
-		}
-	}
-	sampleBuffer.average_wind_intensity = 1;
-	FSM.state = STATE_ESTIMATING;
-	FSM.hook = state_estimating;
-}
-
-void state_measuring()
-{
-	printf("Robot ID [%d]: STATE_MEASURING \n", ID);
-	// printf("measuring sample number %d\n", measurements.n_samples);
-	vector<double> sample_from_map;
-	// if robot is sensing while moving, saving the measurement in motion
-	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
-	{
-		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-		{
-			gas_map.retrieve_readings_from_gasmap(sample_in_motion.position, sample_from_map);
-		}
-
-		for (int i = 0; i < sample_in_motion.size; i++)
-		{
-			history.position.push_back(sample_in_motion.position[i]);
-			// if there is some post-processing, then use the sample from the gas map
-			// otherwise, use the raw sample from the robot
-			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-				history.gas_meas.push_back(sample_from_map[i]);
-			else
-				history.gas_meas.push_back(sample_in_motion.gas_meas[i]);
-			// store wind measurements
-			history.wind_meas_u.push_back(sample_in_motion.wind_meas_u[i]);
-			history.wind_meas_v.push_back(sample_in_motion.wind_meas_v[i]);
-
-			history.FSM_iter.push_back(FSM.n_cycles);
-			history.size++;
-			// mark the cell as visited
-			if (simulation_parameters.visitedList == visitedList_ON)
-			{
-				int idx = position_to_index_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y);
-				cell_visited_list[idx] = 1;
-			}
-			log_measurements(FSM.n_cycles, sample_in_motion.position[i].x, sample_in_motion.position[i].y,
-							 sample_in_motion.wind_meas_u[i], sample_in_motion.wind_meas_v[i], sample_in_motion.gas_meas[i]);
-		}
-
-		sample_in_motion.position.clear();
-		sample_in_motion.gas_meas.clear();
-		sample_in_motion.wind_meas_u.clear();
-		sample_in_motion.wind_meas_v.clear();
-		sample_in_motion.size = 0;
-		sample_from_map.clear();
-	}
-	// if the sampling mode is stop and go, then sample for several seconds and take the average value
-	// Only the average value is used for the estimation
-	if (simulation_parameters.samplingMode == STOP_AND_GO_SAMPLING)
-	{
-		// Sample for several seconds and take the average value
-		if (sampleBuffer.n_samples < ODOR_FILTER_LENGTH)
-		{
-			// continue measuring odor concentration
-			double odor_concentration = 0.0;
-			odor_read(&sampleBuffer.instant_concentration, odor_concentration);
-			// measuring wind
-			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle, &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
-			// printf("instant concentration: %f, wind intensity: %f\n", sampleBuffer.instant_concentration, sampleBuffer.instant_wind_intensity);
-			// add samples to buffers
-			sampleBuffer.add_all_to_buffer();
-			// printf("n %d wind intensity: %f, angle %f \n", sampleBuffer.n_samples, sampleBuffer.instant_wind_intensity, sampleBuffer.instant_wind_angle);
-			return;
-		}
-		else
-		{
-			// average all samples
-			sampleBuffer.average_all();
-		}
-	}
-	if (simulation_parameters.samplingMode == SENSE_WITHOUT_STOP || simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
-	{
-		// continue measuring odor concentration
-		double odor_concentration = 0.0;
-		odor_read(&sampleBuffer.instant_concentration, odor_concentration);
-		// measuring wind
-		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle, &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
-		// add samples to buffers
-		sampleBuffer.add_all_to_buffer();
-		sampleBuffer.average_all();
-	}
-
-	history.position.push_back({current_position.x, current_position.y, 0});
-	history.gas_meas.push_back(sampleBuffer.average_concentration);
-	history.wind_meas_u.push_back(sampleBuffer.average_wind_vx);
-	history.wind_meas_v.push_back(sampleBuffer.average_wind_vy);
-	history.FSM_iter.push_back(FSM.n_cycles);
-	history.size++;
-	//history_print(history);
-	log_measurements(FSM.n_cycles, current_position.x, current_position.y,
-						sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy, sampleBuffer.average_concentration);
-	// mark the current cell as visited
-	if (simulation_parameters.visitedList == visitedList_ON)
-	{
-		int idx = position_to_index_2D(current_position.x, current_position.y);
-		cell_visited_list[idx] = 1;
-	}
-	// log and save
-	if (VERBOSE)
-		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
-	log_position();
-
-	// // send it to friends
-	// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
-	// {
-	// 	Message msg(ID, 1, history.position[(history.size) - 1], sampleBuffer.average_concentration, goal_position, 0);
-	// 	send_msg(msg);
-	// }
-
-	// go to estimation
-	FSM.state = STATE_ESTIMATING;
-	FSM.hook = state_estimating;
-	time_after_measuring = wb_robot_get_time();
-	navigation_sampling_time_sum += time_after_measuring - time_before_measuring;
-	printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
-	
-}
 
 void state_estimating()
 {
@@ -667,96 +413,27 @@ void state_estimating()
 	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
 
 	// check if stopping condition is reached
-	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
+	// calculate entropy and spread
+	posterior->process();
+	posterior->calculate_entropy_and_spread();
+	log_expected_a_posteriori();
+	log_max_a_posteriori();
+	log_entropy();
+	
+	bool is_converge_condition_reached = check_converge_condition();
+	bool is_path_end = path_planner->reach_end_of_fix_path; // only for fixed path like lawnmower
+	if (is_converge_condition_reached || is_path_end || FSM.n_cycles == MAX_ITER)
 	{
-		// calculate entropy and spread
-		posterior->process();
-      	posterior->calculate_entropy_and_spread();
-		log_expected_a_posteriori();
-		log_max_a_posteriori();
-		log_entropy();
-
-		char label[255];
-		sprintf(label, "Iteration: %d\n", FSM.n_cycles);
-		wb_supervisor_set_label(1, label, 0.1, 0.8, 0.1, 0x61A8E8, 0, "Impact");
-		char label2[255];
-		sprintf(label2, "Entropy: %.3f\n", posterior->entropy);
-		wb_supervisor_set_label(2, label2, 0.1, 0.85, 0.1, 0xFF0000, 0, "Impact");
-
-		
-		bool is_converge_condition_reached = check_converge_condition();
-		bool is_path_end = path_planner->reach_end_of_fix_path; // only for fixed path like lawnmower
-		if (is_converge_condition_reached || is_path_end || FSM.n_cycles == MAX_ITER)
-		{
-			// FSM.state = STATE_FINISHED;
-			// return;
-			if (simulation_parameters.estimationScale == GLOBAL){
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-				broadcast_state_finished();
-				return;
-			} 
-			else {
-				// Change the estimation range and move robot to new area
-				// reset the posterior and plume range
-				// if the estimation converge inside the estimation range, then stop
-				// if the estimation converge on the boundary, then it need to be checked
-				// Also set a maximum number of relocations
-				if (posterior->is_converged_on_boundary() && (FSM.n_relocations < MAX_RELOCATIONS)){
-					FSM.n_relocations++;
-					// move the robot to the converged position
-					goal_position.x = plume_model->max_a_post_value[0];
-					goal_position.y = plume_model->max_a_post_value[1];
-					goal_position.heading = 0;
-					Message msg(ID, 0, goal_position, -1, goal_position, 0);
-					send_msg(msg);
-					printf("Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
-					fprintf(console_logfile, "Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
-					FSM.state = STATE_MOVING;
-					FSM.hook = state_moving;
-
-					printf("The estimation converged on the boundary, change the estimation range and relocate robot \n");
-					fprintf(console_logfile, "The estimation converged on the boundary, change the estimation range and relocate robot \n");
-					// NOTE - complied but didn't try to run 
-					// TODO - save the estimation range for every iteration
-					// TODO - should keep the same resolution as the global map for fair comparison
-					// set_source_bounds_centered_with_location(&source_bounds, goal_position.x, goal_position.y);
-					// plume_model->reset_estimation_ranges(source_bounds);
-					// plume_model->calculate_gas_map_and_information_matrix();
-					// posterior->pdf_reset();
-					// path_planner->reset_planning_bound(source_bounds);
-				} else {
-					FSM.state = STATE_FINISHED;
-					printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-					fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-					broadcast_state_finished();
-					return;
-				}
-				
-			}
-		} else {
-			FSM.state = STATE_UPDATEGOAL;
-			FSM.hook = state_updategoal;
-		}
-	}
-	else if (simulation_parameters.teamStrategy == CENTRALIZED)
-	{
-		if (ID == CENTRAL_MASTER_ID)
-		{
-			FSM.state = STATE_RECEIVE_PDF;
-			FSM.hook = state_receive_pdf;
-		}
-		else
-		{
-			FSM.state = STATE_SEND_PDF;
-			FSM.hook = state_send_pdf;
-		}
-	}
-	else if (simulation_parameters.teamStrategy == DISTRIBUTED)
-	{
-		FSM.state = STATE_SHARE_PDF;
-		FSM.hook = state_share_pdf;
+		// FSM.state = STATE_FINISHED;
+		// return;
+		FSM.state = STATE_FINISHED;
+		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+		return;
+	
+	} else {
+		FSM.state = STATE_UPDATEGOAL;
+		FSM.hook = state_updategoal;
 	}
 }
 
@@ -839,593 +516,19 @@ void state_updategoal()
 		i = path.begin();
 		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		// send the goal to the supervisor
-		Message msg(ID, 0, goal_position, -1, goal_position, 0);
-		send_msg(msg);
+		ros.publishWaypoint(i->x, i->y, 0.0);
+		printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
 		// if online simulation: move to the goal position
 		// if offline simulation: read the next goal position and measurements from the file
-		if (simulation_parameters.simuMode == ONLINE)
-		{
-			// update goal
-			FSM.state = STATE_MOVING;
-			FSM.hook = state_moving;
-			time_before_moving = wb_robot_get_time();
-			long long current_path_planning_time = current_timestamp() - time_before_path_planning;
-			planning_time_sum += current_path_planning_time;
-		}
-		else
-		{
-			FSM.state = STATE_READ_ALL;
-			FSM.hook = state_read_positions_measurements;
-		}
-	}
-}
-
-bool entered_state_moving = false;
-
-void state_moving()
-{
-
-	if (!entered_state_moving)
-	{
-		printf("Robot ID [%d]: STATE_MOVING \n", ID);
-
-		// this one doesnt make sense because it enters again in state_moving quite fast (0.288 sec) but forces waiting for n_iter=frequency or distance to the goal < 0.05
-		// double time_now = wb_robot_get_time();
-		// double time_between_movements = time_now - time_after_moving;
-		// printf("Robot ID [%d]: Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements);
-
-		entered_state_moving = true;
-	}
-
-	// printf("moving toward the goal\n");
-	if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
-	{
-		sample_counter++;
-		// sample and run kernel
-		double sensor_reading = 0.0;
-		double odor_concentration = 0.0;
-		double wind_intensity = 0.0;
-		double wind_angle = 0.0;
-		double wind_vx = 0.0;
-		double wind_vy = 0.0;
-		double wind_vz = 0.0;
-		odor_read(&sensor_reading, odor_concentration);
-		wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
-		//printf("instant wind intensity: %f, wind angle: %f, wind vx: %f, wind vy: %f, wind vz: %f\n", wind_intensity, wind_angle, wind_vx, wind_vy, wind_vz);
-		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-		{
-			reverse_sensor_model(sensor_reading, previous_sensor_reading);
-		}
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-		{
-			gas_map.runKernelAlgorithm(current_position, sensor_reading);
-		}
-		if (sample_counter > simulation_parameters.sampling_period)
-		{
-			// Sampling distance threshold
-			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-			//{
-			sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-			sample_in_motion.gas_meas.push_back(sensor_reading);
-			sample_in_motion.wind_meas_u.push_back(wind_vx);
-			sample_in_motion.wind_meas_v.push_back(wind_vy);
-			sample_in_motion.size++;
-			last_measurement_pos.x = current_position.x;
-			last_measurement_pos.y = current_position.y;
-			sample_counter = 0;
-		}
-	}
-	// verify if arrived to the goal if applicable
-	// fprintf(console_logfile, "check dist to end goal \n");
-	// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-	if (current_position.dist_to_goal(goal_position) > 0.05)
-	{
-
-		if (i == path.end())
-		{
-			fprintf(console_logfile, "path end goal reached \n");
-		}
-
-		// move
-		if (current_position.dist_to_goal(*i) <= 0.05 && i != path.end())
-		{
-			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-			i++;
-			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-		}
-		go_to_goal(*i);
-		// obstacle avoidance if necessary
-		if (obstacle_or_not() == 1)
-		{
-			FSM.state = STATE_OBSTACLE_AVOIDANCE;
-			FSM.hook = state_obstacle_avoidance;
-			return;
-		}
-		set_wheels_speed(speed[0], speed[1]);
-
-		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / TIME_STEP));
-
-		if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
-			if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
-				{
-				double time_now_time_step_far = wb_robot_get_time();
-				// set_wheels_speed(0, 0);
-				sampleBuffer.reset_all();
-				path.clear();
-				// printf("Robot ID [%d]. Number of iteration is %d\n", ID, n_time_step);
-				FSM.state = STATE_MEASURING;
-				FSM.hook = state_measuring;
-				time_after_moving = wb_robot_get_time();
-				entered_state_moving = false;
-			}
-		}
-	}
-	else 
-	{
-		double time_now_time_step_near = wb_robot_get_time();
-		set_wheels_speed(0, 0);
-		sampleBuffer.reset_all();
-		path.clear();
-		// back to measuring
-		FSM.state = STATE_MEASURING;
-		FSM.hook = state_measuring;
-		time_after_moving = wb_robot_get_time();
-		navigation_sampling_time_sum += time_after_moving - time_before_moving;
-		time_before_measuring = wb_robot_get_time();
-		printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
-		entered_state_moving = false;
-	}
-}
-
-void state_obstacle_avoidance()
-{
-	// printf("avoiding obstacle\n");
-	obstacle_avoidance_k4();
-}
-
-void state_send_goal()
-{
-	printf("Robot ID [%d]: STATE_SEND_GOAL \n", ID);
-
-	if (FSM.state != STATE_FINISHED)
-	{
-		// The goal position is very close to current postion, swith to random planning
-		// if (current_position.dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-		// {
-		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		// 	random_planning();
-		// }
-
-		// goal position for Robot [101]
-		goal_position = goal_position_team[0];
-		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		path_planner->goal_outside_obstacles(&goal_position);
-		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-		// find the path using visibility graph
-		VisiLibity::Point start(current_position.x, current_position.y);
-		VisiLibity::Point finish(goal_position.x, goal_position.y);
-		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-
-		// copy the path in another variable
-		for (unsigned k = 0; k < Polyline_path.size(); k++)
-		{
-			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-			path.push_back(p);
-			log_trajectory(p);
-		}
-		i = path.begin();
-		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-		// send the goal to the supervisor
-		Message msg(ID, 0, goal_position, -1, goal_position, 0);
-		send_msg(msg);
-
-		for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-			int target_ID = 101 + i;
-			if (target_ID == ID) continue;  // Skip self
-	    
-			Message msg(ID, target_ID, goal_position_team[i], -1, goal_position_team[i], 0); // -1 for STATE_FINISHED flag
-			send_msg(msg);
-		}
-
-		// move to the goal position
-		if (simulation_parameters.simuMode == ONLINE)
-		{
-			// update goal
-			FSM.state = STATE_MOVING;
-			FSM.hook = state_moving;
-			time_before_moving = wb_robot_get_time();
-		}
-		else
-		{
-			FSM.state = STATE_READ_ALL;
-			FSM.hook = state_read_positions_measurements;
-		}
-	}
-}
-
-bool entered_state_receive_goal = false;
-
-void state_receive_goal()
-{
-
-	if (!entered_state_receive_goal)
-	{
-		printf("Robot ID [%d]: STATE_RECEIVE_GOAL \n", ID);
-		entered_state_receive_goal = true;
-	}
-
-	bool goal_received = false;
-
-	// message queue lenght
-	int queue_length = wb_receiver_get_queue_length(receiver);
-	// printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
-
-	if (queue_length == 0)
-		return;
-
-	while (wb_receiver_get_queue_length(receiver) > 0)
-	{
-		const void *data = wb_receiver_get_data(receiver);
-		const double *buffer = (const double *)data;
-
-		// link sender and receiver with buffer
-		int sender_ID = (int)buffer[0];
-		int receiver_ID = (int)buffer[1];
-		int flag_finished = (int)buffer[9];
-		// printf("Robot ID [%d]: Checking message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
-
-		// check if state_finished
-		if (flag_finished == -1)
-		{
-			printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-			FSM.state = STATE_FINISHED;
-			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-			return;
-		}
-
-		// check if message comes from robot 101
-		if (sender_ID == CENTRAL_MASTER_ID)
-		{
-			if (receiver_ID == ID)
-			{ // this message is for this robot?
-				// printf("Robot ID [%d]: Valid goal received from sender_ID %d!\n", ID, sender_ID);
-
-				// assign the goal to the robot specified in the receiver ID
-				goal_position.x = buffer[6];
-				goal_position.y = buffer[7];
-				goal_position.heading = buffer[8];
-
-				// print new goal position
-				// printf("Robot ID [%d]: Set goal_position = %f %f\n", ID, goal_position.x, goal_position.y);
-
-				goal_received = true;
-			}
-		}
-
-		// delete current message and go to check the next message in the queue
-		wb_receiver_next_packet(receiver);
-
-		// if goal position for some robot already received, go out from the while
-		if (goal_received)
-			break;
-	}
-
-	// in case no goals received yet, remain in this state
-	if (!goal_received)
-	{
-		// printf("Robot ID [%d]: No goal received, staying in STATE_RECEIVE_GOAL.\n", ID);
-		return;
-	}
-
-	// print goal position for some of the robots
-	// printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-	path_planner->goal_outside_obstacles(&goal_position);
-	printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-	VisiLibity::Point start(current_position.x, current_position.y);
-	VisiLibity::Point finish(goal_position.x, goal_position.y);
-	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-
-	for (unsigned k = 0; k < Polyline_path.size(); k++)
-	{
-		Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-		path.push_back(p);
-		log_trajectory(p);
-	}
-
-	i = path.begin();
-
-	// we send the msg containing the supervisor to visulize the goal positions
-	Message msg(ID, 0, goal_position, -1, goal_position, 0);
-	send_msg(msg);
-
-	if (simulation_parameters.simuMode == ONLINE)
-	{
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		entered_state_receive_goal = true;
-		time_before_moving = wb_robot_get_time();
-	}
-	else
-	{
-		FSM.state = STATE_READ_ALL;
-		FSM.hook = state_read_positions_measurements;
-		entered_state_receive_goal = true;
-	}
-}
-
-void state_send_pdf()
-{
-	printf("Robot ID [%d]: STATE_SEND_PDF \n", ID);
-
-	if (posterior->pdf != nullptr)
-	{
-		// printf("Robot ID [%d]: Belief map ready to be sent.\n", ID);
-		Message msg_send(ID, CENTRAL_MASTER_ID, Position(), -1, Position(), 0, posterior->pdf);
-		send_msg(msg_send);
-		// printf("Robot ID [%d]: Sending belief map to STATE_RECEIVE_PDF.\n", ID);
-
-		FSM.state = STATE_RECEIVE_GOAL;
-		FSM.hook = state_receive_goal;
-	}
-}
-
-void state_receive_pdf()
-{
-	if (!entered_state_receive_pdf)
-	{
-		printf("Robot ID [%d]: STATE_RECEIVE_PDF \n", ID);
-		entered_state_receive_pdf = true;
-	}
-
-	// if the team strategy is centralized, then the robot 101 receives the belief maps from the other robots
-	// if the team strategy is distributed, then all robots receive the belief maps from each other
-	bool is_centralized = (simulation_parameters.teamStrategy == CENTRALIZED && ID == CENTRAL_MASTER_ID);
-	bool is_distributed = simulation_parameters.teamStrategy == DISTRIBUTED;
-
-	if (is_centralized || is_distributed)
-	{
-		if (!printed && posterior->pdf != nullptr)
-		{
-			belief_maps[self_index].assign(posterior->pdf, posterior->pdf + source_bounds.map_size);
-			printed = true;
-		}
-
-		int queue_length = wb_receiver_get_queue_length(receiver);
-		// printf("Robot ID [%d]: Receiver queue length = %d\n", ID, queue_length);
-
-		while (wb_receiver_get_queue_length(receiver) > 0)
-		{
-			const void *data = wb_receiver_get_data(receiver);
-			const double *buffer = (const double *)data;
-
-			int sender_ID = (int)buffer[0];
-			int receiver_ID = (int)buffer[1];
-			int flag_finished = (int)buffer[9];
-
-			printf("Robot ID [%d]: Received message - sender_ID: %d, receiver_ID: %d\n", ID, sender_ID, receiver_ID);
-
-			// check if state_finished
-			if (flag_finished == -1)
-			{
-				// printf("Robot ID [%d]: Imposing STATE_FINISHED as requested from robot %d!\n", ID, sender_ID);
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				return;
-			}
-
-			int sender_index = sender_ID - 101;
-
-			// Skip self and invalid indices
-			if (sender_ID != ID && sender_index >= 0 && sender_index < MAX_NB_ROBOTS)
-			{
-				belief_maps[sender_index].assign(&buffer[10], &buffer[10] + source_bounds.map_size);
-				received_flags[sender_index] = 1;
-			}
-
-			wb_receiver_next_packet(receiver);
-		}
-
-		// Check if all others have sent their belief maps
-		int all_received = 1;
-		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
-		{
-			if (i == self_index)
-				continue;
-			if (!received_flags[i])
-			{
-				all_received = 0;
-				printf("Robot ID [%d]: Waiting for belief map from Robot ID [%d]\n", ID, 101 + i);
-				break;
-			}
-		}
 	
-		if (all_received)
-		{
-
-			// Reset state for next round
-			for (int i = 0; i < simulation_parameters.number_of_robots; i++)
-			{
-				received_flags[i] = 0;
-			}
-			printed = false;
-
-			FSM.state = STATE_MERGE_PDF;
-			FSM.hook = state_merge_pdf;
-			entered_state_receive_pdf = false;
-		}
-	}
-}
-
-void state_merge_pdf()
-{
-	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
-	// Initialize to 1.0 for multiplicative identity
-	for (int i = 0; i < source_bounds.map_size; i++)
-	{
-		belief_map_merged[i] = 1.0;
-	}
-
-	// Multiply belief maps from other robots (excluding self)
-	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
-	{
-		if (r == self_index)
-			continue; // Skip self
-
-		for (int i = 0; i < source_bounds.map_size; i++)
-		{
-			belief_map_merged[i] *= belief_maps[r][i];
-		}
-	}
-
-	// normalize belief map
-	double sum = 0.0;
-	for (int i = 0; i < source_bounds.map_size; i++)
-	{
-		sum += belief_map_merged[i];
-	}
-
-	if (sum > 0)
-	{
-		for (int i = 0; i < source_bounds.map_size; i++)
-		{
-			belief_map_merged[i] /= sum;
-		}
-	}
-
-	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
-	printf("Robot ID [%d]: Merged belief map is: \n", ID);
-	for (int i = 0; i < source_bounds.map_size; i++)
-	{
-		printf("%f ", belief_map_merged[i]);
-	}
-	printf("\n");
-	belief_map_merged.assign(posterior->pdf, posterior->pdf + source_bounds.map_size);
-    // Check the stopping condition after merging
-	posterior->process();
-    posterior->calculate_entropy_and_spread();
-	log_expected_a_posteriori();
-	log_max_a_posteriori();
-	log_entropy();
-	bool is_stop_condition_reached = check_stop_condition();
-	if (is_stop_condition_reached)
-	{
-		FSM.state = STATE_FINISHED;
-		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-		fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-		broadcast_state_finished();
-		return;
-	} else {
-		if (simulation_parameters.teamStrategy == CENTRALIZED)
-		{
-				FSM.state = STATE_UPDATEGOAL_TEAM;
-				FSM.hook = state_updategoal_team;
-			
-		}
-		else if (simulation_parameters.teamStrategy == DISTRIBUTED)
-		{
-			FSM.state = STATE_REGION_ALLOCATION;
-			FSM.hook = state_region_allocation;
-		}
-	}
+		// update goal
+		FSM.state = STATE_LISTENING;
+		FSM.hook = state_listening;
+		time_before_moving = current_timestamp();
+		long long current_path_planning_time = current_timestamp() - time_before_path_planning;
+		planning_time_sum += current_path_planning_time;
 	
-}
-
-void state_updategoal_team()
-{
-	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
-
-	path_planner->maximal_merged_belief_planning();
-
-	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
-
-	for (int i = 0; i < 3; i++)
-	{
-		printf("Robot [%d]: Goal position -> x: %f, y: %f\n", 101 + i, goal_position_team[i].x, goal_position_team[i].y);
 	}
-
-	FSM.state = STATE_SEND_GOAL;
-	FSM.hook = state_send_goal;
-}
-
-void state_share_pdf()
-{
-    printf("Robot ID [%d]: STATE_SHARE_PDF\n", ID);
-
-    if (posterior->pdf == NULL) {
-        printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
-    } else {
-        for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-            int target_ID = 101 + i;
-            if (target_ID == ID) continue; // skip self
-
-            Message msg(ID, target_ID, Position(), -1, Position(), 0, posterior->pdf);
-            send_msg(msg);
-
-            printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);
-        }
-    }
-
-    FSM.state = STATE_RECEIVE_PDF;
-    FSM.hook = state_receive_pdf;
-}
-
-void state_region_allocation()
-{
-	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
-	if (simulation_parameters.teamStrategy == DISTRIBUTED)
-	{
-		FSM.state = STATE_UPDATEGOAL;
-		FSM.hook = state_updategoal;
-	}
-}
-
-
-// Broadcast STATE_FINISHED to all teammates
-void broadcast_state_finished()
-{
-    printf("Robot ID [%d]: Broadcasting STATE_FINISHED\n", ID);
-
-    for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-        int target_ID = 101 + i;
-        if (target_ID == ID) continue;  // Skip self
-
-        Message msg(ID, target_ID, Position(), -1, Position(), -1); // -1 for STATE_FINISHED flag
-        send_msg(msg);
-
-        printf("Robot ID [%d]: Sent STATE_FINISHED to Robot ID [%d]\n", ID, target_ID);
-    }
-}
-
-bool check_stop_condition()
-{
-	bool is_stop_condition_reached = false;
-	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
-		if (FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 ){
-			is_stop_condition_reached = true;
-		}
-	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
-		if (FSM.n_cycles == MAX_ITER || (posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
-			is_stop_condition_reached = true;
-		}
-	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
-		if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
-			is_stop_condition_reached = true;
-		}
-	}
-	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
-	fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
-	if (is_stop_condition_reached)
-	{
-		// log the finish time stamp
-		end_timestamp = wb_robot_get_time();
-		printf("Robot ID [%d]: Stop condition reached!\n", ID);
-		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
-	}
-	return is_stop_condition_reached;
 }
 
 bool check_converge_condition()
@@ -1449,7 +552,7 @@ bool check_converge_condition()
 	if (is_converge_condition_reached)
 	{
 		// log the finish time stamp
-		end_timestamp = wb_robot_get_time();
+		end_timestamp = current_timestamp();
 		printf("Robot ID [%d]: Stop condition reached!\n", ID);
 		fprintf(console_logfile, "Robot ID [%d]: Stop condition reached!\n", ID);
 	}
@@ -1512,64 +615,16 @@ void set_source_bounds(SourceBounds *bounds,
     bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
 }
 
-void set_source_bounds_centered_with_location(SourceBounds *bounds, double px, double py){
-        double local_xmin = px - 3.0;
-		double local_ymin = py - 1.0;
-		double local_xmax = px + 3.0;
-		double local_ymax = py + 1.0;
-		// make sure the local bounds are within the global bounds
-		local_xmin = std::max(local_xmin, XMIN);
-		local_ymin = std::max(local_ymin, YMIN);
-		local_xmax = std::min(local_xmax, XMAX);
-		local_ymax = std::min(local_ymax, YMAX);
-		set_source_estimation_range(bounds, local_xmin, local_xmax, local_ymin, local_ymax);
-		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
-}
-void set_source_esimation_grid(SourceBounds *bounds, int x_bins, int y_bins){
-	bounds->x_nbins = x_bins;
-    bounds->y_nbins = y_bins;
-
-	bounds->map_size = x_bins * y_bins;
-}
-void set_source_estimation_range(SourceBounds *bounds, double x_min, double x_max, double y_min, double y_max){
-	bounds->x_min = x_min;
-    bounds->y_min = y_min;
-    bounds->x_max = x_max;
-    bounds->y_max = y_max;
-	  // Compute resolutions safely (avoid division by zero)
-    bounds->x_resol = (bounds->x_nbins > 0) ? (x_max - x_min) / bounds->x_nbins : 0.0;
-    bounds->y_resol = (bounds->y_nbins > 0) ? (y_max - y_min) / bounds->y_nbins : 0.0;
-
-}
-
 void init_estimation_bound(){
 	// in case of global estimation
-	if (simulation_parameters.estimationScale == GLOBAL){
 		set_source_bounds(&source_bounds, 
 						XMIN, YMIN, XMAX, YMAX, 20, 20);
 		FILE * sim_param_file = fopen(config_logfile_name, "a");
 	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
 	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
 	    fclose(sim_param_file);
-	}
-	if (simulation_parameters.estimationScale == LOCAL){
-        // TODO: whether it is better to fixed the number of bins or the resolution?
-		set_source_esimation_grid(&source_bounds, 10, 10);
-		set_source_bounds_centered_with_location(&source_bounds, current_position.x, current_position.y);
-
-		FILE * sim_param_file = fopen(config_logfile_name, "a");
-	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
-	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	    fclose(sim_param_file);
-	} 
 }
 
-
-void init_belief_maps_for_team(){
-	belief_maps.assign(simulation_parameters.number_of_robots, std::vector<double>(source_bounds.map_size, 0.0));
-	belief_map_merged.assign(source_bounds.map_size, 0.0);
-	received_flags.assign(simulation_parameters.number_of_robots, 0);
-}
 
 void init_visited_list(){
 	cell_visited_list.assign(source_bounds.map_size, 0.0);
@@ -1580,20 +635,18 @@ void init_visited_list(){
 
 int main(int argc, char **argv)
 {
+	rclcpp::init(argc, argv);
+
 	init();
 	read_obstacle_list();
     check_visibility_environment();
+
 	// init the estimation bound depending on global or local estimation
 	init_estimation_bound();
-	// if multi-robot and using team strategy, initialize the belief maps for each robot
-	if (simulation_parameters.number_of_robots > 1 && (simulation_parameters.teamStrategy == CENTRALIZED || simulation_parameters.teamStrategy == DISTRIBUTED)){
-		init_belief_maps_for_team();
-	}
     // if using visited list, initialize the visited list
 	if (simulation_parameters.visitedList == visitedList_ON){
 		init_visited_list();
 	}
-
     // File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");
 	// Initialize the appropriate plume model based on the simulation parameters
@@ -1605,65 +658,39 @@ int main(int argc, char **argv)
 	plume_model->calculate_gas_map_and_information_matrix();
 	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
-	// initialize the receiver
-	init_receiver(TIME_STEP);
+	auto exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+  	exec->add_node(ros.node());
+
+  	//rclcpp::Time last = ros.node()->now();
 
 	// //main loop
-	while (FSM.state != STATE_FINISHED)
+	while (FSM.state != STATE_FINISHED && rclcpp::ok())
 	{
-		if (simulation_parameters.simuMode == ONLINE)
-		{
-			update_position();
-		}
-		// if we are not stopped to sample, let's log the trajectory
-		/*if(speed[0]!=0 && speed[1]!=0){
-			log_trajectory();
-		}*/
-		// send info (current position and goal position) to friends for joint planning
-		if (simulation_parameters.scenario == COM_COOR)
-		{
-			// //if a robot is already sampling (i.e. STATE_MEASURING), its goal should not be swapped with anyone. Therefore we send 0 as goal and current position
-			if (FSM.state == STATE_MEASURING)
-			{
-				Position tmp;
-				Message msg(ID, 1, tmp, sampleBuffer.average_concentration, tmp, 1);
-				send_msg(msg);
-			}
-			else
-			{
-				Message msg(ID, 1, current_position, sampleBuffer.average_concentration, goal_position, 1);
-				// printf("[%d] I am sendig my position %f %f %f and my goal %f %f %f\n", msg.sender_ID, msg.position[0],msg.position[1], msg.position[2], msg.goal[0],msg.goal[1],msg.goal[2]);
-				send_msg(msg);
-			}
-		}
-		// receive info from colleagues for joint planning and history
-		if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
-		{
-			// printf("Robot %d has %d unread messages! \n", ID, wb_receiver_get_queue_length(receiver));
-			receive_from_friends();
-			// printf("[%d] my history size is %d\n", ID, history.size);
-		}
+		exec->spin_some(); 
+		
+		// update_position();
+	
 		// change state
 		FSM.hook();
 		// next
 		next_iteration_time();
+		// simple sleep to keep timing reasonable
+  		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		n_time_step++;
 	}
 
 	fclose(console_logfile);
 
-	// final logs
-	if (simulation_parameters.simuMode == ONLINE)
-	{
-		log_history();
-		log_experiment_time();
-		log_visited_list();
-		cleaning_up();
-	}
+	log_history();
+	log_experiment_time();
+	log_visited_list();
+
 	// free the allocated memory to obstacle array
 	for (int i = 0; i < nbr_obs; i++)
 		delete[] obstacles[i];
 	delete[] obstacles;
+
+	rclcpp::shutdown();
 
 	exit(0);
 }

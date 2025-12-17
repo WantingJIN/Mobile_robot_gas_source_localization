@@ -17,27 +17,89 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
-add_executable(ste_node src/ste_node.cpp)
-target_include_directories(ste_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+# libtorch
+set(CMAKE_PREFIX_PATH /home/wanting/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
+find_package(Torch REQUIRED NO_DEFAULT_PATH PATHS ${CMAKE_PREFIX_PATH})
 
-install(TARGETS ste_node
-  DESTINATION lib/${PROJECT_NAME})
+# MatIO
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};/home/wanting/Workspace/kheperaodor/plume_model_learning/webots/libraries")
+find_package(MatIO REQUIRED)
+# MatIO gives: MATIO_INCLUDE_DIRS, MATIO_LIBRARIES
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
+# Eigen, SuperLU, Python3, etc.
+include_directories(/usr/include/eigen3)
 
+find_path(SUPERLU_INCLUDE_DIR slu_Cnames.h
+  PATHS /usr/include /usr/include/superlu /usr/local/include /opt/homebrew/include
+  PATH_SUFFIXES superlu)
+
+find_library(SUPERLU_LIBRARY superlu
+  PATHS /usr/lib /usr/local/lib /opt/homebrew/lib $ENV{CONDA_PREFIX}/lib)
+
+include_directories(${SUPERLU_INCLUDE_DIR})
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+include_directories(${Python3_INCLUDE_DIRS})
+link_directories(${Python3_LIBRARY_DIRS})
+
+link_directories(
+  "/usr/lib/python3.8/"
+  "/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/")
+
+include_directories(
+  ${MATIO_INCLUDE_DIRS}
+)
+
+# --- Sources & headers ------------------------------------------------------
+
+# All your .cpp files (FSM, ROS bridge, whatever)
+# Better to list them explicitly, but globbing is okay to start
+file(GLOB CPP_SOURCES "src/*.cpp")
+
+# --- Build the ROS 2 node executable ----------------------------------------
+
+add_executable(controller_node
+  ${CPP_SOURCES}
+)
+
+# Public include dirs for this target (your headers are in include/my_controller_pkg)
+target_include_directories(controller_node PUBLIC
+  include                        # <-- your package's include/
+  /usr/include/eigen3
+  ${SUPERLU_INCLUDE_DIR}
+  ${MATIO_INCLUDE_DIRS}
+  ${Python3_INCLUDE_DIRS}
+)
+
+# Link ROS 2 dependencies
+ament_target_dependencies(controller_node
+  rclcpp
+  geometry_msgs
+  std_msgs
+)
+
+# Link your external libs
+target_link_libraries(controller_node
+  ${LIBRARIES}
+  ${Python3_LIBRARIES}
+  -g -lgsl -lgslcblas
+  "${TORCH_LIBRARIES}"
+  ${MATIO_LIBRARIES}
+  ${SUPERLU_LIBRARY}
+)
+
+set_property(TARGET controller_node PROPERTY CXX_STANDARD 17)
+
+# --- Installation so ros2 run can find it -----------------------------------
+
+install(TARGETS
+  controller_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# --- ament package ----------------------------------------------------------
 ament_package()

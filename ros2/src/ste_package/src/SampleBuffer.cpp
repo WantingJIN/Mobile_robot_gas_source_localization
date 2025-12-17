@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 // #include "nvwa/debug_new.h"
-#include "SampleBuffer.h"
+#include "ste_package/SampleBuffer.h"
+
 using namespace std;
 
 SampleBuffer::SampleBuffer()

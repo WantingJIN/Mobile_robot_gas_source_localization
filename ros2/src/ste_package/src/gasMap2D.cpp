@@ -1,4 +1,4 @@
-#include "gasMap2D.h"
+#include "ste_package/gasMap2D.h"
 
 GasMap2D::GasMap2D(double sigma, double gamma, double scaling_param, double wind_speed, double rco)
 {

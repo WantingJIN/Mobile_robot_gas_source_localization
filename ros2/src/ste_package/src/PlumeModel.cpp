@@ -3,10 +3,10 @@
 #include <chrono>
 #include <iostream>
 // #include "nvwa/debug_new.h"
-#include "PlumeModel.h"
-#include "CellMeasurements.h"
-#include "constant_and_helper.h"
-#include "GasDispersionMap.h"
+#include "ste_package/PlumeModel.h"
+#include "ste_package/CellMeasurements.h"
+#include "ste_package/constant_and_helper.h"
+#include "ste_package/GasDispersionMap.h"
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // #include <numpy/arrayobject.h>
 #include <stdexcept>

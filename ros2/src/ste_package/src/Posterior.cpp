@@ -3,9 +3,10 @@
 #include <iterator>
 #include <fstream>
 #include <vector>
-// #include "nvwa/debug_new.h"
-#include "Posterior.h"
 #include <random>
+// #include "nvwa/debug_new.h"
+#include "ste_package/Posterior.h"
+
 // for storing debugging info
 extern FILE *console_logfile;
 extern SimulationParameters simulation_parameters;

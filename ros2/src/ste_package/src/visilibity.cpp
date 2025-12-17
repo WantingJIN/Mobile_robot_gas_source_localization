@@ -23,7 +23,7 @@ You should have received a copy of the GNU Lesser General Public
 License along with VisiLibity.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "visilibity.hpp" //VisiLibity header
+#include "ste_package/visilibity.hpp" //VisiLibity header
 #include <cmath>          //math functions in std namespace
 #include <vector>
 #include <queue> //queue and priority_queue

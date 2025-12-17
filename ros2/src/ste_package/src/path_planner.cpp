@@ -1,4 +1,4 @@
-#include "path_planner.h"
+#include "ste_package/path_planner.h"
 
 extern SimulationParameters simulation_parameters;
 FILE *gas_information_map_logfile;

@@ -1,46 +1,16 @@
-#ifndef WEBOTS_HEADER_H
-#define WEBOTS_HEADER_H
+#ifndef ROBOT_HEADER_H
+#define ROBOT_HEADER_H
 
-// webots libraries
-#include <webots/robot.h>
-// #include <webots/differential_wheels.h>
-#include <webots/distance_sensor.h>
-#include <webots/gps.h>
-#include <webots/compass.h>
-#include <webots/receiver.h>
-#include <webots/emitter.h>
 #include <random>
 
-extern "C"
-{
-// #include "odor_filter.h"
-// #include "odometry_track.h"
-// #include "vector3d.h"
-#include "khepera4.h"
-#include "khepera4_drive.h"
-}
-#include "controller_STE_multi-robot.h"
+#include "ste_node.h"
 #include "Message.h"
 #include "SimulationParameters.h"
 
+#include "rclcpp/rclcpp.hpp"
+#include "geometry_msgs/msg/pose2_d.hpp" 
 
-#define WEBOTS 1
-#define KHEPERA 0
-
-extern WbDeviceTag gps;
-extern WbDeviceTag compass;
-extern WbDeviceTag emitter;
-extern WbDeviceTag receiver;
-// this supervisor gets the odor and wind readings through the radio and these tags are radio tags
-extern WbDeviceTag odor_tag;
-extern WbDeviceTag wind_tag;
-extern WbDeviceTag sensors[SENSOR_NUMBER];
-
-// Global Variables
-extern struct sObject robot;
-//extern struct sObject source;
-extern struct sOdometryTrack ot;
-
+#define SLEEP_PERIOD      50 // in ms
 // log files
 extern char folder_name[256];
 extern char goalposition_logfile_name[512];
@@ -111,24 +81,31 @@ extern double real_source_pos[3];
 extern SimulationParameters simulation_parameters;
 
 void init();
-void odor_read(double *sensor_reading, double &odor_concentration);
-void wind_read(double *intensity, double *angle, double *wind_x, double *wind_y, double *wind_z);
-void get_gps_position(Position *external_gps_position);
 void update_position();
-int obstacle_or_not();
-void receive_from_friends();
 double get_exp_time();
-void init_receiver(int step_size);
-void send_msg(Message msg);
-void set_wheels_speed(double speed1, double speed2);
-void cleaning_up();
-void next_iteration_time();
-void obstacle_avoidance_k4();
-void linear_reverse_con_to_raw_reading(double* concentration, double &sensor_reading);
-void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX_sensor_reading);
-double generateGaussianNoise(double mean, double variance);
 void set_logfile_names();
-void addNoise(double* sensorReading, double sigma0 , double k);
-void reverse_sensor_model(double &sensor_reading, double &previous_sensor_reading);
+void next_iteration_time();
+
+class RosBridge {
+public:
+  RosBridge();                      // creates node, pubs, subs
+  void spinOnce();                  // process incoming messages
+  bool getCurrentPose(float* x, float* y, float* theta);
+  void publishWaypoint(double x, double y, double theta);
+  rclcpp::Node::SharedPtr node();
+
+private:
+  rclcpp::Node::SharedPtr node_;
+  rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pose_pub_;
+  rclcpp::Subscription<geometry_msgs::msg::Pose2D>::SharedPtr pose_sub_;
+
+  std::mutex mutex_;
+  geometry_msgs::msg::Pose2D current_pose_;
+  bool has_pose_{false};
+  void currentPoseCallback(const geometry_msgs::msg::Pose2D::SharedPtr msg);
+  
+};
+
+
 
 #endif

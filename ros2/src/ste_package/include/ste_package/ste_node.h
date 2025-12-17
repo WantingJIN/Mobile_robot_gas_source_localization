@@ -31,22 +31,12 @@ typedef enum state
 {
 	STATE_UNKNOWN = -1,
 	STATE_WAITFORPLUME = 0,
-	STATE_MEASURING = 4,
 	STATE_ESTIMATING = 1,
 	STATE_UPDATEGOAL = 2,
-	STATE_MOVING = 3,
-	STATE_FINISHED = 5,
-	STATE_OBSTACLE_AVOIDANCE = 6,
-	STATE_READ_ALL = 7,
-	STATE_READ_INITIAL = 8,
-	STATE_RECEIVE_GOAL = 9,
-	STATE_RECEIVE_PDF = 10,
-	STATE_SEND_GOAL = 11,
-	STATE_SEND_PDF = 12,
-	STATE_MERGE_PDF = 13,
-	STATE_UPDATEGOAL_TEAM = 14,
-	STATE_SHARE_PDF = 15,
-	STATE_REGION_ALLOCATION = 16,
+	STATE_FINISHED = 3,
+	STATE_OBSTACLE_AVOIDANCE = 4,
+	STATE_LISTENING = 5,
+	STATE_INITIALIZING = 6,
 } eState;
 
 // finite state machine
@@ -78,22 +68,13 @@ struct friends
 };
 
 // functions
-void state_measuring();
 void state_estimating();
 void state_updategoal();
-void state_moving();
 void state_waiting();
 void state_obstacle_avoidance();
-void state_read_positions_measurements();
-void state_read_initial_position_measurement();
-void state_receive_goal();
-void state_receive_pdf();
-void state_send_goal();
-void state_send_pdf();
-void state_merge_pdf();
-void state_updategoal_team();
-void state_share_pdf();
-void state_region_allocation();
+void state_initializing();
+void state_listening();
+
 
 PlumeModel* initializePlumeModel();
 
