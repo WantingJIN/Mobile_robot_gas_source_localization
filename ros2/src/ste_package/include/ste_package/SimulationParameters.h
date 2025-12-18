@@ -1,6 +1,7 @@
 #ifndef SIMULATION_PARAMETER_H
 #define SIMULATION_PARAMETER_H
 
+#include <string>
 
 typedef enum scenario{
 	NO_COM_NO_COOR = 0,
@@ -232,7 +233,7 @@ class SimulationParameters{
 		eWindEstimationMethod windEstimationMethod;
 		eModelUncertainty modelUncertainty;
 
-		SimulationParameters(const char *filename);
+		SimulationParameters();
 		~SimulationParameters();
 
         void load_simulation_parameters_from_config(const char *filename);

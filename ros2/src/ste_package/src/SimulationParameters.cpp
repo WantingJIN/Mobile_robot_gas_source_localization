@@ -7,6 +7,8 @@
 
 #include <unistd.h>
 
+#include "ament_index_cpp/get_package_share_directory.hpp"
+
 eScenario parse_scenario(const char *str)
 {
 	if (strcmp(str, "NO_COM_NO_COOR") == 0)
@@ -261,8 +263,7 @@ eModelUncertainty parse_model_uncertainty(const char* str) {
 	exit(1);
 }
 
-SimulationParameters::SimulationParameters(const char *filename){
-	load_simulation_parameters_from_config(filename);
+SimulationParameters::SimulationParameters(){
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -271,7 +272,7 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	FILE *file = fopen(filename, "r");
 	if (!file)
 	{
-		fprintf(stderr, "Error opening config file\n");
+		fprintf(stderr, "Error opening config file: %s\n", filename);
 		exit(1);
 	}
 
@@ -448,10 +449,11 @@ void SimulationParameters::read_mapID_from_file()
 	// read simulation parameters
 	FILE *sim_param_file;
 	int ok = 0;
-
-	if (access("../../data/map_nbr.txt", F_OK) != -1)
+	std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
+    std::string map_nbr_file = config_folder_path + "/map_nbr.txt";
+	if (access(map_nbr_file.c_str(), F_OK) != -1)
 	{
-		sim_param_file = fopen("../../data/map_nbr.txt", "r");
+		sim_param_file = fopen(map_nbr_file.c_str(), "r");
 		ok = fscanf(sim_param_file, "%d", &map_nbr);
 		if (ok)
 			printf("scenario : %d\n", map_nbr);

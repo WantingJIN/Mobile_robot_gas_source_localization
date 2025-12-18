@@ -92,5 +92,9 @@ Khepera/Data/gas_concentration_maps.csv
 ros2/build/
 ros2/install/
 ros2/log/
+ros2/Results
+ros2/src/ste_package/config/**
+!ros2/src/ste_package/config/config.txt
+
 
 **/log/**

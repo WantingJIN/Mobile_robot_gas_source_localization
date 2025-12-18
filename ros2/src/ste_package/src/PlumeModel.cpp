@@ -7,6 +7,8 @@
 #include "ste_package/CellMeasurements.h"
 #include "ste_package/constant_and_helper.h"
 #include "ste_package/GasDispersionMap.h"
+#include "ament_index_cpp/get_package_share_directory.hpp"
+
 // #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // #include <numpy/arrayobject.h>
 #include <stdexcept>
@@ -273,14 +275,15 @@ void DeepCFDPlumeModel2D::initialize_model_features()
 {
 	// Load the number of maps
 	int m;
-	std::ifstream f("../../data/map_nbr.txt");
-	f >> m;
-	f.close();
-
+	m = simulation_parameters.map_nbr;
 	// Load the model
 	// std::cout << "Loading model..." << std::endl;
-	DeepCFD = torch::jit::load("DeepCFD_libtorch_model.pt", device);
-	std::string mat_address = "../../../Results/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
+	std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
+	std::string model_path = config_folder_path + "/model/DeepCFD_libtorch_model.pt";
+
+	DeepCFD = torch::jit::load(model_path, device);
+
+	std::string mat_address = config_folder_path + "/model/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + "_flowdef_sdf_sourcepos.mat";
 	// convert string to char*
 	// std::cout << mat_address << std::endl;
 	char *mat_adr = new char[mat_address.length() + 1];
@@ -559,22 +562,24 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	int Ny = 40;
 	// double Nx, double Ny, double D, double Q
 	set_parameters(Nx, Ny, 0.008, 1500.0);
+    std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
+	std::string wind_file_path = config_folder_path + "/model/test_maps/map" + std::to_string(simulation_parameters.map_nbr) + "/wind_map_2D_"+ std::to_string(simulation_parameters.map_nbr) + ".csv";
 	if (simulation_parameters.windInfo == WIND_OFFLINE){
-		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+		set_u_field_from_csv(wind_file_path.c_str(), 64, 64);
 	}
 	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
 		wind_estimator_ = new GaussianWindEstimator(source_bounds.x_min, source_bounds.x_max,
 												  source_bounds.y_min, source_bounds.y_max,
 												  Nx_, Ny_, obstacles, nbr_obs, 0.30, 1.0, 0.5);
 		// first intialize as ground truth wind field
-		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+		set_u_field_from_csv(wind_file_path.c_str(), 64, 64);
 	}
 	if (simulation_parameters.windEstimationMethod == BASEFLOW_CORRECTION){
 		wind_estimator_ = new BaseflowCorrectionWindEstimator(source_bounds.x_min, source_bounds.x_max,
 												  source_bounds.y_min, source_bounds.y_max,
 												  Nx_, Ny_, obstacles, nbr_obs, 1.0, 100);
 		// first intialize as ground truth wind field
-		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+		set_u_field_from_csv(wind_file_path.c_str(), 64, 64);
 	}
 
 	assemble_and_factorize();

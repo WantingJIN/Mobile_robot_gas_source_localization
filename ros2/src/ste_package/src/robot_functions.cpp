@@ -1,4 +1,7 @@
 #include "ste_package/robot_functions.h"
+#include "ament_index_cpp/get_package_share_directory.hpp"
+
+
 // #include "nvwa/debug_new.h"
 
 
@@ -18,7 +21,9 @@ void init()
 	set_logfile_names();
 
     // load the simulation parameters
-    simulation_parameters.load_simulation_parameters_from_config("../config/config.txt");
+	std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
+	std::string config_path = config_folder_path + + "/config.txt";
+    simulation_parameters.load_simulation_parameters_from_config(config_path.c_str());
     simulation_parameters.read_mapID_from_file();
 
 	FILE *sim_param_file;
@@ -35,6 +40,7 @@ void init()
 
 
 	// write the simulation parameters
+	
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
 	// fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
@@ -45,7 +51,7 @@ void init()
 	simulation_parameters.log_simulation_parameters(config_logfile_name);
 
 	goal_position.copy_position(current_position);
-      
+    printf("Initialization done.\n");
 }
 
 /* Return value
@@ -57,12 +63,15 @@ void set_logfile_names()
 {
 	// log files names
 	char *pPath;
-	pPath = getenv("WB_WORKING_DIR");
+	pPath = getenv("STE_DDPM_ROOT");
+	printf("Workspace path: %s\n", pPath);
 	if (pPath != NULL)
 	{
-		if (VERBOSE)
-			printf("The current path is: %s\n", pPath);
-		sprintf(folder_name, "%s/%lld", pPath, current_timestamp());
+		printf("The current path is: %s\n", pPath);
+		char folder_path[128];
+		sprintf(folder_path, "%s/%s", pPath, "ros2/Results"); // create a new folder for log files
+		mkdir(folder_path, 0755);
+		sprintf(folder_name, "%s/%s", folder_path, "logs"); // create a new folder for log files
 		mkdir(folder_name, 0755);
 	}
 	else
@@ -99,11 +108,11 @@ void set_logfile_names()
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+	printf("Console log file: %s\n", console_logfile_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment
     sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
-	printf("logfile_folder_name: %s\n", logfile_folder_name);
 	sprintf(experiment_measurements_logfile_name, "%s/measurements.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);

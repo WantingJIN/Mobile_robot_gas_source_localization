@@ -22,7 +22,9 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "ament_index_cpp/get_package_share_directory.hpp"
 
+#include <string>
 
 using namespace std;
 using namespace std::chrono_literals;
@@ -88,6 +90,7 @@ char experiment_goalposition_logfile_name[512];
 
 // define the global parameter - the root path of the project
 const char *workspacePath = getenv("STE_DDPM_ROOT");
+const std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
 
 // finite state machine
 struct FSM FSM;
@@ -108,7 +111,7 @@ struct history sample_in_motion;
 int sample_counter = 0;
 
 // simulation parameters
-SimulationParameters simulation_parameters("../../data/config.txt");
+SimulationParameters simulation_parameters;
 
 // Declare a pointer to the base class or common interface for plume models
 PlumeModel* plume_model = nullptr;
@@ -118,7 +121,7 @@ PlumeModel* plume_model = nullptr;
 Posterior* posterior= nullptr;
 PathPlanner* path_planner = nullptr;
 
-RosBridge ros;
+RosBridge* ros = nullptr;
 
 // robot's ID
 int ID;
@@ -145,10 +148,10 @@ float **obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
-std::string environment_file("../../data/test_map.environment");
-VisiLibity::Environment my_environment(environment_file);
+// visibility graph
 double epsilon = 0.000000001;
-VisiLibity::Visibility_Graph vg(my_environment, epsilon);
+VisiLibity::Environment *my_environment = nullptr;
+VisiLibity::Visibility_Graph *vg = nullptr;
 
 // log time
 static double start_timestamp;
@@ -202,7 +205,10 @@ void history_print(struct history history)
 void read_obstacle_list()
 {
 	// open file
-	std::ifstream infile("../../data/obstacle_list.txt");
+	
+	std::string obstacle_file = config_folder_path + "/model/test_maps/map" + std::to_string(simulation_parameters.map_nbr) + "/obstacle_list.txt";
+	std::ifstream infile(obstacle_file.c_str());
+	printf("Reading obstacle list from %s\n", obstacle_file.c_str());
 	// first line is the number of obstacles
 	infile >> nbr_obs;
 	printf("There is %d obsatcle in total:\n", nbr_obs);
@@ -342,7 +348,7 @@ void state_initializing(){
 	float start_x = 0.0;
 	float start_y = 5.0;
 	goal_position.set_to(start_x, start_y, 0.0);
-	ros.publishWaypoint(start_x, start_y, 0.0);
+	ros->publishWaypoint(start_x, start_y, 0.0);
 	FSM.state = STATE_LISTENING;
 	FSM.hook  = state_listening;
 }
@@ -350,7 +356,7 @@ void state_initializing(){
 
 void state_listening(){
 	printf("Receiving measurements... \n");
-    if (ros.getCurrentPose(&current_position.x, &current_position.y, &current_position.heading)){
+    if (ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading)){
 		while (current_position.dist_to_goal(goal_position) > 0.05){
 			current_position.calculate_index();
 		    printf("Current Position: x = %f, y = %f, heading = %f\n", current_position.x, current_position.y, current_position.heading);
@@ -504,7 +510,7 @@ void state_updategoal()
 			// find the path using visibility graph
 			VisiLibity::Point start(current_position.x, current_position.y);
 			VisiLibity::Point finish(goal_position.x, goal_position.y);
-			VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+			VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
 			// copy the path in another variable
 			for (unsigned k = 0; k < Polyline_path.size(); k++)
 			{
@@ -516,7 +522,7 @@ void state_updategoal()
 		i = path.begin();
 		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		// send the goal to the supervisor
-		ros.publishWaypoint(i->x, i->y, 0.0);
+		ros->publishWaypoint(i->x, i->y, 0.0);
 		printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
 		// if online simulation: move to the goal position
 		// if offline simulation: read the next goal position and measurements from the file
@@ -574,9 +580,8 @@ PlumeModel* initializePlumeModel() {
 
 void check_visibility_environment() {
 	// visibility graph (visilibity library)
-	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 	std::cout << "Validating environment model . . . ";
-	if (my_environment.is_valid(epsilon))
+	if (my_environment->is_valid(epsilon))
 		std::cout << "OK" << std::endl;
 	else {
 		std::cout << std::endl
@@ -635,12 +640,18 @@ void init_visited_list(){
 
 int main(int argc, char **argv)
 {
+	printf("Starting STE Node... \n");
 	rclcpp::init(argc, argv);
+	ros = new RosBridge();
 
 	init();
 	read_obstacle_list();
+    int m = simulation_parameters.map_nbr;
+	std::string environment_file = config_folder_path + "/model/test_maps/map" + std::to_string(m) + "/test_map" + std::to_string(m) + ".environment";
+    my_environment = new VisiLibity::Environment(environment_file);
+    vg = new VisiLibity::Visibility_Graph(*my_environment, epsilon);
     check_visibility_environment();
-
+    
 	// init the estimation bound depending on global or local estimation
 	init_estimation_bound();
     // if using visited list, initialize the visited list
@@ -659,9 +670,9 @@ int main(int argc, char **argv)
 	plume_model->log_gas_concentration_map(gas_concentration_map_logfile_name, 'a');
 
 	auto exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-  	exec->add_node(ros.node());
+  	exec->add_node(ros->node());
 
-  	//rclcpp::Time last = ros.node()->now();
+  	//rclcpp::Time last = ros->node()->now();
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED && rclcpp::ok())

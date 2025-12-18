@@ -20,6 +20,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(ament_index_cpp REQUIRED)   
 
 # libtorch
 set(CMAKE_PREFIX_PATH /home/wanting/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
@@ -53,6 +54,7 @@ link_directories(
 include_directories(
   ${MATIO_INCLUDE_DIRS}
 )
+set (LIBRARIES m -lgsl -lgslcblas -lm)
 
 # --- Sources & headers ------------------------------------------------------
 
@@ -80,6 +82,7 @@ ament_target_dependencies(controller_node
   rclcpp
   geometry_msgs
   std_msgs
+  ament_index_cpp 
 )
 
 # Link your external libs
@@ -96,9 +99,14 @@ set_property(TARGET controller_node PROPERTY CXX_STANDARD 17)
 
 # --- Installation so ros2 run can find it -----------------------------------
 
-install(TARGETS
-  controller_node
+install(
+  TARGETS controller_node
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}
 )
 
 # --- ament package ----------------------------------------------------------

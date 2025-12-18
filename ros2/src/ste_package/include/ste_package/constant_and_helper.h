@@ -1,6 +1,7 @@
 #ifndef CONSTANT_H
 #define CONSTANT_H
 #include <math.h>
+#include <string>
 // Constant variables
 template <typename T>
 constexpr T BOUND(const T& x, const T& a, const T& b) noexcept {
