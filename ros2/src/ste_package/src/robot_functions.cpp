@@ -1,5 +1,7 @@
 #include "ste_package/robot_functions.h"
 #include "ament_index_cpp/get_package_share_directory.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/utils.h> 
 
 
 // #include "nvwa/debug_new.h"
@@ -127,13 +129,13 @@ void next_iteration_time(){
 
 RosBridge::RosBridge()
   {
-    node_ = std::make_shared<rclcpp::Node>("controller_bridge");
+    node_ = std::make_shared<rclcpp::Node>("ste_robot_bridge");
 
     pose_pub_ = node_->create_publisher<geometry_msgs::msg::Pose2D>(
       "pose_ctrl", 10);
 
-    pose_sub_ = node_->create_subscription<geometry_msgs::msg::Pose2D>(
-      "current_Pose", 10,
+    pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
+      "pose", 10,
       std::bind(&RosBridge::currentPoseCallback, this, std::placeholders::_1));
   }
 
@@ -144,9 +146,9 @@ bool RosBridge::getCurrentPose(float* x, float* y, float* theta)
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!has_pose_) return false;
-    *x = current_pose_.x;
-    *y = current_pose_.y;
-    *theta = current_pose_.theta;
+    *x = current_pose_.pose.position.x;
+    *y = current_pose_.pose.position.y;
+    *theta = tf2::getYaw(current_pose_.pose.orientation);
     return true;
   }
 
@@ -160,8 +162,9 @@ bool RosBridge::getCurrentPose(float* x, float* y, float* theta)
     pose_pub_->publish(msg);
   }
 
-  void RosBridge::currentPoseCallback(const geometry_msgs::msg::Pose2D::SharedPtr msg)
+  void RosBridge::currentPoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
   {
+	printf("Received pose: x=%f, y=%f, theta=%f\n", msg->pose.position.x, msg->pose.position.y, tf2::getYaw(msg->pose.orientation));
     std::lock_guard<std::mutex> lock(mutex_);
     current_pose_ = *msg;
     has_pose_ = true;

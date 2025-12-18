@@ -56,6 +56,9 @@ include_directories(
 )
 set (LIBRARIES m -lgsl -lgslcblas -lm)
 
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 # --- Sources & headers ------------------------------------------------------
 
 # All your .cpp files (FSM, ROS bridge, whatever)
@@ -82,6 +85,9 @@ ament_target_dependencies(controller_node
   rclcpp
   geometry_msgs
   std_msgs
+  tf2
+  tf2_geometry_msgs
+
   ament_index_cpp 
 )
 

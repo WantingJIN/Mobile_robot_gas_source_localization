@@ -8,7 +8,9 @@
 #include "SimulationParameters.h"
 
 #include "rclcpp/rclcpp.hpp"
-#include "geometry_msgs/msg/pose2_d.hpp" 
+#include "geometry_msgs/msg/pose_stamped.hpp" 
+#include "geometry_msgs/msg/pose2_d.hpp"
+
 
 #define SLEEP_PERIOD      50 // in ms
 // log files
@@ -97,12 +99,12 @@ public:
 private:
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pose_pub_;
-  rclcpp::Subscription<geometry_msgs::msg::Pose2D>::SharedPtr pose_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
 
   std::mutex mutex_;
-  geometry_msgs::msg::Pose2D current_pose_;
+  geometry_msgs::msg::PoseStamped current_pose_;
   bool has_pose_{false};
-  void currentPoseCallback(const geometry_msgs::msg::Pose2D::SharedPtr msg);
+  void currentPoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   
 };
 

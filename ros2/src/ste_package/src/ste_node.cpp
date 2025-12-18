@@ -357,9 +357,9 @@ void state_initializing(){
 void state_listening(){
 	printf("Receiving measurements... \n");
     if (ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading)){
+		printf("Current Position: x = %f, y = %f, heading = %f\n", current_position.x, current_position.y, current_position.heading);
 		while (current_position.dist_to_goal(goal_position) > 0.05){
 			current_position.calculate_index();
-		    printf("Current Position: x = %f, y = %f, heading = %f\n", current_position.x, current_position.y, current_position.heading);
 		    // pushback the result into history
 		}
 	}

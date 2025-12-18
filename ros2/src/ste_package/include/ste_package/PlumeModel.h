@@ -35,7 +35,7 @@
 using namespace std;
 using std::vector;
 
-#define PI 3.14159265358979
+constexpr double kPi = 3.14159265358979323846;
 
 // parameter structure defines properties of a parameter. A model has an array of parameters.
 typedef struct
