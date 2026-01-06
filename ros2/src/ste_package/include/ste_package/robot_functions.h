@@ -10,6 +10,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp" 
 #include "geometry_msgs/msg/pose2_d.hpp"
+#include "std_srvs/srv/trigger.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "ste_interfaces/action/navigate_sample.hpp"
+#include <list>
+
 
 
 #define SLEEP_PERIOD      50 // in ms
@@ -64,7 +69,7 @@ extern Position goal_position;
 extern Position current_position;
 extern double speed[2];
 // robot's position and measurement history
-extern struct history history;
+extern struct History history;
 
 // robot's ID
 extern int ID;
@@ -96,6 +101,16 @@ public:
   void publishWaypoint(double x, double y, double theta);
   rclcpp::Node::SharedPtr node();
 
+  using RobotMission = ste_interfaces::action::NavigateSample;
+  using GoalHandleMission = rclcpp_action::ClientGoalHandle<RobotMission>;
+
+  bool shakehand_with_robot();
+  void send_waypoints(std::list<Position> path);
+  void feedback_callback(GoalHandleMission::SharedPtr, const std::shared_ptr<const RobotMission::Feedback> feedback);
+  void result_callback(const GoalHandleMission::WrappedResult & result);
+  std::shared_ptr<History> get_meas_history();
+  bool robot_reached_goal;
+  bool shakehand_success;
 private:
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pose_pub_;
@@ -105,6 +120,13 @@ private:
   geometry_msgs::msg::PoseStamped current_pose_;
   bool has_pose_{false};
   void currentPoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr handshake_client_;
+  rclcpp_action::Client<RobotMission>::SharedPtr action_client_;
+  // Use a shared_ptr to manage the vector heap memory
+  std::shared_ptr<History> history_ptr_ = std::make_shared<History>();
+  std::mutex data_mutex_;
+ 
   
 };
 

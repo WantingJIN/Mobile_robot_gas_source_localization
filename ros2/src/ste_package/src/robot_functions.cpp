@@ -134,15 +134,24 @@ RosBridge::RosBridge()
     pose_pub_ = node_->create_publisher<geometry_msgs::msg::Pose2D>(
       "pose_ctrl", 10);
 
-    pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
-      "pose", 10,
-      std::bind(&RosBridge::currentPoseCallback, this, std::placeholders::_1));
+    // pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
+    //   "pose", 10,
+    //   std::bind(&RosBridge::currentPoseCallback, this, std::placeholders::_1));
+
+	// 1. Initialize Service Client for Handshake
+	handshake_client_ = node_->create_client<std_srvs::srv::Trigger>("check_ready");
+	
+	// 2. Initialize Action Client for Waypoints
+	action_client_ = rclcpp_action::create_client<RobotMission>(node_, "robot_mission");
+
+	robot_reached_goal = false;
+	shakehand_success = false;
   }
 
-rclcpp::Node::SharedPtr RosBridge::node() { return node_; }
+  rclcpp::Node::SharedPtr RosBridge::node() { return node_; }
 
   // Called from main loop after spin_some
-bool RosBridge::getCurrentPose(float* x, float* y, float* theta)
+  bool RosBridge::getCurrentPose(float* x, float* y, float* theta)
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!has_pose_) return false;
@@ -170,3 +179,92 @@ bool RosBridge::getCurrentPose(float* x, float* y, float* theta)
     has_pose_ = true;
   }
 
+// --- STEP 1: Handshake Logic ---
+   bool RosBridge::shakehand_with_robot() {
+		RCLCPP_INFO(node_->get_logger(), "Waiting for robot service...");
+		while (!handshake_client_->wait_for_service(std::chrono::seconds(1))) {
+			if (!rclcpp::ok()) return false;
+			RCLCPP_INFO(node_->get_logger(), "Robot not found on network, retrying...");
+		}
+
+		auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+		handshake_client_->async_send_request(request, 
+			[this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+				auto response = future.get();
+				if (response->success) {
+					RCLCPP_INFO(node_->get_logger(), "Handshake Success: %s", response->message.c_str());
+					shakehand_success = true;
+				} else {
+					RCLCPP_ERROR(node_->get_logger(), "Robot rejected handshake: %s", response->message.c_str());
+				}
+			});
+		return shakehand_success;
+	}
+
+    // --- STEP 2: Goal Generation ---
+    void RosBridge::send_waypoints(std::list<Position> path) {
+		robot_reached_goal = false;
+        if (!action_client_->wait_for_action_server(std::chrono::seconds(5))) {
+            RCLCPP_ERROR(node_->get_logger(), "Action server not available!");
+            return;
+        }
+
+        auto goal_msg = RobotMission::Goal();
+        for (const auto& pos : path) {
+			geometry_msgs::msg::Pose waypoint;
+			waypoint.position.x = pos.x;
+			waypoint.position.y = pos.y;
+			waypoint.position.z = 0.0;
+			tf2::Quaternion q;
+			q.setRPY(0, 0, pos.heading);
+			waypoint.orientation = tf2::toMsg(q);
+			goal_msg.goal_positions.poses.push_back(waypoint);
+		}
+
+        auto send_goal_options = rclcpp_action::Client<RobotMission>::SendGoalOptions();
+        
+        // Setup Callbacks
+        send_goal_options.feedback_callback = std::bind(&RosBridge::feedback_callback, this, std::placeholders::_1, std::placeholders::_2);
+        send_goal_options.result_callback = std::bind(&RosBridge::result_callback, this, std::placeholders::_1);
+
+        action_client_->async_send_goal(goal_msg, send_goal_options);
+    }
+
+    // --- STEP 3: Feedback & Result Callbacks ---
+    void RosBridge::feedback_callback(GoalHandleMission::SharedPtr, const std::shared_ptr<const RobotMission::Feedback> feedback) {
+        // This is where you receive the Gas and Anemometer data from the robot
+        std::lock_guard<std::mutex> lock(data_mutex_);
+		RCLCPP_INFO(node_->get_logger(), "Robot Feedback -> Pos: (%.2f, %.2f) | Gas: %.2f", 
+                    feedback->current_pose.pose.position.x, 
+                    feedback->current_pose.pose.position.y, 
+                    feedback->gas_level);
+
+		history_ptr_->position.push_back(Position(feedback->current_pose.pose.position.x, feedback->current_pose.pose.position.y,
+												  tf2::getYaw(feedback->current_pose.pose.orientation)));
+		history_ptr_->gas_meas.push_back(feedback->gas_level);
+		// history_ptr_->wind_meas_u.push_back(feedback->wind_u);
+		// history_ptr_->wind_meas_v.push_back(feedback->wind_v);
+		history_ptr_->wind_meas_u.push_back(0.0);
+		history_ptr_->wind_meas_v.push_back(0.0);
+		history_ptr_->size += 1;
+        // Here you would add logic to adjust your path if gas levels are high
+    }
+
+    void RosBridge::result_callback(const GoalHandleMission::WrappedResult & result) {
+        switch (result.code) {
+            case rclcpp_action::ResultCode::SUCCEEDED:
+                RCLCPP_INFO(node_->get_logger(), "Waypoint reached! Waiting for next goal...");
+				robot_reached_goal = true;
+                break;
+            default:
+                RCLCPP_ERROR(node_->get_logger(), "Mission failed or was aborted.");
+                break;
+        }
+    }
+	std::shared_ptr<History> RosBridge::get_meas_history() {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        // Return the current pointer and create a new empty one for the next mission
+        auto snapshot = history_ptr_;
+        history_ptr_ = std::make_shared<History>(); 
+        return snapshot;
+  }

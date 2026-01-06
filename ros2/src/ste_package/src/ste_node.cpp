@@ -105,8 +105,8 @@ Position current_position;
 double speed[2] = {0};
 
 // robot's position and measurement history
-struct history history;
-struct history sample_in_motion;
+struct History history;
+struct History sample_in_motion;
 
 int sample_counter = 0;
 
@@ -192,7 +192,7 @@ long long current_timestamp()
 }
 
 // show the measurement history on screen
-void history_print(struct history history)
+void history_print(struct History history)
 {
 	printf("_____ Sample History _____ \n");
 	for (int i = 0; i < history.size; i++)
@@ -343,29 +343,54 @@ void log_experiment_time()
 
 void state_initializing(){
 	printf("Robot ID [%d]: STATE_INITIALIZING \n", ID);
-    // TODO: establish baseline measurements
+	// waiting for some time to let the robot stabilize; and the message to confirm connection
+    
+	while (ros->shakehand_with_robot() == false){
+		printf("Robot ID [%d]: waiting for handshake...\n", ID);
+		next_iteration_time();
+	}
+	// TODO: establish baseline measurements
 	// Radom Start position
 	float start_x = 0.0;
 	float start_y = 5.0;
-	goal_position.set_to(start_x, start_y, 0.0);
-	ros->publishWaypoint(start_x, start_y, 0.0);
+	std::list<Position> start_path;
+	start_path.push_back(Position(start_x, start_y, 0.0));
+	ros->send_waypoints(start_path);
 	FSM.state = STATE_LISTENING;
 	FSM.hook  = state_listening;
 }
 
 
 void state_listening(){
-	printf("Receiving measurements... \n");
-    if (ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading)){
-		printf("Current Position: x = %f, y = %f, heading = %f\n", current_position.x, current_position.y, current_position.heading);
-		while (current_position.dist_to_goal(goal_position) > 0.05){
-			current_position.calculate_index();
-		    // pushback the result into history
-		}
-	}
+	// printf("Receiving measurements... \n");
+    // if (ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading)){
+	// 	printf("Current Position: x = %f, y = %f, heading = %f\n", current_position.x, current_position.y, current_position.heading);
+	// 	// while (current_position.dist_to_goal(goal_position) > 0.05){
+	// 	// 	current_position.calculate_index();
+	// 	//     // pushback the result into history
+	// 	// }
+	// }
 		
-	FSM.state = STATE_LISTENING;
-	FSM.hook  = state_listening;
+	// FSM.state = STATE_LISTENING;
+	// FSM.hook  = state_listening;
+
+	while (!ros->robot_reached_goal){
+		printf("Robot ID [%d]: waiting to reach start position...\n", ID);
+		next_iteration_time();
+	}
+	//copy the measurement history from rosbridge
+	struct History last_history = *(ros->get_meas_history());
+	// add the new measurements to history
+	for (int i = 0; i < last_history.size; i++){
+		history.position.push_back(last_history.position[i]);
+		history.gas_meas.push_back(last_history.gas_meas[i]);
+		history.wind_meas_u.push_back(last_history.wind_meas_u[i]);
+		history.wind_meas_v.push_back(last_history.wind_meas_v[i]);
+		history.FSM_iter.push_back(last_history.FSM_iter[i]);	
+		history.size++;
+	}
+	FSM.state = STATE_ESTIMATING;
+	FSM.hook  = state_estimating;
 		
 }
 
@@ -519,10 +544,10 @@ void state_updategoal()
 				log_trajectory(p);
 			}
 		}
-		i = path.begin();
+		// i = path.begin();
 		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		// send the goal to the supervisor
-		ros->publishWaypoint(i->x, i->y, 0.0);
+		ros->send_waypoints(path);
 		printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
 		// if online simulation: move to the goal position
 		// if offline simulation: read the next goal position and measurements from the file

@@ -25,7 +25,7 @@ extern float **obstacles;
 // text file for storing some prints for debugging
 extern FILE *console_logfile;
 
-PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history)
+PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct History *input_history)
 {
     plume_model = input_model;
     posterior = input_posterior;
@@ -133,7 +133,7 @@ void PathPlanner::KLD_informative_goal_selection()
 	double KLD = 0, max_KLD = -100, max_meas = -100;
 	// double position[1][3] = {{0}};
 	Position tmp_position;
-	struct history fake_history;
+	struct History fake_history;
 	fake_history.position = history->position;
 	fake_history.gas_meas = history->gas_meas;
 	fake_history.size = history->size;

@@ -21,6 +21,9 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(ament_index_cpp REQUIRED)   
+find_package(ste_interfaces REQUIRED)
+find_package(std_srvs REQUIRED)
+
 
 # libtorch
 set(CMAKE_PREFIX_PATH /home/wanting/Softwares/libtorch-cxx11-abi-shared-with-deps-1.13.1+cu117/libtorch)
@@ -87,7 +90,8 @@ ament_target_dependencies(controller_node
   std_msgs
   tf2
   tf2_geometry_msgs
-
+  ste_interfaces
+  std_srvs
   ament_index_cpp 
 )
 

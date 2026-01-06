@@ -42,7 +42,7 @@ public:
 
 };
 
-struct history
+struct History
 {
 	int size;
 	vector<int> FSM_iter;

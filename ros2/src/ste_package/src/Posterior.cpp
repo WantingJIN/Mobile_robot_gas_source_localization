@@ -369,7 +369,7 @@ void Posterior::calculate_entropy_and_spread()
 }
 
 // efficient sampling through MCMC
-void Posterior::MCMC_evaluation(struct history history)
+void Posterior::MCMC_evaluation(struct History history)
 {
 	int i = 0, j = 0, count = simulation_parameters.MCMC_iteration_num; // number of iterations
 	double p_acceptance = 0, posterior_value = 0;
@@ -445,7 +445,7 @@ void Posterior::MCMC_evaluation(struct history history)
 }
 
 // exhaustive evaluation of all the values of the posterior pdf
-void Posterior::exhaustive_evaluation(struct history &history)
+void Posterior::exhaustive_evaluation(struct History &history)
 {
 	int i = 0;
 	double sample[nbr_dimension];

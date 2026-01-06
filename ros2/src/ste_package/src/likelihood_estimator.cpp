@@ -7,7 +7,7 @@ extern SimulationParameters simulation_parameters;
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)
-double likelihood_precomp(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+double likelihood_precomp(struct History &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -58,7 +58,7 @@ double likelihood_precomp(struct history &history, double *parameters, int sourc
 
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+double likelihood_rel_con(struct History &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 
 	// float sigma = 0.22; // works well for Gaussian CDF
@@ -167,7 +167,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	return (exp(-0.5 * sum_tmp));
 }
 
-double likelihood(struct history &history, double *parameters, PlumeModel *model)
+double likelihood(struct History &history, double *parameters, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -259,7 +259,7 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 	}
 }
 
-double likelihood_gas_hit(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+double likelihood_gas_hit(struct History &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 	double sum_tmp = 0;
 	vector<double> model_c_avg(history.size);

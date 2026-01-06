@@ -25,7 +25,7 @@ class PathPlanner {
 private:
     Posterior *posterior;
     PlumeModel *plume_model;
-    struct history *history;
+    struct History *history;
 
     double *gas_information_map;
     double *scores_map;
@@ -58,7 +58,7 @@ public:
     /////////////////////////////////!SECTION/////////////////////////////////
     bool reach_end_of_fix_path;
 
-    PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history);
+    PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct History *input_history);
     ~PathPlanner();
     void reset_planning_bound(SourceBounds source_bounds);
 
