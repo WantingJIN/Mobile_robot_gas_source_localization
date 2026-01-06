@@ -235,12 +235,12 @@ RosBridge::RosBridge()
         // This is where you receive the Gas and Anemometer data from the robot
         std::lock_guard<std::mutex> lock(data_mutex_);
 		RCLCPP_INFO(node_->get_logger(), "Robot Feedback -> Pos: (%.2f, %.2f) | Gas: %.2f", 
-                    feedback->current_pose.pose.position.x, 
-                    feedback->current_pose.pose.position.y, 
+                    feedback->current_pose.x, 
+                    feedback->current_pose.y, 
                     feedback->gas_level);
 
-		history_ptr_->position.push_back(Position(feedback->current_pose.pose.position.x, feedback->current_pose.pose.position.y,
-												  tf2::getYaw(feedback->current_pose.pose.orientation)));
+		history_ptr_->position.push_back(Position(feedback->current_pose.x, feedback->current_pose.y,
+												  feedback->current_pose.theta));
 		history_ptr_->gas_meas.push_back(feedback->gas_level);
 		// history_ptr_->wind_meas_u.push_back(feedback->wind_u);
 		// history_ptr_->wind_meas_v.push_back(feedback->wind_v);

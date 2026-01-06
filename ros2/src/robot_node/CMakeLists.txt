@@ -32,4 +32,35 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(ste_interfaces REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+
+# All your .cpp files (FSM, ROS bridge, whatever)
+# Better to list them explicitly, but globbing is okay to start
+file(GLOB CPP_SOURCES "src/*.cpp")
+
+add_executable(robot_node
+  ${CPP_SOURCES}
+)
+
+# Link ROS 2 dependencies
+ament_target_dependencies(robot_node
+  rclcpp
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  ste_interfaces
+  std_srvs
+  ament_index_cpp 
+  sensor_msgs
+)
+
 ament_package()

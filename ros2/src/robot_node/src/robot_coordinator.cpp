@@ -5,7 +5,9 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 
 #include "sensor_msgs/msg/fluid_pressure.hpp" // Placeholder for gas/wind
-#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose2_d.hpp"
+#include "tf2/utils.h"
+
 #include "ste_interfaces/action/navigate_sample.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 
@@ -21,14 +23,16 @@ public:
 
         // 2. Internal Subscriptions (Gathering data from other robot nodes)
         pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-            "/pose", 10, [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) { latest_pose_ = msg->pose; });
+            "/pose", 10, [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) { 
+                latest_pose_.x = msg->pose.position.x; 
+                latest_pose_.y = msg->pose.position.y; 
+                latest_pose_.theta = tf2::getYaw(msg->pose.orientation); });
         
-        gas_sub_ = this->create_subscription<sensor_msgs::msg::Fluid_pressure>( // Replace with your actual msg type
-            "/gas_sensor", 10, [this](const sensor_msgs::msg::Fluid_pressure::SharedPtr msg) { latest_gas_ = msg->fluid_pressure; });
+        gas_sub_ = this->create_subscription<sensor_msgs::msg::FluidPressure>( // Replace with your actual msg type
+            "/gas_sensor", 10, [this](const sensor_msgs::msg::FluidPressure::SharedPtr msg) { latest_gas_ = msg->fluid_pressure; });
         
-        wind_sub_ = this->create_subscription<sensor_msgs::msg::Fluid_pressure>( // Replace with your actual msg type
-            "/wind_sensor", 10, [this](const sensor_msgs::msg::Fluid_pressure::SharedPtr msg) { latest_wind_ = msg->fluid_pressure; });
-
+        wind_sub_ = this->create_subscription<sensor_msgs::msg::FluidPressure>( // Replace with your actual msg type
+            "/wind_sensor", 10, [this](const sensor_msgs::msg::FluidPressure::SharedPtr msg) { latest_wind_ = msg->fluid_pressure; });
         // 3. Action Server (Talking to the Laptop)
         this->action_server_ = rclcpp_action::create_server<RobotMission>(
             this, "robot_mission",
@@ -36,9 +40,9 @@ public:
             std::bind(&RobotCoordinator::handle_cancel, this, std::placeholders::_1),
             std::bind(&RobotCoordinator::handle_accepted, this, std::placeholders::_1));
 
-        current_location_.position.x = 0.0;
-        current_location_.position.y = 0.0;
-        current_location_.orientation.w = 1.0;
+        current_location_.x = 0.0;
+        current_location_.y = 0.0;
+        current_location_.theta = 0.0;
     }
 
 private:
@@ -76,7 +80,10 @@ private:
         rclcpp::Rate loop_rate(10); // 10Hz feedback
         
         // while the current pose is far from the last waypoint
-        goal_location_ = way_points->goal_positions.poses.back();
+        auto goal_pose = way_points->goal_positions.poses.back();
+        goal_location_.x = goal_pose.position.x;
+        goal_location_.y = goal_pose.position.y;
+        goal_location_.theta = tf2::getYaw(goal_pose.orientation);
 
         while (rclcpp::ok() && distance_to_goal(goal_location_) > 0.05) {
             // Check if laptop canceled
@@ -88,7 +95,7 @@ private:
             // Pack latest measurements into feedback
             // NOTE: fixed the logic here, we need to sync all the messages
             feedback->current_pose = latest_pose_;
-            current_location_ = latest_pose_.pose;
+            current_location_ = latest_pose_;
             feedback->gas_level = latest_gas_;
             feedback->wind_speed = 1.23; // Placeholder for anemometer
 
@@ -110,9 +117,9 @@ private:
         return true;
     }
 
-    double distance_to_goal(const geometry_msgs::msg::Pose& goal) {
-        double dx = goal.position.x - current_location_.position.x;
-        double dy = goal.position.y - current_location_.position.y;
+    double distance_to_goal(const geometry_msgs::msg::Pose2D& goal) {
+        double dx = goal.x - current_location_.x;
+        double dy = goal.y - current_location_.y;
         double distance = std::sqrt(dx * dx + dy * dy);
         return distance;
     }
@@ -121,17 +128,17 @@ private:
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_service_;
     rclcpp_action::Server<RobotMission>::SharedPtr action_server_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::Fluid_pressure>::SharedPtr gas_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::Fluid_pressure>::SharedPtr wind_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::FluidPressure>::SharedPtr gas_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::FluidPressure>::SharedPtr wind_sub_;
     
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr planner_pub_;
     
-    geometry_msgs::msg::PoseStamped latest_pose_;
+    geometry_msgs::msg::Pose2D latest_pose_;
     double latest_gas_;
     double latest_wind_;
     // current location
-    geometry_msgs::msg::Pose current_location_;
-    geometry_msgs::msg::Pose goal_location_;
+    geometry_msgs::msg::Pose2D current_location_;
+    geometry_msgs::msg::Pose2D goal_location_;
     
 };
 
