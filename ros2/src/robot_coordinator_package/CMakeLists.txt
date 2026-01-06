@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(robot_node)
+project(robot_coordinator_package)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -48,6 +48,11 @@ file(GLOB CPP_SOURCES "src/*.cpp")
 
 add_executable(robot_node
   ${CPP_SOURCES}
+)
+
+install(TARGETS
+  robot_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 # Link ROS 2 dependencies
