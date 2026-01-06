@@ -139,7 +139,7 @@ RosBridge::RosBridge()
     //   std::bind(&RosBridge::currentPoseCallback, this, std::placeholders::_1));
 
 	// 1. Initialize Service Client for Handshake
-	handshake_client_ = node_->create_client<std_srvs::srv::Trigger>("check_ready");
+	handshake_client_ = node_->create_client<std_srvs::srv::Trigger>("/check_ready");
 	
 	// 2. Initialize Action Client for Waypoints
 	action_client_ = rclcpp_action::create_client<RobotMission>(node_, "robot_mission");
@@ -203,13 +203,17 @@ RosBridge::RosBridge()
 
     // --- STEP 2: Goal Generation ---
     void RosBridge::send_waypoints(std::list<Position> path) {
+		printf("Preparing to send waypoints to robot...\n");
 		robot_reached_goal = false;
         if (!action_client_->wait_for_action_server(std::chrono::seconds(5))) {
             RCLCPP_ERROR(node_->get_logger(), "Action server not available!");
             return;
         }
+		printf("Sending waypoints to robot...\n");
 
         auto goal_msg = RobotMission::Goal();
+		goal_msg.goal_positions.header.frame_id = "map"; 
+		goal_msg.goal_positions.header.stamp = node_->now();
         for (const auto& pos : path) {
 			geometry_msgs::msg::Pose waypoint;
 			waypoint.position.x = pos.x;
@@ -228,6 +232,7 @@ RosBridge::RosBridge()
         send_goal_options.result_callback = std::bind(&RosBridge::result_callback, this, std::placeholders::_1);
 
         action_client_->async_send_goal(goal_msg, send_goal_options);
+		printf("Action sent to robot.\n");
     }
 
     // --- STEP 3: Feedback & Result Callbacks ---

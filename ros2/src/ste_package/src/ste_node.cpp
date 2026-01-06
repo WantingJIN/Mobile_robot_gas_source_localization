@@ -345,20 +345,28 @@ void state_initializing(){
 	printf("Robot ID [%d]: STATE_INITIALIZING \n", ID);
 	// waiting for some time to let the robot stabilize; and the message to confirm connection
     
-	while (ros->shakehand_with_robot() == false){
+	if (ros->shakehand_with_robot() == false){
 		printf("Robot ID [%d]: waiting for handshake...\n", ID);
-		next_iteration_time();
+		FSM.state = STATE_INITIALIZING;
+		FSM.hook  = state_initializing;
+		//next_iteration_time();
+	
+	} else {
+		// TODO: establish baseline measurements
+		// Radom Start position
+		float start_x = 0.0;
+		float start_y = 5.0;
+		std::list<Position> start_path;
+		start_path.push_back(Position(start_x, start_y, 0.0));
+		start_path.push_back(Position(3.0, 4.0, 0.0));
+		// print start_path
+		printf("Robot ID [%d]: sending robot to start position (%f, %f)...\n", ID, start_x, start_y);
+		ros->send_waypoints(start_path);
+		FSM.state = STATE_LISTENING;
+		FSM.hook  = state_listening;
 	}
-	// TODO: establish baseline measurements
-	// Radom Start position
-	float start_x = 0.0;
-	float start_y = 5.0;
-	std::list<Position> start_path;
-	start_path.push_back(Position(start_x, start_y, 0.0));
-	ros->send_waypoints(start_path);
-	FSM.state = STATE_LISTENING;
-	FSM.hook  = state_listening;
 }
+
 
 
 void state_listening(){
@@ -374,24 +382,26 @@ void state_listening(){
 	// FSM.state = STATE_LISTENING;
 	// FSM.hook  = state_listening;
 
-	while (!ros->robot_reached_goal){
+	if (!ros->robot_reached_goal){
 		printf("Robot ID [%d]: waiting to reach start position...\n", ID);
-		next_iteration_time();
+		FSM.state = STATE_LISTENING;
+		FSM.hook  = state_listening;
 	}
-	//copy the measurement history from rosbridge
-	struct History last_history = *(ros->get_meas_history());
-	// add the new measurements to history
-	for (int i = 0; i < last_history.size; i++){
-		history.position.push_back(last_history.position[i]);
-		history.gas_meas.push_back(last_history.gas_meas[i]);
-		history.wind_meas_u.push_back(last_history.wind_meas_u[i]);
-		history.wind_meas_v.push_back(last_history.wind_meas_v[i]);
-		history.FSM_iter.push_back(last_history.FSM_iter[i]);	
-		history.size++;
+	else {
+		//copy the measurement history from rosbridge
+		struct History last_history = *(ros->get_meas_history());
+		// add the new measurements to history
+		for (int i = 0; i < last_history.size; i++){
+			history.position.push_back(last_history.position[i]);
+			history.gas_meas.push_back(last_history.gas_meas[i]);
+			history.wind_meas_u.push_back(last_history.wind_meas_u[i]);
+			history.wind_meas_v.push_back(last_history.wind_meas_v[i]);
+			history.FSM_iter.push_back(last_history.FSM_iter[i]);	
+			history.size++;
+		}
+		FSM.state = STATE_ESTIMATING;
+		FSM.hook  = state_estimating;
 	}
-	FSM.state = STATE_ESTIMATING;
-	FSM.hook  = state_estimating;
-		
 }
 
 
@@ -696,8 +706,6 @@ int main(int argc, char **argv)
 
 	auto exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
   	exec->add_node(ros->node());
-
-  	//rclcpp::Time last = ros->node()->now();
 
 	// //main loop
 	while (FSM.state != STATE_FINISHED && rclcpp::ok())
