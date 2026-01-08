@@ -543,6 +543,10 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	// source_y
 	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
 
+
+	printf("Estimation ranges for ADE-FDM model: \n");
+	printf("source_x: [%f, %f] m, resol: %f m, nbins: %d \n", param_list[0].lower_limit, param_list[0].upper_limit, param_list[0].resolution, param_list[0].nbins);
+	printf("source_y: [%f, %f] m, resol: %f m, nbins: %d \n", param_list[1].lower_limit, param_list[1].upper_limit, param_list[1].resolution, param_list[1].nbins);
 	// initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
 	max_a_post_value = new double[nbr_param];

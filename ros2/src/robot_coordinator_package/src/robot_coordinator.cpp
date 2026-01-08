@@ -36,7 +36,6 @@ public:
                 latest_pose_.y = msg->transform.translation.y; 
                 latest_pose_.theta = tf2::getYaw(msg->transform.rotation);
                 new_pose_ = true;
-                printf("Received new pose: (%.2f, %.2f, %.2f)\n", latest_pose_.x, latest_pose_.y, latest_pose_.theta);
             }
         });
         
@@ -46,7 +45,6 @@ public:
                     std::lock_guard<std::mutex> lock(data_mutex_);
                     latest_gas_ = msg->vector.x; // gas level is in vector.x
                     new_gas_ = true;
-                    printf("Received new gas concentration: %.2f\n", latest_gas_);
                 }
         });
                 
@@ -57,7 +55,6 @@ public:
                     latest_wind_u_ = msg->vector.x;
                     latest_wind_v_ = msg->vector.y;
                     new_wind_ = true;
-                    printf("Received new wind speed: (u: %.2f, v: %.2f)\n", latest_wind_u_, latest_wind_v_);
                 }
         });
 
@@ -79,7 +76,6 @@ public:
         new_pose_ = false;
         new_gas_ = false;
         new_wind_ = false;
-    
     }
 
 private:
@@ -149,7 +145,8 @@ private:
                 new_pose_ = false;
                 new_gas_ = false;
                 new_wind_ = false;
-                goal_handle->publish_feedback(feedback);               
+                goal_handle->publish_feedback(feedback); 
+                printf("Send feedback during mission execution.\n");             
             }
 
         }
@@ -171,6 +168,7 @@ private:
                 new_pose_ = false;
                 new_gas_ = false;
                 new_wind_ = false;
+                printf("Send feedback at goal location.\n");
                 goal_handle->publish_feedback(feedback);               
             }
         }

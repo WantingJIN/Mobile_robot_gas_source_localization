@@ -28,9 +28,9 @@ inline constexpr int MAX_NB_ROBOTS = 5;
 // ------------------------------------------------------------
 // 🌬️ Wind tunnel boundaries
 // ------------------------------------------------------------
-inline constexpr double XMIN = 3.0;
+inline constexpr double XMIN = -10.0;
 inline constexpr double YMIN = -2.5;
-inline constexpr double XMAX = -10.0;
+inline constexpr double XMAX = 3.0;
 inline constexpr double YMAX = 2.5;
 // inline constexpr double ZMIN = 0.1;
 // inline constexpr double ZMAX = 1.9;

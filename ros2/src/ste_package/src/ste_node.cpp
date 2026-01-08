@@ -367,9 +367,8 @@ void state_initializing(){
 			// TODO: establish baseline measurements
 			// Radom Start position
 			float start_x = 0.0;
-			float start_y = 5.0;
+			float start_y = 2.0;
 			start_path.push_back(Position(start_x, start_y, 0.0));
-			start_path.push_back(Position(3.0, 4.0, 0.0));
 		}
 		ros->send_waypoints(start_path);
 		FSM.state = STATE_LISTENING;
@@ -399,9 +398,9 @@ void state_listening(){
 	}
 	else {
 		//copy the measurement history from rosbridge
+		printf("Robot ID [%d]: reached position.\n", ID);
 		struct History last_history = *(ros->get_meas_history());
-		printf("Robot ID [%d]: reached position. Received %d measurements from robot.\n", ID, last_history.size);
-
+        printf("Received history size: %d\n", last_history.size);
 		// add the new measurements to history
 		for (int i = 0; i < last_history.size; i++){
 			history.position.push_back(last_history.position[i]);
@@ -414,9 +413,6 @@ void state_listening(){
 		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
-		// tempory testing
-		
-
 	}
 }
 
@@ -491,6 +487,7 @@ void state_estimating()
 	} else {
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
+
 	}
 }
 
@@ -551,6 +548,7 @@ void state_updategoal()
 		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
 		// 	random_planning();
 		// }
+		path.clear();
 		if (simulation_parameters.workingMode == TEST){
 			std::list<Position> test_path;
 			//set the goal position from the goal positions list
@@ -589,7 +587,15 @@ void state_updategoal()
 			// send the goal to the supervisor
 			}
 			ros->send_waypoints(path);
-			printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
+            // tempory testing
+			// std::list<Position> test_path;
+			// float start_x = -3.0;
+			// float start_y = 2.0;
+			// test_path.push_back(Position(start_x, start_y, 0.0));
+			
+			// ros->send_waypoints(test_path);
+	
+			//printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
 			// if online simulation: move to the goal position
 			// if offline simulation: read the next goal position and measurements from the file
 		
