@@ -1,6 +1,6 @@
 vicon_median_length: 10
 control_rate: 20.
-max_lin_vel: 0.4
+max_lin_vel: 0.3
 max_agl_vel: 3
 lin_accuracy: 0.05
 agl_accuracy: 0.15

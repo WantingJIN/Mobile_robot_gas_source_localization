@@ -13,6 +13,9 @@
 #include "ste_interfaces/action/navigate_sample.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 
+#include "geometry_msgs/msg/vector3_stamped.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+
 class RobotCoordinator : public rclcpp::Node {
 public:
     using RobotMission = ste_interfaces::action::NavigateSample;
@@ -25,37 +28,40 @@ public:
             "/check_ready", std::bind(&RobotCoordinator::handle_handshake, this, std::placeholders::_1, std::placeholders::_2));
 
         // 2. Internal Subscriptions (Gathering data from other robot nodes)
-        pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-            "/pose", 10, [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) { 
+        pose_sub_ = this->create_subscription<geometry_msgs::msg::TransformStamped>(
+            "/vicon/nori/nori", 10, [this](const geometry_msgs::msg::TransformStamped::SharedPtr msg) { 
             {
                 std::lock_guard<std::mutex> lock(data_mutex_);
-                latest_pose_.x = msg->pose.position.x; 
-                latest_pose_.y = msg->pose.position.y; 
-                latest_pose_.theta = tf2::getYaw(msg->pose.orientation);
+                latest_pose_.x = msg->transform.translation.x; 
+                latest_pose_.y = msg->transform.translation.y; 
+                latest_pose_.theta = tf2::getYaw(msg->transform.rotation);
                 new_pose_ = true;
+                printf("Received new pose: (%.2f, %.2f, %.2f)\n", latest_pose_.x, latest_pose_.y, latest_pose_.theta);
             }
         });
         
-        gas_sub_ = this->create_subscription<sensor_msgs::msg::FluidPressure>(
-            "/gas_sensor", 10, [this](const sensor_msgs::msg::FluidPressure::SharedPtr msg) { 
+        gas_sub_ = this->create_subscription<geometry_msgs::msg::Vector3Stamped>(
+            "/nori/concentration", 10, [this](const geometry_msgs::msg::Vector3Stamped::SharedPtr msg) { 
                 {
                     std::lock_guard<std::mutex> lock(data_mutex_);
-                    latest_gas_ = msg->fluid_pressure;
+                    latest_gas_ = msg->vector.x; // gas level is in vector.x
                     new_gas_ = true;
+                    printf("Received new gas concentration: %.2f\n", latest_gas_);
                 }
         });
                 
-        wind_sub_ = this->create_subscription<ste_interfaces::msg::WindMeasure>( // Replace with your actual msg type
-            "/wind_sensor", 10, [this](const ste_interfaces::msg::WindMeasure::SharedPtr msg) { 
+        wind_sub_ = this->create_subscription<geometry_msgs::msg::Vector3Stamped>( // Replace with your actual msg type
+            "/nori/wind", 10, [this](const geometry_msgs::msg::Vector3Stamped::SharedPtr msg) { 
                 {
                     std::lock_guard<std::mutex> lock(data_mutex_);
-                    latest_wind_u_ = msg->wind_u;
-                    latest_wind_v_ = msg->wind_v;
+                    latest_wind_u_ = msg->vector.x;
+                    latest_wind_v_ = msg->vector.y;
                     new_wind_ = true;
+                    printf("Received new wind speed: (u: %.2f, v: %.2f)\n", latest_wind_u_, latest_wind_v_);
                 }
         });
 
-        planner_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/pose_ctrl_array", 10);
+        planner_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/nori/pose_ctrl_array", 10);
         // 3. Action Server (Talking to the Laptop)
         this->action_server_ = rclcpp_action::create_server<RobotMission>(
             this, "robot_mission",
@@ -190,9 +196,9 @@ private:
     // Variables
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr ready_service_;
     rclcpp_action::Server<RobotMission>::SharedPtr action_server_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::FluidPressure>::SharedPtr gas_sub_;
-    rclcpp::Subscription<ste_interfaces::msg::WindMeasure>::SharedPtr wind_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::TransformStamped>::SharedPtr pose_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr gas_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr wind_sub_;
     
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr planner_pub_;
     

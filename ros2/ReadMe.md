@@ -8,6 +8,10 @@ Build with **ROS2 Foxy**
 
 4. run the node with `ros2 run ste_package controller_node`
 
-5. Remember to set the same ID on both side of laptop and robot, currently the ID is set on laptop side as 60
+5. Remember to set the same ID on both side of laptop and robot, currently the ID is set on laptop side as 7
 
-   `export ROS_DOMAIN_ID=60`
+   `export ROS_DOMAIN_ID=7`
+
+6. ros2 action send_goal /robot_mission ste_interfaces/action/NavigateSample \ "{  goal_positions: {    header: {frame_id: 'map'},    poses: [      {position: {x: 1.0, y: 1.0, z: 0.0}, orientation: {w: 1.0}},      {position: {x: 2.0, y: 2.0, z: 0.0}, orientation: {w: 1.0}},      {position: {x: 3.0, y: 1.5, z: 0.0}, orientation: {w: 1.0}}    ]  } }" --feedback
+
+7. Domain range x [-10,3] y[-2.5, 2.5]
