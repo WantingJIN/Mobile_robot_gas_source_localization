@@ -36,6 +36,11 @@ void init()
 			FSM.state = STATE_INITIALIZING;
 			FSM.hook  = state_initializing;
 			break;
+		case TEST:
+			//set the state to wait for stationary plume
+			FSM.state = STATE_INITIALIZING;
+			FSM.hook  = state_initializing;
+			break;
 		default:
 			break;
 	}
@@ -131,13 +136,6 @@ RosBridge::RosBridge()
   {
     node_ = std::make_shared<rclcpp::Node>("ste_robot_bridge");
 
-    pose_pub_ = node_->create_publisher<geometry_msgs::msg::Pose2D>(
-      "pose_ctrl", 10);
-
-    // pose_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
-    //   "pose", 10,
-    //   std::bind(&RosBridge::currentPoseCallback, this, std::placeholders::_1));
-
 	// 1. Initialize Service Client for Handshake
 	handshake_client_ = node_->create_client<std_srvs::srv::Trigger>("/check_ready");
 	
@@ -161,15 +159,6 @@ RosBridge::RosBridge()
     return true;
   }
 
-  // Called from FSM / controller side to send waypoint
-  void RosBridge::publishWaypoint(double x, double y, double theta)
-  {
-    geometry_msgs::msg::Pose2D msg;
-    msg.x = x;
-    msg.y = y;
-    msg.theta = theta;
-    pose_pub_->publish(msg);
-  }
 
   void RosBridge::currentPoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
   {
@@ -203,13 +192,18 @@ RosBridge::RosBridge()
 
     // --- STEP 2: Goal Generation ---
     void RosBridge::send_waypoints(std::list<Position> path) {
+		
+		// if (action_active_) { // 你可以加一个布尔量标记
+    	// 	RCLCPP_WARN(node_->get_logger(), "Previous goal is still active, waiting...");
+    	// 	return;
+		// }
 		printf("Preparing to send waypoints to robot...\n");
 		robot_reached_goal = false;
         if (!action_client_->wait_for_action_server(std::chrono::seconds(5))) {
             RCLCPP_ERROR(node_->get_logger(), "Action server not available!");
             return;
         }
-		printf("Sending waypoints to robot...\n");
+		printf("Sending waypoints:");
 
         auto goal_msg = RobotMission::Goal();
 		goal_msg.goal_positions.header.frame_id = "map"; 
@@ -223,22 +217,27 @@ RosBridge::RosBridge()
 			q.setRPY(0, 0, pos.heading);
 			waypoint.orientation = tf2::toMsg(q);
 			goal_msg.goal_positions.poses.push_back(waypoint);
+			printf("  Waypoint: (%.2f, %.2f)\n", waypoint.position.x, waypoint.position.y);
 		}
+		printf("\n");
 
         auto send_goal_options = rclcpp_action::Client<RobotMission>::SendGoalOptions();
         
         // Setup Callbacks
         send_goal_options.feedback_callback = std::bind(&RosBridge::feedback_callback, this, std::placeholders::_1, std::placeholders::_2);
         send_goal_options.result_callback = std::bind(&RosBridge::result_callback, this, std::placeholders::_1);
-
-        action_client_->async_send_goal(goal_msg, send_goal_options);
+        
+        try {
+			action_client_->async_send_goal(goal_msg, send_goal_options);
+		} catch (const std::exception & e) {
+			printf("CRASH PREVENTED: %s\n", e.what());
+		}
 		printf("Action sent to robot.\n");
     }
 
     // --- STEP 3: Feedback & Result Callbacks ---
     void RosBridge::feedback_callback(GoalHandleMission::SharedPtr, const std::shared_ptr<const RobotMission::Feedback> feedback) {
         // This is where you receive the Gas and Anemometer data from the robot
-        std::lock_guard<std::mutex> lock(data_mutex_);
 		RCLCPP_INFO(node_->get_logger(), "Robot Feedback -> Pos: (%.2f, %.2f) | Gas: %.2f", 
                     feedback->current_pose.x, 
                     feedback->current_pose.y, 
@@ -247,12 +246,10 @@ RosBridge::RosBridge()
 		history_ptr_->position.push_back(Position(feedback->current_pose.x, feedback->current_pose.y,
 												  feedback->current_pose.theta));
 		history_ptr_->gas_meas.push_back(feedback->gas_level);
-		// history_ptr_->wind_meas_u.push_back(feedback->wind_u);
-		// history_ptr_->wind_meas_v.push_back(feedback->wind_v);
-		history_ptr_->wind_meas_u.push_back(0.0);
-		history_ptr_->wind_meas_v.push_back(0.0);
+		history_ptr_->wind_meas_u.push_back(feedback->wind_speed_u);
+		history_ptr_->wind_meas_v.push_back(feedback->wind_speed_v);
 		history_ptr_->size += 1;
-        // Here you would add logic to adjust your path if gas levels are high
+	
     }
 
     void RosBridge::result_callback(const GoalHandleMission::WrappedResult & result) {
@@ -267,9 +264,10 @@ RosBridge::RosBridge()
         }
     }
 	std::shared_ptr<History> RosBridge::get_meas_history() {
-        std::lock_guard<std::mutex> lock(data_mutex_);
+        //std::lock_guard<std::mutex> lock(data_mutex_);
         // Return the current pointer and create a new empty one for the next mission
         auto snapshot = history_ptr_;
         history_ptr_ = std::make_shared<History>(); 
+		action_active_ = false;
         return snapshot;
   }

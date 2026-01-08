@@ -95,4 +95,5 @@ void broadcast_state_finished();
 void set_source_bounds_centered_with_location(SourceBounds *bounds, double px, double py);
 void set_source_esimation_grid(SourceBounds *bounds, int x_bins, int y_bins);
 void set_source_estimation_range(SourceBounds *bounds, double x_min, double x_max, double y_min, double y_max);
+std::vector<Position> load_goals_from_file(std::string filename);
 #endif

@@ -8,6 +8,8 @@
 #include "geometry_msgs/msg/pose2_d.hpp"
 #include "tf2/utils.h"
 
+#include "ste_interfaces/msg/wind_measure.hpp"
+
 #include "ste_interfaces/action/navigate_sample.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 
@@ -25,20 +27,33 @@ public:
         // 2. Internal Subscriptions (Gathering data from other robot nodes)
         pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
             "/pose", 10, [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) { 
+            {
                 std::lock_guard<std::mutex> lock(data_mutex_);
                 latest_pose_.x = msg->pose.position.x; 
                 latest_pose_.y = msg->pose.position.y; 
-                latest_pose_.theta = 0.0; });
+                latest_pose_.theta = tf2::getYaw(msg->pose.orientation);
+                new_pose_ = true;
+            }
+        });
         
-        gas_sub_ = this->create_subscription<sensor_msgs::msg::FluidPressure>( // Replace with your actual msg type
+        gas_sub_ = this->create_subscription<sensor_msgs::msg::FluidPressure>(
             "/gas_sensor", 10, [this](const sensor_msgs::msg::FluidPressure::SharedPtr msg) { 
-                std::lock_guard<std::mutex> lock(data_mutex_);
-                latest_gas_ = msg->fluid_pressure; });
-        
-        wind_sub_ = this->create_subscription<sensor_msgs::msg::FluidPressure>( // Replace with your actual msg type
-            "/wind_sensor", 10, [this](const sensor_msgs::msg::FluidPressure::SharedPtr msg) { 
-                std::lock_guard<std::mutex> lock(data_mutex_);
-                latest_wind_ = msg->fluid_pressure; });
+                {
+                    std::lock_guard<std::mutex> lock(data_mutex_);
+                    latest_gas_ = msg->fluid_pressure;
+                    new_gas_ = true;
+                }
+        });
+                
+        wind_sub_ = this->create_subscription<ste_interfaces::msg::WindMeasure>( // Replace with your actual msg type
+            "/wind_sensor", 10, [this](const ste_interfaces::msg::WindMeasure::SharedPtr msg) { 
+                {
+                    std::lock_guard<std::mutex> lock(data_mutex_);
+                    latest_wind_u_ = msg->wind_u;
+                    latest_wind_v_ = msg->wind_v;
+                    new_wind_ = true;
+                }
+        });
 
         planner_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>("/pose_ctrl_array", 10);
         // 3. Action Server (Talking to the Laptop)
@@ -48,14 +63,17 @@ public:
             std::bind(&RobotCoordinator::handle_cancel, this, std::placeholders::_1),
             std::bind(&RobotCoordinator::handle_accepted, this, std::placeholders::_1));
 
-        current_location_.x = 0.0;
-        current_location_.y = 0.0;
-        current_location_.theta = 0.0;
+
         latest_gas_ = 0.0;
-        latest_wind_ = 0.0;
+        latest_wind_u_ = 0.0;
+        latest_wind_v_ = 0.0;
         latest_pose_.x = 0.0;
         latest_pose_.y = 0.0;
         latest_pose_.theta = 0.0;
+        new_pose_ = false;
+        new_gas_ = false;
+        new_wind_ = false;
+    
     }
 
 private:
@@ -111,23 +129,48 @@ private:
                 goal_handle->canceled(result);
                 return;
             }
-            // Pack latest measurements into feedback
-            // NOTE: fixed the logic here, we need to sync all the messages
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            feedback->current_pose = latest_pose_;
-            current_location_ = latest_pose_;
-            feedback->gas_level = latest_gas_;
-            feedback->wind_speed = latest_wind_;
 
-            goal_handle->publish_feedback(feedback);
+            if (new_pose_ && new_gas_ && new_wind_){
+                std::lock_guard<std::mutex> lock(data_mutex_);
+                // Only proceed if we have a full "packet" of new data
+                auto feedback = std::make_shared<RobotMission::Feedback>();
+                feedback->current_pose = latest_pose_;
+                feedback->gas_level = latest_gas_;
+                feedback->wind_speed_u = latest_wind_u_;
+                feedback->wind_speed_v = latest_wind_v_;
 
-            // Logic to determine if "reached" (this would normally check Planner status)
-            // For now, we simulate a finish after some time
-            // if (/* some condition from Path Planner */ false) { break; }
+                // Reset flags for next sync
+                new_pose_ = false;
+                new_gas_ = false;
+                new_wind_ = false;
+                goal_handle->publish_feedback(feedback);               
+            }
 
-            loop_rate.sleep();
         }
+        // take one measurement or more at the goal position depending on the sample mode
+        // TODO: impelement different sampling modes
+        rclcpp::sleep_for(std::chrono::seconds(1));
+        if (distance_to_goal(goal_location_) < 0.05){
+            RCLCPP_INFO(this->get_logger(), "Reached goal location.");
+            if (new_pose_ && new_gas_ && new_wind_){
+                std::lock_guard<std::mutex> lock(data_mutex_);
+                // Only proceed if we have a full "packet" of new data
+                auto feedback = std::make_shared<RobotMission::Feedback>();
+                feedback->current_pose = latest_pose_;
+                feedback->gas_level = latest_gas_;
+                feedback->wind_speed_u = latest_wind_u_;
+                feedback->wind_speed_v = latest_wind_v_;
 
+                // Reset flags for next sync
+                new_pose_ = false;
+                new_gas_ = false;
+                new_wind_ = false;
+                goal_handle->publish_feedback(feedback);               
+            }
+        }
+        // wait for 1s
+        rclcpp::sleep_for(std::chrono::seconds(1));
+        printf("Mission completed successfully.\n");
         result->success = true;
         goal_handle->succeed(result);
     }
@@ -138,8 +181,8 @@ private:
     }
 
     double distance_to_goal(const geometry_msgs::msg::Pose2D& goal) {
-        double dx = goal.x - current_location_.x;
-        double dy = goal.y - current_location_.y;
+        double dx = goal.x - latest_pose_.x;
+        double dy = goal.y - latest_pose_.y;
         double distance = std::sqrt(dx * dx + dy * dy);
         return distance;
     }
@@ -149,17 +192,21 @@ private:
     rclcpp_action::Server<RobotMission>::SharedPtr action_server_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
     rclcpp::Subscription<sensor_msgs::msg::FluidPressure>::SharedPtr gas_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::FluidPressure>::SharedPtr wind_sub_;
+    rclcpp::Subscription<ste_interfaces::msg::WindMeasure>::SharedPtr wind_sub_;
     
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr planner_pub_;
     
     geometry_msgs::msg::Pose2D latest_pose_;
-    double latest_gas_;
-    double latest_wind_;
+    float latest_gas_;
+    float latest_wind_u_;
+    float latest_wind_v_;
     // current location
-    geometry_msgs::msg::Pose2D current_location_;
     geometry_msgs::msg::Pose2D goal_location_;
     std::mutex data_mutex_;
+
+    bool new_pose_;
+    bool new_gas_;
+    bool new_wind_;
     
 };
 
@@ -167,10 +214,8 @@ int main(int argc, char ** argv) {
     rclcpp::init(argc, argv);
     // rclcpp::spin(std::make_shared<RobotCoordinator>());
     // rclcpp::shutdown();
-    while (rclcpp::ok()) {
-        auto robot_coordinator_node = std::make_shared<RobotCoordinator>();
-        rclcpp::spin(robot_coordinator_node);
-    }
+    auto node = std::make_shared<RobotCoordinator>();
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }

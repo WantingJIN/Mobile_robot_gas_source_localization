@@ -99,6 +99,7 @@ typedef enum workingMode{
 	OFFLINE = 0,
 	EXPERIMENT = 1,
 	VIDEO = 2,
+	TEST = 3,
 }eWorkingMode;
 
 typedef enum calibrationMode

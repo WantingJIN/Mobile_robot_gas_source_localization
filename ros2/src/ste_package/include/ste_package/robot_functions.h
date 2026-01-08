@@ -113,8 +113,6 @@ public:
   bool shakehand_success;
 private:
   rclcpp::Node::SharedPtr node_;
-  rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pose_pub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
 
   std::mutex mutex_;
   geometry_msgs::msg::PoseStamped current_pose_;
@@ -126,7 +124,7 @@ private:
   // Use a shared_ptr to manage the vector heap memory
   std::shared_ptr<History> history_ptr_ = std::make_shared<History>();
   std::mutex data_mutex_;
- 
+  bool action_active_{false};
   
 };
 

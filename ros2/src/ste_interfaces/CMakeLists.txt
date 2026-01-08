@@ -24,7 +24,9 @@ find_package(tf2_geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(ste_interfaces
   "action/NavigateSample.action"
+  "msg/WindMeasure.msg"
   DEPENDENCIES geometry_msgs
+  DEPENDENCIES std_msgs
 )
 
 if(BUILD_TESTING)

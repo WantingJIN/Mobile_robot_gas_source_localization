@@ -156,6 +156,7 @@ eWorkingMode parse_work_mode(const char* str) {
 	if (strcmp(str, "OFFLINE") == 0) return OFFLINE;
 	if (strcmp(str, "EXPERIMENT") == 0) return EXPERIMENT;
 	if (strcmp(str, "VIDEO") == 0) return VIDEO;
+	if (strcmp(str, "TEST") == 0) return TEST;
 	fprintf(stderr, "Unknown work mode: %s\n", str);
 	exit(1);
 }

@@ -179,6 +179,11 @@ SourceBounds source_bounds;
 std::vector<std::vector<double>> belief_maps;
 // visited list
 std::vector<int> cell_visited_list;
+
+// goal positions 
+
+std::vector<Position> goal_positions; 
+
 // =========================== FUNCTIONS ================================ //
 
 // get the current time in timestamp (ms)
@@ -206,7 +211,8 @@ void read_obstacle_list()
 {
 	// open file
 	
-	std::string obstacle_file = config_folder_path + "/model/test_maps/map" + std::to_string(simulation_parameters.map_nbr) + "/obstacle_list.txt";
+	std::string obstacle_file = config_folder_path + "/model/test_maps/map" + std::to_string(simulation_parameters.map_nbr) + "/" + std::to_string(simulation_parameters.map_nbr) + "_obstacles.txt";
+	printf("Obstacle file path: %s\n", obstacle_file.c_str());
 	std::ifstream infile(obstacle_file.c_str());
 	printf("Reading obstacle list from %s\n", obstacle_file.c_str());
 	// first line is the number of obstacles
@@ -344,7 +350,6 @@ void log_experiment_time()
 void state_initializing(){
 	printf("Robot ID [%d]: STATE_INITIALIZING \n", ID);
 	// waiting for some time to let the robot stabilize; and the message to confirm connection
-    
 	if (ros->shakehand_with_robot() == false){
 		printf("Robot ID [%d]: waiting for handshake...\n", ID);
 		FSM.state = STATE_INITIALIZING;
@@ -352,15 +357,20 @@ void state_initializing(){
 		//next_iteration_time();
 	
 	} else {
-		// TODO: establish baseline measurements
-		// Radom Start position
-		float start_x = 0.0;
-		float start_y = 5.0;
 		std::list<Position> start_path;
-		start_path.push_back(Position(start_x, start_y, 0.0));
-		start_path.push_back(Position(3.0, 4.0, 0.0));
-		// print start_path
-		printf("Robot ID [%d]: sending robot to start position (%f, %f)...\n", ID, start_x, start_y);
+        if (simulation_parameters.workingMode == TEST){
+			//set the start position from the goal positions list
+			auto goal_pos_from_file = goal_positions[FSM.n_cycles];
+			start_path.push_back(Position(goal_pos_from_file.x, goal_pos_from_file.y, 0.0));
+		    printf("Robot ID [%d]: start position from file: (%.2f, %.2f)\n", ID, goal_pos_from_file.x, goal_pos_from_file.y);
+		} else if (simulation_parameters.workingMode == EXPERIMENT){
+			// TODO: establish baseline measurements
+			// Radom Start position
+			float start_x = 0.0;
+			float start_y = 5.0;
+			start_path.push_back(Position(start_x, start_y, 0.0));
+			start_path.push_back(Position(3.0, 4.0, 0.0));
+		}
 		ros->send_waypoints(start_path);
 		FSM.state = STATE_LISTENING;
 		FSM.hook  = state_listening;
@@ -383,24 +393,30 @@ void state_listening(){
 	// FSM.hook  = state_listening;
 
 	if (!ros->robot_reached_goal){
-		printf("Robot ID [%d]: waiting to reach start position...\n", ID);
+		printf("Robot ID [%d]: waiting to reach position...\n", ID);
 		FSM.state = STATE_LISTENING;
 		FSM.hook  = state_listening;
 	}
 	else {
 		//copy the measurement history from rosbridge
 		struct History last_history = *(ros->get_meas_history());
+		printf("Robot ID [%d]: reached position. Received %d measurements from robot.\n", ID, last_history.size);
+
 		// add the new measurements to history
 		for (int i = 0; i < last_history.size; i++){
 			history.position.push_back(last_history.position[i]);
 			history.gas_meas.push_back(last_history.gas_meas[i]);
 			history.wind_meas_u.push_back(last_history.wind_meas_u[i]);
 			history.wind_meas_v.push_back(last_history.wind_meas_v[i]);
-			history.FSM_iter.push_back(last_history.FSM_iter[i]);	
+			history.FSM_iter.push_back(FSM.n_cycles);	
 			history.size++;
 		}
+		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
+		// tempory testing
+		
+
 	}
 }
 
@@ -528,47 +544,62 @@ void state_updategoal()
 	}
 	if (FSM.state != STATE_FINISHED)
 	{
-		// The goal position is very close to current postion, swith to random planning
+		// If the goal position is very close to current postion, swith to random planning
 		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
 		// {
 		// 	printf("The goal position is very close to current postion, switch to random planning \n");
 		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
 		// 	random_planning();
 		// }
-		if (use_visibility_path)
-		{
-
-			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-			path_planner->goal_outside_obstacles(&goal_position);
-			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-			// find the path using visibility graph
-			VisiLibity::Point start(current_position.x, current_position.y);
-			VisiLibity::Point finish(goal_position.x, goal_position.y);
-			VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
-			// copy the path in another variable
-			for (unsigned k = 0; k < Polyline_path.size(); k++)
-			{
-				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-				path.push_back(p);
-				log_trajectory(p);
-			}
+		if (simulation_parameters.workingMode == TEST){
+			std::list<Position> test_path;
+			//set the goal position from the goal positions list
+			auto goal_pos_from_file = goal_positions[FSM.n_cycles];
+			goal_position.x = goal_pos_from_file.x;
+			goal_position.y = goal_pos_from_file.y;
+			test_path.clear();
+			test_path.push_back(Position(goal_position.x, goal_position.y, 0.0));
+			// i = path.begin();
+			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			// send the goal to the supervisor
+			ros->send_waypoints(test_path);
+			FSM.state = STATE_LISTENING;
+			FSM.hook  = state_listening;
 		}
-		// i = path.begin();
-		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-		// send the goal to the supervisor
-		ros->send_waypoints(path);
-		printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
-		// if online simulation: move to the goal position
-		// if offline simulation: read the next goal position and measurements from the file
-	
-		// update goal
-		FSM.state = STATE_LISTENING;
-		FSM.hook = state_listening;
-		time_before_moving = current_timestamp();
-		long long current_path_planning_time = current_timestamp() - time_before_path_planning;
-		planning_time_sum += current_path_planning_time;
-	
+		else {
+			if (use_visibility_path){
+				printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+				path_planner->goal_outside_obstacles(&goal_position);
+				printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+
+				// find the path using visibility graph
+				VisiLibity::Point start(current_position.x, current_position.y);
+				VisiLibity::Point finish(goal_position.x, goal_position.y);
+				VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
+				// copy the path in another variable
+				for (unsigned k = 0; k < Polyline_path.size(); k++)
+				{
+					Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+					path.push_back(p);
+					log_trajectory(p);
+				}
+			
+			// i = path.begin();
+			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			// send the goal to the supervisor
+			}
+			ros->send_waypoints(path);
+			printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
+			// if online simulation: move to the goal position
+			// if offline simulation: read the next goal position and measurements from the file
+		
+			// update goal
+			FSM.state = STATE_LISTENING;
+			FSM.hook = state_listening;
+			time_before_moving = current_timestamp();
+			long long current_path_planning_time = current_timestamp() - time_before_path_planning;
+			planning_time_sum += current_path_planning_time;
+		}
 	}
 }
 
@@ -669,6 +700,26 @@ void init_estimation_bound(){
 void init_visited_list(){
 	cell_visited_list.assign(source_bounds.map_size, 0.0);
 }
+
+
+std::vector<Position> load_goals_from_file(std::string filename) {
+    std::vector<Position> goals;
+    std::ifstream file(filename);
+    std::string line;
+    while (std::getline(file, line)) {
+		printf("Reading line: %s\n", line.c_str());
+        std::stringstream ss(line);
+        std::string val;
+        std::vector<double> row;
+        while (std::getline(ss, val, ',')) {
+            row.push_back(std::stod(val));
+        }
+        if (row.size() >= 4) {
+            goals.push_back({row[1], row[2], row[3]});
+        }
+    }
+    return goals;
+}
 	
 
 // =========================== MAIN ============================== //
@@ -706,7 +757,12 @@ int main(int argc, char **argv)
 
 	auto exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
   	exec->add_node(ros->node());
-
+    
+	if (simulation_parameters.workingMode == TEST){
+		goal_positions = load_goals_from_file(config_folder_path + "/goal_position.csv");
+		printf("Goal positions file path is: %s\n", (config_folder_path + "/goal_position.csv").c_str());
+		printf("Loaded %zu goal positions from file.\n", goal_positions.size());
+	}
 	// //main loop
 	while (FSM.state != STATE_FINISHED && rclcpp::ok())
 	{
