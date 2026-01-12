@@ -472,7 +472,7 @@ void Posterior::exhaustive_evaluation(struct History &history)
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
-		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
+		// printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas);
@@ -485,7 +485,7 @@ void Posterior::exhaustive_evaluation(struct History &history)
 		}
 	}
 	// for each element of the pdf
-	printf("for each element of the pdf\n");
+	//printf("for each element of the pdf\n");
 	for (i = 0; i < nbr_element; i++)
 	{
 		// convert index 'i' to set of parameter values 'sample'

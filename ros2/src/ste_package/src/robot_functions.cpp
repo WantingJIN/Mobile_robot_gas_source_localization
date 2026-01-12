@@ -78,7 +78,12 @@ void set_logfile_names()
 		char folder_path[128];
 		sprintf(folder_path, "%s/%s", pPath, "ros2/Results"); // create a new folder for log files
 		mkdir(folder_path, 0755);
-		sprintf(folder_name, "%s/%s", folder_path, "logs"); // create a new folder for log files
+		//create a new folder with the time dd_hh_mm
+		time_t now = time(0);
+		tm *ltm = localtime(&now);
+		char time_folder[64];
+		sprintf(time_folder, "%02d_%02d_%02d_%02d", ltm->tm_mon+1 ,ltm->tm_mday, ltm->tm_hour, ltm->tm_min);
+		sprintf(folder_name, "%s/%s", folder_path, time_folder);
 		mkdir(folder_name, 0755);
 	}
 	else
@@ -238,10 +243,10 @@ RosBridge::RosBridge()
     // --- STEP 3: Feedback & Result Callbacks ---
     void RosBridge::feedback_callback(GoalHandleMission::SharedPtr, const std::shared_ptr<const RobotMission::Feedback> feedback) {
         // This is where you receive the Gas and Anemometer data from the robot
-		RCLCPP_INFO(node_->get_logger(), "Robot Feedback -> Pos: (%.2f, %.2f) | Gas: %.2f", 
-                    feedback->current_pose.x, 
-                    feedback->current_pose.y, 
-                    feedback->gas_level);
+		// RCLCPP_INFO(node_->get_logger(), "Robot Feedback -> Pos: (%.2f, %.2f) | Gas: %.2f", 
+        //             feedback->current_pose.x, 
+        //             feedback->current_pose.y, 
+        //             feedback->gas_level);
 
 		history_ptr_->position.push_back(Position(feedback->current_pose.x, feedback->current_pose.y,
 												  feedback->current_pose.theta));

@@ -392,7 +392,7 @@ void state_listening(){
 	// FSM.hook  = state_listening;
 
 	if (!ros->robot_reached_goal){
-		printf("Robot ID [%d]: waiting to reach position...\n", ID);
+		//printf("Robot ID [%d]: waiting to reach position...\n", ID);
 		FSM.state = STATE_LISTENING;
 		FSM.hook  = state_listening;
 	}
@@ -410,9 +410,11 @@ void state_listening(){
 			history.FSM_iter.push_back(FSM.n_cycles);	
 			history.size++;
 		}
+		current_position = last_history.position.back();
 		history_print(history);
 		FSM.state = STATE_ESTIMATING;
 		FSM.hook  = state_estimating;
+		log_position();
 	}
 }
 

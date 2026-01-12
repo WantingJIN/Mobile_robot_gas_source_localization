@@ -15,3 +15,7 @@ Build with **ROS2 Foxy**
 6. ros2 action send_goal /robot_mission ste_interfaces/action/NavigateSample \ "{  goal_positions: {    header: {frame_id: 'map'},    poses: [      {position: {x: 1.0, y: 1.0, z: 0.0}, orientation: {w: 1.0}},      {position: {x: 2.0, y: 2.0, z: 0.0}, orientation: {w: 1.0}},      {position: {x: 3.0, y: 1.5, z: 0.0}, orientation: {w: 1.0}}    ]  } }" --feedback
 
 7. Domain range x [-10,3] y[-2.5, 2.5]
+
+8. wind is in local frame
+
+9. The anemometer coordinate has 90 degree (clockwise) difference compare to the robot coordinate 

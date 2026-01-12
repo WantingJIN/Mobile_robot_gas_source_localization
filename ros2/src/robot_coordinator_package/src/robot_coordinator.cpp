@@ -56,7 +56,7 @@ public:
                 //!average window
                 latest_robot_speed_x = get_average(robot_speed_x_buffer_, latest_robot_speed_x);
                 latest_robot_speed_y = get_average(robot_speed_y_buffer_, latest_robot_speed_y);
-                printf("Robot Speed: x=%.2f, y=%.2f\n", latest_robot_speed_x, latest_robot_speed_y);
+                //printf("Robot Speed: x=%.2f, y=%.2f\n", latest_robot_speed_x, latest_robot_speed_y);
 
                 // use moving average to smooth the speed
                 // Exponential Moving Average
@@ -134,7 +134,7 @@ public:
                     double cmd_speed_y = msg->linear.y;
                     cmd_speed_x_world_ = cmd_speed_x * cos(latest_pose_.theta) - cmd_speed_y * sin(latest_pose_.theta);
                     cmd_speed_y_world_ = cmd_speed_x * sin(latest_pose_.theta) + cmd_speed_y * cos(latest_pose_.theta);
-                    printf("Cmd Speed: x=%.2f, y=%.2f\n", cmd_speed_x_world_, cmd_speed_y_world_);
+                    //printf("Cmd Speed: x=%.2f, y=%.2f\n", cmd_speed_x_world_, cmd_speed_y_world_);
                 }
         });
 
