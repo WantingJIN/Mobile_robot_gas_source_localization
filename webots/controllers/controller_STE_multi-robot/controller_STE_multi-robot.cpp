@@ -532,7 +532,8 @@ void state_measuring()
 			if (simulation_parameters.visitedList == visitedList_ON)
 			{
 				int idx = position_to_index_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y);
-				cell_visited_list[idx] = 1;
+				// do not mark the cells passed during motion as visited; only mark the final goal position
+				//cell_visited_list[idx] = 1;
 			}
 			log_measurements(FSM.n_cycles, sample_in_motion.position[i].x, sample_in_motion.position[i].y,
 							 sample_in_motion.wind_meas_u[i], sample_in_motion.wind_meas_v[i], sample_in_motion.gas_meas[i]);
