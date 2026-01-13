@@ -122,7 +122,7 @@ void PathPlanner::random_navigation()
 bool PathPlanner::position_outside_arena(Position p)
 {
 	bool outside = 1;
-	if (p.y >= float(YMIN + SAFETY_MARGIN) && p.y <= float(YMAX - SAFETY_MARGIN) && p.x >= float(XMIN + SAFETY_MARGIN) && p.x < float(XMAX - SAFETY_MARGIN))
+	if (p.y >= float(YMIN + SAFETY_MARGIN) && p.y <= float(YMAX - SAFETY_MARGIN) && p.x >= float(XMIN + SAFETY_MARGIN) && p.x <= float(XMAX - SAFETY_MARGIN))
 		outside = 0;
 	// if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;

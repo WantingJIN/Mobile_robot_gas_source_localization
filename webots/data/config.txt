@@ -36,6 +36,6 @@ updateGoalPolicy = GOAL_REACHED
 updateGoalTime = 5
 plumeModel = FDM_PDE
 estimationScale = GLOBAL
-windEstimationMethod = BASEFLOW_CORRECTION
+windEstimationMethod = GAUSSIAN_KERNEL
 windInfo = WIND_ONLINE
 modelUncertainty = FIXED_UNCERTAINTY
