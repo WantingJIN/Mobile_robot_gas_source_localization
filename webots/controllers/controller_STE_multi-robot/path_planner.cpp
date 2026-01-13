@@ -122,7 +122,7 @@ void PathPlanner::random_navigation()
 bool PathPlanner::position_outside_arena(Position p)
 {
 	bool outside = 1;
-	if (p.y >= float(YMIN + SAFETY_MARGIN) && p.y <= float(YMAX - SAFETY_MARGIN) && p.x >= float(XMIN + SAFETY_MARGIN) && p.x < float(XMAX - SAFETY_MARGIN))
+	if (p.y >= float(YMIN + SAFETY_MARGIN) && p.y <= float(YMAX - SAFETY_MARGIN) && p.x >= float(XMIN + SAFETY_MARGIN) && p.x <= float(XMAX - SAFETY_MARGIN))
 		outside = 0;
 	// if(position[2] < ZMIN || position[2] > ZMAX) outside = 1;
 	return outside;
@@ -312,6 +312,7 @@ vector<pair<CellPoint, CellPoint>> PathPlanner::clustering_information_blocks(do
 
 void PathPlanner::belief_clustering_planning()
 {
+	// TODO - change the logic here; if a cluster exist, then it should scan the clusters anyway 
 	printf("Enter belief clustering planning \n");
 
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
@@ -426,13 +427,13 @@ void PathPlanner::informative_clustering_planning()
 								Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].first.y, 0),
 								Position(clusters_bounding_box[i].second.x, clusters_bounding_box[i].second.y, 0)};
-			for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
 			{
-				double dist = current_position.dist_to_goal(cluster_vertex[i]);
+				double dist = current_position.dist_to_goal(cluster_vertex[j]);
 				if (dist > max_dist_to_robot)
 				{
 					max_dist_to_robot = dist;
-					max_dist_to_robot_index = i;
+					max_dist_to_robot_index = j;
 				}
 			}
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
@@ -1135,8 +1136,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 		// for each candidate position
 		for (int i = 0; i < 8; i++)
 		{
-
-
 			// check if the distance to candidate is smaller than others
 			if (goal->distance_from(candidates[i]) < min_dist)
 			{
