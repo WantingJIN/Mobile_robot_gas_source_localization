@@ -565,7 +565,7 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
 		wind_estimator_ = new GaussianWindEstimator(source_bounds.x_min, source_bounds.x_max,
 												  source_bounds.y_min, source_bounds.y_max,
-												  Nx_, Ny_, obstacles, nbr_obs, 0.30, 1.0, 0.0);
+												  Nx_, Ny_, obstacles, nbr_obs, 0.30, 1.0, 0.5);
 		// first intialize as ground truth wind field
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
