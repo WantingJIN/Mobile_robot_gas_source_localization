@@ -1589,9 +1589,7 @@ int main(int argc, char **argv)
 		init_belief_maps_for_team();
 	}
     // if using visited list, initialize the visited list
-	if (simulation_parameters.visitedList == visitedList_ON){
-		init_visited_list();
-	}
+	init_visited_list();
 
     // File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");
@@ -1663,6 +1661,5 @@ int main(int argc, char **argv)
 	for (int i = 0; i < nbr_obs; i++)
 		delete[] obstacles[i];
 	delete[] obstacles;
-
 	exit(0);
 }

@@ -95,6 +95,7 @@ ros2/log/
 ros2/Results
 ros2/src/ste_package/config/**
 !ros2/src/ste_package/config/config.txt
+ros2/src/test_tool
 
 
 **/log/**
