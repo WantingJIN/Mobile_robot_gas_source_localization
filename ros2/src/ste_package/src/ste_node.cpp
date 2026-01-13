@@ -697,7 +697,7 @@ void set_source_bounds(SourceBounds *bounds,
 void init_estimation_bound(){
 	// in case of global estimation
 		set_source_bounds(&source_bounds, 
-						XMIN, YMIN, XMAX, YMAX, 20, 20);
+						XMIN+SAFETY_MARGIN, YMIN+SAFETY_MARGIN, XMAX-SAFETY_MARGIN, YMAX-SAFETY_MARGIN, 20, 20);
 		FILE * sim_param_file = fopen(config_logfile_name, "a");
 	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
 	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);

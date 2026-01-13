@@ -61,17 +61,20 @@ double likelihood_precomp(struct History &history, double *parameters, int sourc
 double likelihood_rel_con(struct History &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
 
-	// float sigma = 0.22; // works well for Gaussian CDF
-	// float sigma = 0.49; // works well for Normalization
-	float sigma = simulation_parameters.likelihoodSigma;
-    // if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-	// 	sigma = simulation_parameters.likelihoodSigma;
-	// }
-	// else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-	// 	// dynamic uncertainty based on wind estimation confidence
-	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
-	// 	sigma = simulation_parameters.likelihoodSigma * (1.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
-	// }
+	float sigma;
+    if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+		sigma = simulation_parameters.likelihoodSigma;
+	}
+	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// dynamic uncertainty based on wind estimation confidence
+		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+		if (wind_confidence < 1e-3){
+			// very high uncertainty when wind confidence is too low
+			sigma = simulation_parameters.likelihoodSigma * 5.0;
+		} else {
+			sigma = simulation_parameters.likelihoodSigma;
+		}
+	}
 
 	double sum_tmp = 0; 
 
@@ -155,15 +158,15 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 	}
 
 
-	if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-		// dynamic uncertainty based on wind estimation confidence
-		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
-		if (wind_confidence < 1e-3){
-			// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
-			sum_tmp = 0.001; // very high likelihood
-		}
+	// if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+	// 	// dynamic uncertainty based on wind estimation confidence
+	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+	// 	if (wind_confidence < 1e-3){
+	// 		// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
+	// 		sum_tmp = 0.001; // very high likelihood
+	// 	}
 	
-	}
+	// }
 	return (exp(-0.5 * sum_tmp));
 }
 

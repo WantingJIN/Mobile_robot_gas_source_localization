@@ -143,8 +143,6 @@ void GaussianWindEstimator::estimateField(
                 float dy_ = Y_[jj][ii] - y_i;
                 float r_n = dx_ * n_x + dy_ * n_y;
                 float r_t = -dx_ * n_y + dy_ * n_x;
-                // FIXME: still we have something very wired when the samples is very close to the obstacle
-                // Now we set beta to 0.0 manually
                 float w = std::exp(-(r_t*r_t + beta*r_n*r_n) / (2*sigma_*sigma_));
                 //float w = std::exp(-(dx_*dx_ + dy_*dy_) / (2*sigma_*sigma_));
                 U_field_[jj][ii] += w * U_i;
