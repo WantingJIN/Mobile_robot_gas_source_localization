@@ -366,10 +366,13 @@ void state_initializing(){
 		} else if (simulation_parameters.workingMode == EXPERIMENT){
 			// TODO: establish baseline measurements
 			// Radom Start position
-			float start_x = 0.0;
-			float start_y = 2.0;
+			float start_x = XMAX-1.0;
+			float start_y = YMIN+1.0;
 			start_path.push_back(Position(start_x, start_y, 0.0));
 		}
+		ros->send_waypoints(start_path);
+		// send twice to garantee the robot only sample after reaching the start position
+		// to make it consistent with the simulation
 		ros->send_waypoints(start_path);
 		FSM.state = STATE_LISTENING;
 		FSM.hook  = state_listening;
@@ -448,9 +451,9 @@ void state_estimating()
 		posterior->exhaustive_evaluation(history);
 	}
 
-	printf("sum posterior : %f \n", posterior->sum);
+	//printf("sum posterior : %f \n", posterior->sum);
 	posterior->normalize();
-	printf("sum posterior after normalization : %f \n", posterior->sum);
+	//printf("sum posterior after normalization : %f \n", posterior->sum);
 	posterior->log_pdf(posterior_pdf_3D_name, 'a');
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		posterior->log_relative_history_meas(relative_history_meas_logfile_name, 'a', history.relative_meas);
@@ -474,6 +477,9 @@ void state_estimating()
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
+
+	printf("Max a posteriori: %f, %f\n", plume_model->max_a_post_value[0], plume_model->max_a_post_value[1]);
+	
 	
 	bool is_converge_condition_reached = check_converge_condition();
 	bool is_path_end = path_planner->reach_end_of_fix_path; // only for fixed path like lawnmower
@@ -577,7 +583,8 @@ void state_updategoal()
 				VisiLibity::Point finish(goal_position.x, goal_position.y);
 				VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
 				// copy the path in another variable
-				for (unsigned k = 0; k < Polyline_path.size(); k++)
+				// skip the first point (current position)
+				for (unsigned k = 1; k < Polyline_path.size(); k++)
 				{
 					Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
 					path.push_back(p);
@@ -797,6 +804,13 @@ int main(int argc, char **argv)
 	for (int i = 0; i < nbr_obs; i++)
 		delete[] obstacles[i];
 	delete[] obstacles;
+
+	float end_x = XMAX-1.0;
+	float end_y = YMIN+1.0;
+	std::list<Position> end_goal;
+	end_goal.push_back(Position(end_x, end_y, 0.0));
+	ros->send_waypoints(end_goal);
+	printf("STE Node finished. Homing... \n");
 
 	rclcpp::shutdown();
 

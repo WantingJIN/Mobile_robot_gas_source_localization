@@ -70,7 +70,7 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
 		if (wind_confidence < 1e-3){
 			// very high uncertainty when wind confidence is too low
-			sigma = simulation_parameters.likelihoodSigma * 5.0;
+			sigma = simulation_parameters.likelihoodSigma * 20.0;
 		} else {
 			sigma = simulation_parameters.likelihoodSigma;
 		}

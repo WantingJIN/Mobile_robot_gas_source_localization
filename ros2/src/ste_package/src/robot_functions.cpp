@@ -75,15 +75,18 @@ void set_logfile_names()
 	if (pPath != NULL)
 	{
 		printf("The current path is: %s\n", pPath);
-		char folder_path[128];
+		char folder_path[64];
 		sprintf(folder_path, "%s/%s", pPath, "ros2/Results"); // create a new folder for log files
 		mkdir(folder_path, 0755);
 		//create a new folder with the time dd_hh_mm
+		char date_folder[128];
 		time_t now = time(0);
 		tm *ltm = localtime(&now);
+		sprintf(date_folder, "%s/%02d_%02d", folder_path, ltm->tm_mon+1 ,ltm->tm_mday);
+		mkdir(date_folder, 0755);
 		char time_folder[64];
-		sprintf(time_folder, "%02d_%02d_%02d_%02d", ltm->tm_mon+1 ,ltm->tm_mday, ltm->tm_hour, ltm->tm_min);
-		sprintf(folder_name, "%s/%s", folder_path, time_folder);
+		sprintf(time_folder, "%02d_%02d",ltm->tm_hour, ltm->tm_min);
+		sprintf(folder_name, "%s/%s", date_folder, time_folder);
 		mkdir(folder_name, 0755);
 	}
 	else

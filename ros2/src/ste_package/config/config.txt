@@ -39,3 +39,4 @@ estimationScale = GLOBAL
 windEstimationMethod = GAUSSIAN_KERNEL
 windInfo = WIND_ONLINE
 modelUncertainty = DYNAMIC_UNCERTAINTY
+mapINFO=MAP_USED

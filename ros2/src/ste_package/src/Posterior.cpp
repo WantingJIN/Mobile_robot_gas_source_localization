@@ -509,7 +509,7 @@ void Posterior::exhaustive_evaluation(struct History &history)
 		// add the new value to the sum
 		sum += pdf[i];
 	}
-	printf("exhaustive_evaluation done\n");
+	//printf("exhaustive_evaluation done\n");
 }
 
 // relative entropy calculation between one posterior pdf and another P

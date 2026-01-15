@@ -171,6 +171,11 @@ typedef enum modelUncertainty{
 	DYNAMIC_UNCERTAINTY = 1,
 } eModelUncertainty;
 
+typedef enum mapInfo{
+	MAP_USED = 0,
+	MAP_NOT_USED = 1,
+} eMapInfo;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -233,6 +238,8 @@ class SimulationParameters{
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
 		eModelUncertainty modelUncertainty;
+
+		eMapInfo mapInfo;
 
 		SimulationParameters();
 		~SimulationParameters();

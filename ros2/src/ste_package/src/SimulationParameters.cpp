@@ -264,6 +264,13 @@ eModelUncertainty parse_model_uncertainty(const char* str) {
 	exit(1);
 }
 
+eMapInfo parse_map_info(const char* str) {
+	if (strcmp(str, "MAP_USED") == 0) return MAP_USED;
+	if (strcmp(str, "MAP_NOT_USED") == 0) return MAP_NOT_USED;
+	fprintf(stderr, "Unknown map info: %s\n", str);
+	exit(1);
+}
+
 SimulationParameters::SimulationParameters(){
 }
 
@@ -438,6 +445,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			strcpy(experimental_logname, value);
 		}
+		else if (strcmp(key, "mapInfo") == 0) 
+		{
+			mapInfo = parse_map_info(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -507,6 +518,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "wind_info %d\n", windInfo);
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
+	fprintf(sim_param_file, "map_info %d\n", mapInfo);
 	fclose(sim_param_file);
 }
 
