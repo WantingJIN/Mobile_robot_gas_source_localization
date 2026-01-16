@@ -111,6 +111,7 @@ public:
   std::shared_ptr<History> get_meas_history();
   bool robot_reached_goal;
   bool shakehand_success;
+  int feedback_count = 0;
 private:
   rclcpp::Node::SharedPtr node_;
 

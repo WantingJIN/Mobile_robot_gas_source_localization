@@ -168,10 +168,10 @@ void DBSCAN::printResults()
 
 pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPoint> &points, const int clusterId)
 {
-	float minX = numeric_limits<float>::max();
-	float minY = numeric_limits<float>::max();
-	float maxX = numeric_limits<float>::min();
-	float maxY = numeric_limits<float>::min();
+	float minX = 1000;
+	float minY = 1000;
+	float maxX = -1000;
+	float maxY = -1000;
 
 	for (auto &point : points)
 	{

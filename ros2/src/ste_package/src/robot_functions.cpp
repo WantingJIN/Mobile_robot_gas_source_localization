@@ -240,6 +240,10 @@ RosBridge::RosBridge()
 		} catch (const std::exception & e) {
 			printf("CRASH PREVENTED: %s\n", e.what());
 		}
+
+		history_ptr_ = std::make_shared<History>(); 
+		feedback_count = 0;
+
 		printf("Action sent to robot.\n");
     }
 
@@ -250,6 +254,15 @@ RosBridge::RosBridge()
         //             feedback->current_pose.x, 
         //             feedback->current_pose.y, 
         //             feedback->gas_level);
+
+		// only keep one measurement outof every N feedbacks to reduce data amount
+		// const int FEEDBACK_SKIP = 5;
+		// feedback_count++;
+		// if (feedback_count >1 && feedback_count % FEEDBACK_SKIP != 0) {
+		// 	return;
+		// }
+		// Store the feedback data into history
+		std::lock_guard<std::mutex> lock(data_mutex_);
 
 		history_ptr_->position.push_back(Position(feedback->current_pose.x, feedback->current_pose.y,
 												  feedback->current_pose.theta));

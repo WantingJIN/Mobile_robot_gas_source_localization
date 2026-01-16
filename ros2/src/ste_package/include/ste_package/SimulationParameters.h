@@ -208,6 +208,7 @@ class SimulationParameters{
 		float weighting_entropy_ratio;
 		int update_goal_time;
 		char experimental_logname[128];
+		int source_location_config;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 

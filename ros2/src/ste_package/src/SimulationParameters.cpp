@@ -449,6 +449,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			mapInfo = parse_map_info(value);
 		}
+
+		else if (strcmp(key, "sourceLocationConfig") == 0) 
+		{
+			source_location_config = atoi(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -519,6 +524,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
 	fprintf(sim_param_file, "map_info %d\n", mapInfo);
+	fprintf(sim_param_file, "source_location_config %d\n", source_location_config);
 	fclose(sim_param_file);
 }
 

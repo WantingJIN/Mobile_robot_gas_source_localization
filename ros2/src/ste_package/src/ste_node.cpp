@@ -366,20 +366,15 @@ void state_initializing(){
 		} else if (simulation_parameters.workingMode == EXPERIMENT){
 			// TODO: establish baseline measurements
 			// Radom Start position
-			float start_x = XMAX-1.0;
-			float start_y = YMIN+1.0;
-			start_path.push_back(Position(start_x, start_y, 0.0));
+				float start_x = XMAX-0.5;
+				float start_y = YMIN+0.5;
+				start_path.push_back(Position(start_x, start_y, 0.0));
 		}
-		ros->send_waypoints(start_path);
-		// send twice to garantee the robot only sample after reaching the start position
-		// to make it consistent with the simulation
 		ros->send_waypoints(start_path);
 		FSM.state = STATE_LISTENING;
 		FSM.hook  = state_listening;
 	}
 }
-
-
 
 void state_listening(){
 	// printf("Receiving measurements... \n");
@@ -405,13 +400,23 @@ void state_listening(){
 		struct History last_history = *(ros->get_meas_history());
         printf("Received history size: %d\n", last_history.size);
 		// add the new measurements to history
-		for (int i = 0; i < last_history.size; i++){
-			history.position.push_back(last_history.position[i]);
-			history.gas_meas.push_back(last_history.gas_meas[i]);
-			history.wind_meas_u.push_back(last_history.wind_meas_u[i]);
-			history.wind_meas_v.push_back(last_history.wind_meas_v[i]);
+		if (FSM.n_cycles == 0){
+			// for the first cycle, only copy the value of the goal position
+			history.position.push_back(last_history.position.back());
+			history.gas_meas.push_back(last_history.gas_meas.back());
+			history.wind_meas_u.push_back(last_history.wind_meas_u.back());
+			history.wind_meas_v.push_back(last_history.wind_meas_v.back());
 			history.FSM_iter.push_back(FSM.n_cycles);	
 			history.size++;
+		}else{
+			for (int i = 0; i < last_history.size; i++){
+				history.position.push_back(last_history.position[i]);
+				history.gas_meas.push_back(last_history.gas_meas[i]);
+				history.wind_meas_u.push_back(last_history.wind_meas_u[i]);
+				history.wind_meas_v.push_back(last_history.wind_meas_v[i]);
+				history.FSM_iter.push_back(FSM.n_cycles);	
+				history.size++;
+			}
 		}
 		current_position = last_history.position.back();
 		history_print(history);
@@ -648,8 +653,10 @@ bool check_converge_condition()
 
 PlumeModel* initializePlumeModel() {
     if (simulation_parameters.plumeModel == DDPM) {
+		printf("Initializing DeepCFD plume model...\n");
         return new DeepCFDPlumeModel2D();
     } else if (simulation_parameters.plumeModel == FDM_PDE) {
+		printf("Initializing FDM_PDE plume model...\n");
         return new AdeFDMPlumeModel2D();
     } else if (simulation_parameters.plumeModel == GAUSSIAN_PLUME){
         return new GaussianPlumeModel2D();
@@ -704,7 +711,7 @@ void set_source_bounds(SourceBounds *bounds,
 void init_estimation_bound(){
 	// in case of global estimation
 		set_source_bounds(&source_bounds, 
-						XMIN+SAFETY_MARGIN, YMIN+SAFETY_MARGIN, XMAX-SAFETY_MARGIN, YMAX-SAFETY_MARGIN, 20, 20);
+						XMIN, YMIN, XMAX, YMAX, 20, 20);
 		FILE * sim_param_file = fopen(config_logfile_name, "a");
 	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
 	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);

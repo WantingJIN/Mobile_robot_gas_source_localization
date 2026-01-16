@@ -352,7 +352,7 @@ void PathPlanner::belief_clustering_planning()
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
 		// find the closest unvisited point among candidate goals
-		double min_dist_to_robot = 1000;
+		double min_dist_to_robot = 1000.0;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
 		for (int j = 0; j < candidate_goal.size(); j++)
@@ -363,7 +363,7 @@ void PathPlanner::belief_clustering_planning()
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
                     int idx = position_to_index_2D(candidate_goal[j].x, candidate_goal[j].y);
-					if (cell_visited_list[idx] == 0)
+					if (cell_visited_list[idx] != 1)
 					{
 						min_dist_to_robot = dist;
 						min_dist_to_robot_index = j;

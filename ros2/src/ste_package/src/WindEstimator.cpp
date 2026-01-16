@@ -28,7 +28,7 @@ void GaussianWindEstimator::computeSDF() {
 
             for (const auto& o : obstacles_) {
                 float xmin = o[0], ymin = o[1], xmax = o[2], ymax = o[3];
-                printf("Obstacle: [%f, %f, %f, %f]\n", xmin, ymin, xmax, ymax);
+                //printf("Obstacle: [%f, %f, %f, %f]\n", xmin, ymin, xmax, ymax);
                 float dxo = std::max({xmin - x, (float)0.0, x - xmax});
                 float dyo = std::max({ymin - y, (float)0.0, y - ymax});
                 float unsigned_d = std::sqrt(dxo*dxo + dyo*dyo);

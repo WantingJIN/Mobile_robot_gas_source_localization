@@ -15,7 +15,7 @@ def generate_launch_description():
             parameters=[
                 {
                     "rover_name": "nori",
-                    "ignore_heading": False,
+                    "ignore_heading": True,
                     "configuration_file": "real.yaml",
                 }
             ]
