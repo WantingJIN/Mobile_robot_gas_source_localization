@@ -37,6 +37,7 @@ typedef enum state
 	STATE_OBSTACLE_AVOIDANCE = 4,
 	STATE_LISTENING = 5,
 	STATE_INITIALIZING = 6,
+	STATE_READ_ALL = 7,
 } eState;
 
 // finite state machine
@@ -74,6 +75,7 @@ void state_waiting();
 void state_obstacle_avoidance();
 void state_initializing();
 void state_listening();
+void state_read_goal_measurement();
 
 
 PlumeModel* initializePlumeModel();

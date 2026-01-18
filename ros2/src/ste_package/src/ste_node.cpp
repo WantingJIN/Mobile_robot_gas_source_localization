@@ -349,7 +349,8 @@ void log_experiment_time()
 
 void state_initializing(){
 	printf("Robot ID [%d]: STATE_INITIALIZING \n", ID);
-	// waiting for some time to let the robot stabilize; and the message to confirm connection
+	
+// waiting for some time to let the robot stabilize; and the message to confirm connection
 	if (ros->shakehand_with_robot() == false){
 		printf("Robot ID [%d]: waiting for handshake...\n", ID);
 		FSM.state = STATE_INITIALIZING;
@@ -358,22 +359,23 @@ void state_initializing(){
 	
 	} else {
 		std::list<Position> start_path;
-        if (simulation_parameters.workingMode == TEST){
+		if (simulation_parameters.workingMode == TEST){
 			//set the start position from the goal positions list
 			auto goal_pos_from_file = goal_positions[FSM.n_cycles];
 			start_path.push_back(Position(goal_pos_from_file.x, goal_pos_from_file.y, 0.0));
-		    printf("Robot ID [%d]: start position from file: (%.2f, %.2f)\n", ID, goal_pos_from_file.x, goal_pos_from_file.y);
+			printf("Robot ID [%d]: start position from file: (%.2f, %.2f)\n", ID, goal_pos_from_file.x, goal_pos_from_file.y);
 		} else if (simulation_parameters.workingMode == EXPERIMENT){
 			// TODO: establish baseline measurements
 			// Radom Start position
-				float start_x = XMAX-0.5;
-				float start_y = YMIN+0.5;
+				float start_x = XMIN+0.5;
+				float start_y = YMAX-0.5;
 				start_path.push_back(Position(start_x, start_y, 0.0));
 		}
 		ros->send_waypoints(start_path);
 		FSM.state = STATE_LISTENING;
 		FSM.hook  = state_listening;
 	}
+	
 }
 
 void state_listening(){
@@ -600,26 +602,85 @@ void state_updategoal()
 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			// send the goal to the supervisor
 			}
-			ros->send_waypoints(path);
-            // tempory testing
-			// std::list<Position> test_path;
-			// float start_x = -3.0;
-			// float start_y = 2.0;
-			// test_path.push_back(Position(start_x, start_y, 0.0));
-			
-			// ros->send_waypoints(test_path);
-	
-			//printf("Robot ID [%d]: New goal position sent (%f, %f) \n", ID, i->x, i->y);
-			// if online simulation: move to the goal position
-			// if offline simulation: read the next goal position and measurements from the file
-		
-			// update goal
-			FSM.state = STATE_LISTENING;
-			FSM.hook = state_listening;
-			time_before_moving = current_timestamp();
-			long long current_path_planning_time = current_timestamp() - time_before_path_planning;
-			planning_time_sum += current_path_planning_time;
+			if (simulation_parameters.workingMode == EXPERIMENT){
+				ros->send_waypoints(path);
+				// update goal
+				FSM.state = STATE_LISTENING;
+				FSM.hook = state_listening;
+				time_before_moving = current_timestamp();
+				long long current_path_planning_time = current_timestamp() - time_before_path_planning;
+				planning_time_sum += current_path_planning_time;
+
+			}
+			if (simulation_parameters.workingMode == OFFLINE){
+				FSM.state = STATE_READ_ALL;
+				FSM.hook  = state_read_goal_measurement;
+			}
+
 		}
+	}
+}
+
+
+void state_read_goal_measurement(){
+	printf("Enter state read goal and measurment\n");
+    int d, FSM_iter;
+	float f1, f2, f3, f4, f5, f6, f7, f8, f9, f10; 
+    double t;
+	char line[256];
+
+
+    // Read the goal position
+	if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5){
+		printf("Read goal position from file \n");
+		goal_position.x = f1;
+		goal_position.y = f2;
+		goal_position.heading = 0;
+		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+
+		while (current_position.dist_to_goal(goal_position) > 0.05){
+			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d, %f, %f", &d, &f4, &f5, &FSM_iter, &f9, &f10);
+			history.size ++;
+			history.gas_meas.push_back(f4);
+			history.wind_meas_u.push_back(f9);
+			history.wind_meas_v.push_back(f10);
+			history.FSM_iter.push_back(FSM_iter);
+
+			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
+			history.position.push_back({f6, f7, f8});
+			current_position.x = f6;
+			current_position.y = f7;
+			current_position.heading = f8;
+		}
+
+		// NOTE Read from a scan
+		// printf("I am here \n");
+		// fscanf(scan_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f4);
+		// history.size ++;
+		// history.measurement_avg[history.size] = f2;
+		// if (history.measurement_avg[history.size] < 0.0)
+		// 	history.measurement_avg[history.size] = 0.0;
+		// history.measurement_std[history.size] = 0.0;
+
+		// fscanf(scan_position_logfile, "%d, %f, %f, %f, %f", &d, &f1, &f2, &f3, &f4);
+		// history.position[history.size].x = f1;
+		// history.position[history.size].y = f2;
+
+		// // Move to estimating
+		history_print(history);
+		log_position();
+		log_trajectory(current_position);
+		FSM.state = STATE_ESTIMATING;
+		FSM.hook = state_estimating;
+
+	} else{
+		printf("End of experiment measurements file\n");
+		FSM.state = STATE_FINISHED;
+		//close the files
+		fclose(experiment_goalposition_logfile);
+		fclose(experiment_measurements_logfile);
+		fclose(experiment_position_logfile);
+
 	}
 }
 
@@ -811,13 +872,17 @@ int main(int argc, char **argv)
 	for (int i = 0; i < nbr_obs; i++)
 		delete[] obstacles[i];
 	delete[] obstacles;
-
+    
+	if (simulation_parameters.workingMode == EXPERIMENT){
+		printf("STE Node finished. Returning to home position... \n");
+	
 	float end_x = XMAX-1.0;
 	float end_y = YMIN+1.0;
 	std::list<Position> end_goal;
 	end_goal.push_back(Position(end_x, end_y, 0.0));
 	ros->send_waypoints(end_goal);
 	printf("STE Node finished. Homing... \n");
+	}
 
 	rclcpp::shutdown();
 

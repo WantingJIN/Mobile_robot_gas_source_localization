@@ -131,6 +131,7 @@ void set_logfile_names(){
 	sprintf(experiment_measurements_logfile_name, "%s/pc/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/pc/position_history.csv", logfile_folder_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/k4/goal_position.csv", logfile_folder_name);
+	
     sprintf(visited_list_logfile_name, "%s/visited_list.csv", folder_name);
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 

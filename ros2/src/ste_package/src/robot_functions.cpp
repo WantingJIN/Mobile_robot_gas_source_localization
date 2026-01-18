@@ -19,14 +19,15 @@ void init()
 	// seed the RNG
 	srand(time(NULL));
       
-	// set the log file names
-	set_logfile_names();
 
     // load the simulation parameters
 	std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
 	std::string config_path = config_folder_path + + "/config.txt";
     simulation_parameters.load_simulation_parameters_from_config(config_path.c_str());
     simulation_parameters.read_mapID_from_file();
+
+	// set the log file names
+	set_logfile_names();
 
 	FILE *sim_param_file;
 
@@ -40,6 +41,11 @@ void init()
 			//set the state to wait for stationary plume
 			FSM.state = STATE_INITIALIZING;
 			FSM.hook  = state_initializing;
+			break;
+		case OFFLINE:
+			//set the state to read from log files
+			FSM.state = STATE_READ_ALL;
+			FSM.hook  = state_read_goal_measurement;
 			break;
 		default:
 			break;
@@ -127,10 +133,15 @@ void set_logfile_names()
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment
-    sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
-	sprintf(experiment_measurements_logfile_name, "%s/measurements.csv", logfile_folder_name);
+    sprintf(logfile_folder_name, "%s/ros2/Results/%s", workspacePath, simulation_parameters.experimental_logname);
+	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
+	printf("experiment position log file: %s\n", simulation_parameters.experimental_logname);
+	printf("Experiment measurements log file: %s\n", experiment_measurements_logfile_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
+	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
+	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name, "r");
+	experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
 
 }
 
