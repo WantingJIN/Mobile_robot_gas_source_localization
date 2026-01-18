@@ -107,6 +107,7 @@ double speed[2] = {0};
 // robot's position and measurement history
 struct History history;
 struct History sample_in_motion;
+int history_size_last_cycle = 0;
 
 int sample_counter = 0;
 
@@ -200,11 +201,12 @@ long long current_timestamp()
 void history_print(struct History history)
 {
 	printf("_____ Sample History _____ \n");
-	for (int i = 0; i < history.size; i++)
+	for (int i = history_size_last_cycle; i < history.size; i++)
 	{
 		printf("%d : %f @ (%f, %f)\n", i, history.gas_meas[i], history.position[i].x, history.position[i].y);
 	}
 	printf("__________________________ \n");
+	history_size_last_cycle = history.size;
 }
 
 void read_obstacle_list()
@@ -554,6 +556,7 @@ void state_updategoal()
 	default:
 		break;
 	}
+
 	if (FSM.state != STATE_FINISHED)
 	{
 		// If the goal position is very close to current postion, swith to random planning
@@ -628,7 +631,7 @@ void state_read_goal_measurement(){
 	float f1, f2, f3, f4, f5, f6, f7, f8, f9, f10; 
     double t;
 	char line[256];
-
+    int counter = 0;
 
     // Read the goal position
 	if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5){
@@ -639,34 +642,27 @@ void state_read_goal_measurement(){
 		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
 
 		while (current_position.dist_to_goal(goal_position) > 0.05){
+			// keep 1 out of 2 measurements to reduce the data size
 			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d, %f, %f", &d, &f4, &f5, &FSM_iter, &f9, &f10);
-			history.size ++;
-			history.gas_meas.push_back(f4);
-			history.wind_meas_u.push_back(f9);
-			history.wind_meas_v.push_back(f10);
-			history.FSM_iter.push_back(FSM_iter);
-
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
-			history.position.push_back({f6, f7, f8});
+			if (counter % 2 == 0){
+				history.size ++;
+				history.gas_meas.push_back(f4);
+				history.wind_meas_u.push_back(f9);
+				history.wind_meas_v.push_back(f10);
+				history.FSM_iter.push_back(FSM_iter);
+
+				
+				history.position.push_back({f6, f7, f8});
+			}
 			current_position.x = f6;
 			current_position.y = f7;
 			current_position.heading = f8;
+			counter ++;
 		}
 
-		// NOTE Read from a scan
-		// printf("I am here \n");
-		// fscanf(scan_measurements_logfile, "%d, %f, %f, %f", &d, &f1, &f2, &f4);
-		// history.size ++;
-		// history.measurement_avg[history.size] = f2;
-		// if (history.measurement_avg[history.size] < 0.0)
-		// 	history.measurement_avg[history.size] = 0.0;
-		// history.measurement_std[history.size] = 0.0;
 
-		// fscanf(scan_position_logfile, "%d, %f, %f, %f, %f", &d, &f1, &f2, &f3, &f4);
-		// history.position[history.size].x = f1;
-		// history.position[history.size].y = f2;
-
-		// // Move to estimating
+		// Move to estimating
 		history_print(history);
 		log_position();
 		log_trajectory(current_position);

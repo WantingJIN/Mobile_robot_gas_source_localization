@@ -355,6 +355,13 @@ void PathPlanner::belief_clustering_planning()
 		double min_dist_to_robot = 1000.0;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
+
+		// print candida goals
+		for (int j = 0; j < candidate_goal.size(); j++)
+		{
+			fprintf(console_logfile, "candidate goal %d : %f %f \n", j, candidate_goal[j].x, candidate_goal[j].y);
+		}
+
 		for (int j = 0; j < candidate_goal.size(); j++)
 		{
 			double dist = current_position.dist_to_goal(candidate_goal[j]);
@@ -363,6 +370,7 @@ void PathPlanner::belief_clustering_planning()
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
                     int idx = position_to_index_2D(candidate_goal[j].x, candidate_goal[j].y);
+					fprintf(console_logfile, "candidate goal %d index : %d , visited status : %d \n", j, idx, cell_visited_list[idx]);
 					if (cell_visited_list[idx] != 1)
 					{
 						min_dist_to_robot = dist;

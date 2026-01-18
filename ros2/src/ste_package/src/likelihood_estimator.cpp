@@ -70,7 +70,7 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
 		if (wind_confidence < 1e-3){
 			// very high uncertainty when wind confidence is too low
-			sigma = simulation_parameters.likelihoodSigma * 20.0;
+			sigma = simulation_parameters.likelihoodSigma * 5.0;
 		} else {
 			sigma = simulation_parameters.likelihoodSigma;
 		}
@@ -122,8 +122,12 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
-	{
+	{   // print the time it required to calculate the empirical CDF
+		auto start = std::chrono::high_resolution_clock::now();
 		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		std::cout << "Sort measurement takes: " << duration.count() << " ms" << std::endl;
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
@@ -145,7 +149,31 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM)
 	{
+		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
+        fprintf(console_logfile, "Model values: \n");
+		for (int i = 0; i < model_c_avg.size(); i++)
+		{
+			fprintf(console_logfile, "%f, ", model_c_avg[i]);
+		}
+		fprintf(console_logfile, "\n");
+
+		fprintf(console_logfile, "Model normalized values: \n");
+		for (int i = 0; i < rel_model_list.size(); i++)
+		{
+			fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		}
+		fprintf(console_logfile, "\n");
+
+		
 		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		
+		fprintf(console_logfile, "Model ranking values: \n");
+		for (int i = 0; i < rel_model_list.size(); i++)
+		{
+			fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		}
+		fprintf(console_logfile, "\n");
+		
 		// sigma = 0.48;// works well for Empirical CDF NUM
 		for (int i = 0; i < history.size; i++)
 		{

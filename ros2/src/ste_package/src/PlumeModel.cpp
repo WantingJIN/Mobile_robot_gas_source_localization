@@ -860,6 +860,12 @@ std::vector<double> AdeFDMPlumeModel2D::solve_point_source(double sx, double sy)
 	Eigen::VectorXd b = Eigen::VectorXd::Zero(N_);
 	b(k_src) = -source_strength_; // match your sign convention
 
+	// if source is on boundary, adjust b and A accordingly
+	if (si == 0 || si == Nx_ - 1 || sj == 0 || sj == Ny_ - 1) {
+		// Dirichlet BC at source location
+		b(k_src) = 0.0;
+	}
+
 	Eigen::VectorXd x = solver_.solve(b);
 	if (solver_.info() != Eigen::Success) {
 		throw std::runtime_error("Linear solve failed");
