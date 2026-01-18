@@ -94,6 +94,93 @@ void PlumeModel::get_source_position_params(parameter *source_position_param_lis
 	source_position_param_list[1] = param_list[1]; // y
 }
 
+void PlumeModel::calculate_gas_concentration_map(GasDispersionMap &gas_map)
+{
+	// to be implemented by derived classes
+}
+
+void PlumeModel::log_gas_concentration_map(char *filename, char writing_mode)
+{
+	for (auto gas_map : gas_con_map_list)
+	{
+		gas_map.log_map(filename, writing_mode);
+	}
+}
+void PlumeModel::calculate_gas_map_and_information_matrix()
+{
+	// initialize the dispersion map list
+	calculate_gas_concentration_map_list();
+
+	// initialize the cell measurements list
+	calculate_cell_measurement_list();
+}
+
+void PlumeModel::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf)
+{
+	for (int i = 0; i < cell_lists.size(); i++)
+	{
+		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
+		gas_con_variance_map[i] = cell_lists[i].meas_std;
+	}
+}
+
+void PlumeModel::calculate_weighted_gas_con_mean_map(double *gas_con_mean_map, double *pdf)
+{
+	for (int i = 0; i < cell_lists.size(); i++)
+	{
+		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
+		gas_con_mean_map[i] = cell_lists[i].meas_mean;
+	}
+}
+void PlumeModel::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg)
+{
+	for (int i = 0; i < nbr; i++)
+	{
+		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
+	}
+}
+void PlumeModel::calculate_gas_concentration_map_list()
+{
+	// initialize gas dispersion list
+	// calculate the gas concentration map for each possible source location
+	// first scan y axis then x axis; the same order as the pdf
+	for (int j = 0; j < param_list[1].nbins; j++)    // y_nbins
+	{
+		for (int i = 0; i < param_list[0].nbins; i++)   //x_nbins
+		{
+			GasDispersionMap gas_map(i, j);
+			calculate_gas_concentration_map(gas_map);
+			gas_con_map_list.push_back(gas_map);
+		}
+	}
+}
+
+
+// TODO - possible improvement: only store the variance of the gas concentration map
+void PlumeModel::calculate_cell_measurement_list()
+{
+	// initialize cell meausurements list
+	for (int j = 0; j < param_list[1].nbins; j++)    //y_nbins
+	{
+		for (int i = 0; i < param_list[0].nbins; i++) //x_nbins
+		{
+			CellMeasurements cell_measurements(i, j);
+			cell_lists.push_back(cell_measurements);
+		}
+	}
+	for (auto &cell : cell_lists)
+	{
+		for (auto &gas_map : gas_con_map_list)
+		{
+			float con = gas_map.get_concentration(cell.idx_x, cell.idx_y);
+			cell.add_measurement(con);
+			cell.add_gas_hit(con);
+		}
+	}
+}
+
+
+
 
 /********************************************************/
 //					GaussianPlumeModel2D 				//
@@ -188,11 +275,6 @@ double GaussianPlumeModel2D::approx_concentration(Position robot_position, doubl
 	return concentration(robot_position, wind_intensity, expected_value);
 }
 
-void GaussianPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) {}
-void GaussianPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) {}
-void GaussianPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode) {}
-void GaussianPlumeModel2D::calculate_gas_map_and_information_matrix() {}
-void GaussianPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) {}
 void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
 void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
@@ -262,14 +344,6 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D()
 	delete[] covar_sig_ii;
 }
 
-void DeepCFDPlumeModel2D::calculate_gas_map_and_information_matrix()
-{
-	// initialize the dispersion map list
-	calculate_gas_concentration_map_list();
-
-	// initialize the cell measurements list
-	calculate_cell_measurement_list();
-}
 
 void DeepCFDPlumeModel2D::initialize_model_features()
 {
@@ -322,12 +396,6 @@ void DeepCFDPlumeModel2D::initialize_model_features()
 	r_torch = torch::from_blob(r->data, {(long long)r->dims[0], (long long)r->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
 	c_torch = torch::from_blob(c->data, {(long long)c->dims[0], (long long)c->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
 }
-
-// void DeepCFDPlumeModel2D::random_params(double * rnd_params){
-// 	for(int i = 0; i < nbr_param; i++)
-// 		rnd_params[i] = ((double)rand() / (double)RAND_MAX) * (param_list[i].upper_limit - param_list[i].lower_limit) + param_list[i].lower_limit;
-// }
-
 
 
 void DeepCFDPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds)
@@ -415,71 +483,6 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 	}
 }
 
-void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg)
-{
-	for (int i = 0; i < nbr; i++)
-	{
-		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
-	}
-}
-
-// 20x20 sized map
-void DeepCFDPlumeModel2D::calculate_gas_concentration_map_list()
-{
-	// initialize gas dispersion list
-	// calculate the gas concentration map for each possible source location
-	// first scan y axis then x axis; the same order as the pdf
-	for (int j = 0; j < param_list[1].nbins; j++)    // y_nbins
-	{
-		for (int i = 0; i < param_list[0].nbins; i++)   //x_nbins
-		{
-			GasDispersionMap gas_map(i, j);
-			calculate_gas_concentration_map(gas_map);
-			gas_con_map_list.push_back(gas_map);
-		}
-	}
-}
-
-// TODO - possible improvement: only store the variance of the gas concentration map
-void DeepCFDPlumeModel2D::calculate_cell_measurement_list()
-{
-	// initialize cell meausurements list
-	for (int j = 0; j < param_list[1].nbins; j++)    //y_nbins
-	{
-		for (int i = 0; i < param_list[0].nbins; i++) //x_nbins
-		{
-			CellMeasurements cell_measurements(i, j);
-			cell_lists.push_back(cell_measurements);
-		}
-	}
-	for (auto &cell : cell_lists)
-	{
-		for (auto &gas_map : gas_con_map_list)
-		{
-			float con = gas_map.get_concentration(cell.idx_x, cell.idx_y);
-			cell.add_measurement(con);
-			cell.add_gas_hit(con);
-		}
-	}
-}
-
-void DeepCFDPlumeModel2D::calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf)
-{
-	for (int i = 0; i < cell_lists.size(); i++)
-	{
-		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
-		gas_con_variance_map[i] = cell_lists[i].meas_std;
-	}
-}
-
-void DeepCFDPlumeModel2D::calculate_weighted_gas_con_mean_map(double *gas_con_mean_map, double *pdf)
-{
-	for (int i = 0; i < cell_lists.size(); i++)
-	{
-		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
-		gas_con_mean_map[i] = cell_lists[i].meas_mean;
-	}
-}
 
 void DeepCFDPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_map)
 {
@@ -515,13 +518,6 @@ double DeepCFDPlumeModel2D::approx_concentration(Position robot_position, double
 	return concentration(robot_position, wind_intensity, expected_value);
 }
 
-void DeepCFDPlumeModel2D::log_gas_concentration_map(char *filename, char writing_mode)
-{
-	for (auto gas_map : gas_con_map_list)
-	{
-		gas_map.log_map(filename, writing_mode);
-	}
-}
 void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void DeepCFDPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
 double DeepCFDPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
@@ -564,8 +560,9 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	u_x = -0.75;
 	int Nx = 100;
 	int Ny = 40;
+	double diff_coef = simulation_parameters.diff_coefficient;
 	// double Nx, double Ny, double D, double Q
-	set_parameters(Nx, Ny, 0.008, 1500.0);
+	set_parameters(Nx, Ny, diff_coef, 1500.0);
     std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
 	std::string wind_file_path = config_folder_path + "/model/test_maps/map" + std::to_string(simulation_parameters.map_nbr) + "/wind_map_2D_"+ std::to_string(simulation_parameters.map_nbr) + ".csv";
 	if (simulation_parameters.windInfo == WIND_OFFLINE){
@@ -975,3 +972,7 @@ double AdeFDMPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx)
 	int index = grid_indices_to_idx(grid_i, grid_j);
 	return w_[index];
 }
+
+double AdeFDMPlumeModel2D::concentration(Position robot_position, double wind_intensity, double param_value[]) {};
+void AdeFDMPlumeModel2D::concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) {};
+double AdeFDMPlumeModel2D::approx_concentration(Position robot_position, double wind_intensity) {};
