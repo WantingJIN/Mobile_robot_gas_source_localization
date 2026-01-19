@@ -35,7 +35,7 @@
 using namespace std;
 using std::vector;
 
-#define PI 3.14159265358979
+constexpr double kPi = 3.14159265358979323846;
 
 // parameter structure defines properties of a parameter. A model has an array of parameters.
 typedef struct
@@ -75,6 +75,9 @@ public:
 	// MCMC proposal distribution's covariance sigma_i,i
 	double *covar_sig_ii;
 
+	vector<GasDispersionMap> gas_con_map_list;
+	vector<CellMeasurements> cell_lists;
+
 	// virtual PlumeModel() = 0;
 	// //copy constructor
 	// PlumeModel(const PlumeModel & another_model);
@@ -86,19 +89,25 @@ public:
 	int get_source_position_params_nbr();
 	void get_source_position_params(parameter *source_position_param_list);
 
+	// precompute maps
+	void log_gas_concentration_map(char *filename, char writing_mode);
+	void calculate_gas_map_and_information_matrix();
+	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf);
+	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf);
+
+	void calculate_gas_concentration_map_list();
+	void calculate_cell_measurement_list();
+
 	// function that returns concentration using parameters
 	virtual double concentration(Position robot_position, double wind_intensity, double param_value[]) = 0;
 	virtual void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) = 0;
+	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
 	// virtual void concentration(Position robot_position[], int nbr, double wind_intensity, vector<float> &c_avg) = 0;
 
 	// read from precomputed maps
-	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) = 0;
+	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg);
 
-	virtual double approx_concentration(Position robot_position, double wind_intensity) = 0;
-	virtual void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) = 0;
-	virtual void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) = 0;
-	virtual void log_gas_concentration_map(char *filename, char writing_mode) = 0;
-	virtual void calculate_gas_map_and_information_matrix() = 0;
+
 	virtual void reset_estimation_ranges(SourceBounds source_bounds) = 0;
 
 	virtual void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) = 0;
@@ -111,6 +120,9 @@ public:
 	void get_max_a_post_value(double *container);
 	void set_expected_value(double *container);
 	void set_max_a_post_value(double *container);
+
+	virtual void calculate_gas_concentration_map(GasDispersionMap &gas_map);
+
 };
 
 /********************************************************/
@@ -130,14 +142,10 @@ public:
 	double concentration(Position robot_position, double wind_intensity, double param_value[]) override;
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
 	double approx_concentration(Position robot_position, double wind_intensity) override;
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
     void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) override;
 
     // calculate the gas concentration map and information map
-	void calculate_gas_map_and_information_matrix() override;
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) override;
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
-	void log_gas_concentration_map(char *filename, char writing_mode) override;
+
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode) override;
 	double get_wind_estimation_confidence(int soure_pos_idx) override;
@@ -158,26 +166,14 @@ public:
 
 	// destructor
 	~DeepCFDPlumeModel2D();
-
-	vector<GasDispersionMap> gas_con_map_list;
-	vector<CellMeasurements> cell_lists;
-    
-	// overide virtual functions
-	void calculate_weighted_gas_con_variance_map(double *gas_con_variance_map, double *pdf) override;
-	void calculate_weighted_gas_con_mean_map(double *gas_con_variance_map, double *pdf) override;
-
+	
+    // override virtual functions from PlumeModel
 	double concentration(Position robot_position, double wind_intensity, double param_value[]) override;
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
-    // calculate the gas concentration map and information map
-	void calculate_gas_map_and_information_matrix() override;
-	void log_gas_concentration_map(char *filename, char writing_mode) override;
+
 	double approx_concentration(Position robot_position, double wind_intensity) override;
     
-	// precompute maps
-	void calculate_gas_concentration_map_list();
-	void calculate_cell_measurement_list();
 	// read from precomputed maps
-	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) override;
 	void log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode) override;
@@ -194,8 +190,7 @@ private:
 
 	// load pytorch model
 	void initialize_model_features();
-    virtual void calculate_gas_concentration_map(GasDispersionMap &gas_map);
-    
+    void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
 };
 
 
@@ -203,7 +198,7 @@ private:
 //	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
 /************************************************************************************************/
 
-class AdeFDMPlumeModel2D : public DeepCFDPlumeModel2D
+class AdeFDMPlumeModel2D : public PlumeModel
 {
 public:
 	// constructor : default values
@@ -221,6 +216,9 @@ public:
 	void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) override;
     void log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode) override;
 	double get_wind_estimation_confidence(int soure_pos_idx) override;
+	double concentration(Position robot_position, double wind_intensity, double param_value[]) override;
+	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
+	double approx_concentration(Position robot_position, double wind_intensity) override;
 private:
 	void calculate_gas_concentration_map(GasDispersionMap &gas_map) override;
 	// Here, the grid used to solve PDE is different than the grid for the source position estimation
