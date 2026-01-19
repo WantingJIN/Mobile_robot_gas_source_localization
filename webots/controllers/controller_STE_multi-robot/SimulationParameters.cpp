@@ -438,6 +438,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			strcpy(experimental_logname, value);
 		}
+		else if (strcmp(key, "diffCoefficient") == 0)
+		{
+			diff_coefficient = atof(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -506,6 +510,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "wind_info %d\n", windInfo);
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
+	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
 	fclose(sim_param_file);
 }
 
