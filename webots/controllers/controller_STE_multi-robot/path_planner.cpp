@@ -316,7 +316,18 @@ void PathPlanner::belief_clustering_planning()
 	printf("Enter belief clustering planning \n");
 
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+	if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+		clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+	}
+	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// take into account the wind uncertainty
+		double *weighted_belief_map = new double[_map_size];
+		for (int i = 0; i < _map_size; i++){
+			double wind_confidence = plume_model->get_wind_estimation_confidence(i);
+			weighted_belief_map[i] = posterior->pdf[i] * (1 + exp(-wind_confidence));
+		}
+		clusters_bounding_box = clustering_information_blocks(weighted_belief_map);
+	}
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
@@ -381,9 +392,9 @@ void PathPlanner::belief_clustering_planning()
 		}
 		if (!find_goal)
 		{
-			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
+			fprintf(console_logfile, "all the vertex of clusters are visited, move to the center \n");
 			// maximal_information_planning();
-			maximal_belief_planning();
+			move_to_cluster_centroid(clusters_bounding_box[0], posterior->pdf);
 			return;
 		}
 		else
@@ -670,8 +681,8 @@ void PathPlanner::accumulative_Dijkstra() {
 			continue; // Skip if no path exists	
 		} 
 
-            // **Accumulate total information gain along the path**
-            double totalInfo = 0.0;
+        // **Accumulate total information gain along the path**
+        double totalInfo = 0.0;
 		if (simulation_parameters.infoSum == LINEAR_SUM){
 			for (const auto& pos : dij_path) {		    
 				totalInfo += gas_information_map[pos.index]; // Sum information along the path
@@ -763,18 +774,18 @@ void PathPlanner::accumulative_Dijkstra() {
 			}
 		}
 
-            scores_map[cell.index] = score;
+		scores_map[cell.index] = score;
 
-            if (score > bestScore) {
-		    std::list<Position> dij_path = reconstructPath(cell, cameFrom);
-		    if (dij_path.empty()){
-				std::cout<<"no valid path exists";
-				continue; // Skip if no path exists	
-		    } 
-                bestScore = score;
-                bestTarget.copy_position(cell);
-                bestPath = dij_path;
-            }
+		if (score > bestScore) {
+		std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+		if (dij_path.empty()){
+			std::cout<<"no valid path exists";
+			continue; // Skip if no path exists	
+		} 
+			bestScore = score;
+			bestTarget.copy_position(cell);
+			bestPath = dij_path;
+		}
 	  }
     }
 
