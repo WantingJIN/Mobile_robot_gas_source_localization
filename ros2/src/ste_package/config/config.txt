@@ -41,5 +41,5 @@ windEstimationMethod = GAUSSIAN_KERNEL
 windInfo = WIND_ONLINE
 modelUncertainty = DYNAMIC_UNCERTAINTY
 sourceLocationConfig = 1
-robotStartLocation = 2
+robotStartLocation = 3
 windBeliefWeight = 0.4

@@ -89,6 +89,7 @@ typedef enum infoFeature
 typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
+	
 	EMPIRICAL_CDF = 3,
 	EMPIRICAL_CDF_AND_SLOPE = 4,
 	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
@@ -115,11 +116,6 @@ typedef enum gasHitMethod
 	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
-typedef enum infoSum
-{
-	LINEAR_SUM = 0,
-	EXP_SUM = 1,
-} eInfoSum;
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
@@ -220,7 +216,6 @@ class SimulationParameters{
 		eTeamStrategy teamStrategy;
 
 	    eScoreFun scoreFun;
-		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
 		eUpdateGoalPolicy updateGoalPolicy;

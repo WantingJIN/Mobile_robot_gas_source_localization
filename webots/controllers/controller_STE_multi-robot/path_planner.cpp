@@ -668,31 +668,29 @@ void PathPlanner::accumulative_Dijkstra() {
     for (int y_idx = 0; y_idx < _ynbins; y_idx++) {
         for (int x_idx = 0; x_idx < _xnbins; x_idx++) {
 		Position cell(x_idx,y_idx);
-            if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
+		if (cell.is_in_obstacle_list(obstacles, nbr_obs)!=-1) continue; // Skip obstacles
 
-            double pathLength = distanceMap[cell.index];
+		double pathLength = distanceMap[cell.index];
 
-            if (pathLength == 1e3) continue; // Unreachable cell
- 
-            // **Retrieve the path to this cell**
-            std::list<Position> dij_path = reconstructPath(cell, cameFrom);
-            if (dij_path.empty()){
+		if (pathLength == 1e3) continue; // Unreachable cell
+
+		// **Retrieve the path to this cell**
+		std::list<Position> dij_path = reconstructPath(cell, cameFrom);
+		if (dij_path.empty()){
 			std::cout<<"no valid path exists";
 			continue; // Skip if no path exists	
 		} 
 
         // **Accumulate total information gain along the path**
         double totalInfo = 0.0;
-		if (simulation_parameters.infoSum == LINEAR_SUM){
-			for (const auto& pos : dij_path) {		    
-				totalInfo += gas_information_map[pos.index]; // Sum information along the path
-			}
-		}
-		if (simulation_parameters.infoSum == EXP_SUM){
-			for (const auto& pos : dij_path) {		    
-				totalInfo += exp(3*gas_information_map[pos.index])-1; // Sum information along the path
-			}
-		}
+		
+		for (const auto& pos : dij_path) {		    
+			totalInfo += gas_information_map[pos.index]; // Sum information along the path
+	
+	
+		// for (const auto& pos : dij_path) {		    
+		// 	totalInfo += exp(3*gas_information_map[pos.index])-1; // Sum information along the path
+		// }
 		
 		acc_info_map[cell.index] = totalInfo;
 		distance_map[cell.index] = pathLength;
@@ -733,18 +731,18 @@ void PathPlanner::accumulative_Dijkstra() {
 
 		// **Compute the score based on information-to-distance trade-off**
             double score;
-            if (simulation_parameters.scoreFun == RATIO)
-		{
-			score = (simulation_parameters.scoreSigma * totalInfo) / std::max(0.0, pathLength);
-		}
-		if (simulation_parameters.scoreFun == LOG)
-		{
-			score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(0.0, pathLength) + 1);
-		}
-		if (simulation_parameters.scoreFun == SIGMOID)
-		{
-			score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(0.0, pathLength)));
-		}
+        //     if (simulation_parameters.scoreFun == RATIO)
+		// {
+		// 	score = (simulation_parameters.scoreSigma * totalInfo) / std::max(0.0, pathLength);
+		// }
+		// if (simulation_parameters.scoreFun == LOG)
+		// {
+		// 	score = (simulation_parameters.scoreSigma * totalInfo) / std::log(std::max(0.0, pathLength) + 1);
+		// }
+		// if (simulation_parameters.scoreFun == SIGMOID)
+		// {
+		// 	score = 1 / (1 + exp(-simulation_parameters.scoreSigma * totalInfo)) - 1 / (1 + exp(-0.1 * std::max(0.0, pathLength)));
+		// }
 		if (simulation_parameters.scoreFun == SUM)
 		{
 			if (simulation_parameters.planningStrategy == SUM_DIJKSTRA_FIX)

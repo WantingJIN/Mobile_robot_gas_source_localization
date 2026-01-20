@@ -338,8 +338,6 @@ void PathPlanner::belief_clustering_planning()
 	// 	log_weighted_belief_map();
 	// }
 
-	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
-
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
