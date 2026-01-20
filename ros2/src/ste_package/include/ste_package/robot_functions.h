@@ -40,6 +40,7 @@ extern char clustering_bounding_boxes_logfile_name[512];
 extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
+extern char weighted_belief_map_logfile_name[512];
 extern char relative_history_meas_logfile_name[512];
 extern char wind_field_u_logfile_name[512];
 extern char wind_field_v_logfile_name[512];

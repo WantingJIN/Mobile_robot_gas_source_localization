@@ -39,19 +39,6 @@ double likelihood_precomp(struct History &history, double *parameters, int sourc
 		sum_tmp += pow(history.gas_meas[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
 	}
 
-	// if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-	// 	sigmaE = simulation_parameters.likelihood_error;
-	// }
-	// else 
-	if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-		// dynamic uncertainty based on wind estimation confidence
-		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
-		if (wind_confidence < 1e-3){
-			// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
-			sum_tmp = 0.1; // very high likelihood
-		}
-	
-	}
 
 	return (exp(-0.5 * sum_tmp));
 }
@@ -62,19 +49,21 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 {
 
 	float sigma;
-    if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-		sigma = simulation_parameters.likelihoodSigma;
-	}
-	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-		// dynamic uncertainty based on wind estimation confidence
-		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
-		if (wind_confidence < 1e-3){
-			// very high uncertainty when wind confidence is too low
-			sigma = simulation_parameters.likelihoodSigma * 5.0;
-		} else {
-			sigma = simulation_parameters.likelihoodSigma;
-		}
-	}
+	sigma = simulation_parameters.likelihoodSigma;
+    // if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+	// 	sigma = simulation_parameters.likelihoodSigma;
+	// }
+	// else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+	// 	// dynamic uncertainty based on wind estimation confidence
+	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+	// 	sigma = simulation_parameters.likelihoodSigma * (1 + simulation_parameters.wind_belief_weight * exp(-wind_confidence));
+	// 	// if (wind_confidence < 1e-3){
+	// 	// 	// very high uncertainty when wind confidence is too low
+	// 	// 	sigma = simulation_parameters.likelihoodSigma * 2.0;
+	// 	// } else {
+	// 	// 	sigma = simulation_parameters.likelihoodSigma;
+	// 	// }
+	// }
 
 	double sum_tmp = 0; 
 
@@ -114,6 +103,61 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
+		// if (source_pos_idx == 82 || source_pos_idx == 385){
+		// 	if (source_pos_idx == 82) fprintf(console_logfile, "True source\n");
+        //     if (source_pos_idx == 385) fprintf(console_logfile, "Estimated source\n");
+		
+		// 	fprintf(console_logfile, "Model values: \n");
+		// 	for (int i = 0; i < model_c_avg.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", model_c_avg[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+
+		// 	fprintf(console_logfile, "Model normalized values: \n");
+		// 	for (int i = 0; i < rel_model_list.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+		// }
+
+		
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = history.relative_meas[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2) / (history.size + 1);
+		}
+		sum_tmp /= sigma * sigma;
+	}
+
+	if (simulation_parameters.relativeMethod == Z_SCORE)
+	{
+		double cosine_distance = 0;
+		calculate_measurements_zscore(rel_model_list, model_c_avg);
+		// if (source_pos_idx == 82 || source_pos_idx == 0){
+		// 	if (source_pos_idx == 82) fprintf(console_logfile, "True source\n");
+        //     if (source_pos_idx == 0) fprintf(console_logfile, "Estimated source\n");
+		
+		// 	fprintf(console_logfile, "Model values: \n");
+		// 	for (int i = 0; i < model_c_avg.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", model_c_avg[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+
+		// 	fprintf(console_logfile, "Model normalized values: \n");
+		// 	for (int i = 0; i < rel_model_list.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+		// }
+
+		// cosine_distance = calculate_cosine_distance(rel_model_list, history.relative_meas);
+		// sum_tmp = cosine_distance/(sigma*sigma);
+		// printf("Cosine distance: %f\n", cosine_distance);
 		for (int i = 0; i < history.size; i++)
 		{
 			rel_hist_val = history.relative_meas[i];
@@ -121,6 +165,7 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
 	}
+
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{   // print the time it required to calculate the empirical CDF
 		auto start = std::chrono::high_resolution_clock::now();
@@ -149,30 +194,37 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM)
 	{
-		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-        fprintf(console_logfile, "Model values: \n");
-		for (int i = 0; i < model_c_avg.size(); i++)
-		{
-			fprintf(console_logfile, "%f, ", model_c_avg[i]);
-		}
-		fprintf(console_logfile, "\n");
+		// calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
+		// if (source_pos_idx == 82 || source_pos_idx == 385){
+		// 	if (source_pos_idx == 82) fprintf(console_logfile, "True source\n");
+        //     if (source_pos_idx == 354) fprintf(console_logfile, "Estimated source\n");
+		
+		// 	fprintf(console_logfile, "Model values: \n");
+		// 	for (int i = 0; i < model_c_avg.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", model_c_avg[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
 
-		fprintf(console_logfile, "Model normalized values: \n");
-		for (int i = 0; i < rel_model_list.size(); i++)
-		{
-			fprintf(console_logfile, "%f, ", rel_model_list[i]);
-		}
-		fprintf(console_logfile, "\n");
+		// 	fprintf(console_logfile, "Model normalized values: \n");
+		// 	for (int i = 0; i < rel_model_list.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+		// }
 
 		
 		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
 		
-		fprintf(console_logfile, "Model ranking values: \n");
-		for (int i = 0; i < rel_model_list.size(); i++)
-		{
-			fprintf(console_logfile, "%f, ", rel_model_list[i]);
-		}
-		fprintf(console_logfile, "\n");
+		// if (source_pos_idx == 82 || source_pos_idx == 354){
+		// 	fprintf(console_logfile, "Model ranking values: \n");
+		// 	for (int i = 0; i < rel_model_list.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+		// }
 		
 		// sigma = 0.48;// works well for Empirical CDF NUM
 		for (int i = 0; i < history.size; i++)
@@ -191,10 +243,10 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
 	// 	if (wind_confidence < 1e-3){
 	// 		// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
-	// 		sum_tmp = 0.001; // very high likelihood
+	// 		sum_tmp = 1; // very high likelihood
 	// 	}
-	
 	// }
+
 	return (exp(-0.5 * sum_tmp));
 }
 
@@ -287,6 +339,37 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 			rel_meas_list[i] = (data_list[i] - min_val) / (max_val - min_val);
 		}
 		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
+	}
+}
+
+void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> data_list)
+{
+	rel_meas_list.resize(data_list.size());
+	if (data_list.size() == 1)
+	{
+		rel_meas_list[0] = 0.0;
+		return;
+	}
+	// calculate the mean and standard deviation
+	double sum = 0.0;
+	for (const auto& val : data_list) {
+		sum += val;
+	}
+	double mean = sum / data_list.size();
+
+	double sq_sum = 0.0;
+	for (const auto& val : data_list) {
+		sq_sum += (val - mean) * (val - mean);
+	}
+	double stddev = sqrt(sq_sum / data_list.size());
+
+	// calculate z-score for each measurement
+	for (int i = 0; i < data_list.size(); i++) {
+		if (stddev < 1e-6) {
+			rel_meas_list[i] = 0.0; // avoid division by zero
+		} else {
+			rel_meas_list[i] = (data_list[i] - mean) / stddev;
+		}
 	}
 }
 
@@ -502,10 +585,18 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model)
 	bool output = 1;
 
 	// verify if all the parameters are between the right intervals
-	for (i = 0; i < nbr_dimension; i++)
-		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] >= model->param_list[i].lower_limit);
 
-	// verify the x and y elements of the parameters are not inside obstacles
+	for (i = 0; i < nbr_dimension; i++)
+		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] > model->param_list[i].lower_limit);
+
+	// source should not be at the border of the area
+	int idx, idy;
+	position_to_indices_2D(parameters[0], parameters[1], &idx, &idy);
+    if (idx <= 0 || idx >= model->param_list[0].nbins - 1 || idy <= 0 || idy >= model->param_list[1].nbins - 1)
+	{
+		output = 0;
+	}	
+
 	Position tmp_p(parameters[0], parameters[1], 0);
 	if (tmp_p.is_in_obstacle_list(obstacles, nbr_obs) != -1)
 	{
@@ -517,4 +608,27 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model)
 	//	printf("parameters: %f %f %f %f %f\n", parameters[0], parameters[1], parameters[2], parameters[3], parameters[4]);
 
 	return (output);
+}
+
+// 2. Function to calculate Cosine Distance (1 - Cosine Similarity)
+double calculate_cosine_distance(std::vector<double> v1, std::vector<double> v2) {
+	double dot_product = 0.0;
+    double mag1 = 0.0;
+    double mag2 = 0.0;
+
+    for (size_t i = 0; i < v1.size(); ++i) {
+        dot_product += v1[i] * v2[i];
+        mag1 += v1[i] * v1[i];
+        mag2 += v2[i] * v2[i];
+    }
+    
+	
+    // Final logic: (dot_product / (sqrt(mag1) * sqrt(mag2)))
+	// avoid division by zero
+	if (mag1 < 1e-10 || mag2 < 1e-10) {
+		return 0.0; // define cosine similarity as 0 when one vector has zero magnitude
+	}
+	
+    double similarity = 1 - dot_product / (std::sqrt(mag1) * std::sqrt(mag2));
+    return similarity;
 }

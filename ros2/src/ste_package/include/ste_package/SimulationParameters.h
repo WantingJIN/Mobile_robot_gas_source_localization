@@ -90,6 +90,7 @@ typedef enum infoFeature
 typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
+	Z_SCORE = 1,
 	EMPIRICAL_CDF = 3,
 	EMPIRICAL_CDF_AND_SLOPE = 4,
 	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
@@ -210,6 +211,8 @@ class SimulationParameters{
 		char experimental_logname[128];
 		int source_location_config;
 		float diff_coefficient;
+		int robot_start_position_config;
+		double wind_belief_weight;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 

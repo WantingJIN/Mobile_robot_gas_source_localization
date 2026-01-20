@@ -175,10 +175,10 @@ pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPo
 
 	for (auto &point : points)
 	{
-		minX = min(minX, point.x - float(source_bounds.x_resol / 2));
-		minY = min(minY, point.y - float(source_bounds.y_resol / 2));
-		maxX = max(maxX, point.x + float(source_bounds.x_resol / 2));
-		maxY = max(maxY, point.y + float(source_bounds.y_resol / 2));
+		minX = min(minX, point.x);
+		minY = min(minY, point.y);
+		maxX = max(maxX, point.x);
+		maxY = max(maxY, point.y);
 	}
 
 	CellPoint topLeft = {minX, minY, clusterId};

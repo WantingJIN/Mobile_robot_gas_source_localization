@@ -476,12 +476,42 @@ void Posterior::exhaustive_evaluation(struct History &history)
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas);
+			// fprintf(console_logfile, "measurement values: \n");
+			// for (int i = 0; i < history.gas_meas.size(); i++)
+			// {
+			// 	fprintf(console_logfile, "%f, ", history.gas_meas[i]);
+			// }
+			// fprintf(console_logfile, "\n");
+
+			// fprintf(console_logfile, "measurement normalized values: \n");
+			// for (int i = 0; i < history.relative_meas.size(); i++)
+			// {
+			// 	fprintf(console_logfile, "%f, ", history.relative_meas[i]);
+			// }
+			// fprintf(console_logfile, "\n");
+		}
+		if (simulation_parameters.relativeMethod == Z_SCORE)
+		{
+			calculate_measurements_zscore(history.relative_meas, history.gas_meas);
+			// fprintf(console_logfile, "measurement values: \n");
+			// for (int i = 0; i < history.gas_meas.size(); i++)
+			// {
+			// 	fprintf(console_logfile, "%f, ", history.gas_meas[i]);
+			// }
+			// fprintf(console_logfile, "\n");
+
+			// fprintf(console_logfile, "measurement normalized values: \n");
+			// for (int i = 0; i < history.relative_meas.size(); i++)
+			// {
+			// 	fprintf(console_logfile, "%f, ", history.relative_meas[i]);
+			// }
+			// fprintf(console_logfile, "\n");
 		}
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 
 		{
-			//calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas);
+			// calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas);
 			
 			// fprintf(console_logfile, "measurement values: \n");
 			// for (int i = 0; i < history.gas_meas.size(); i++)
@@ -497,7 +527,7 @@ void Posterior::exhaustive_evaluation(struct History &history)
 			// }
 			// fprintf(console_logfile, "\n");
 			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.gas_meas);
-			//fprintf(console_logfile, "measurement CDF values: \n");
+			// fprintf(console_logfile, "measurement CDF values: \n");
 			// for (int i = 0; i < history.relative_meas.size(); i++)
 			// {
 			// 	fprintf(console_logfile, "%f, ", history.relative_meas[i]);

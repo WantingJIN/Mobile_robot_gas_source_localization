@@ -31,6 +31,7 @@ private:
     double *scores_map;
     double *distance_map;
     double *acc_info_map; 
+    double *weighted_belief_map;
      
     // range and resolution of the map
     int _xnbins, _ynbins;
@@ -46,6 +47,7 @@ private:
     void log_distance_map();
     void log_acc_info_map();
     void log_gas_information_map();
+    void log_weighted_belief_map();
     // functions for Dijkstra
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);

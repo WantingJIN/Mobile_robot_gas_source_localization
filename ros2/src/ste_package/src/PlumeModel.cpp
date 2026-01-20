@@ -562,7 +562,7 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	int Ny = 40;
 	double diff_coef = simulation_parameters.diff_coefficient;
 	// double Nx, double Ny, double D, double Q
-	set_parameters(Nx, Ny, diff_coef, 1500.0);
+	set_parameters(Nx, Ny, diff_coef, 400.0);
     std::string config_folder_path = ament_index_cpp::get_package_share_directory("ste_package");
 	std::string wind_file_path = config_folder_path + "/model/test_maps/map" + std::to_string(simulation_parameters.map_nbr) + "/wind_map_2D_"+ std::to_string(simulation_parameters.map_nbr) + ".csv";
 	if (simulation_parameters.windInfo == WIND_OFFLINE){

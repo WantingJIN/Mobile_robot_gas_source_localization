@@ -5,6 +5,7 @@ FILE *gas_information_map_logfile;
 FILE *scores_map_logfile;
 FILE *distance_map_logfile;
 FILE *acc_info_map_logfile;
+FILE *weighted_belief_map_logfile;
 extern Position goal_position;
 extern Position goal_position_team[3];
 extern Position current_position;
@@ -16,6 +17,7 @@ extern char gas_information_map_logfile_name[512];
 extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
+extern char weighted_belief_map_logfile_name[512];
 extern int ID;
 extern int nbr_obs;
 extern float margin;
@@ -46,6 +48,7 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 	scores_map = new double[_map_size];
 	distance_map = new double[_map_size];
 	acc_info_map = new double[_map_size];	
+	weighted_belief_map = new double[_map_size];
 	reach_end_of_fix_path = false;
 }
 
@@ -64,6 +67,11 @@ void PathPlanner::reset_planning_bound(SourceBounds source_bounds)
 
 PathPlanner:: ~PathPlanner()
 {
+	delete[] gas_information_map;
+	delete[] scores_map;
+	delete[] distance_map;
+	delete[] acc_info_map;
+	delete[] weighted_belief_map;	
 }
 // TODO - maybe merge this to greedy_information_planning
 void PathPlanner::maximal_belief_planning()
@@ -315,7 +323,23 @@ void PathPlanner::belief_clustering_planning()
 	printf("Enter belief clustering planning \n");
 
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
+	//clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+    // Implementation for different uncertainty models used for clustering
+	if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+		clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+	}
+	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// take into account the wind uncertainty
+		for (int i = 0; i < _map_size; i++){
+			double wind_confidence = plume_model->get_wind_estimation_confidence(i);
+			weighted_belief_map[i] = posterior->pdf[i] * (1 + simulation_parameters.wind_belief_weight * exp(-wind_confidence));
+		}
+		clusters_bounding_box = clustering_information_blocks(weighted_belief_map);
+		log_weighted_belief_map();
+	}
+
 	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
@@ -388,9 +412,8 @@ void PathPlanner::belief_clustering_planning()
 		}
 		if (!find_goal)
 		{
-			fprintf(console_logfile, "all the vertex of clusters are visited, use maximal belief planning \n");
-			// maximal_information_planning();
-			maximal_belief_planning();
+			fprintf(console_logfile, "all the vertex of clusters are visited, move to the centroid of the first cluster \n");
+			move_to_cluster_centroid(clusters_bounding_box[0], posterior->pdf);
 			return;
 		}
 		else
@@ -1258,6 +1281,18 @@ void PathPlanner::log_acc_info_map()
 	fclose(acc_info_map_logfile);
 }
 
+void PathPlanner::log_weighted_belief_map()
+{
+	weighted_belief_map_logfile = fopen(weighted_belief_map_logfile_name, "a");
+
+	for (int i = 0; i < (_map_size - 1); i++)
+		fprintf(weighted_belief_map_logfile, "%.9f, ", weighted_belief_map[i]);
+
+	// Ajoutez la dernière valeur sans virgule
+	fprintf(weighted_belief_map_logfile, "%.9f\n", weighted_belief_map[_map_size - 1]);
+
+	fclose(weighted_belief_map_logfile);
+}
 void PathPlanner::log_gas_information_map()
 {
 	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "a");

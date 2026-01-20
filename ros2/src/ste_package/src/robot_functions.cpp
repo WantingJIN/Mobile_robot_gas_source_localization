@@ -77,10 +77,10 @@ void set_logfile_names()
 	// log files names
 	char *pPath;
 	pPath = getenv("STE_DDPM_ROOT");
-	printf("Workspace path: %s\n", pPath);
+	// printf("Workspace path: %s\n", pPath);
 	if (pPath != NULL)
 	{
-		printf("The current path is: %s\n", pPath);
+		// printf("The current path is: %s\n", pPath);
 		char folder_path[64];
 		sprintf(folder_path, "%s/%s", pPath, "ros2/Results"); // create a new folder for log files
 		mkdir(folder_path, 0755);
@@ -122,6 +122,7 @@ void set_logfile_names()
 	sprintf(acc_info_map_logfile_name, "%s/acc_info_map.csv", folder_name);
 	sprintf(scores_map_logfile_name, "%s/scores_map.csv", folder_name);
 	sprintf(distance_map_logfile_name, "%s/distance_map.csv", folder_name);
+	sprintf(weighted_belief_map_logfile_name, "%s/weighted_belief_map.csv", folder_name);
 	sprintf(relative_history_meas_logfile_name, "%s/relative_history_meas.csv", folder_name);
 	sprintf(wind_field_u_logfile_name, "%s/wind_field_u.csv", folder_name);
 	sprintf(wind_field_v_logfile_name, "%s/wind_field_v.csv", folder_name);
@@ -129,15 +130,15 @@ void set_logfile_names()
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
-	printf("Console log file: %s\n", console_logfile_name);
+	// printf("Console log file: %s\n", console_logfile_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment
     sprintf(logfile_folder_name, "%s/ros2/Results/%s", workspacePath, simulation_parameters.experimental_logname);
 	sprintf(experiment_measurements_logfile_name, "%s/measurement_history.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
-	printf("experiment position log file: %s\n", simulation_parameters.experimental_logname);
-	printf("Experiment measurements log file: %s\n", experiment_measurements_logfile_name);
+	// printf("experiment position log file: %s\n", simulation_parameters.experimental_logname);
+	// printf("Experiment measurements log file: %s\n", experiment_measurements_logfile_name);
 	sprintf(experiment_goalposition_logfile_name, "%s/goal_position.csv", logfile_folder_name);
 	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
 	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name, "r");

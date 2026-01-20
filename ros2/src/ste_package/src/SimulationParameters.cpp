@@ -149,6 +149,8 @@ eRelativeMethod parse_relative_method(const char *str)
 		return EMPIRICAL_CDF_AND_SLOPE;
 	if (strcmp(str, "EMPIRICAL_CDF_NUM") == 0)
 		return EMPIRICAL_CDF_NUM;
+	if (strcmp(str, "Z_SCORE") == 0)
+		return Z_SCORE;
 	fprintf(stderr, "Unknown relative method: %s\n", str);
 	exit(1);
 }
@@ -457,6 +459,15 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			diff_coefficient = atof(value);
 		}
+		else if (strcmp(key, "robotStartLocation") == 0) 
+		{
+			robot_start_position_config = atoi(value);
+			printf("robot_start_position_config: %d\n", robot_start_position_config);
+		}
+		else if (strcmp(key, "windBeliefWeight") == 0) 
+		{
+			wind_belief_weight = atof(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -529,6 +540,8 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "map_info %d\n", mapInfo);
 	fprintf(sim_param_file, "source_location_config %d\n", source_location_config);
 	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
+	fprintf(sim_param_file, "robot_start_position_config %d\n", robot_start_position_config);
+	fprintf(sim_param_file, "wind_belief_weight %f\n", wind_belief_weight);
 	fclose(sim_param_file);
 }
 

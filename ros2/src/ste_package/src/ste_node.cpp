@@ -71,6 +71,7 @@ char gas_information_map_logfile_name[512];
 char scores_map_logfile_name[512];
 char distance_map_logfile_name[512];
 char acc_info_map_logfile_name[512];
+char weighted_belief_map_logfile_name[512];
 char relative_history_meas_logfile_name[512];
 char wind_field_u_logfile_name[512];
 char wind_field_v_logfile_name[512];
@@ -367,15 +368,54 @@ void state_initializing(){
 			start_path.push_back(Position(goal_pos_from_file.x, goal_pos_from_file.y, 0.0));
 			printf("Robot ID [%d]: start position from file: (%.2f, %.2f)\n", ID, goal_pos_from_file.x, goal_pos_from_file.y);
 		} else if (simulation_parameters.workingMode == EXPERIMENT){
-			// TODO: establish baseline measurements
-			// Radom Start position
-				float start_x = XMIN+0.5;
-				float start_y = YMAX-0.5;
-				start_path.push_back(Position(start_x, start_y, 0.0));
+			// set the start position based on the configuration parameter
+			float start_x, start_y;
+			switch (simulation_parameters.robot_start_position_config){
+				case 0:
+					{
+						start_x = XMAX -0.5 ;
+						start_y = YMIN + 0.5;
+						break;
+					}
+				case 1:
+					{
+						start_x = XMAX -0.5 ;
+						start_y = YMAX -0.5;
+						break;	
+					}
+				case 2:
+					{
+						start_x = XMIN +0.5 ;
+						start_y = YMAX -0.5;
+						break;	
+					}
+				case 3:
+					{
+						start_x = XMIN +0.5 ;
+						start_y = YMIN +0.5;
+						break;	
+					}
+				}
+            printf("Robot ID [%d]: start position from configuration %d: (%.2f, %.2f)\n", ID, simulation_parameters.robot_start_position_config, start_x, start_y);
+			ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading);
+
+			// find the path using visibility graph
+			VisiLibity::Point start(current_position.x, current_position.y);
+			VisiLibity::Point finish(start_x, start_y);
+			VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
+			// copy the path in another variable
+			// skip the first point (current position)
+			for (unsigned k = 1; k < Polyline_path.size(); k++)
+			{
+				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+				start_path.push_back(p);
+			
+			}
+	
+			ros->send_waypoints(start_path);
+			FSM.state = STATE_LISTENING;
+			FSM.hook  = state_listening;
 		}
-		ros->send_waypoints(start_path);
-		FSM.state = STATE_LISTENING;
-		FSM.hook  = state_listening;
 	}
 	
 }
@@ -645,7 +685,7 @@ void state_read_goal_measurement(){
 			// keep 1 out of 2 measurements to reduce the data size
 			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d, %f, %f", &d, &f4, &f5, &FSM_iter, &f9, &f10);
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
-			if (counter % 2 == 0){
+			// if (counter % 2 == 0){
 				history.size ++;
 				history.gas_meas.push_back(f4);
 				history.wind_meas_u.push_back(f9);
@@ -654,7 +694,7 @@ void state_read_goal_measurement(){
 
 				
 				history.position.push_back({f6, f7, f8});
-			}
+			// }
 			current_position.x = f6;
 			current_position.y = f7;
 			current_position.heading = f8;
