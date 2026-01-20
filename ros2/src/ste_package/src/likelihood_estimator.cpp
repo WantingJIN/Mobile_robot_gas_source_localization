@@ -49,21 +49,21 @@ double likelihood_rel_con(struct History &history, double *parameters, int sourc
 {
 
 	float sigma;
-	sigma = simulation_parameters.likelihoodSigma;
-    // if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-	// 	sigma = simulation_parameters.likelihoodSigma;
-	// }
-	// else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-	// 	// dynamic uncertainty based on wind estimation confidence
-	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
-	// 	sigma = simulation_parameters.likelihoodSigma * (1 + simulation_parameters.wind_belief_weight * exp(-wind_confidence));
-	// 	// if (wind_confidence < 1e-3){
-	// 	// 	// very high uncertainty when wind confidence is too low
-	// 	// 	sigma = simulation_parameters.likelihoodSigma * 2.0;
-	// 	// } else {
-	// 	// 	sigma = simulation_parameters.likelihoodSigma;
-	// 	// }
-	// }
+	//sigma = simulation_parameters.likelihoodSigma;
+    if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+		sigma = simulation_parameters.likelihoodSigma;
+	}
+	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// dynamic uncertainty based on wind estimation confidence
+		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+		sigma = simulation_parameters.likelihoodSigma * (1 + simulation_parameters.wind_belief_weight * exp(-wind_confidence));
+		// if (wind_confidence < 1e-3){
+		// 	// very high uncertainty when wind confidence is too low
+		// 	sigma = simulation_parameters.likelihoodSigma * 2.0;
+		// } else {
+		// 	sigma = simulation_parameters.likelihoodSigma;
+		// }
+	}
 
 	double sum_tmp = 0; 
 

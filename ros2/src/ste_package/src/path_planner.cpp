@@ -323,20 +323,20 @@ void PathPlanner::belief_clustering_planning()
 	printf("Enter belief clustering planning \n");
 
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	//clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
     // Implementation for different uncertainty models used for clustering
-	if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-		clusters_bounding_box = clustering_information_blocks(posterior->pdf);
-	}
-	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-		// take into account the wind uncertainty
-		for (int i = 0; i < _map_size; i++){
-			double wind_confidence = plume_model->get_wind_estimation_confidence(i);
-			weighted_belief_map[i] = posterior->pdf[i] * (1 + simulation_parameters.wind_belief_weight * exp(-wind_confidence));
-		}
-		clusters_bounding_box = clustering_information_blocks(weighted_belief_map);
-		log_weighted_belief_map();
-	}
+	// if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+	// 	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
+	// }
+	// else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+	// 	// take into account the wind uncertainty
+	// 	for (int i = 0; i < _map_size; i++){
+	// 		double wind_confidence = plume_model->get_wind_estimation_confidence(i);
+	// 		weighted_belief_map[i] = posterior->pdf[i] + simulation_parameters.wind_belief_weight * exp(-wind_confidence));
+	// 	}
+	// 	clusters_bounding_box = clustering_information_blocks(weighted_belief_map);
+	// 	log_weighted_belief_map();
+	// }
 
 	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
 
