@@ -476,6 +476,10 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		{
 			calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas);
 		}
+		if (simulation_parameters.relativeMethod == Z_SCORE)
+		{
+			calculate_measurements_zscore(history.relative_meas, history.gas_meas);
+		}
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 

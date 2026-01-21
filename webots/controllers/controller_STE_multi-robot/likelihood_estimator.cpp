@@ -62,23 +62,27 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 {
 
 	// float sigma = 0.22; // works well for Gaussian CDF
-	// float sigma = 0.49; // works well for Normalization
+	// float sigma = 1; // works well for Normalization
+	// float sigma = 0.48; // works well for empirical CDF
+	// float sigma = 3.5; // works well for z-score
 	//float sigma = simulation_parameters.likelihoodSigma;
-	float sigma;
+    float sigma;
 	sigma = simulation_parameters.likelihoodSigma;
-    // if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-	// 	sigma = simulation_parameters.likelihoodSigma;
-	// }
-	// else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-	// 	// dynamic uncertainty based on wind estimation confidence
-	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
-	// 	if (wind_confidence < 1e-3){
-	// 		// very high uncertainty when wind confidence is too low
-	// 		sigma = simulation_parameters.likelihoodSigma *5.0;
-	// 	} else {
-	// 		sigma = simulation_parameters.likelihoodSigma;
-	// 	}
-	// }
+    if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
+		sigma = simulation_parameters.likelihoodSigma;
+	}
+	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
+		// dynamic uncertainty based on wind estimation confidence
+		double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
+		sigma = simulation_parameters.likelihoodSigma * (1 + simulation_parameters.wind_belief_weight * exp(-wind_confidence*2));
+		// if (wind_confidence < 1e-3){
+		// 	// very high uncertainty when wind confidence is too low
+		// 	sigma = simulation_parameters.likelihoodSigma * 2.0;
+		// } else {
+		// 	sigma = simulation_parameters.likelihoodSigma;
+		// }
+	}
+
 
 	double sum_tmp = 0; 
 
@@ -127,6 +131,43 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 		}
 		sum_tmp /= (sigma * sigma);
 	}
+    // z-score method
+
+	if (simulation_parameters.relativeMethod == Z_SCORE)
+	{
+		calculate_measurements_zscore(rel_model_list, model_c_avg);
+		// if (source_pos_idx == 82 || source_pos_idx == 0){
+		// 	if (source_pos_idx == 82) fprintf(console_logfile, "True source\n");
+        //     if (source_pos_idx == 0) fprintf(console_logfile, "Estimated source\n");
+		
+		// 	fprintf(console_logfile, "Model values: \n");
+		// 	for (int i = 0; i < model_c_avg.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", model_c_avg[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+
+		// 	fprintf(console_logfile, "Model normalized values: \n");
+		// 	for (int i = 0; i < rel_model_list.size(); i++)
+		// 	{
+		// 		fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		// 	}
+		// 	fprintf(console_logfile, "\n");
+		// }
+
+		// cosine_distance = calculate_cosine_distance(rel_model_list, history.relative_meas);
+		// sum_tmp = cosine_distance/(sigma*sigma);
+		// printf("Cosine distance: %f\n", cosine_distance);
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = history.relative_meas[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
+		}
+	}
+
+
+
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
@@ -265,6 +306,37 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 			rel_meas_list[i] = (data_list[i] - min_val) / (max_val - min_val);
 		}
 		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
+	}
+}
+
+void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> data_list)
+{
+	rel_meas_list.resize(data_list.size());
+	if (data_list.size() == 1)
+	{
+		rel_meas_list[0] = 0.0;
+		return;
+	}
+	// calculate the mean and standard deviation
+	double sum = 0.0;
+	for (const auto& val : data_list) {
+		sum += val;
+	}
+	double mean = sum / data_list.size();
+
+	double sq_sum = 0.0;
+	for (const auto& val : data_list) {
+		sq_sum += (val - mean) * (val - mean);
+	}
+	double stddev = sqrt(sq_sum / data_list.size());
+
+	// calculate z-score for each measurement
+	for (int i = 0; i < data_list.size(); i++) {
+		if (stddev < 1e-6) {
+			rel_meas_list[i] = 0.0; // avoid division by zero
+		} else {
+			rel_meas_list[i] = (data_list[i] - mean) / stddev;
+		}
 	}
 }
 
@@ -482,7 +554,15 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model)
 	// verify if all the parameters are between the right intervals
 	for (i = 0; i < nbr_dimension; i++)
 		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] >= model->param_list[i].lower_limit);
-
+    
+    // source should not be at the border of the area
+	int idx, idy;
+	position_to_indices_2D(parameters[0], parameters[1], &idx, &idy);
+    if (idx <= 0 || idx >= model->param_list[0].nbins - 1 || idy <= 0 || idy >= model->param_list[1].nbins - 1)
+	{
+		output = 0;
+	}	
+	
 	// verify the x and y elements of the parameters are not inside obstacles
 	Position tmp_p(parameters[0], parameters[1], 0);
 	if (tmp_p.is_in_obstacle_list(obstacles, nbr_obs) != -1)

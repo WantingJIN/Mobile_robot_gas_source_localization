@@ -132,6 +132,8 @@ eRelativeMethod parse_relative_method(const char *str)
 {
 	if (strcmp(str, "NORMALIZATION") == 0)
 		return NORMALIZATION;
+	if (strcmp(str, "Z_SCORE") == 0)
+		return Z_SCORE;
 	if (strcmp(str, "EMPIRICAL_CDF") == 0)
 		return EMPIRICAL_CDF;
 	if (strcmp(str, "EMPIRICAL_CDF_AND_SLOPE") == 0)
@@ -429,6 +431,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			diff_coefficient = atof(value);
 		}
+		else if (strcmp(key, "windBeliefWeight") == 0)
+		{
+			wind_belief_weight = atof(value);
+		}
 		else {
 			fprintf(stderr, "Unknown parameter: %s\n", key);
 			exit(1);
@@ -497,6 +503,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
 	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
+	fprintf(sim_param_file, "wind_belief_weight %f\n", wind_belief_weight);
 	fclose(sim_param_file);
 }
 

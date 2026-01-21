@@ -12,6 +12,6 @@ bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
 void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> data_list);
 void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> data_list);    
-
+void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> data_list);
 
 
