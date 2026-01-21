@@ -680,21 +680,50 @@ void state_read_goal_measurement(){
 		goal_position.y = f2;
 		goal_position.heading = 0;
 		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+        float average_x = 0;
+		float average_y = 0;
+		float average_heading = 0;
+		float average_gas = 0;
+		float average_wind_u = 0;
+		float average_wind_v = 0;
 
 		while (current_position.dist_to_goal(goal_position) > 0.05){
 			// keep 1 out of 2 measurements to reduce the data size
 			fscanf(experiment_measurements_logfile, "%d, %f, %f, %d, %f, %f", &d, &f4, &f5, &FSM_iter, &f9, &f10);
 			fscanf(experiment_position_logfile, "%d, %f, %f, %f", &d, &f6, &f7, &f8);
-			// if (counter % 2 == 0){
-				history.size ++;
-				history.gas_meas.push_back(f4);
-				history.wind_meas_u.push_back(f9);
-				history.wind_meas_v.push_back(f10);
-				history.FSM_iter.push_back(FSM_iter);
+			// use the average of sampling_period measurements
+            average_gas += f4;
+			average_wind_u += f9;
+			average_wind_v += f10;
+			average_x += f6;
+			average_y += f7;
+			average_heading += f8;
+			if (counter % simulation_parameters.sampling_period == 0){
+				if (counter != 0){
+					// to avoid adding the first measurement when reaching the goal position
+					average_gas /= simulation_parameters.sampling_period;
+					average_wind_u /= simulation_parameters.sampling_period;
+					average_wind_v /= simulation_parameters.sampling_period;
+					average_x /= simulation_parameters.sampling_period;
+					average_y /= simulation_parameters.sampling_period;
+					average_heading /= simulation_parameters.sampling_period;
 
+				}
 				
-				history.position.push_back({f6, f7, f8});
-			// }
+				
+				history.size ++;
+				history.gas_meas.push_back(average_gas);
+				history.wind_meas_u.push_back(average_wind_u);
+				history.wind_meas_v.push_back(average_wind_v);
+				history.FSM_iter.push_back(FSM_iter);				
+				history.position.push_back({average_x, average_y, average_heading});
+				average_gas = 0;
+				average_wind_u = 0;
+				average_wind_v = 0;
+				average_x = 0;
+				average_y = 0;
+				average_heading = 0;
+			}
 			current_position.x = f6;
 			current_position.y = f7;
 			current_position.heading = f8;
