@@ -214,26 +214,94 @@ void PathPlanner::random_planning()
 void PathPlanner::lawnmower_planning()
 {
 	printf("Enter lawnmower planning \n");
-	int static direction = 1;
-	double x_step = 1.0;
-	double y_step = 4;
-	goal_position.y = current_position.y + direction * y_step;
-	goal_position.x = current_position.x;
-	goal_position.heading = 0;
-	if (current_position.y > YMAX - SAFETY_MARGIN - 0.05 && direction == 1)
-	{
-		goal_position.x = current_position.x + x_step;
-		direction = -1;
-	}
-	if (current_position.y < YMIN + SAFETY_MARGIN + 0.1 && direction == -1)
-	{
-		goal_position.x = current_position.x + x_step;
-		direction = 1;
-	}
-	if (goal_position.x > XMAX - SAFETY_MARGIN - 0.05)
-	{
-		reach_end_of_fix_path = true;
-	}
+	// int static direction = 1;
+	// double x_step = 1.0;
+	// double y_step = 4;
+	// goal_position.y = current_position.y + direction * y_step;
+	// goal_position.x = current_position.x;
+	// goal_position.heading = 0;
+	// if (current_position.y > YMAX - SAFETY_MARGIN - 0.05 && direction == 1)
+	// {
+	// 	goal_position.x = current_position.x + x_step;
+	// 	direction = -1;
+	// }
+	// if (current_position.y < YMIN + SAFETY_MARGIN + 0.1 && direction == -1)
+	// {
+	// 	goal_position.x = current_position.x + x_step;
+	// 	direction = 1;
+	// }
+	// if (goal_position.x > XMAX - SAFETY_MARGIN - 0.05)
+	// {
+	// 	reach_end_of_fix_path = true;
+	// }
+
+
+
+	printf("Enter lawnmower planning with obstacle avoidance\n");
+    
+    static int direction = 1; // 1 for Up, -1 for Down
+    double x_step = 1.0;
+    double y_total_step = YMAX - YMIN;
+    double margin = SAFETY_MARGIN;
+
+    // 2. Propose the next Y position
+    double target_y = current_position.y + (direction * y_total_step);
+    
+    // Clamp to environment boundaries
+    if (target_y > YMAX) target_y = YMAX ;
+    if (target_y < YMIN) target_y = YMIN ;
+
+    // 3. Check for Obstacle Collisions in the current X-lane
+    // If the path from current_y to target_y hits an obstacle, we stop at the edge
+    double x = current_position.x;
+    for (int i = 0; i < nbr_obs; i++){
+        double obs_x_min = obstacles[i][0] - margin;
+		double obs_x_max = obstacles[i][2] + margin;
+		double obs_y_min = obstacles[i][1] - margin;
+		double obs_y_max = obstacles[i][3] + margin;
+        // If our current X is within the horizontal bounds of the inflated obstacle
+        if (x >= obs_x_min && x <= obs_x_max) {
+            // Moving Up: Check if obstacle is ahead
+            if (direction == 1 && current_position.y < obs_y_min && target_y > obs_y_min) {
+                target_y = obs_y_min - 0.05; // Stop just before
+            }
+            // Moving Down: Check if obstacle is ahead
+            else if (direction == -1 && current_position.y > obs_y_max && target_y < obs_y_max) {
+                target_y = obs_y_max + 0.05; // Stop just before
+            }
+            // If we are currently "trapped" inside an inflated obstacle, jump to the exit
+            else if (current_position.y >= obs_y_min && current_position.y <= obs_y_max) {
+                 target_y = (direction == 1) ? obs_y_max + 0.05 : obs_y_min - 0.05;
+            }
+        }
+    }
+
+    // 4. Set the Goal
+    goal_position.x = x;
+    goal_position.y = target_y;
+
+    // 5. Logic for shifting to the next row (X-step)
+    // If we reached the limit (Boundary or Obstacle edge), prepare to move right
+    bool reached_limit = false;
+    if (direction == 1 && goal_position.y >= YMAX - 0.1) reached_limit = true;
+    if (direction == -1 && goal_position.y <= YMIN + 0.1) reached_limit = true;
+    
+    // Also check if we are stuck against an obstacle face
+      for (int i = 0; i < nbr_obs; i++){
+        if (x >= obstacles[i][0] - margin && x <= obstacles[i][2] + margin) {
+            if (direction == 1 && std::abs(goal_position.y - (obstacles[i][1] - margin - 0.05)) < 0.1) reached_limit = true;
+            if (direction == -1 && std::abs(goal_position.y - (obstacles[i][3] + margin + 0.05)) < 0.1) reached_limit = true;
+        }
+    }
+
+    if (reached_limit) {
+        goal_position.x = current_position.x + x_step;
+        direction *= -1; // Switch direction for next call
+    }
+
+    if (goal_position.x > XMAX - margin) {
+        reach_end_of_fix_path = true;
+    }
 }
 
 void PathPlanner::calculate_information_gain()
