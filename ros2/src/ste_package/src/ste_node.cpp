@@ -182,9 +182,6 @@ std::vector<std::vector<double>> belief_maps;
 // visited list
 std::vector<int> cell_visited_list;
 
-// goal positions 
-
-std::vector<Position> goal_positions; 
 
 // =========================== FUNCTIONS ================================ //
 
@@ -362,14 +359,9 @@ void state_initializing(){
 	
 	} else {
 		std::list<Position> start_path;
-		if (simulation_parameters.workingMode == TEST){
-			//set the start position from the goal positions list
-			auto goal_pos_from_file = goal_positions[FSM.n_cycles];
-			start_path.push_back(Position(goal_pos_from_file.x, goal_pos_from_file.y, 0.0));
-			printf("Robot ID [%d]: start position from file: (%.2f, %.2f)\n", ID, goal_pos_from_file.x, goal_pos_from_file.y);
-		} else if (simulation_parameters.workingMode == EXPERIMENT){
+		float start_x, start_y;
+		if (simulation_parameters.workingMode == EXPERIMENT){
 			// set the start position based on the configuration parameter
-			float start_x, start_y;
 			switch (simulation_parameters.robot_start_position_config){
 				case 0:
 					{
@@ -395,30 +387,47 @@ void state_initializing(){
 						start_y = YMIN +0.5;
 						break;	
 					}
-				}
-            printf("Robot ID [%d]: start position from configuration %d: (%.2f, %.2f)\n", ID, simulation_parameters.robot_start_position_config, start_x, start_y);
-			ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading);
-
-			// find the path using visibility graph
-			VisiLibity::Point start(current_position.x, current_position.y);
-			VisiLibity::Point finish(start_x, start_y);
-			VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
-			// copy the path in another variable
-			// skip the first point (current position)
-			for (unsigned k = 1; k < Polyline_path.size(); k++)
-			{
-				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-				start_path.push_back(p);
-			
+				case 4:
+					{
+						start_x = -2;//(XMIN + XMAX) / 2;
+						start_y = (YMIN + YMAX) / 2;
+						break;	
+					}
 			}
-	
-			ros->send_waypoints(start_path);
-			FSM.state = STATE_LISTENING;
-			FSM.hook  = state_listening;
 		}
+		if (simulation_parameters.workingMode == VIDEO){
+			read_goal_position();
+			start_x = goal_position.x;
+			start_y = goal_position.y;
+		}
+
+		printf("Robot ID [%d]: start position from configuration %d: (%.2f, %.2f)\n", ID, simulation_parameters.robot_start_position_config, start_x, start_y);
+		// FIXME: some bug here to get the current Pose, always return 0, maybe need another ros spin
+		//ros->getCurrentPose(&current_position.x, &current_position.y, &current_position.heading);
+		// temporary fix
+		current_position.x = XMAX-1.0;
+		current_position.y = YMIN+1.0;
+		printf("Robot ID [%d]: current position: (%.2f, %.2f)\n", ID, current_position.x, current_position.y);
+		// find the path using visibility graph
+		VisiLibity::Point start(current_position.x, current_position.y);
+		VisiLibity::Point finish(start_x, start_y);
+		VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
+		// copy the path in another variable
+		// skip the first point (current position)
+		for (unsigned k = 1; k < Polyline_path.size(); k++)
+		{
+			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+			start_path.push_back(p);
+			printf(" waypoint %d: (%f, %f) \n", k, p.x, p.y);
+		
+		}
+		ros->send_waypoints(start_path);
+		FSM.state = STATE_LISTENING;
+		FSM.hook  = state_listening;
 	}
-	
 }
+	
+
 
 void state_listening(){
 	// printf("Receiving measurements... \n");
@@ -597,6 +606,13 @@ void state_updategoal()
 		break;
 	}
 
+	if (path_planner->reach_end_of_fix_path){
+		printf("Robot ID [%d]: reached the end of fixed path\n", ID);
+		fprintf(console_logfile, "Robot ID [%d]: reached the end of fixed path\n", ID);
+		FSM.state = STATE_FINISHED;
+		return;
+	}
+
 	if (FSM.state != STATE_FINISHED)
 	{
 		// If the goal position is very close to current postion, swith to random planning
@@ -607,62 +623,56 @@ void state_updategoal()
 		// 	random_planning();
 		// }
 		path.clear();
-		if (simulation_parameters.workingMode == TEST){
-			std::list<Position> test_path;
-			//set the goal position from the goal positions list
-			auto goal_pos_from_file = goal_positions[FSM.n_cycles];
-			goal_position.x = goal_pos_from_file.x;
-			goal_position.y = goal_pos_from_file.y;
-			test_path.clear();
-			test_path.push_back(Position(goal_position.x, goal_position.y, 0.0));
-			// i = path.begin();
-			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-			// send the goal to the supervisor
-			ros->send_waypoints(test_path);
+		if (simulation_parameters.workingMode == VIDEO){
+			// use the goal position from the file instead
+			read_goal_position();
+			if (FSM.state == STATE_FINISHED){
+				return;
+			}
+		}
+		if (use_visibility_path){
+			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
+			path_planner->goal_outside_obstacles(&goal_position);
+			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+
+			// find the path using visibility graph
+			VisiLibity::Point start(current_position.x, current_position.y);
+			VisiLibity::Point finish(goal_position.x, goal_position.y);
+			VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
+			// copy the path in another variable
+			// skip the first point (current position)
+			for (unsigned k = 1; k < Polyline_path.size(); k++)
+			{
+				Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+				path.push_back(p);
+				log_trajectory(p);
+			}
+		
+		// i = path.begin();
+		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+		// send the goal to the supervisor
+		}
+		
+
+		if (simulation_parameters.workingMode == EXPERIMENT || simulation_parameters.workingMode == VIDEO){
+			printf("Sending waypoints to robot ID [%d]...\n", ID);
+			ros->send_waypoints(path);
+			// update goal
 			FSM.state = STATE_LISTENING;
-			FSM.hook  = state_listening;
-		}
-		else {
-			if (use_visibility_path){
-				printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-				path_planner->goal_outside_obstacles(&goal_position);
-				printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-				// find the path using visibility graph
-				VisiLibity::Point start(current_position.x, current_position.y);
-				VisiLibity::Point finish(goal_position.x, goal_position.y);
-				VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
-				// copy the path in another variable
-				// skip the first point (current position)
-				for (unsigned k = 1; k < Polyline_path.size(); k++)
-				{
-					Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-					path.push_back(p);
-					log_trajectory(p);
-				}
-			
-			// i = path.begin();
-			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
-			// send the goal to the supervisor
-			}
-			if (simulation_parameters.workingMode == EXPERIMENT){
-				ros->send_waypoints(path);
-				// update goal
-				FSM.state = STATE_LISTENING;
-				FSM.hook = state_listening;
-				time_before_moving = current_timestamp();
-				long long current_path_planning_time = current_timestamp() - time_before_path_planning;
-				planning_time_sum += current_path_planning_time;
-
-			}
-			if (simulation_parameters.workingMode == OFFLINE){
-				FSM.state = STATE_READ_ALL;
-				FSM.hook  = state_read_goal_measurement;
-			}
+			FSM.hook = state_listening;
+			time_before_moving = current_timestamp();
+			long long current_path_planning_time = current_timestamp() - time_before_path_planning;
+			planning_time_sum += current_path_planning_time;
 
 		}
+		if (simulation_parameters.workingMode == OFFLINE){
+			FSM.state = STATE_READ_ALL;
+			FSM.hook  = state_read_goal_measurement;
+		}
+
 	}
 }
+
 
 
 void state_read_goal_measurement(){
@@ -748,6 +758,29 @@ void state_read_goal_measurement(){
 
 	}
 }
+
+void read_goal_position(){
+	printf("Enter state read goals\n");
+    int d;
+	float f1, f2, f3; 
+    double t;
+	char line[256];
+
+    // Read the goal position
+	if (fscanf(experiment_goalposition_logfile, "%d, %f, %f, %f, %lf", &d, &f1, &f2, &f3, &t) == 5){
+		goal_position.x = f1;
+		goal_position.y = f2;
+		goal_position.heading = 0;
+		printf("goal position is (%f, %f, %f) at %lf\n", goal_position.x, goal_position.y, f3, t);
+	} else{
+		printf("End of experiment measurements file\n");
+		//close the files
+		FSM.state = STATE_FINISHED;
+		fclose(experiment_goalposition_logfile);
+	}
+}
+
+
 
 bool check_converge_condition()
 {
@@ -850,26 +883,6 @@ void init_visited_list(){
 }
 
 
-std::vector<Position> load_goals_from_file(std::string filename) {
-    std::vector<Position> goals;
-    std::ifstream file(filename);
-    std::string line;
-    while (std::getline(file, line)) {
-		printf("Reading line: %s\n", line.c_str());
-        std::stringstream ss(line);
-        std::string val;
-        std::vector<double> row;
-        while (std::getline(ss, val, ',')) {
-            row.push_back(std::stod(val));
-        }
-        if (row.size() >= 4) {
-            goals.push_back({row[1], row[2], row[3]});
-        }
-    }
-    return goals;
-}
-	
-
 // =========================== MAIN ============================== //
 
 int main(int argc, char **argv)
@@ -906,11 +919,6 @@ int main(int argc, char **argv)
 	auto exec = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
   	exec->add_node(ros->node());
     
-	if (simulation_parameters.workingMode == TEST){
-		goal_positions = load_goals_from_file(config_folder_path + "/goal_position.csv");
-		printf("Goal positions file path is: %s\n", (config_folder_path + "/goal_position.csv").c_str());
-		printf("Loaded %zu goal positions from file.\n", goal_positions.size());
-	}
 	// //main loop
 	while (FSM.state != STATE_FINISHED && rclcpp::ok())
 	{
@@ -938,15 +946,26 @@ int main(int argc, char **argv)
 		delete[] obstacles[i];
 	delete[] obstacles;
     
-	if (simulation_parameters.workingMode == EXPERIMENT){
+	if (simulation_parameters.workingMode == EXPERIMENT || simulation_parameters.workingMode == VIDEO){
 		printf("STE Node finished. Returning to home position... \n");
-	
-	float end_x = XMAX-1.0;
-	float end_y = YMIN+1.0;
-	std::list<Position> end_goal;
-	end_goal.push_back(Position(end_x, end_y, 0.0));
-	ros->send_waypoints(end_goal);
-	printf("STE Node finished. Homing... \n");
+		float end_x = XMAX-1.0;
+		float end_y = YMIN+1.0;
+		std::list<Position> end_goal;
+		// find the path using visibility graph
+		VisiLibity::Point start(current_position.x, current_position.y);
+		VisiLibity::Point finish(end_x, end_y);
+		VisiLibity::Polyline Polyline_path = my_environment->shortest_path(start, finish, *vg, epsilon);
+		// copy the path in another variable
+		// skip the first point (current position)
+		for (unsigned k = 1; k < Polyline_path.size(); k++)
+		{
+			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+			end_goal.push_back(p);
+		
+		}
+
+		ros->send_waypoints(end_goal);
+		printf("STE Node finished. Homing... \n");
 	}
 
 	rclcpp::shutdown();

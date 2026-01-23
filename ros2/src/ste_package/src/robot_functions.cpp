@@ -37,7 +37,7 @@ void init()
 			FSM.state = STATE_INITIALIZING;
 			FSM.hook  = state_initializing;
 			break;
-		case TEST:
+		case VIDEO:
 			//set the state to wait for stationary plume
 			FSM.state = STATE_INITIALIZING;
 			FSM.hook  = state_initializing;

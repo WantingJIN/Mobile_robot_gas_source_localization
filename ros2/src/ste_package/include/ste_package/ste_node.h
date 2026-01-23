@@ -77,6 +77,8 @@ void state_initializing();
 void state_listening();
 void state_read_goal_measurement();
 
+void read_goal_position();
+
 
 PlumeModel* initializePlumeModel();
 
