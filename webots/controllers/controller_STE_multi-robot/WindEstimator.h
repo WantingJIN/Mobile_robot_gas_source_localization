@@ -71,8 +71,8 @@ protected:
 	int clamp_to_grid_x(int i) const { return std::max(0, std::min(i, nx_ - 1)); }
 	int clamp_to_grid_y(int j) const { return std::max(0, std::min(j, ny_ - 1)); }
 	int grid_idx(int i, int j) const { return (i < 0 || i >= nx_ || j < 0 || j >= ny_) ? -1 : grid_indices_to_idx(i, j); }
-	int world_to_i(double x) const { return (int)floor((x - source_bounds.x_min) / dx_); }
-	int world_to_j(double y) const { return (int)floor((y - source_bounds.y_min) / dy_); }
+	int world_to_i(double x) const { return (int)floor((x - source_x_min) / dx_); }
+	int world_to_j(double y) const { return (int)floor((y - source_y_min) / dy_); }
 };
 
 // ============================================================

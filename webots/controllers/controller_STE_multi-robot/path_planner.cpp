@@ -10,7 +10,6 @@ extern Position goal_position_team[3];
 extern Position current_position;
 extern SimulationParameters simulation_parameters;
 extern vector<int> cell_visited_list;
-extern SourceBounds source_bounds;
 
 extern char gas_information_map_logfile_name[512];
 extern char scores_map_logfile_name[512];
@@ -31,15 +30,15 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
     posterior = input_posterior;
 	history = input_history;
 	// initialize the map parameters with source bounds
-	_xnbins = source_bounds.x_nbins;
-	_ynbins = source_bounds.y_nbins;
-	_xresol = source_bounds.x_resol;
-	_yresol = source_bounds.y_resol;
-	_map_size = source_bounds.map_size;
-	_xmin = source_bounds.x_min;
-	_ymin = source_bounds.y_min;	
-	_xmax = source_bounds.x_max;	
-	_ymax = source_bounds.y_max;
+	_xnbins = source_x_nbins;
+	_ynbins = source_y_nbins;
+	_xresol = source_x_resol;
+	_yresol = source_y_resol;
+	_map_size = MAP_SIZE;
+	_xmin = source_x_min;
+	_ymin = source_y_min;	
+	_xmax = source_x_max;	
+	_ymax = source_y_max;
 
 	// initialize the maps
 	gas_information_map = new double[_map_size];
@@ -47,19 +46,6 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 	distance_map = new double[_map_size];
 	acc_info_map = new double[_map_size];	
 	reach_end_of_fix_path = false;
-}
-
-void PathPlanner::reset_planning_bound(SourceBounds source_bounds)
-{
-	_xnbins = source_bounds.x_nbins;
-	_ynbins = source_bounds.y_nbins;
-	_xresol = source_bounds.x_resol;
-	_yresol = source_bounds.y_resol;
-	_map_size = source_bounds.map_size;
-	_xmin = source_bounds.x_min;
-	_ymin = source_bounds.y_min;	
-	_xmax = source_bounds.x_max;	
-	_ymax = source_bounds.y_max;	
 }
 
 PathPlanner:: ~PathPlanner()

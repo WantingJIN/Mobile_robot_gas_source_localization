@@ -108,8 +108,6 @@ public:
 	virtual void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg);
 
 
-	virtual void reset_estimation_ranges(SourceBounds source_bounds) = 0;
-
 	virtual void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) = 0;
 	virtual void log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode) = 0;
 	virtual double get_wind_estimation_confidence(int soure_pos_idx) = 0;
@@ -145,8 +143,6 @@ public:
     void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) override;
 
     // calculate the gas concentration map and information map
-
-	void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode) override;
 	double get_wind_estimation_confidence(int soure_pos_idx) override;
 };
@@ -172,9 +168,7 @@ public:
 	void concentration(vector<Position> robot_position, int nbr, double wind_intensity, double param_value[], vector<float> &c_avg, vector<float> &c_std) override;
 
 	double approx_concentration(Position robot_position, double wind_intensity) override;
-    
-	// read from precomputed maps
-	void reset_estimation_ranges(SourceBounds source_bounds) override;
+
 	void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) override;
 	void log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode) override;
 	double get_wind_estimation_confidence(int soure_pos_idx) override;
@@ -211,7 +205,6 @@ public:
 
 	using SpMat  = Eigen::SparseMatrix<double>;
     using Triplet = Eigen::Triplet<double>;
-    void reset_estimation_ranges(SourceBounds source_bounds) override;
 	void retrieve_hist_measurements(int idx[], int idy[], int nbr, int soure_pos_idx, vector<double> &c_avg) override;
 	void update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) override;
     void log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode) override;
@@ -268,8 +261,8 @@ private:
 	int clamp_to_grid_x(int i) const { return std::max(0, std::min(i, Nx_ - 1)); }
 	int clamp_to_grid_y(int j) const { return std::max(0, std::min(j, Ny_ - 1)); }
 	int grid_idx(int i, int j) const { return (i < 0 || i >= Nx_ || j < 0 || j >= Ny_) ? -1 : grid_indices_to_idx(i, j); }
-	int world_to_i(double x) const { return (int)floor((x - source_bounds.x_min) / dx_); }
-	int world_to_j(double y) const { return (int)floor((y - source_bounds.y_min) / dy_); }
+	int world_to_i(double x) const { return (int)floor((x - source_x_min) / dx_); }
+	int world_to_j(double y) const { return (int)floor((y - source_y_min) / dy_); }
 		
 };
 

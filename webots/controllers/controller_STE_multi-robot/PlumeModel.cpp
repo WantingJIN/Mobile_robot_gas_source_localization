@@ -195,9 +195,9 @@ GaussianPlumeModel2D::GaussianPlumeModel2D()
 
 	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	// source_x
-	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
+	param_list[0] = parameter{"source_x", source_x_min, source_x_max, source_x_resol, source_x_nbins, 0, 0};
 	// source_y
-	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
+	param_list[1] = parameter{"source_y", source_y_min, source_y_max, source_y_resol, source_y_nbins, 0, 0};
 	// Q
 	param_list[2] = parameter{"Q", Q_min, Q_max, Q_resol, Q_nbins, 0, 0};
 	// sigma_a
@@ -273,7 +273,6 @@ double GaussianPlumeModel2D::approx_concentration(Position robot_position, doubl
 	return concentration(robot_position, wind_intensity, expected_value);
 }
 
-void GaussianPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds){}
 void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
 double GaussianPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
@@ -292,9 +291,9 @@ DeepCFDPlumeModel2D::DeepCFDPlumeModel2D()
 
 	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	// source_x
-	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
+	param_list[0] = parameter{"source_x", source_x_min, source_x_max, source_x_resol, source_x_nbins, 0, 0};
 	// source_y
-	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
+	param_list[1] = parameter{"source_y", source_y_min, source_y_max, source_y_resol, source_y_nbins, 0, 0};
 
 	// initialize expected and max a posteriori values to zero
 	expected_value = new double[nbr_param];
@@ -392,17 +391,6 @@ void DeepCFDPlumeModel2D::initialize_model_features()
 	x[0][2].slice(/*dim=*/0, /*start=*/0, /*end=*/reverse_sd_torch.size(0)).copy_(reverse_sd_torch);
 	r_torch = torch::from_blob(r->data, {(long long)r->dims[0], (long long)r->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
 	c_torch = torch::from_blob(c->data, {(long long)c->dims[0], (long long)c->dims[1]}, torch::TensorOptions().dtype(torch::kDouble));
-}
-
-
-void DeepCFDPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds)
-{
-	// source_x
-	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
-	// source_y
-	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
-	gas_con_map_list.clear();
-	cell_lists.clear();
 }
 
 
@@ -532,9 +520,9 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 
 	// hard-coded parameters {name, lower_limit, upper_limit, resolution, nbins, estimated, max_a_post}
 	// source_x
-	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
+	param_list[0] = parameter{"source_x", source_x_min, source_x_max, source_x_resol, source_x_nbins, 0, 0};
 	// source_y
-	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
+	param_list[1] = parameter{"source_y", source_y_min, source_y_max, source_y_resol, source_y_nbins, 0, 0};
 
 	printf("Estimation ranges for ADE-FDM model: \n");
 	printf("source_x: [%f, %f] m, resol: %f m, nbins: %d \n", param_list[0].lower_limit, param_list[0].upper_limit, param_list[0].resolution, param_list[0].nbins);
@@ -564,15 +552,15 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
 	if (simulation_parameters.windEstimationMethod == GAUSSIAN_KERNEL){
-		wind_estimator_ = new GaussianWindEstimator(source_bounds.x_min, source_bounds.x_max,
-												  source_bounds.y_min, source_bounds.y_max,
+		wind_estimator_ = new GaussianWindEstimator(source_x_min, source_x_max,
+												  source_y_min, source_y_max,
 												  Nx_, Ny_, obstacles, nbr_obs, 0.30, 1.0, 0.5);
 		// first intialize as ground truth wind field
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
 	if (simulation_parameters.windEstimationMethod == BASEFLOW_CORRECTION){
-		wind_estimator_ = new BaseflowCorrectionWindEstimator(source_bounds.x_min, source_bounds.x_max,
-												  source_bounds.y_min, source_bounds.y_max,
+		wind_estimator_ = new BaseflowCorrectionWindEstimator(source_x_min, source_x_max,
+												  source_y_min, source_y_max,
 												  Nx_, Ny_, obstacles, nbr_obs, 1.0, 100);
 		// first intialize as ground truth wind field
 		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
@@ -631,24 +619,6 @@ void AdeFDMPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nb
 	}
 	
 }
-
-
-void AdeFDMPlumeModel2D::reset_estimation_ranges(SourceBounds new_bounds)
-{
-	// source_x
-	param_list[0] = parameter{"source_x", source_bounds.x_min, source_bounds.x_max, source_bounds.x_resol, source_bounds.x_nbins, 0, 0};
-	// source_y
-	param_list[1] = parameter{"source_y", source_bounds.y_min, source_bounds.y_max, source_bounds.y_resol, source_bounds.y_nbins, 0, 0};
-	dx_ = (param_list[0].upper_limit - param_list[0].lower_limit) / (Nx_ - 1);
-	dy_ = (param_list[1].upper_limit - param_list[1].lower_limit) / (Ny_ - 1);
-    // reset the gas map list and cell lists
-	gas_con_map_list.clear();
-	cell_lists.clear();
-	// reload the wind filed
-	set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
-	//assemble_and_factorize();
-}
-
 
 void AdeFDMPlumeModel2D::set_u_field_uniform(double u)
 {

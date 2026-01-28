@@ -41,14 +41,6 @@
 WbDeviceTag receiver[MAX_NB_ROBOTS];         // Supervisor receivers
 WbDeviceTag emitter;
 
-// message structure
-struct message{
-    int sender_ID;
-    double position[3];
-    double concentration;
-    int termination_flag;
-}message;
-
 char ID_name[50];
 
 // obstacles definitions
@@ -151,7 +143,7 @@ int main(void){
     if (is_in_obstacle_list(source_position[0], source_position[1], obstacles, nbr_obs) != -1){
         printf("The source is in an obstacle, randomizing the position!!!\n");
         do{
-            source_position[0] = 12.7;
+            source_position[0] = (((double)rand() / (double)RAND_MAX) * (ARENA_XMAX - ARENA_XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_XMIN;
             source_position[1] = (((double)rand() / (double)RAND_MAX) * (ARENA_YMAX - ARENA_YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_YMIN;
             source_position[2] = 0.13;
         }while(is_in_obstacle_list(source_position[0], source_position[1], obstacles, nbr_obs) != -1);

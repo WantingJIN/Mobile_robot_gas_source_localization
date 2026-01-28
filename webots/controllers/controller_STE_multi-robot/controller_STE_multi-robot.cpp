@@ -161,9 +161,6 @@ double real_source_pos[3] = {0, 0, 0};
 
 bool use_visibility_path = true;
 
-// define the source bound for the estimation
-SourceBounds source_bounds;
-
 // store the belief maps of the whole team
 std::vector<std::vector<double>> belief_maps;
 std::vector<int> received_flags;
@@ -379,7 +376,7 @@ void log_visited_list()
 {
 	visited_list_logfile = fopen(visited_list_logfile_name, "a");
 
-	for (int i = 0; i < source_bounds.map_size; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
 
 	fprintf(visited_list_logfile, "\n");
@@ -718,14 +715,6 @@ void state_estimating()
 
 					printf("The estimation converged on the boundary, change the estimation range and relocate robot \n");
 					fprintf(console_logfile, "The estimation converged on the boundary, change the estimation range and relocate robot \n");
-					// NOTE - complied but didn't try to run 
-					// TODO - save the estimation range for every iteration
-					// TODO - should keep the same resolution as the global map for fair comparison
-					// set_source_bounds_centered_with_location(&source_bounds, goal_position.x, goal_position.y);
-					// plume_model->reset_estimation_ranges(source_bounds);
-					// plume_model->calculate_gas_map_and_information_matrix();
-					// posterior->pdf_reset();
-					// path_planner->reset_planning_bound(source_bounds);
 				} else {
 					FSM.state = STATE_FINISHED;
 					printf("Robot ID [%d]: STATE_FINISHED\n", ID);
@@ -1190,7 +1179,7 @@ void state_receive_pdf()
 	{
 		if (!printed && posterior->pdf != nullptr)
 		{
-			belief_maps[self_index].assign(posterior->pdf, posterior->pdf + source_bounds.map_size);
+			belief_maps[self_index].assign(posterior->pdf, posterior->pdf + MAP_SIZE);
 			printed = true;
 		}
 
@@ -1222,7 +1211,7 @@ void state_receive_pdf()
 			// Skip self and invalid indices
 			if (sender_ID != ID && sender_index >= 0 && sender_index < MAX_NB_ROBOTS)
 			{
-				belief_maps[sender_index].assign(&buffer[10], &buffer[10] + source_bounds.map_size);
+				belief_maps[sender_index].assign(&buffer[10], &buffer[10] + MAP_SIZE);
 				received_flags[sender_index] = 1;
 			}
 
@@ -1264,7 +1253,7 @@ void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
 	// Initialize to 1.0 for multiplicative identity
-	for (int i = 0; i < source_bounds.map_size; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		belief_map_merged[i] = 1.0;
 	}
@@ -1275,7 +1264,7 @@ void state_merge_pdf()
 		if (r == self_index)
 			continue; // Skip self
 
-		for (int i = 0; i < source_bounds.map_size; i++)
+		for (int i = 0; i < MAP_SIZE; i++)
 		{
 			belief_map_merged[i] *= belief_maps[r][i];
 		}
@@ -1283,14 +1272,14 @@ void state_merge_pdf()
 
 	// normalize belief map
 	double sum = 0.0;
-	for (int i = 0; i < source_bounds.map_size; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		sum += belief_map_merged[i];
 	}
 
 	if (sum > 0)
 	{
-		for (int i = 0; i < source_bounds.map_size; i++)
+		for (int i = 0; i < MAP_SIZE; i++)
 		{
 			belief_map_merged[i] /= sum;
 		}
@@ -1298,12 +1287,12 @@ void state_merge_pdf()
 
 	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
 	printf("Robot ID [%d]: Merged belief map is: \n", ID);
-	for (int i = 0; i < source_bounds.map_size; i++)
+	for (int i = 0; i < MAP_SIZE; i++)
 	{
 		printf("%f ", belief_map_merged[i]);
 	}
 	printf("\n");
-	belief_map_merged.assign(posterior->pdf, posterior->pdf + source_bounds.map_size);
+	belief_map_merged.assign(posterior->pdf, posterior->pdf + MAP_SIZE);
     // Check the stopping condition after merging
 	posterior->process();
     posterior->calculate_entropy_and_spread();
@@ -1493,86 +1482,14 @@ void check_visibility_environment() {
 }
 
 
-void set_source_bounds(SourceBounds *bounds,
-                        double x_min, double y_min,
-                        double x_max, double y_max,
-                        int x_nbins, int y_nbins)
-{
-    bounds->x_min = x_min;
-    bounds->y_min = y_min;
-    bounds->x_max = x_max;
-    bounds->y_max = y_max;
-    bounds->x_nbins = x_nbins;
-    bounds->y_nbins = y_nbins;
-
-	bounds->map_size = x_nbins * y_nbins;
-
-    // Compute resolutions safely (avoid division by zero)
-    bounds->x_resol = (x_nbins > 0) ? (x_max - x_min) / x_nbins : 0.0;
-    bounds->y_resol = (y_nbins > 0) ? (y_max - y_min) / y_nbins : 0.0;
-}
-
-void set_source_bounds_centered_with_location(SourceBounds *bounds, double px, double py){
-        double local_xmin = px - 3.0;
-		double local_ymin = py - 1.0;
-		double local_xmax = px + 3.0;
-		double local_ymax = py + 1.0;
-		// make sure the local bounds are within the global bounds
-		local_xmin = std::max(local_xmin, XMIN);
-		local_ymin = std::max(local_ymin, YMIN);
-		local_xmax = std::min(local_xmax, XMAX);
-		local_ymax = std::min(local_ymax, YMAX);
-		set_source_estimation_range(bounds, local_xmin, local_xmax, local_ymin, local_ymax);
-		printf("local estimation bound: [%f, %f] x [%f, %f]\n", local_xmin, local_xmax, local_ymin, local_ymax);
-}
-void set_source_esimation_grid(SourceBounds *bounds, int x_bins, int y_bins){
-	bounds->x_nbins = x_bins;
-    bounds->y_nbins = y_bins;
-
-	bounds->map_size = x_bins * y_bins;
-}
-void set_source_estimation_range(SourceBounds *bounds, double x_min, double x_max, double y_min, double y_max){
-	bounds->x_min = x_min;
-    bounds->y_min = y_min;
-    bounds->x_max = x_max;
-    bounds->y_max = y_max;
-	  // Compute resolutions safely (avoid division by zero)
-    bounds->x_resol = (bounds->x_nbins > 0) ? (x_max - x_min) / bounds->x_nbins : 0.0;
-    bounds->y_resol = (bounds->y_nbins > 0) ? (y_max - y_min) / bounds->y_nbins : 0.0;
-
-}
-
-void init_estimation_bound(){
-	// in case of global estimation
-	if (simulation_parameters.estimationScale == GLOBAL){
-		set_source_bounds(&source_bounds, 
-						XMIN+SAFETY_MARGIN, YMIN+SAFETY_MARGIN, XMAX-SAFETY_MARGIN, YMAX-SAFETY_MARGIN, 20, 20);
-		FILE * sim_param_file = fopen(config_logfile_name, "a");
-	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
-	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	    fclose(sim_param_file);
-	}
-	if (simulation_parameters.estimationScale == LOCAL){
-        // TODO: whether it is better to fixed the number of bins or the resolution?
-		set_source_esimation_grid(&source_bounds, 10, 10);
-		set_source_bounds_centered_with_location(&source_bounds, current_position.x, current_position.y);
-
-		FILE * sim_param_file = fopen(config_logfile_name, "a");
-	    fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, source_bounds.x_nbins, source_bounds.y_nbins, a_y_nbins, b_y_nbins);
-	    fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_bounds.x_min, source_bounds.x_max, source_bounds.y_min, source_bounds.y_max, a_y_min, a_y_max, b_y_min, b_y_max);
-	    fclose(sim_param_file);
-	} 
-}
-
-
 void init_belief_maps_for_team(){
-	belief_maps.assign(simulation_parameters.number_of_robots, std::vector<double>(source_bounds.map_size, 0.0));
-	belief_map_merged.assign(source_bounds.map_size, 0.0);
+	belief_maps.assign(simulation_parameters.number_of_robots, std::vector<double>(MAP_SIZE, 0.0));
+	belief_map_merged.assign(MAP_SIZE, 0.0);
 	received_flags.assign(simulation_parameters.number_of_robots, 0);
 }
 
 void init_visited_list(){
-	cell_visited_list.assign(source_bounds.map_size, 0.0);
+	cell_visited_list.assign(MAP_SIZE, 0.0);
 }
 	
 
@@ -1583,8 +1500,6 @@ int main(int argc, char **argv)
 	init();
 	read_obstacle_list();
     check_visibility_environment();
-	// init the estimation bound depending on global or local estimation
-	init_estimation_bound();
 	// if multi-robot and using team strategy, initialize the belief maps for each robot
 	if (simulation_parameters.number_of_robots > 1 && (simulation_parameters.teamStrategy == CENTRALIZED || simulation_parameters.teamStrategy == DISTRIBUTED)){
 		init_belief_maps_for_team();

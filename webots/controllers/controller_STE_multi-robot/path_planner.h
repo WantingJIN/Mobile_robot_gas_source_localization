@@ -60,7 +60,6 @@ public:
 
     PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history);
     ~PathPlanner();
-    void reset_planning_bound(SourceBounds source_bounds);
 
     void maximal_belief_planning();
     void random_navigation();

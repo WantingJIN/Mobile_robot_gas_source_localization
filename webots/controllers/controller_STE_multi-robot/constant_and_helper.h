@@ -34,6 +34,17 @@ inline constexpr double YMAX = 4.0;
 // inline constexpr double ZMIN = 0.1;
 // inline constexpr double ZMAX = 1.9;
 
+
+// Source estimation boundaries
+inline constexpr float source_x_min = XMIN + SAFETY_MARGIN;
+inline constexpr float source_y_min = YMIN + SAFETY_MARGIN;
+inline constexpr float source_x_max = XMAX - SAFETY_MARGIN;
+inline constexpr float source_y_max = YMAX - SAFETY_MARGIN;
+inline constexpr int source_x_nbins = 20;
+inline constexpr int source_y_nbins = 20;
+inline constexpr float source_x_resol = (source_x_max - source_x_min) / source_x_nbins;
+inline constexpr float source_y_resol = (source_y_max - source_y_min) / source_y_nbins;
+inline constexpr int MAP_SIZE = source_x_nbins * source_y_nbins;
 // ------------------------------------------------------------
 // 📈 Parameter ranges
 // ------------------------------------------------------------
@@ -76,28 +87,6 @@ inline constexpr int TIMEOUT = 1000 * 1000; // microseconds
 // declare the global parameter - the root path of the project
 extern const char *workspacePath;
 
-// declare the gloabl paramter - the estimation bound of the gas source
-typedef struct {
-    float x_min;
-    float y_min;
-    float x_max;
-    float y_max;
-    int x_nbins;
-    int y_nbins;
-    int map_size; // derived = x_nbins * y_nbins
-
-    float x_resol;  // derived = (x_max - x_min) / x_nbins
-    float y_resol;  // derived = (y_max - y_min) / y_nbins
-} SourceBounds;
-
-
-// Function to initialize SourceBounds and compute resolutions
-void set_source_bounds(SourceBounds *bounds,
-                        double x_min, double y_min,
-                        double x_max, double y_max,
-                        int x_nbins, int y_nbins);
-
-extern SourceBounds source_bounds;
 
 // random value sampled from a uniform distribution
 inline double randu()
@@ -108,17 +97,17 @@ inline double randu()
 
 // inline functions for position to index and vice versa
 inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
-      *idx_x = (int)floor((x - source_bounds.x_min) / source_bounds.x_resol);
-      *idx_y = (int)floor((y - source_bounds.y_min) / source_bounds.y_resol);
+      *idx_x = (int)floor((x - source_x_min) / source_x_resol);
+      *idx_y = (int)floor((y - source_y_min) / source_y_resol);
       // put idx_x and idx_y in the range of [0, x_nbins-1] and [0, y_nbins-1]      
       if (*idx_x < 0)
             *idx_x = 0; 
-      if (*idx_x >= source_bounds.x_nbins)  
-            *idx_x = source_bounds.x_nbins - 1;
+      if (*idx_x >= source_x_nbins)  
+            *idx_x = source_x_nbins - 1;
       if (*idx_y < 0)
             *idx_y = 0;
-      if (*idx_y >= source_bounds.y_nbins)
-            *idx_y = source_bounds.y_nbins - 1;
+      if (*idx_y >= source_y_nbins)
+            *idx_y = source_y_nbins - 1;
 
       // if (*idx_y < 0 || *idx_y > y_nbins)
       //       *idx_y = -1; // invalid
@@ -127,45 +116,45 @@ inline void position_to_indices_2D(float x, float y, int *idx_x, int *idx_y){
       
 }
 inline void indices_to_position_2D(int idx_x, int idx_y, float *x, float *y){
-      *x = source_bounds.x_min + idx_x * source_bounds.x_resol + source_bounds.x_resol / 2.0;
-      *y = source_bounds.y_min + idx_y * source_bounds.y_resol + source_bounds.y_resol / 2.0;
+      *x = source_x_min + idx_x * source_x_resol + source_x_resol / 2.0;
+      *y = source_y_min + idx_y * source_y_resol + source_y_resol / 2.0;
 }
 inline int position_to_index_2D(float x, float y){
-      int idx_x = (int)floor((x - source_bounds.x_min) / source_bounds.x_resol);
-      int idx_y = (int)floor((y - source_bounds.y_min) / source_bounds.y_resol);
-      int idx = idx_x + idx_y * source_bounds.x_nbins;
+      int idx_x = (int)floor((x - source_x_min) / source_x_resol);
+      int idx_y = (int)floor((y - source_y_min) / source_y_resol);
+      int idx = idx_x + idx_y * source_x_nbins;
       // put idx in the range of [0, MAP_SIZE-1]
       if (idx < 0)
             idx = 0;
-      if (idx >= source_bounds.map_size)    
-            idx = source_bounds.map_size - 1;
+      if (idx >= MAP_SIZE)    
+            idx = MAP_SIZE - 1;
 
       // if (idx < 0 || idx > MAP_SIZE)
       //       idx = -1; // invalid
       return idx;
 }
 inline void index_to_position_2D(int idx, float *x, float *y){
-      int idx_x = idx % source_bounds.x_nbins;
-      int idx_y = idx / source_bounds.x_nbins;
-      *x = source_bounds.x_min + idx_x * source_bounds.x_resol + source_bounds.x_resol / 2.0;
-      *y = source_bounds.y_min + idx_y * source_bounds.y_resol + source_bounds.y_resol / 2.0;
+      int idx_x = idx % source_x_nbins;
+      int idx_y = idx / source_x_nbins;
+      *x = source_x_min + idx_x * source_x_resol + source_x_resol / 2.0;
+      *y = source_y_min + idx_y * source_y_resol + source_y_resol / 2.0;
 }
 inline void index_to_indices_2D(int idx, int *idx_x, int *idx_y){
-      *idx_x = idx % source_bounds.x_nbins;
-      *idx_y = idx / source_bounds.x_nbins;
+      *idx_x = idx % source_x_nbins;
+      *idx_y = idx / source_x_nbins;
       // put idx_x and idx_y in the range of [0, x_nbins-1] and [0, y_nbins-1]
       if (*idx_x < 0)
             *idx_x = 0; 
-      if (*idx_x >= source_bounds.x_nbins)  
-            *idx_x = source_bounds.x_nbins - 1;
+      if (*idx_x >= source_x_nbins)  
+            *idx_x = source_x_nbins - 1;
 }
 inline int indices_to_index_2D(int idx_x, int idx_y){
-      int idx = idx_x + idx_y * source_bounds.x_nbins;
+      int idx = idx_x + idx_y * source_x_nbins;
       // put idx in the range of [0, MAP_SIZE-1]
       if (idx < 0)
             idx = 0;
-      if (idx >= source_bounds.map_size)    
-            idx = source_bounds.map_size - 1;
+      if (idx >= MAP_SIZE)    
+            idx = MAP_SIZE - 1;
       return idx;
 }
 

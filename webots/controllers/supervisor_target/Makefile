@@ -54,7 +54,7 @@ USE_C_API = true
 INCLUDE = -I"../../libraries/khepera4" -I"$(WEBOTS_HOME)/include/controller/c/"
 LIBRARIES = -g -L"../../libraries/khepera4" -lk4_webots -lm -L"$(WEBOTS_HOME)/lib" -lController -lgsl -lgslcblas  
 
-CFLAGS = -std=c++11 -Wno-write-strings
+CFLAGS = -std=c++17 -Wno-write-strings
 space := 
 space +=
 WEBOTS_HOME_PATH=$(subst $(space),\ ,$(strip $(subst \,/,$(WEBOTS_HOME))))
