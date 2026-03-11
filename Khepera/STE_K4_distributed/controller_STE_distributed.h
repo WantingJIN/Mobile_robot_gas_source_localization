@@ -60,8 +60,10 @@ struct history{
 	int size;
 	vector<int> FSM_iter;
 	vector<Position> position;
-	vector<float> measurement;
-	vector<float> measurement_std;
+	vector<float> gas_meas_avg;
+	vector<float> gas_meas_std;
+	vector<float> wind_intensity;
+	vector<float> wind_angle;
 	vector<float> relative_meas;
 	vector<int> gas_hit_event;
 };

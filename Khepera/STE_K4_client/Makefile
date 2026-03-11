@@ -8,7 +8,7 @@ CFLAGS_ADD := -std=c++0x -pthread
 #Need to add an export line in .bashrc like
 #export K4_ROOT=/home/Roro/Documents/Epfl/master_project/code/khepera4.git
 
-MODULES	:= khepera4 odometry_track odometry_goto i2cal i2c_stream nmea odorboard windsensorboard cortex
+MODULES	:= khepera4 odometry_track odometry_goto i2cal i2c_stream nmea odorboard trisonica cortex
 
 #Y_MODULES	:= /home/disal/khepera4toolbox/Modules/
 #MY_MODULES_FOLDER := /Modules

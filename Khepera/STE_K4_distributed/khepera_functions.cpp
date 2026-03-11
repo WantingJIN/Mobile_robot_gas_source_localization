@@ -3,7 +3,7 @@
 
 struct sKhepera4 khepera4;
 struct sOdorboard odorboard;
-struct sWindSensorBoard windsensorboard;
+struct sTrisonica trisonica;
 struct sBraitenberg braitenberg;
 float odor_baseline_value = 0;
 sMsg STmsg;
@@ -40,11 +40,9 @@ void init(){
     odorboard_led_mode_set();
     odorboard_pump_speed_set(0, PUMP_SPEED); // Pump should preferably be running before...
     
-    // Initialise wind board
-    windsensorboard_init();
-    windsensorboard.led.mode = cWindSensorBoardLEDMode_Tracking;
-    windsensorboard_led_mode_set();
-    windsensorboard_windsensor_start();
+    // Initialise trisonica
+    trisonica_init();
+    trisonica_power_on();
 
     // Initialise radio
     udp_msg_init(3000, ID);
@@ -324,16 +322,19 @@ float odor_read(){
     return current_odor;
 }
 
-float wind_read(){
-	float current_wind = 0, heading=0;
-    windsensorboard_windsensor_get();
-    current_wind = windsensorboard.windsensor.last.angle;
-    //calculation
-    heading = current_position.heading*180/PI;
-    current_wind = fmod(-(current_wind*180/PI)+3*180,2*180);//-((current_wind*180/PI)-180);
-    //printf("heading %f wind %f\n", heading, current_wind);
-    return (heading - current_wind);
+void wind_read(float* wind_intensity, float* wind_angle){
+	float current_wind = 0;
+    float heading = 0;
+
+    trisonica_get();
+    current_wind = (float) trisonica.last.direction_rad;
+    *wind_intensity = (float) trisonica.last.speed;
+
+    heading = current_position.heading * 180 / PI;
+    current_wind = fmod(-(current_wind * 180 / PI) + 3 * 180, 2 * 180);
+    *wind_angle = (heading - current_wind) * PI / 180.0;
 }
+
 
 void updateCortexPos(Position * position){
     sFrameOfData* FrameOfData;
@@ -438,9 +439,9 @@ int obstacle_or_not(){
 // 		if(msg.measurement0_goal1 == 0){
 // 			//std::cout << "COMMUNICATION++++++++++++++++++" << std::endl;
 // 			//put the relelvant values in history
-// 			history.measurement[history.size] = msg.concentration;
+// 			history.gas_meas_avg[history.size] = msg.concentration;
 // 			history.position[history.size].copy_position(msg.position);
-// 			printf("[%d] received concentration %f at (%f,%f,%f) from robot %d - ack flag %d\n", ID, history.measurement[history.size], history.position[history.size].x, history.position[history.size].y, history.position[history.size].heading, msg.sender_ID, msg.ack_flag);
+// 			printf("[%d] received concentration %f at (%f,%f,%f) from robot %d - ack flag %d\n", ID, history.gas_meas_avg[history.size], history.position[history.size].x, history.position[history.size].y, history.position[history.size].heading, msg.sender_ID, msg.ack_flag);
 // 			history.size++;
 // 			printf("my history size is now %d \n", history.size);
 // 		}else{ //if the message contains the current position and goal of another robot -> update the friends list

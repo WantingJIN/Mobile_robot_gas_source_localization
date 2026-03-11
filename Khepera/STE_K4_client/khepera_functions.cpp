@@ -3,7 +3,7 @@
 
 struct sKhepera4 khepera4;
 struct sOdorboard odorboard;
-struct sWindSensorBoard windsensorboard;
+struct sTrisonica trisonica;
 struct sBraitenberg braitenberg;
 double odor_baseline_value = 0;
 sMsg STmsg;
@@ -42,11 +42,9 @@ void init(){
     odorboard_led_mode_set();
     odorboard_pump_speed_set(0, PUMP_SPEED); // Pump should preferably be running before...
     
-    // Initialise wind board
-    windsensorboard_init();
-    windsensorboard.led.mode = cWindSensorBoardLEDMode_Tracking;
-    windsensorboard_led_mode_set();
-    windsensorboard_windsensor_start();
+    // Initialise trisonica
+    trisonica_init();
+    trisonica_power_on();
 
     // Initialise radio
     udp_msg_init(3000, ID);
@@ -379,15 +377,17 @@ double odor_read(){
     return current_odor;
 }
 
-double wind_read(){
-	double current_wind = 0, heading=0;
-    windsensorboard_windsensor_get();
-    current_wind = windsensorboard.windsensor.last.angle;
-    //calculation
-    heading = current_position.heading*180/PI;
-    current_wind = fmod(-(current_wind*180/PI)+3*180,2*180);//-((current_wind*180/PI)-180);
-    //printf("heading %f wind %f\n", heading, current_wind);
-    return (heading - current_wind);
+void wind_read(double* wind_intensity, double* wind_angle){
+	double current_wind = 0;
+    double heading = 0;
+
+    trisonica_get();
+    current_wind = trisonica.last.direction_rad;
+    *wind_intensity = trisonica.last.speed;
+
+    heading = current_position.heading * 180 / PI;
+    current_wind = fmod(-(current_wind * 180 / PI) + 3 * 180, 2 * 180);
+    *wind_angle = (heading - current_wind) * PI / 180.0;
 }
 
 void updateCortexPos(Position * position){
@@ -490,15 +490,18 @@ void receive_from_friends(){
             //printf("0000000000000000000000000000000000000000000000000 received a NOACK msg from\n", current_timestamp(),(int)msg.sender_ID);
         }
 		//if the message contains a measurement value -> put it in history
-		if(msg.measurement0_goal1 == 0){
-			//std::cout << "COMMUNICATION++++++++++++++++++" << std::endl;
-			//put the relelvant values in history
-			history.measurement_avg[history.size] = msg.concentration;
-			history.position[history.size].copy_position(msg.position);
-			printf("[%d] received concentration %f at (%f,%f,%f) from robot %d - ack flag %d\n", ID, history.measurement_avg[history.size], history.position[history.size].x, history.position[history.size].y, history.position[history.size].heading, msg.sender_ID, msg.ack_flag);
-			history.size++;
-			printf("my history size is now %d \n", history.size);
-		}else{ //if the message contains the current position and goal of another robot -> update the friends list
+        if(msg.measurement0_goal1 == 0){
+            //std::cout << "COMMUNICATION++++++++++++++++++" << std::endl;
+            //put the relelvant values in history
+            history.gas_concentration_avg.push_back(msg.concentration);
+            history.gas_concentration_std.push_back(0.0);
+            history.wind_intensity_avg.push_back(0.0);
+            history.wind_angle_avg.push_back(0.0);
+            history.position.push_back(msg.position);
+            printf("[%d] received concentration %f at (%f,%f,%f) from robot %d - ack flag %d\n", ID, history.gas_concentration_avg.back(), history.position.back().x, history.position.back().y, history.position.back().heading, msg.sender_ID, msg.ack_flag);
+            history.size++;
+            printf("my history size is now %d \n", history.size);
+        }else{ //if the message contains the current position and goal of another robot -> update the friends list
 			//std::cout << "JOINT PLANNING****************" << std::endl;
 			//if the message is sent to my ID specifically, then it's a new goal for me!
 			if(msg.receiver_ID == ID){
@@ -772,4 +775,4 @@ void braitenberg_init(struct sBraitenberg *braitenberg) {
     braitenberg->speed.right =  speed;
     braitenberg->repeat =  0;
     braitenberg->wait_us =  5000;
-}
+}   

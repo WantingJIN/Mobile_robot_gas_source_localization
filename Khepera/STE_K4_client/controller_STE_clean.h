@@ -2,8 +2,6 @@
 #define CONTROLLER_STE_CLEAN_H
 
 
-
-
 //C libraries
 #include <assert.h>
 #include <math.h>
@@ -160,8 +158,10 @@ extern struct FSM FSM;
 struct history{
 	int size;
 	vector<Position> position;
-	vector<double> measurement_avg;
-	vector<double> measurement_std;
+	vector<double> gas_concentration_avg;
+	vector<double> gas_concentration_std;
+	vector<double> wind_intensity_avg;
+	vector<double> wind_angle_avg;
 
 };
 

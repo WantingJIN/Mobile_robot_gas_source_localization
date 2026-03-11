@@ -104,7 +104,7 @@ void PathPlanner::KLD_informative_goal_selection()
 	Position tmp_position;
 	struct history fake_history;
 	fake_history.position = history->position;
-	fake_history.measurement = history->measurement;
+	fake_history.gas_meas_avg = history->gas_meas_avg;
 	fake_history.size = history->size;
 
 	// add fake prediction for friends goal position, so we don't choose the same ones
@@ -113,7 +113,7 @@ void PathPlanner::KLD_informative_goal_selection()
 	// 	if (friends[i].ID == 0 || friends[i].ID == ID)
 	// 		continue;
 	// 	fake_history.position[fake_history.size].copy_position(friends[i].goal);
-	// 	fake_history.measurement[fake_history.size] = plume_model->approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
+	// 	fake_history.gas_meas_avg[fake_history.size] = plume_model->approx_concentration(friends[i].goal, sampleBuffer.average_wind_intensity);
 	// 	(fake_history.size)++;
 	// }
 	// 8 candidate positions
@@ -135,8 +135,8 @@ void PathPlanner::KLD_informative_goal_selection()
 			continue;
 		// calculate the expected concentration on position
 		// Note: the average_wind_intensity is not used in DDPM for predicting the concentration, so we set it to 0 here
-		fake_history.measurement.push_back(plume_model->approx_concentration(tmp_position, 0.0));
-		std::cout << "fake_history.measurement = " << fake_history.measurement[fake_history.size] << std::endl;
+		fake_history.gas_meas_avg.push_back(plume_model->approx_concentration(tmp_position, 0.0));
+		std::cout << "fake_history.gas_meas_avg = " << fake_history.gas_meas_avg[fake_history.size] << std::endl;
 		fake_history.position.push_back(tmp_position);
 		(fake_history.size)++;
 		DeepCFDPlumeModel2D plume_model_fake;
@@ -153,7 +153,7 @@ void PathPlanner::KLD_informative_goal_selection()
 			goal_position.y = tmp_position.y;
 			goal_position.heading = 0;
 		}
-		fake_history.measurement.pop_back();
+		fake_history.gas_meas_avg.pop_back();
 		fake_history.position.pop_back();
 		fake_history.size--;
 	}

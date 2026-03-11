@@ -486,13 +486,13 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
-			calculate_normalized_relative_measurements(history.relative_meas, history.measurement);
+			calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas_avg);
 		}
 		if (simulation_parameters.relativeMethod == EMPIRICAL_CDF || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 
 		{
-			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.measurement);
+			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.gas_meas_avg);
 		}
 	}
 	// for each element of the pdf
