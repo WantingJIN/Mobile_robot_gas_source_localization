@@ -652,6 +652,11 @@ void state_updategoal()
 		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		// send the goal to the supervisor
 		}
+
+		// mark the goal position as visited instead of the actually reach position, to avoid the problem of reselecting the same goal
+		int idx = position_to_index_2D(goal_position.x, goal_position.y);
+		cell_visited_list[idx] = 1;
+            printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 		
 
 		if (simulation_parameters.workingMode == EXPERIMENT || simulation_parameters.workingMode == VIDEO){

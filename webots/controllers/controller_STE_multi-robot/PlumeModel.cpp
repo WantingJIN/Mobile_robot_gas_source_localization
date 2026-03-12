@@ -742,16 +742,19 @@ void AdeFDMPlumeModel2D::assemble_and_factorize() {
 			if (i == 0) {
 				// outflow: C(i) - C(i+1) = 0
 				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i+1,j), -1.0);
 				continue;
 			}
 			if (j == 0) {
 				// bottom: C(i,j) - C(i,j+1) = 0
 				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i, j+1), -1.0);
 				continue;
 			}
 			if (j == Ny_ - 1) {
 				// top: C(i,j) - C(i,j-1) = 0
 				T.emplace_back(k, k, 1.0);
+				T.emplace_back(k, grid_idx(i, j-1), -1.0);
 				continue;
 			}
 

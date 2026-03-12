@@ -231,7 +231,7 @@ double min_distance(Position p1, Position g1, Position p2, Position g2)
 // calculate wheel speeds to go toward goal position
 void go_to_goal(Position goal)
 {
-	// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, goal.x,goal.y);
+	
 	// vector to the goal
 	double movement[2];
 	movement[0] = (goal.x - current_position.x);
@@ -593,6 +593,7 @@ void state_measuring()
 	{
 		int idx = position_to_index_2D(current_position.x, current_position.y);
 		cell_visited_list[idx] = 1;
+		fprintf(console_logfile, "mark cell %d, position (%f, %f) as visited\n", idx, current_position.x, current_position.y);
 	}
 	// log and save
 	if (VERBOSE)
@@ -810,7 +811,7 @@ void state_updategoal()
 		{
 
 			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-			path_planner->goal_outside_obstacles(&goal_position);
+			path_planner->find_feasible_goal(&goal_position);
 			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 			// find the path using visibility graph
@@ -825,8 +826,12 @@ void state_updategoal()
 				log_trajectory(p);
 			}
 		}
+		// mark the goal position as visited
+		int idx = position_to_index_2D(goal_position.x, goal_position.y);
+		cell_visited_list[idx] = 1;
+            printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 		i = path.begin();
-		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+		
 		// send the goal to the supervisor
 		Message msg(ID, 0, goal_position, -1, goal_position, 0);
 		send_msg(msg);
@@ -919,7 +924,7 @@ void state_moving()
 		// move
 		if (current_position.dist_to_goal(*i) <= 0.05 && i != path.end())
 		{
-			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			//fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}
@@ -990,7 +995,7 @@ void state_send_goal()
 		// goal position for Robot [101]
 		goal_position = goal_position_team[0];
 		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		path_planner->goal_outside_obstacles(&goal_position);
+		path_planner->find_feasible_goal(&goal_position);
 		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 		// find the path using visibility graph
@@ -1111,7 +1116,7 @@ void state_receive_goal()
 
 	// print goal position for some of the robots
 	// printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-	path_planner->goal_outside_obstacles(&goal_position);
+	path_planner->find_feasible_goal(&goal_position);
 	printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 	VisiLibity::Point start(current_position.x, current_position.y);
