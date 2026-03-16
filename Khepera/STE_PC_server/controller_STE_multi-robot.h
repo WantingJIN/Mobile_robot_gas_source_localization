@@ -35,15 +35,6 @@ extern float ** obstacles;
 
 extern SimulationParameters simulation_parameters;
 
-//parameters to estimate
-struct parameters_set{
-	double Q;
-	double source_position[2];
-	double a_y;
-	double b_y;
-	//double a_z;
-	//double b_z;
-};
 
 //states of the finite state machine
 typedef enum state {
@@ -116,7 +107,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int soure
 double pseudo_gaussian_plume_model(double robot_position[], double wind_intensity, struct parameters_set parameters);
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
-double randu();
 long long current_timestamp();
 double dist_to_goal(Position goal);
 bool send_goal_to_robot(double x, double y);

@@ -45,6 +45,7 @@ class CellMeasurements{
         // calculate the variance by taking in the pdf of the source location
         void calculate_weighted_variance(double *pdf);
         void calculate_hit_weighted_variance(double *pdf);
+        void calculate_con_weighted_mean_variance(double *pdf);
 }; 
 
 #endif

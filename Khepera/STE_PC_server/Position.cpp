@@ -16,19 +16,19 @@ Position::Position(float px, float py, float ph){
 	y = py;
 	heading = ph;
 
-	x_idx = static_cast<int>((x - source_x_min) / x_resol);
-	y_idx = static_cast<int>((y - source_y_min) / y_resol);
-	index = y_idx * x_nbins + x_idx;
+	x_idx = static_cast<int>((x - source_x_min) / source_x_resol);
+	y_idx = static_cast<int>((y - source_y_min) / source_y_resol);
+	index = y_idx * source_x_nbins + x_idx;
 }
 
 Position::Position(int px_idx, int py_idx)
 {
 	x_idx = px_idx;
 	y_idx = py_idx;
-	index = y_idx * x_nbins + x_idx;
+	index = y_idx * source_x_nbins + x_idx;
 
-	x = double(x_idx) * x_resol + source_x_min;
-	y = double(y_idx) * y_resol + source_y_min;
+	x = double(x_idx) * source_x_resol + source_x_min;
+	y = double(y_idx) * source_y_resol + source_y_min;
 }
 
 Position::Position(const Position & to_copy_from){
@@ -42,9 +42,9 @@ Position::Position(const Position & to_copy_from){
 }
 
 void Position::calculate_index(){
-	x_idx = static_cast<int>((x - source_x_min) / x_resol);
-	y_idx = static_cast<int>((y - source_y_min) / y_resol);
-	index = y_idx * x_nbins + x_idx;
+	x_idx = static_cast<int>((x - source_x_min) / source_x_resol);
+	y_idx = static_cast<int>((y - source_y_min) / source_y_resol);
+	index = y_idx * source_x_nbins + x_idx;
 }
 
 bool Position::operator== (const Position& o){

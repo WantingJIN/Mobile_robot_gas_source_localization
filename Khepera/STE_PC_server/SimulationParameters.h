@@ -1,5 +1,6 @@
 #ifndef SIMULATION_PARAMETER_H
 #define SIMULATION_PARAMETER_H
+#include <vector>
 
 
 typedef enum scenario{
@@ -51,10 +52,11 @@ typedef enum planningStrategy
 	BELIEF_CLUSTERING = 5,
 	INFORMATIVE_KLD = 6,
 	INFO_CLUSTERING = 7,
+	WEIGHTED_CLUSTERING = 9,
 	SUM_DIJKSTRA_FIX = 10,
 	SUM_DIJKSTRA_ADP = 11,
+	MULTI_DIJKSTRA = 12,
 } ePlanningStrategy;
-
 
 typedef enum scoreFun
 {
@@ -64,12 +66,6 @@ typedef enum scoreFun
 	SUM = 3,
 	EXP = 4,
 }eScoreFun;
-
-typedef enum infoSum
-{
-	LINEAR_SUM = 0,
-	EXP_SUM = 1,
-} eInfoSum;
 
 typedef enum gasFeature
 {
@@ -94,83 +90,116 @@ typedef enum infoFeature
 typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
-	M_DISTANCE = 2,
 	EMPIRICAL_CDF = 3,
-	EMPIRICAL_CDF_NUM = 6,
+	EMPIRICAL_CDF_AND_SLOPE = 4,
+	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
 } eRelativeMethod;
 
-typedef enum calibrationMode
+typedef enum workMode{
+	EXPERIMENT = 0,
+	OFFLINE = 1,
+	VIDEO = 2,
+}eworkMode;
+
+typedef enum sensorCalibration
 {
-	OFF = 0,
-	LINEAR = 1,
-	NOLINEAR = 2,
-} eCalibrationMode;
+	ON = 0,
+	OFF = 1,
+} eSensorCalibration;
 
 typedef enum gasHitMethod
 {
 	FIXED_THRES = 0,
 	MIN_MAX_THRES = 1,
 	SLIDING_WINDOW_THRES = 2,
+	SLIDING_WINDOW_THRES_NUM = 4,   // The likehood function is defined diffrently
+	FIXED_THRES_NUM = 5, // The likehood function is defined diffrently
 } eGasHitMethod;
 
-typedef enum workingMode{
-	OFFLINE = 0,
-	EXPERIMENT = 1,
-	VIDEO = 2,
-}eWorkingMode;
+typedef enum infoSum
+{
+	LINEAR_SUM = 0,
+	EXP_SUM = 1,
+} eInfoSum;
+typedef enum teamStrategy{
+	INDIVIDUAL = 0,
+	DISTRIBUTED = 1,
+	CENTRALIZED = 2,
+} eTeamStrategy;
 
-typedef enum releaseRate{
-	LOW = 0,
-	MIDDLE = 1,
-	HIGH = 2,
-}eReleaseRate;
+typedef enum stopCondition{
+	ENTROPY_ONLY = 0,
+	SPREAD_ONLY = 1,
+	ENTROPY_SPREAD = 2,
+} eStopCondition;
+
+typedef enum updataGoalPolicy{
+	GOAL_REACHED = 0,
+	FIXED_FREQ = 1,
+	BELIEF_DIFF = 2,
+} eUpdateGoalPolicy;
+
+// parameters to estimate
+struct parameters_set
+{
+	float Q;
+	float source_position[2];
+	float a_y;
+	float b_y;
+	// float a_z;
+	// float b_z;
+};
 
 // simulation paramters
 class SimulationParameters{
       public:
-	      int max_iter;
 		int MCMC_iteration_num; 
 		int number_of_robots; 
 		int map_nbr; 
-		//int sampling_period; 
+		int sampling_period; 
 		float likelihood_error;  
 		float global_local_search_ratio; 
 		float cluster_entropy_ratio; 
-		//float vel_factor; 
+		float vel_factor; 
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
-		int measurement_error;
-	      float sigma;
+		float R0;
+	    float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
+		int planning_step;
 		float weighting_entropy_ratio;
+		int update_goal_time;
+		int wheel_speed;
+		std::vector<int> ID_list; // IDs of the robots
 
-		char experimental_logname[256];
-
-		eEvaluationMethod MCMC_or_exhaustive_eval;
+		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
-		//eSamplingMode samplingMode; 
+		eSamplingMode samplingMode; 
 		eProcessingMode processingMode; 
+		eGasSensor gasSensor; 
 		ePlanningStrategy planningStrategy; 
 		eGasFeature gasFeature; 
 		eVisitedList visitedList; 
 		eInfoFeature infoFeature; 
 		
 		eRelativeMethod relativeMethod; 
-		eWorkingMode workingMode;
-		eCalibrationMode calibrationMode;
-		eGasHitMethod gasHitMethod; 
+		eworkMode workMode; 
+		eSensorCalibration sensorCalibration;
+		eGasHitMethod gasHitMethod;
+		eTeamStrategy teamStrategy;
 
-		eReleaseRate releaseRate;
-
-		eScoreFun scoreFun;
+	    eScoreFun scoreFun;
 		eInfoSum infoSum;
+
+		eStopCondition stopCondition;
+		eUpdateGoalPolicy updateGoalPolicy;
 
 		SimulationParameters();
 		~SimulationParameters();
 
-        void load_simulation_parameters_from_config(const char *filename);
-		void rewrite_parameters_from_file();
+        	void load_simulation_parameters_from_config(const char *filename);
+		void read_mapID_from_file();
 		void log_simulation_parameters(const char *filename);
 };
 
