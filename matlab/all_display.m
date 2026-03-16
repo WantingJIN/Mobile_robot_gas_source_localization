@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_relative_2nd_test/0');
+folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/test_random_source_random_start_position/gt_wind/10');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -92,7 +92,7 @@ for i=1:exp_number
         hold on;
         if gas_feature == 0 || gas_feature == 2
              scatter3(position_history(:,2),position_history(:,3),position_history(:,4),25,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
-             scatter3(positions(:,2),positions(:,3),positions(:,4),25,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on;
+%              scatter3(positions(:,2),positions(:,3),positions(:,4),25,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on;
              c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]);  load MyColormap.mat; colormap(mymap); %colormap jet;
         end
         if gas_feature == 1
@@ -101,7 +101,7 @@ for i=1:exp_number
 
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
         plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',20,'LineWidth',3,'DisplayName','Source real position'); %real source position
-        plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',20,'LineWidth',3,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
+        plot3(max_a_posteriori(end,2),max_a_posteriori(end,3),0, 'rx','MarkerSize',20,'LineWidth',3,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
         plot3(positions(1,2),positions(1,3), positions(1,4),'DisplayName','Start point','MarkerSize',8,'Marker','o','LineWidth',2,'LineStyle','none');
         patch(obstacles_x,obstacles_y ,[0.6 0.8 1],'DisplayName','Obstacle', 'LineStyle', 'none');
         hold off;

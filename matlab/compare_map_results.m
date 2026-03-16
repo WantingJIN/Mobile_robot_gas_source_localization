@@ -3,7 +3,7 @@ dataTable = table();
 %% dispatch the result to target folder
 % the general folder
 general_folder = '/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/';
-dispatched_folder = [general_folder,'online_wind_estimation/baseflow_correction_same_weighting'];
+dispatched_folder = [general_folder,'test_random_source_random_start_position/baseflow'];
 folder_list = dir(general_folder);
 disp(folder_list)
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101','102','103'})); %,'current','101','102','103'
@@ -71,10 +71,11 @@ for i = 1:numExperiments
     expected_a_posteriori_file = dlmread([folder_name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
     iteration_nbr = size(expected_a_posteriori_file,1);
     expected_a_posteriori(1:2) = expected_a_posteriori_file(end,2:3);
-    if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,1); end
-    if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,2); end
-    error(1) = params.source_position(1) - expected_a_posteriori(1);
-    error(2) = params.source_position(2) - expected_a_posteriori(2);
+    max_a_post = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
+    if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
+    if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
+    error(1) = params.source_position(1) - max_a_post(end,2);
+    error(2) = params.source_position(2) - max_a_post(end,3);
     entropy_file = dlmread([folder_name, '/' num2str(ID(1)), '/entropy.csv']);
     entropy(1) = entropy_file(end,1);
     max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
@@ -99,11 +100,11 @@ for i = 1:numExperiments
     sampling_mode = "";
     switch sampling_mode_idx
         case 0
-            sampling_mode = "sense in motion";
+            sampling_mode = "sense_in_motion";
         case 1
-            sampling_mode = "stop sense go";
+            sampling_mode = "stop_sense_go";
         case 2
-            sampling_mode = "visit sense go";
+            sampling_mode = "visit_sense_go";
     end
 
     planning_mode_idx = params.planning_strategy;
@@ -112,7 +113,7 @@ for i = 1:numExperiments
         case 0
             planning_mode = "greedy";
         case 5
-            planning_mode = "belief clustering";
+            planning_mode = "belief_clustering";
         case 6
             planning_mode = "informative kld";
     end
@@ -147,13 +148,34 @@ for i = 1:numExperiments
         case 2
             gas_feature = "relative_value";
     end
+    
+    wind_uncertainty_idx = params.model_uncertainty;
+    wind_estimation_idx = params.wind_estimation_method;
+    wind_info_idx =  params.wind_info;
+    
+   
+    wind_config = "";
+   
+    
+    if (wind_info_idx == 0)
+        wind_config = "wind_gt";
+    end
+    if (wind_info_idx == 1 && wind_estimation_idx == 2)
+        wind_config = "baseflow";
+    end
+    if (wind_info_idx == 1 && wind_estimation_idx == 1 && wind_uncertainty_idx == 0)
+        wind_config = "Gaussian_fixed_uncertainty";
+    end
+    if (wind_info_idx == 1 && wind_estimation_idx == 1 && wind_uncertainty_idx == 1)
+        wind_config = "Gaussian_dynamic_uncertainty";
+    end
             
         
             
     estimate_error=sqrt(error(1)^2+error(2)^2);
     % Create a temporary table for the current experiment
-    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, totalTime, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error, gas_feature, plume_model);
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error', 'gas_feature', 'plume_model'};
+    tempTable = table(map_nbr, error(1), error(2), iteration_nbr, totalTime, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error, gas_feature, plume_model, wind_config);
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error', 'gas_feature', 'plume_model', 'wind_config'};
     
     % Append the temporary table to the main dataTable
     dataTable = [dataTable; tempTable];
@@ -166,7 +188,7 @@ writetable(dataTable, [dispatched_folder '/experiment_data.csv']); % Save as CSV
 disp('Experiment data saved.');
 
 %% plot the result for this folder 
-f = figure('Position',[-1561         656         1115         350]);
+f = figure('Position',[-1561         656         1115        600]);
 ax = axes;
 ax.Position = [0.13, 0.2, 0.775, 0.7];  
 custom_color = [44,136,217]./255;

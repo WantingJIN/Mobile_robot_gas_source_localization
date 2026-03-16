@@ -15,14 +15,14 @@ config_file="../webots/data/config.txt"
 s=0
 echo $s > $MCMC_exhaustive_filename
 
-nbr_source_pos=10
+nbr_source_pos=30
 # source_pos_x=12.7   # default: 12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
 source_pos_y_step=$(awk "BEGIN { print ($source_pos_y_max - $source_pos_y_min) / $nbr_source_pos }")
 
-source_pos_x_min=10
-source_pos_x_max=12.7
+source_pos_x_min=4
+source_pos_x_max=12.5
 source_pos_x_step=$(awk "BEGIN { print ($source_pos_x_max - $source_pos_x_min) / $nbr_source_pos }")
 
 #delete last unfinished job
@@ -46,7 +46,7 @@ sigma=0.4 #noise level for the STE likelihood
 for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
-	for m in 0 #1 2 3 5 10 #0 1  
+	for m in 10 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
 		# for likelihood in 2000 3000
@@ -80,7 +80,7 @@ do
 			#for k in {1..3} 1
 			for ((k=1; k<=$nbr_source_pos; k++)) 
 			do
-				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
+				source_pos_y=$(awk "BEGIN { print $source_pos_y_max - $k * $source_pos_y_step }")
 				source_pos_x=$(awk "BEGIN { print $source_pos_x_min + $k * $source_pos_x_step }")
 				echo $source_pos_x $source_pos_y > $source_pos_filename
 				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt # >wb_output.txt

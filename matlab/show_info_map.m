@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/DDPM_absolute_2nd_test/10';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/test_random_source_random_start_position/gt_wind/10';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
@@ -242,5 +242,5 @@ if visited_list_true~=0
 %     end
     % Close the figure 
     %close(f);
-    close all
+%     close all
 end 
