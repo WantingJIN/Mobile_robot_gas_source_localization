@@ -302,18 +302,8 @@ void PathPlanner::belief_clustering_planning()
 	printf("Enter belief clustering planning \n");
 
 	vector<pair<CellPoint, CellPoint>> clusters_bounding_box;
-	if (simulation_parameters.modelUncertainty == FIXED_UNCERTAINTY){
-		clusters_bounding_box = clustering_information_blocks(posterior->pdf);
-	}
-	else if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY){
-		// take into account the wind uncertainty
-		double *weighted_belief_map = new double[_map_size];
-		for (int i = 0; i < _map_size; i++){
-			double wind_confidence = plume_model->get_wind_estimation_confidence(i);
-			weighted_belief_map[i] = posterior->pdf[i] * (1 + exp(-wind_confidence));
-		}
-		clusters_bounding_box = clustering_information_blocks(weighted_belief_map);
-	}
+	
+	clusters_bounding_box = clustering_information_blocks(posterior->pdf);
 	if (clusters_bounding_box.size() == 0)
 	{
 		printf("no cluster found \n");
@@ -325,7 +315,7 @@ void PathPlanner::belief_clustering_planning()
 	else
 	{
 		// fprintf(console_logfile, "clusters found \n");
-		// Find furthest vertex of each cluster
+		// Find furthest unvisted vertex of each cluster
 		double max_dist_to_robot;
 		int max_dist_to_robot_index;
 		vector<Position> candidate_goal;
@@ -343,23 +333,25 @@ void PathPlanner::belief_clustering_planning()
 				double dist = current_position.dist_to_goal(cluster_vertex[i]);
 				if (simulation_parameters.visitedList == visitedList_ON)
 				{
-                    int idx = position_to_index_2D(cluster_vertex[i].x, cluster_vertex[i].y);
-					if (cell_visited_list[idx] == 0 && dist > max_dist_to_robot)
+					
+					int idx = position_to_index_2D(cluster_vertex[i].x, cluster_vertex[i].y);
+					if (cell_visited_list[idx] != 1 && dist > max_dist_to_robot)
 					{
+						fprintf(console_logfile, "cluster vertex (%f, %f) idx: %d is unvisited, dist to robot: %f \n", cluster_vertex[i].x, cluster_vertex[i].y, idx, dist);
 						max_dist_to_robot = dist;
 						max_dist_to_robot_index = i;
 					}
+				}	
+				
+				else if (dist > max_dist_to_robot)
+				{
+					max_dist_to_robot = dist;
+					max_dist_to_robot_index = i;
 				}
-				else
-					if (dist > max_dist_to_robot)
-					{
-						max_dist_to_robot = dist;
-						max_dist_to_robot_index = i;
-					}
 			}
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
-		// find the closest unvisited point among candidate goals
+		// find the closest point among candidate goals
 		double min_dist_to_robot = 1000;
 		int min_dist_to_robot_index = 0;
 		bool find_goal = false;
@@ -368,11 +360,9 @@ void PathPlanner::belief_clustering_planning()
 			double dist = current_position.dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
 			{
-				
-				min_dist_to_robot = dist;
-				min_dist_to_robot_index = j;
-				find_goal = true;
-				
+					min_dist_to_robot = dist;
+					min_dist_to_robot_index = j;
+					find_goal = true;
 			}
 		}
 		if (!find_goal)
@@ -1045,7 +1035,7 @@ void PathPlanner::KLD_distance_balance()
 	goal_position.heading = 0; // current_position[2] + ratio*vec1[2] + (1-ratio)*vec2[2];
 }
 
-void PathPlanner::goal_outside_obstacles(Position *goal)
+void PathPlanner::find_feasible_goal(Position *goal)
 {
 
 	double min_dist_to_current = 0.05 + simulation_parameters.sampling_dist_thresh;
@@ -1089,15 +1079,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
 				}
-				else
-				{
-					if (simulation_parameters.visitedList == visitedList_ON)
-					{
-						// mark the cell as visited so that never plans to go there again
-						int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
-						cell_visited_list[idx] = 1;
-					}
-				}
 			}
 		}
 		// change the goal position using the pointer
@@ -1140,14 +1121,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 					nearest_position.copy_position(candidates[i]);
 					min_dist = goal->distance_from(candidates[i]);
 				}
-				else
-				{
-					if (simulation_parameters.visitedList == visitedList_ON)
-					{
-						int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
-						cell_visited_list[idx] = 1;
-					}
-				}
 			}
 		}
 		// fprintf(console_logfile, ">>> Outside Arena Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);
@@ -1155,7 +1128,7 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 	}
 	// make sure that the chosen goal is not too close from the robot current position so that it will not instantaneously be reached
 	double dist_candidate_goal = goal->distance_from(current_position);
-	if (goal->distance_from(current_position) < min_dist_to_current)
+	if (dist_candidate_goal< min_dist_to_current)
 	{
 		if (simulation_parameters.visitedList == visitedList_ON)
 		{
@@ -1188,14 +1161,6 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 					break; // give priority to unvisited cell
 				}
 				// printf(">>> chose it as new position !!! \n");
-			}
-			else
-			{
-				if (simulation_parameters.visitedList == visitedList_ON)
-				{
-					int idx = position_to_index_2D(candidates[i].x, candidates[i].y);
-					cell_visited_list[idx] = 1;
-				}
 			}
 		}
 		fprintf(console_logfile, ">>> Too close Goal position (%f, %f) was changed to (%f, %f)\n", goal->x, goal->y, nearest_position.x, nearest_position.y);

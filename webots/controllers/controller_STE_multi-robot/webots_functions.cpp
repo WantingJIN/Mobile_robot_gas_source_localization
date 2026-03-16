@@ -119,7 +119,7 @@ void init()
 	}else if (simulation_parameters.simuMode == OFFLINE){
 		char experiment_source_pos_logfile_name[512];
 		char* source_str = (char*) malloc(100 * sizeof(char)); 
-        sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
+            sprintf(experiment_source_pos_logfile_name, "%s/source_pos.csv", logfile_folder_name);
 		printf("%s\n",experiment_source_pos_logfile_name);
 		if (access(experiment_source_pos_logfile_name, F_OK) != -1) {
 			FILE * sim_param_file = fopen(experiment_source_pos_logfile_name, "r");

@@ -14,7 +14,7 @@
 extern "C" {
     #include "khepera4.h"
     #include "odorboard.h"
-    #include "windsensorboard.h"
+    #include "trisonica.h"
     #include "odometry_track.h"
     #include "odometry_goto.h"
 }
@@ -37,7 +37,7 @@ extern "C" {
 
 extern struct sKhepera4 khepera4;
 extern struct sOdorboard odorboard;
-extern struct sWindSensorBoard windsensorboard;
+extern struct sTrisonica trisonica;
 extern struct sBraitenberg braitenberg;
 
 extern struct sOdometryTrack ot;
@@ -151,7 +151,7 @@ int initCortexComm();
 void initCommRobot();
 void establish_baseline();
 double odor_read();
-double wind_read();
+void wind_read(double* wind_intensity, double* wind_angle);
 void update_position();
 void updateSwisTrack(double position[3]);
 void updateCortexPos(Position *position);

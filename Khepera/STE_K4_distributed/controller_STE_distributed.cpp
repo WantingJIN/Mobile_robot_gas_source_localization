@@ -227,7 +227,7 @@ float dist_to_goal(Position goal_position){
 void history_print(struct history history){
 	printf("_____ Sample History _____ \n");
 	for(int i=0; i<history.size; i++){
-		printf("%d : %f (+/- %f) @ (%f, %f)\n", i, history.measurement[i], history.measurement_std[i], history.position[i].x, history.position[i].y);
+		printf("%d : gas=%f (+/- %f), wind=(%f, %f) @ (%f, %f)\n", i, history.gas_meas_avg[i], history.gas_meas_std[i], history.wind_intensity[i], history.wind_angle[i], history.position[i].x, history.position[i].y);
 	}
 	printf("__________________________ \n");
 }
@@ -357,7 +357,7 @@ void log_history(){
 	//FILE * measurement_history_logfile;
 	measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
 	for (int i = 0; i < history.size; i++){
-		fprintf(measurement_history_logfile,"%d, %f, %f\n", i, history.measurement[i], history.measurement_std[i]);
+		fprintf(measurement_history_logfile,"%d, %f, %f, %f, %f\n", i, history.gas_meas_avg[i], history.gas_meas_std[i], history.wind_intensity[i], history.wind_angle[i]);
 	}
     	fclose(measurement_history_logfile);
    
@@ -413,10 +413,12 @@ void state_measuring(){
 			// if there is some post-processing, then use the sample from the gas map
 			// otherwise, use the raw sample from the robot
 			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-				history.measurement.push_back(sample_from_map[i]);
+				history.gas_meas_avg.push_back(sample_from_map[i]);
 			else
-				history.measurement.push_back(sample_in_motion.measurement[i]);
-			history.measurement_std.push_back(0.0);
+				history.gas_meas_avg.push_back(sample_in_motion.gas_meas_avg[i]);
+			history.gas_meas_std.push_back(0.0);
+			history.wind_intensity.push_back(sample_in_motion.wind_intensity[i]);
+			history.wind_angle.push_back(sample_in_motion.wind_angle[i]);
 			history.FSM_iter.push_back(FSM.n_cycles);
 			history.size++;
 			// mark the cell as visited
@@ -429,7 +431,9 @@ void state_measuring(){
 			}
 		}
 		sample_in_motion.position.clear();
-		sample_in_motion.measurement.clear();
+		sample_in_motion.gas_meas_avg.clear();
+		sample_in_motion.wind_intensity.clear();
+		sample_in_motion.wind_angle.clear();
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 	}
@@ -438,7 +442,7 @@ void state_measuring(){
 			//continue measuring odor concentration
 			sampleBuffer.instant_concentration = odor_read();
 			//measuring wind
-			//wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 			//add samples to buffers
 			sampleBuffer.add_all_to_buffer();
 			next_iteration_time();
@@ -448,6 +452,7 @@ void state_measuring(){
 		sampleBuffer.average_all();
 	} else if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING || simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
 		sampleBuffer.instant_concentration = odor_read();
+		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
 	}
@@ -459,9 +464,11 @@ void state_measuring(){
 	history.position.push_back({current_position.x, current_position.y, 0.0});
 	float calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
 	if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
-	history.measurement.push_back(calibrated_sensor_reading);
-	// if(history.measurement[history.size] < 0) history.measurement[history.size] = 0;
-	history.measurement_std.push_back(sampleBuffer.stdDev_concentration);
+	history.gas_meas_avg.push_back(calibrated_sensor_reading);
+	// if(history.gas_meas_avg[history.size] < 0) history.gas_meas_avg[history.size] = 0;
+	history.gas_meas_std.push_back(sampleBuffer.stdDev_concentration);
+	history.wind_intensity.push_back(sampleBuffer.average_wind_intensity);
+	history.wind_angle.push_back(sampleBuffer.average_wind_angle);
 	history.size++;
 	history_print(history);
 
@@ -500,8 +507,8 @@ void state_measuring(){
 	// 	m_buffer[0] = i;
 	// 	m_buffer[1] = history.position[i].x;
 	// 	m_buffer[2] = history.position[i].y;
-	// 	m_buffer[3] = history.measurement[i];
-	// 	m_buffer[4] = history.measurement_std[i];
+	// 	m_buffer[3] = history.gas_meas_avg[i];
+	// 	m_buffer[4] = history.gas_meas_std[i];
 	// 	//variable = (condition) ? expressionTrue : expressionFalse;
 	// 	do{
 	// 		success = send(sock, m_buffer, sizeof(m_buffer), 0);
@@ -730,6 +737,9 @@ void state_moving(){
 		sample_counter++;
 		//sample and run Kernel
 		float sensor_reading = odor_read();
+		float wind_intensity = 0.0;
+		float wind_angle = 0.0;
+		wind_read(&wind_intensity, &wind_angle);
 		float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
 		if (instant_concentration < 0) instant_concentration = 0;
 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
@@ -749,7 +759,9 @@ void state_moving(){
 				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
 				if (MCS_data_available){
 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-				      sample_in_motion.measurement.push_back(instant_concentration);
+				      sample_in_motion.gas_meas_avg.push_back(instant_concentration);
+				      sample_in_motion.wind_intensity.push_back(wind_intensity);
+				      sample_in_motion.wind_angle.push_back(wind_angle);
 				      sample_in_motion.size++;
 
 				      last_measurement_pos.x = current_position.x;

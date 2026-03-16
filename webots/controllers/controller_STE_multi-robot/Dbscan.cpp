@@ -6,6 +6,8 @@
 using namespace std;
 extern char clustering_bounding_boxes_logfile_name[512];
 FILE *clustering_bounding_boxes_logfile;
+// text file for storing some prints for debugging
+extern FILE *console_logfile;
 
 DBSCAN::DBSCAN(float x_eps, float y_eps, unsigned int minPts, double rat)
 {
@@ -107,6 +109,9 @@ void DBSCAN::run(double *information)
 			min_info = information[i];
 		}
 	}
+	// fprintf(console_logfile, "threshold is : %f \n", ratio * (max_info - min_info) + min_info);
+	// fprintf(console_logfile, "max_info : %f , min_info: %f\n", max_info, min_info);
+	// fprintf(console_logfile, "ratio : %f\n", ratio);
 	// first fill y then fill x
 	for (int j = 0; j < source_y_nbins; j++)
 	{
@@ -114,6 +119,7 @@ void DBSCAN::run(double *information)
 		{
 			if (information[j * source_x_nbins + i] > ratio * (max_info - min_info) + min_info)
 			{
+				// fprintf(console_logfile, "cell (%d, %d) with information %f is added to clustering \n", i, j, information[j * source_x_nbins + i]);
 				CellPoint cell;
 				indices_to_position_2D(i, j, &cell.x, &cell.y);
 				cell.cluster_id = UNCLASSIFIED;
@@ -156,11 +162,14 @@ void DBSCAN::printResults()
 {
 	printf("Number of clusters found: %d \n", cluster_num);
 	printf("Clustered cells: \n");
+	fprintf(console_logfile, "Number of clusters found: %d \n", cluster_num);
+	fprintf(console_logfile, "Clustered cells: \n");
 	for (vector<CellPoint>::iterator iter = cell_list.begin(); iter != cell_list.end(); iter++)
 	{
 		if (iter->cluster_id != NOISE)
 		{
 			printf("Cell (%f, %f) @ cluster %d \n", iter->x, iter->y, iter->cluster_id + 1);
+			fprintf(console_logfile, "Cell (%f, %f) @ cluster %d \n", iter->x, iter->y, iter->cluster_id + 1);
 		}
 	}
 }
@@ -169,8 +178,8 @@ pair<CellPoint, CellPoint> DBSCAN::calculateBoundingBox(const std::vector<CellPo
 {
 	float minX = numeric_limits<float>::max();
 	float minY = numeric_limits<float>::max();
-	float maxX = numeric_limits<float>::min();
-	float maxY = numeric_limits<float>::min();
+	float maxX = numeric_limits<float>::lowest();
+	float maxY = numeric_limits<float>::lowest();
 
 	for (auto &point : points)
 	{

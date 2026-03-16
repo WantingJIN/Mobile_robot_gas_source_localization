@@ -82,7 +82,7 @@ public:
     void balance_expected_maximal_pdf();
     void joint_planning();
     void KLD_distance_balance();
-    void goal_outside_obstacles(Position *goal);
+    void find_feasible_goal(Position *goal);
     vector<pair<CellPoint, CellPoint>> clustering_information_blocks(double information_map[]);
 
 };

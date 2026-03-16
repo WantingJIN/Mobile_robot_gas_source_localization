@@ -38,10 +38,10 @@ float likelihood_precomp(struct history &history, float *parameters, int source_
 	// absolute concentration error
 	for (int i = 0; i < history.size; i++)
 	{
-		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
-		//printf("history.measurement[%d]: %f, model_c_avg[%d]: %f\n", i, history.measurement[i], i, model_c_avg[i]);
+		sum_tmp += pow(history.gas_meas_avg[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
+		//printf("history.gas_meas_avg[%d]: %f, model_c_avg[%d]: %f\n", i, history.gas_meas_avg[i], i, model_c_avg[i]);
 		// if (source_pos_idx == 0)
-		// 	//fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.measurement[i], model_c_avg[i]);
+		// 	//fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.gas_meas_avg[i], model_c_avg[i]);
 	}
 	return (exp(-0.5 * sum_tmp));
 }
@@ -137,7 +137,7 @@ float likelihood(struct history &history, float *parameters, PlumeModel *model)
 
 	for (int i = 0; i < history.size; i++)
 	{
-		sum_tmp += pow(history.measurement[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
+		sum_tmp += pow(history.gas_meas_avg[i] - model_c_avg[i], 2) / (sigmaE * sigmaE + sigmaD * sigmaD);
 		// std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
 	}
 
@@ -236,7 +236,7 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 	{
 		for (int i = 0; i < history.size; i++)
 		{
-			if (history.measurement[i] < simulation_parameters.gas_hit_threshold)
+			if (history.gas_meas_avg[i] < simulation_parameters.gas_hit_threshold)
 				history_hit = 0;
 			else
 				history_hit = 1;
@@ -255,7 +255,7 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 	{
 		for (int i = 0; i < history.size; i++)
 		{
-			if (history.measurement[i] < simulation_parameters.gas_hit_threshold)
+			if (history.gas_meas_avg[i] < simulation_parameters.gas_hit_threshold)
 				history_hit = 0;
 			else
 				history_hit = 1;
@@ -284,21 +284,21 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 		// Dynamic threshold
 		if (history.size <= 1)
 		{
-			max_con = history.measurement[0];
-			min_con = history.measurement[0];
+			max_con = history.gas_meas_avg[0];
+			min_con = history.gas_meas_avg[0];
 			max_idx = 0;
 			min_idx = 0;
 		}
 		else
 		{
-			if (history.measurement[history.size - 1] > max_con)
+			if (history.gas_meas_avg[history.size - 1] > max_con)
 			{
-				max_con = history.measurement[history.size - 1];
+				max_con = history.gas_meas_avg[history.size - 1];
 				max_idx = history.size - 1;
 			}
-			else if (history.measurement[history.size - 1] < min_con)
+			else if (history.gas_meas_avg[history.size - 1] < min_con)
 			{
-				min_con = history.measurement[history.size - 1];
+				min_con = history.gas_meas_avg[history.size - 1];
 				min_idx = history.size - 1;
 			}
 			his_thrs = min_con + (max_con - min_con) * 0.5;
@@ -307,7 +307,7 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 		for (int i = 0; i < history.size; i++)
 		{
 			// decide whether the gas hit event happens
-			history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+			history_hit = (history.gas_meas_avg[i] > his_thrs) ? 1 : 0;
 			history.gas_hit_event[i] = history_hit;
 			model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
 			// update the likelihood based on the similarity of the hit event
@@ -334,19 +334,19 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 		{
 			if (i == 0)
 			{
-				prev_his_thrs = history.measurement[i];
-				his_thrs = history.measurement[i];
+				prev_his_thrs = history.gas_meas_avg[i];
+				his_thrs = history.gas_meas_avg[i];
 				prev_mod_thrs = model_c_avg[i];
 				mod_thrs = model_c_avg[i];
 			}
-			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement[i];
+			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.gas_meas_avg[i];
 			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
 			// store history threshold for next iteration
 			prev_his_thrs = his_thrs;
 			prev_mod_thrs = mod_thrs;
 
 			// decide whether the gas hit event happens
-			history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+			history_hit = (history.gas_meas_avg[i] > his_thrs) ? 1 : 0;
 			history.gas_hit_event[i] = history_hit;
 			model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
 			// update the likelihood based on the similarity of the hit event
@@ -371,19 +371,19 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 		{
 			if (i == 0)
 			{
-				prev_his_thrs = history.measurement[i];
-				his_thrs = history.measurement[i];
+				prev_his_thrs = history.gas_meas_avg[i];
+				his_thrs = history.gas_meas_avg[i];
 				prev_mod_thrs = model_c_avg[i];
 				mod_thrs = model_c_avg[i];
 			}
-			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.measurement[i];
+			his_thrs = simulation_parameters.lambda * prev_his_thrs + (1 - simulation_parameters.lambda) * history.gas_meas_avg[i];
 			mod_thrs = simulation_parameters.lambda * prev_mod_thrs + (1 - simulation_parameters.lambda) * model_c_avg[i];
 			// store history threshold for next iteration
 			prev_his_thrs = his_thrs;
 			prev_mod_thrs = mod_thrs;
 
 			// decide whether the gas hit event happens
-			history_hit = (history.measurement[i] > his_thrs) ? 1 : 0;
+			history_hit = (history.gas_meas_avg[i] > his_thrs) ? 1 : 0;
 			history.gas_hit_event[i] = history_hit;
 			model_hit = (model_c_avg[i] > mod_thrs) ? 1 : 0;
 			// update the likelihood based on the similarity of the hit event
