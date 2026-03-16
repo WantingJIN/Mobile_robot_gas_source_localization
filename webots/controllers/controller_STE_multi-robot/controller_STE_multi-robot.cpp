@@ -592,6 +592,7 @@ void state_measuring()
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
 		int idx = position_to_index_2D(current_position.x, current_position.y);
+		fprintf(console_logfile, "mark cell %d as visited\n", idx);
 		cell_visited_list[idx] = 1;
 	}
 	// log and save
@@ -919,7 +920,7 @@ void state_moving()
 		// move
 		if (current_position.dist_to_goal(*i) <= 0.05 && i != path.end())
 		{
-			fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
+			//fprintf(console_logfile, "my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 			i++;
 			// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		}

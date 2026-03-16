@@ -341,11 +341,21 @@ void PathPlanner::belief_clustering_planning()
 			for (int i = 0; i < 4; i++)
 			{
 				double dist = current_position.dist_to_goal(cluster_vertex[i]);
-				if (dist > max_dist_to_robot)
+				if (simulation_parameters.visitedList == visitedList_ON)
 				{
-					max_dist_to_robot = dist;
-					max_dist_to_robot_index = i;
+                    int idx = position_to_index_2D(cluster_vertex[i].x, cluster_vertex[i].y);
+					if (cell_visited_list[idx] == 0 && dist > max_dist_to_robot)
+					{
+						max_dist_to_robot = dist;
+						max_dist_to_robot_index = i;
+					}
 				}
+				else
+					if (dist > max_dist_to_robot)
+					{
+						max_dist_to_robot = dist;
+						max_dist_to_robot_index = i;
+					}
 			}
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
@@ -358,22 +368,11 @@ void PathPlanner::belief_clustering_planning()
 			double dist = current_position.dist_to_goal(candidate_goal[j]);
 			if (dist < min_dist_to_robot)
 			{
-				if (simulation_parameters.visitedList == visitedList_ON)
-				{
-                    int idx = position_to_index_2D(candidate_goal[j].x, candidate_goal[j].y);
-					if (cell_visited_list[idx] == 0)
-					{
-						min_dist_to_robot = dist;
-						min_dist_to_robot_index = j;
-						find_goal = true;
-					}
-				}
-				else
-				{
-					min_dist_to_robot = dist;
-					min_dist_to_robot_index = j;
-					find_goal = true;
-				}
+				
+				min_dist_to_robot = dist;
+				min_dist_to_robot_index = j;
+				find_goal = true;
+				
 			}
 		}
 		if (!find_goal)
@@ -388,7 +387,13 @@ void PathPlanner::belief_clustering_planning()
 			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
 			goal_position.y = candidate_goal[min_dist_to_robot_index].y;
 			goal_position.heading = 0;
+			int idx = position_to_index_2D(goal_position.x, goal_position.y);
+			cell_visited_list[idx] = 1;
+			
 		}
+
+		fprintf(console_logfile, "my current position %f %f, selected cluster goal position : %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
+
 
 		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
 		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);

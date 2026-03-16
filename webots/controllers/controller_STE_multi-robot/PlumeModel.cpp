@@ -556,14 +556,14 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 												  source_y_min, source_y_max,
 												  Nx_, Ny_, obstacles, nbr_obs, 0.30, 1.0, 0.5);
 		// first intialize as ground truth wind field
-		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+		// set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
 	if (simulation_parameters.windEstimationMethod == BASEFLOW_CORRECTION){
 		wind_estimator_ = new BaseflowCorrectionWindEstimator(source_x_min, source_x_max,
 												  source_y_min, source_y_max,
 												  Nx_, Ny_, obstacles, nbr_obs, 1.0, 100);
 		// first intialize as ground truth wind field
-		set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
+		// set_u_field_from_csv("../../data/wind_map_2D.csv", 64, 64);
 	}
 
 	assemble_and_factorize();
