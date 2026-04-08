@@ -1,0 +1,5 @@
+# Source locations for this environment (x y), one location per line
+# Edit this file to test specific source positions.
+4 3.5
+12.3 1
+8 4
