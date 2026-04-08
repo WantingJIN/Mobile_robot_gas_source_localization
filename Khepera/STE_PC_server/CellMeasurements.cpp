@@ -15,8 +15,8 @@ CellMeasurements::CellMeasurements(){
 CellMeasurements::CellMeasurements(int idx, int idy){
 	idx_x = idx;
 	idx_y = idy;
-	px = source_x_min + idx_x * x_resol + x_resol / 2.0;
-	py = source_y_min + idx_y * y_resol + y_resol / 2.0;
+	px = source_x_min + idx_x * source_x_resol + source_x_resol / 2.0;
+	py = source_y_min + idx_y * source_y_resol + source_y_resol / 2.0;
 	meas_std = 0.0;
 	meas_mean = 0.0;
 	meas_num = 0;
@@ -60,4 +60,17 @@ void CellMeasurements::calculate_hit_weighted_variance(double *pdf){
 		sum += pow(gas_hits[i] - hit_mean, 2) * pdf[i];
 	}
 	hit_std = sqrt(sum);
+}
+void CellMeasurements::calculate_con_weighted_mean_variance(double *pdf){
+	int i;
+	float sum = 0.0;
+	meas_mean = 0.0;
+	// calculate the weighted mean
+	for(i = 0; i < meas_num; i++){
+		meas_mean += measurements[i] * pdf[i];
+	}
+	for(i = 0; i < meas_num; i++){
+		sum += pow(measurements[i] - meas_mean, 2) * pdf[i];
+	}
+	meas_std = sqrt(sum);
 }

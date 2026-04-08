@@ -262,9 +262,9 @@ void Posterior::process(){
 	double bin_values[nbr_dimension];
 	max = 0;
 	entropy = 0; 
-	double possible_source_x_index_min = x_nbins;
+	double possible_source_x_index_min = source_x_nbins;
 	double possible_source_x_index_max = 0;
-	double possible_source_y_index_min = y_nbins;
+	double possible_source_y_index_min = source_y_nbins;
 	double possible_source_y_index_max = 0;
 
 	for(j = 0; j < nbr_dimension; j++)
@@ -315,8 +315,8 @@ void Posterior::process(){
 	//log
 	log_pdf(posterior_pdf_3D_name, 'a');
 	//print on screen
-	if(VERBOSE) model->print_expected_val();
-	if(VERBOSE) model->print_max_a_post_val();
+	// if(VERBOSE) model->print_expected_val();
+	// if(VERBOSE) model->print_max_a_post_val();
 }
 
 //efficient sampling through MCMC
@@ -347,8 +347,8 @@ void Posterior::MCMC_evaluation(struct history history){
 	}
     double sample_likelihood = likelihood(history, sample, model, 1);
 	// int sample_indices[2];
-	// sample_indices[0] = floor((sample[0] - source_x_min) / x_resol);
-	// sample_indices[1] = floor((sample[1] - source_y_min) / y_resol);
+	// sample_indices[0] = floor((sample[0] - source_x_min) / source_x_resol);
+	// sample_indices[1] = floor((sample[1] - source_y_min) / source_y_resol);
 	// int sam_idx = indices_to_index(sample_indices);
 	// double sample_likelihood = likelihood_precomp(history, sample, sam_idx, model);
 	// if(prior(sample, nbr_dimension, model) == 0 || sample_likelihood == 0){
@@ -390,8 +390,8 @@ void Posterior::MCMC_evaluation(struct history history){
 		//calculate the acceptance chance
 		double candidate_likelihood = likelihood(history, candidate, model,0);
         // int candidate_indices[2];
-		// candidate_indices[0] = floor((candidate[0] - source_x_min) / x_resol);
-		// candidate_indices[1] = floor((candidate[1] - source_y_min) / y_resol);
+		// candidate_indices[0] = floor((candidate[0] - source_x_min) / source_x_resol);
+		// candidate_indices[1] = floor((candidate[1] - source_y_min) / source_y_resol);
 		// int can_idx = indices_to_index(candidate_indices);
 		// double candidate_likelihood = likelihood_precomp(history, candidate, can_idx, model);
 		// printf("Finish checking candidate likelihood\n");

@@ -120,20 +120,20 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 		// if (source_pos_idx == 82 || source_pos_idx == 0){
 		// 	if (source_pos_idx == 82) fprintf(console_logfile, "True source\n");
         //     if (source_pos_idx == 0) fprintf(console_logfile, "Estimated source\n");
-		
-		// 	fprintf(console_logfile, "Model values: \n");
-		// 	for (int i = 0; i < model_c_avg.size(); i++)
-		// 	{
-		// 		fprintf(console_logfile, "%f, ", model_c_avg[i]);
-		// 	}
-		// 	fprintf(console_logfile, "\n");
+		// fprintf(console_logfile, "source_pos_idx: %d\n", source_pos_idx);
+		// fprintf(console_logfile, "Model values: \n");
+		// for (int i = 0; i < model_c_avg.size(); i++)
+		// {
+		// 	fprintf(console_logfile, "%f, ", model_c_avg[i]);
+		// }
+		// fprintf(console_logfile, "\n");
 
-		// 	fprintf(console_logfile, "Model normalized values: \n");
-		// 	for (int i = 0; i < rel_model_list.size(); i++)
-		// 	{
-		// 		fprintf(console_logfile, "%f, ", rel_model_list[i]);
-		// 	}
-		// 	fprintf(console_logfile, "\n");
+		// fprintf(console_logfile, "Model normalized values: \n");
+		// for (int i = 0; i < rel_model_list.size(); i++)
+		// {
+		// 	fprintf(console_logfile, "%f, ", rel_model_list[i]);
+		// }
+		// fprintf(console_logfile, "\n");
 		// }
 
 		// cosine_distance = calculate_cosine_distance(rel_model_list, history.relative_meas);
@@ -145,6 +145,8 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 			rel_model_val = rel_model_list[i];
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
+		//fprintf(console_logfile, "source_pos_idx: %d, Sum_tmp for z-score: %f\n", source_pos_idx, sum_tmp);
+        
 	}
 
 
@@ -319,6 +321,11 @@ void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<d
 			rel_meas_list[i] = (data_list[i] - mean) / stddev;
 		}
 	}
+
+	// // print each z-score value
+	// for (int i = 0; i < rel_meas_list.size(); i++) {
+	// 	fprintf(console_logfile, "data: %f, z-score: %f\n", data_list[i], rel_meas_list[i]);
+	// }
 }
 
 double likelihood_gas_hit(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)

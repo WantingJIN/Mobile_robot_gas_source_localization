@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='../Results/info_planning/map5/Dijkstra_Exp_pdf_linear_acc0.5';
+general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/physics_encoded_GSL/fixed_sigma_normalization_dijstra_visit_list_on_entropy_spread/10';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
@@ -31,7 +31,7 @@ if map_nbr~=0
 end
 measurements = dlmread([experiment_file_path, '/measurement_history.csv']); %measurement_historyobstacles_x
 if (gas_feature == 2)
-    relative_measurements = dlmread([experiment_file_path, '/relative_measurements.csv']);
+    relative_measurements = dlmread([experiment_file_path, '/relative_history_meas.csv']);
 end
 position_history = dlmread([experiment_file_path, '/position_history.csv']); %position_history
 entropy = dlmread([experiment_file_path, '/entropy.csv']);

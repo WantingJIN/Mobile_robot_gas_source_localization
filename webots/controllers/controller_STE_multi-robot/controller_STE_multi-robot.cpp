@@ -592,6 +592,7 @@ void state_measuring()
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
 		int idx = position_to_index_2D(current_position.x, current_position.y);
+		fprintf(console_logfile, "mark cell %d as visited\n", idx);
 		cell_visited_list[idx] = 1;
 		fprintf(console_logfile, "mark cell %d, position (%f, %f) as visited\n", idx, current_position.x, current_position.y);
 	}

@@ -161,8 +161,7 @@ int main(void){
     for(int i=0; i<number_of_robots; i++){
         double robot_position[3] = {0};
         do{
-            robot_position[0] = (((double)rand() / (double)RAND_MAX) * (5 - ARENA_XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_XMIN;
-            //robot_position[0] = (((double)rand() / (double)RAND_MAX) * (ARENA_XMAX - ARENA_XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_XMIN;
+            robot_position[0] = (((double)rand() / (double)RAND_MAX) * (ARENA_XMAX - ARENA_XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_XMIN;
             robot_position[1] = (((double)rand() / (double)RAND_MAX) * (ARENA_YMAX - ARENA_YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_YMIN;
             robot_position[2] = 0;
         }while(is_in_obstacle_list(robot_position[0], robot_position[1], obstacles, nbr_obs) != -1);

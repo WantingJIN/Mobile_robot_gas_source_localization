@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('//home/wjin/Workspace/continuous_STE/Results/online_wind_estimation/Gaussian_fixed_clustering_source_lists_different_bc_outlet/14');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/online_wind_estimation/Gaussian_fixed_clustering_source_lists_different_bc_outlet/14');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -101,7 +101,7 @@ for i=1:exp_number
 
         plot3(trajectory(:,2),trajectory(:,3),trajectory(:,4),'DisplayName','Trajectory','LineWidth',1);%lines
         plot3(source_real_position(1),source_real_position(2),source_real_position(3),'g+','MarkerSize',20,'LineWidth',3,'DisplayName','Source real position'); %real source position
-        plot3(expected_a_posteriori(end,2),expected_a_posteriori(end,3),0, 'rx','MarkerSize',20,'LineWidth',3,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
+        plot3(max_a_posteriori(end,2),max_a_posteriori(end,3),0, 'rx','MarkerSize',20,'LineWidth',3,'DisplayName','Final expected value for source position'); %where the robot thinks the source is
         plot3(positions(1,2),positions(1,3), positions(1,4),'DisplayName','Start point','MarkerSize',8,'Marker','o','LineWidth',2,'LineStyle','none');
         patch(obstacles_x,obstacles_y ,[0.6 0.8 1],'DisplayName','Obstacle', 'LineStyle', 'none');
         hold off;

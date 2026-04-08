@@ -11,7 +11,6 @@ params = my_text2struct([experiment_file_path,'/param_log.csv']);
 
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
 
-map_folder=[general_folder '/map'];
 map_nbr = params.map_nbr;
 obstacles_x = [];
 obstacles_y = [];

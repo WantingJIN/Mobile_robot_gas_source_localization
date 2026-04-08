@@ -6,10 +6,10 @@
 GasDispersionMap::GasDispersionMap(int index_sx, int index_sy){
 	idx_sx = index_sx;
 	idx_sy = index_sy;
-	sx = source_x_min + idx_sx * x_resol;
-  	sy = source_y_min + idx_sy * y_resol;
-	for (int i = 0; i < x_nbins; i++){
-    	for (int j = 0; j < y_nbins; j++) {
+	sx = source_x_min + idx_sx * source_x_resol;
+  	sy = source_y_min + idx_sy * source_y_resol;
+	for (int i = 0; i < source_x_nbins; i++){
+    	for (int j = 0; j < source_y_nbins; j++) {
       		gasConcentrationMap[i][j] = 0;
    		}
 	}
@@ -19,8 +19,8 @@ void GasDispersionMap::log_map(const char *filename, char writing_mode){
 
 	FILE * gas_dispersion_maps = fopen(filename, &writing_mode);
 	fprintf(gas_dispersion_maps, "%.9f, %9f", sx, sy);
-	for (int i = 0; i < x_nbins; i++){
-		for (int j = 0; j < y_nbins; j++) {
+	for (int i = 0; i < source_x_nbins; i++){
+		for (int j = 0; j < source_y_nbins; j++) {
 	  		fprintf(gas_dispersion_maps, "%.9f, ", gasConcentrationMap[i][j]);
    		}
 	}
@@ -29,7 +29,7 @@ void GasDispersionMap::log_map(const char *filename, char writing_mode){
 }
 
 double GasDispersionMap::get_concentration(int idx_x, int idx_y){
-	if (idx_x < 0 || idx_x >= x_nbins || idx_y < 0 || idx_y >= y_nbins){
+	if (idx_x < 0 || idx_x >= source_x_nbins || idx_y < 0 || idx_y >= source_y_nbins){
 		printf("Error: index out of range\n");
 		return 0;
 	}

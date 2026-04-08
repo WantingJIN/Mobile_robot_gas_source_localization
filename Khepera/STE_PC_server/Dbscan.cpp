@@ -67,7 +67,7 @@ void DBSCAN::expandCluster(CellPoint& cell, vector<int>& neighbors, int clusterI
 void DBSCAN::run(double information[]){
 	double max_info = 0;
 	double min_info = 100000;
-	for (int i = 0; i < x_nbins * y_nbins; i++){
+	for (int i = 0; i < source_x_nbins * source_y_nbins; i++){
 		if (information[i] > max_info){
 			max_info = information[i];
 		}
@@ -76,12 +76,12 @@ void DBSCAN::run(double information[]){
 		}
 	}
 	// first fill y then fill x
-	for (int j = 0; j < y_nbins; j++){
-		for (int i = 0; i < x_nbins; i++){
-			if (information[j * y_nbins + i] > ratio * (max_info - min_info) + min_info){
+	for (int j = 0; j < source_y_nbins; j++){
+		for (int i = 0; i < source_x_nbins; i++){
+			if (information[j * source_y_nbins + i] > ratio * (max_info - min_info) + min_info){
 				CellPoint cell;
-				cell.x = i * x_resol + source_x_min + x_resol / 2;
-				cell.y = j * y_resol + source_y_min + y_resol / 2;
+				cell.x = i * source_x_resol + source_x_min + source_x_resol / 2;
+				cell.y = j * source_y_resol + source_y_min + source_y_resol / 2;
 				cell.cluster_id = UNCLASSIFIED;
 				cell_list.push_back(cell);
 			}
