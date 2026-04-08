@@ -2,14 +2,14 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/online_wind_estimation/istropic_wind_dynamic_sigma_relative/10';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/online_wind_estimation/Gaussian_fixed_clustering_source_lists_different_bc/14';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
 %experiment_file_path = general_folder;
 
 params = my_text2struct([experiment_file_path,'/param_log.csv']);       
-clustering = 1;
+clustering = 0;
 visited_listd_true = 0; 
 gas_feature = params.gas_feature;
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
@@ -21,6 +21,8 @@ else
 end
 map_folder=[general_folder '/map'];
 map_nbr = params.map_nbr;
+obstacles_x = [];
+obstacles_y = [];
 if map_nbr~=0
     obst_file = ['../openfoam/test_maps/map' num2str(map_nbr) '/map' num2str(map_nbr) '_wind0.75/' num2str(map_nbr) '_obstacles.txt'];
     obst_fileID = fopen(obst_file);
@@ -125,7 +127,7 @@ for i=1:size(pdf,1)
     hold on;
 
    
-    if map_nbr~=0
+    if map_nbr~=0 && map_nbr~=11 && map_nbr~=14
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
     hold on
@@ -150,7 +152,7 @@ for i=1:size(pdf,1)
     imagesc(y_wind, x_wind, W);     % color map for speed
     colormap(turbo);          % modern colormap
    
-    if map_nbr~=0
+    if map_nbr~=0 && map_nbr~=11
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
     hold on
@@ -175,7 +177,7 @@ for i=1:size(pdf,1)
     imagesc(y,x,reshape(pdf(i,:),params.nbins(2),params.nbins(3)));
     load MyColormap2; colormap(mymap); 
     colorbar;caxis([0 Inf]);
-    if map_nbr~=0
+    if map_nbr~=0 && map_nbr~=11
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
     hold on
@@ -244,7 +246,7 @@ for i=1:size(pdf,1)
    
     plot(real_source_position(2),real_source_position(1),'p','MarkerSize',40,'MarkerEdgeColor','blue','MarkerFaceColor',[51/255 153/255 1]);
     hold on
-    if map_nbr~=0
+    if map_nbr~=0 && map_nbr~=11
         patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
     end
     hold on
