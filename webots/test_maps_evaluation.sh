@@ -7,111 +7,161 @@ webots=$WEBOTS_HOME/webots
 webots_folder="../webots"
 map_nbr_filename="../webots/data/map_nbr.txt"
 source_pos_filename="../webots/data/source_pos.txt"
-sampling_prd_filename="../webots/data/simulation_parameters/sampling_period.txt"
-MCMC_exhaustive_filename="../webots/data/simulation_parameters/MCMC_or_exhaustive_eval.txt"
-vel_factor_filename="../webots/data/simulation_parameters/vel_factor.txt" 
 rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
-config_file="../webots/data/config.txt"
+config_file="../webots/data/config.yaml"
 source_locations_filename="source_locations.txt"
-s=0
-echo $s > $MCMC_exhaustive_filename
 
+# ---------------------------------------------------------------------------
+# Helper: set a scalar value in the YAML config file.
+# Works for any unique key in the file regardless of nesting depth, because
+# it matches leading whitespace + key name.
+# Usage: set_yaml_value <key> <value>
+# ---------------------------------------------------------------------------
+set_yaml_value() {
+    local key="$1"
+    local value="$2"
+    sed -i "s/\(^[[:space:]]*${key}:[[:space:]]*\).*/\1${value}/" "$config_file"
+}
+
+# ---------------------------------------------------------------------------
+# Source position bounds (used when no source_locations file exists)
+# ---------------------------------------------------------------------------
 nbr_source_pos=30
-# source_pos_x=12.7   # default: 12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
-
 source_pos_x_min=3.2
 source_pos_x_max=12.7
 
-#delete last unfinished job
-result_folder_name="../Results/current/"  # the folder to store the result for experiment that not finish
+# ---------------------------------------------------------------------------
+# Delete last unfinished result folder
+# ---------------------------------------------------------------------------
+result_folder_name="../Results/current/"
 if [ -d "$result_folder_name" ]; then
-    echo "Folder exists. Delete"
+    echo "Folder exists. Deleting..."
     rm -r "$result_folder_name"
-    echo "Folder deleted successfully."
-else
-    echo "Folder does not exist."
+    echo "Folder deleted."
 fi
 
-v=1 # 1 for default controller
-# save previous velocity value
-tmp=$(cat "$vel_factor_filename") 
-echo $v > $vel_factor_filename
-R=100 # gas sensor resistance
-sigma=0.4 #noise level for the STE likelihood
+# ---------------------------------------------------------------------------
+# Parameter sweeps — uncomment the loops you want to sweep over.
+# Each set_yaml_value call patches the YAML in-place before launching Webots.
+#
+# Available sweep parameters (add/remove as needed):
+#   bayesian_estimation: likelihood_error, R0, likelihoodSigma, lambda
+#   planning:            planningStrategy, scoreFun, scoreSigma, infoFeature
+#                        weighting_entropy_ratio (active for SUM_DIJKSTRA_ADP)
+#                        cluster_entropy_ratio   (active for BELIEF_CLUSTERING)
+#   gas_feature:         gasHitThres (active for FIXED_THRES / FIXED_THRES_NUM)
+# ---------------------------------------------------------------------------
 
 # release amount
-for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
+for r in 53 #10 30 53 80 200
 do
-	echo $r > $rr_filename
-	for m in 14 #1 2 3 5 10 #0 1  
-	do
-		echo $m > $map_nbr_filename
-		env_folder="../openfoam/test_maps/map${m}/map${m}_wind0.75"
-		source_locations_file="${env_folder}/${source_locations_filename}"
+    echo $r > $rr_filename
 
-		source_locations=()
-		if [ -f "$source_locations_file" ]; then
-			mapfile -t source_locations < <(grep -Ehv '^\s*(#|$)' "$source_locations_file")
-		fi
-		source_locations_count=${#source_locations[@]}
-		if [ "$source_locations_count" -gt 0 ]; then
-			echo "Use source locations from $source_locations_file"
-		else
-			echo "No source locations file (or empty) for map $m, use random source positions"
-		fi
-		# for likelihood in 2000 3000
-		# for sigma in 0.43 0.45 0.48
-	      # for R in 100 1500
-		# for thres in 100 300
-		# for lambda in 0.5 0.7 0.9
-		# for planningStrategy in "INFORMATIVE_KLD"
-		# for scoreSigma in 0.4 0.5 0.7
-		# for scoreFun in "RATIO" "LOG" "SIGMOID"
-		# for infoFeature in "VARIANCE" "MEAN" "PDF"
-		# for weighting_entropy_ratio in 10
-	      # do
-			# sed -i "s/^R0 *= *.*/R0 = $R/" "$config_file"
-			# sed -i "s/^sigma *= *.*/sigma = $sigma/" "$config_file"
-			# sed -i "s/^likelihood_error *= *.*/likelihood_error = $likelihood/" "$config_file"
-			# sed -i "s/^gasHitThres *= *.*/gasHitThres = $thres/" "$config_file"
-			# sed -i "s/^lambda *= *.*/lambda = $lambda/" "$config_file"
-			# sed -i "s/^cluster_entropy_ratio *= *.*/cluster_entropy_ratio = $cluster_entropy_ratio/" "$config_file"
-			# sed -i "s/^planningStrategy *= *.*/planningStrategy = $planningStrategy/" "$config_file"
-			# sed -i "s/^scoreSigma *= *.*/scoreSigma = $scoreSigma/" "$config_file"
-			# sed -i "s/^scoreFun *= *.*/scoreFun = $scoreFun/" "$config_file"
-			# sed -i "s/^infoFeature *= *.*/infoFeature = $infoFeature/" "$config_file"
-			# sed -i "s/^weighting_entropy_ratio *= *.*/weighting_entropy_ratio = $weighting_entropy_ratio/" "$config_file"
-			# wind map and obstacle list
-			cp "$env_folder"/"$m".txt data/plugin_parameters/wind_map.txt
-			cp "$env_folder"/wind_map_2D_"$m".csv data/wind_map_2D.csv
-			cp "$env_folder"/"$m"_obstacles.txt data/obstacle_list.txt
-			cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
+    for m in 1 #1 2 3 5 10
+    do
+        echo $m > $map_nbr_filename
+        env_folder="../openfoam/test_maps/map${m}/map${m}_wind0.75"
+        source_locations_file="${env_folder}/${source_locations_filename}"
 
-			#for k in {1..3} 1
-			for ((k=1; k<=$nbr_source_pos; k++)) 
-			do
-				if [ "$source_locations_count" -gt 0 ]; then
-					loc_idx=$(( (k - 1) % source_locations_count ))
-					read -r source_pos_x source_pos_y <<< "${source_locations[$loc_idx]}"
-				else
-					source_pos_x=$(awk -v min="$source_pos_x_min" -v max="$source_pos_x_max" -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
-					source_pos_y=$(awk -v min="$source_pos_y_min" -v max="$source_pos_y_max" -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
-				fi
-				# source_pos_y=3
-				# source_pos_x=8
-				echo $source_pos_x $source_pos_y > $source_pos_filename
-				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt # >wb_output.txt
-				now=$(date +"%T")
-				echo "map $m  k $k  release amount $r R $R end time $now"
-			done
-	      # done	
-	done
-done
+        source_locations=()
+        if [ -f "$source_locations_file" ]; then
+            mapfile -t source_locations < <(grep -Ehv '^\s*(#|$)' "$source_locations_file")
+        fi
+        source_locations_count=${#source_locations[@]}
+        if [ "$source_locations_count" -gt 0 ]; then
+            echo "Use source locations from $source_locations_file"
+        else
+            echo "No source locations file (or empty) for map $m, using random source positions"
+        fi
 
-# write original velocity value back
-echo $tmp > $vel_factor_filename
+        # -- parameter sweep loops (uncomment to activate) ------------------
+
+        # for likelihood_error in 2000 3000
+        # do
+        #     set_yaml_value likelihood_error $likelihood_error
+
+        # for likelihoodSigma in 0.43 0.45 0.48 3.5
+        # do
+        #     set_yaml_value likelihoodSigma $likelihoodSigma
+
+        # for R0 in 100 1500
+        # do
+        #     set_yaml_value R0 $R0
+
+        # for lambda in 0.5 0.7 0.9
+        # do
+        #     set_yaml_value lambda $lambda
+
+        # for gasHitThres in 100 300 1000
+        # do
+        #     set_yaml_value gasHitThres $gasHitThres
+
+        # for planningStrategy in BELIEF_CLUSTERING SUM_DIJKSTRA_ADP INFORMATIVE_KLD
+        # do
+        #     set_yaml_value planningStrategy $planningStrategy
+
+        # for scoreFun in RATIO LOG EXP
+        # do
+        #     set_yaml_value scoreFun $scoreFun
+
+        # for scoreSigma in 0.4 0.5 0.7
+        # do
+        #     set_yaml_value scoreSigma $scoreSigma
+
+        # for infoFeature in VARIANCE MEAN PDF
+        # do
+        #     set_yaml_value infoFeature $infoFeature
+
+        # for weighting_entropy_ratio in 5 10 20
+        # do
+        #     set_yaml_value weighting_entropy_ratio $weighting_entropy_ratio
+
+        # for cluster_entropy_ratio in 2 4 8
+        # do
+        #     set_yaml_value cluster_entropy_ratio $cluster_entropy_ratio
+
+        # -------------------------------------------------------------------
+
+        # copy environment data
+        cp "$env_folder"/"$m".txt data/plugin_parameters/wind_map.txt
+        cp "$env_folder"/wind_map_2D_"$m".csv data/wind_map_2D.csv
+        cp "$env_folder"/"$m"_obstacles.txt data/obstacle_list.txt
+        cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
+
+        for ((k=1; k<=$nbr_source_pos; k++))
+        do
+            if [ "$source_locations_count" -gt 0 ]; then
+                loc_idx=$(( (k - 1) % source_locations_count ))
+                read -r source_pos_x source_pos_y <<< "${source_locations[$loc_idx]}"
+            else
+                source_pos_x=$(awk -v min="$source_pos_x_min" -v max="$source_pos_x_max" \
+                    -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
+                source_pos_y=$(awk -v min="$source_pos_y_min" -v max="$source_pos_y_max" \
+                    -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
+            fi
+            echo $source_pos_x $source_pos_y > $source_pos_filename
+            $webots '--minimize' '--mode=fast' $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt
+            now=$(date +"%T")
+            echo "map $m  k $k  release $r  end time $now"
+        done
+
+        # -- close sweep loops in the same order as opened (uncomment matching done lines) --
+        # done  # cluster_entropy_ratio
+        # done  # weighting_entropy_ratio
+        # done  # infoFeature
+        # done  # scoreSigma
+        # done  # scoreFun
+        # done  # planningStrategy
+        # done  # gasHitThres
+        # done  # lambda
+        # done  # R0
+        # done  # likelihoodSigma
+        # done  # likelihood_error
+
+    done  # map
+done  # release amount
 
 r=53
 echo "$r" > $rr_filename

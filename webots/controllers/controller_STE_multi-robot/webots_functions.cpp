@@ -93,7 +93,7 @@ void init()
 	set_logfile_names();
 
     // load the simulation parameters
-    simulation_parameters.load_simulation_parameters_from_config("../../data/config.txt");
+    simulation_parameters.load_simulation_parameters_from_config("../../data/config.yaml");
     simulation_parameters.read_mapID_from_file();
 
 	FILE *sim_param_file;

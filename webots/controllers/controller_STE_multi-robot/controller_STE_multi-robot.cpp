@@ -102,7 +102,7 @@ struct history sample_in_motion;
 int sample_counter = 0;
 
 // simulation parameters
-SimulationParameters simulation_parameters("../../data/config.txt");
+SimulationParameters simulation_parameters("../../data/config.yaml");
 
 // Declare a pointer to the base class or common interface for plume models
 PlumeModel* plume_model = nullptr;
