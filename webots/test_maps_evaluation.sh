@@ -12,6 +12,7 @@ MCMC_exhaustive_filename="../webots/data/simulation_parameters/MCMC_or_exhaustiv
 vel_factor_filename="../webots/data/simulation_parameters/vel_factor.txt" 
 rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
 config_file="../webots/data/config.txt"
+source_locations_filename="source_locations.txt"
 s=0
 echo $s > $MCMC_exhaustive_filename
 
@@ -19,11 +20,9 @@ nbr_source_pos=10
 # source_pos_x=12.7   # default: 12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
-source_pos_y_step=$(awk "BEGIN { print ($source_pos_y_max - $source_pos_y_min) / $nbr_source_pos }")
 
-source_pos_x_min=10
+source_pos_x_min=3.2
 source_pos_x_max=12.7
-source_pos_x_step=$(awk "BEGIN { print ($source_pos_x_max - $source_pos_x_min) / $nbr_source_pos }")
 
 #delete last unfinished job
 result_folder_name="../Results/current/"  # the folder to store the result for experiment that not finish
@@ -46,9 +45,22 @@ sigma=0.4 #noise level for the STE likelihood
 for r in 53 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
-	for m in 0 #1 2 3 5 10 #0 1  
+	for m in 14 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
+		env_folder="../openfoam/test_maps/map${m}/map${m}_wind0.75"
+		source_locations_file="${env_folder}/${source_locations_filename}"
+
+		source_locations=()
+		if [ -f "$source_locations_file" ]; then
+			mapfile -t source_locations < <(grep -Ehv '^\s*(#|$)' "$source_locations_file")
+		fi
+		source_locations_count=${#source_locations[@]}
+		if [ "$source_locations_count" -gt 0 ]; then
+			echo "Use source locations from $source_locations_file"
+		else
+			echo "No source locations file (or empty) for map $m, use random source positions"
+		fi
 		# for likelihood in 2000 3000
 		# for sigma in 0.43 0.45 0.48
 	      # for R in 100 1500
@@ -72,16 +84,23 @@ do
 			# sed -i "s/^infoFeature *= *.*/infoFeature = $infoFeature/" "$config_file"
 			# sed -i "s/^weighting_entropy_ratio *= *.*/weighting_entropy_ratio = $weighting_entropy_ratio/" "$config_file"
 			# wind map and obstacle list
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m".txt data/plugin_parameters/wind_map.txt
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/wind_map_2D_"$m".csv data/wind_map_2D.csv
-			cp ../openfoam/test_maps/map"$m"/map"$m"_wind0.75/"$m"_obstacles.txt data/obstacle_list.txt
+			cp "$env_folder"/"$m".txt data/plugin_parameters/wind_map.txt
+			cp "$env_folder"/wind_map_2D_"$m".csv data/wind_map_2D.csv
+			cp "$env_folder"/"$m"_obstacles.txt data/obstacle_list.txt
 			cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 
 			#for k in {1..3} 1
 			for ((k=1; k<=$nbr_source_pos; k++)) 
 			do
-				source_pos_y=$(awk "BEGIN { print $source_pos_y_min + $k * $source_pos_y_step }")
-				source_pos_x=$(awk "BEGIN { print $source_pos_x_min + $k * $source_pos_x_step }")
+				if [ "$source_locations_count" -gt 0 ]; then
+					loc_idx=$(( (k - 1) % source_locations_count ))
+					read -r source_pos_x source_pos_y <<< "${source_locations[$loc_idx]}"
+				else
+					source_pos_x=$(awk -v min="$source_pos_x_min" -v max="$source_pos_x_max" -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
+					source_pos_y=$(awk -v min="$source_pos_y_min" -v max="$source_pos_y_max" -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
+				fi
+				# source_pos_y=3
+				# source_pos_x=8
 				echo $source_pos_x $source_pos_y > $source_pos_filename
 				$webots '--minimize' '--mode=fast'  $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt # >wb_output.txt
 				now=$(date +"%T")
