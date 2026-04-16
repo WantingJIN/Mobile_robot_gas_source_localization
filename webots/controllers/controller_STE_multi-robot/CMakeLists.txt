@@ -18,6 +18,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};/home/wjin/Workspace/continuous_STE/
 find_package(MatIO REQUIRED)
 include_directories(${MATIO_INCLUDE_DIRS})
 find_package(Torch REQUIRED NO_DEFAULT_PATH PATHS ${CMAKE_PREFIX_PATH})
+find_package(yaml-cpp REQUIRED)
 
 include_directories(../../libraries/khepera4)
 include_directories(/usr/include/eigen3)
@@ -62,6 +63,7 @@ target_link_libraries(${PROJECT} -g -lk4_webots -lgsl -lgslcblas)
 target_link_libraries(${PROJECT} "${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT} ${MATIO_LIBRARIES})
 target_link_libraries(${PROJECT} ${SUPERLU_LIBRARY})
+target_link_libraries(${PROJECT} yaml-cpp)
 
 set_property(TARGET ${PROJECT} PROPERTY CXX_STANDARD 17)
 

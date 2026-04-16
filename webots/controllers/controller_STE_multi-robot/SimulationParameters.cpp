@@ -4,8 +4,8 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
-
 #include <unistd.h>
+#include <yaml-cpp/yaml.h>
 
 eScenario parse_scenario(const char *str)
 {
@@ -82,7 +82,7 @@ ePlanningStrategy parse_planning_strategy(const char *str)
 		return LAWNMOWER;
 	if (strcmp(str, "BELIEF_CLUSTERING") == 0)
 		return BELIEF_CLUSTERING;
-	if (strcmp(str, "INFORMATIVE_KLD") == 0) 
+	if (strcmp(str, "INFORMATIVE_KLD") == 0)
 		return INFORMATIVE_KLD;
 	if (strcmp(str, "INFO_CLUSTERING") == 0)
 		return INFO_CLUSTERING;
@@ -262,186 +262,150 @@ SimulationParameters::SimulationParameters(const char *filename){
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
 {
-	// read parameters from file
-	FILE *file = fopen(filename, "r");
-	if (!file)
-	{
-		fprintf(stderr, "Error opening config file\n");
+	YAML::Node config;
+	try {
+		config = YAML::LoadFile(filename);
+	} catch (const YAML::Exception& e) {
+		fprintf(stderr, "Error loading config file '%s': %s\n", filename, e.what());
 		exit(1);
 	}
 
-	char key[256], value[256];
-	while (fscanf(file, "%255s = %255s", key, value) == 2)
+	// --- simulation ---
 	{
-		if (strcmp(key, "likelihood_error") == 0)
-		{
-			likelihood_error = atof(value);
-		}
-		else if (strcmp(key, "global_local_search_ratio") == 0)
-		{
-			global_local_search_ratio = atof(value);
-		}
-		else if (strcmp(key, "BayesianModelingMethod") == 0)
-		{
-			BayesianModelingMethod = parse_evaluation_method(value);
-		}
-		else if (strcmp(key, "number_of_robots") == 0)
-		{
-			number_of_robots = atoi(value);
-		}
-		else if (strcmp(key, "scenario") == 0)
-		{
-			scenario = parse_scenario(value);
-		}
-		else if (strcmp(key, "map_nbr") == 0)
-		{
-			map_nbr = atoi(value);
-		}
-		else if (strcmp(key, "MCMC_iteration_num") == 0)
-		{
-			MCMC_iteration_num = atoi(value);
-		}
-		else if (strcmp(key, "samplingMode") == 0)
-		{
-			samplingMode = parse_sampling_mode(value);
-		}
-		else if (strcmp(key, "processingMode") == 0)
-		{
-			processingMode = parse_processing_mode(value);
-		}
-		else if (strcmp(key, "gasSensor") == 0)
-		{
-			gasSensor = parse_gas_sensor(value);
-		}
-		else if (strcmp(key, "planningStrategy") == 0)
-		{
-			planningStrategy = parse_planning_strategy(value);
-		}
-		else if (strcmp(key, "gasFeature") == 0)
-		{
-			gasFeature = parse_gas_feature(value);
-		}
-		else if (strcmp(key, "visitedList") == 0)
-		{
-			visitedList = parse_visited_list(value);
-		}
-		else if (strcmp(key, "infoFeature") == 0)
-		{
-			infoFeature = parse_info_feature(value);
-		}
-		else if (strcmp(key, "sampling_period") == 0)
-		{
-			sampling_period = atoi(value);
-		}
-		else if (strcmp(key, "cluster_entropy_ratio") == 0)
-		{
-			cluster_entropy_ratio = atof(value);
-		}
-		else if (strcmp(key, "vel_factor") == 0)
-		{
-			vel_factor = atof(value);
-		}
-		else if (strcmp(key, "sampling_dist_thresh") == 0)
-		{
-			sampling_dist_thresh = atof(value);
-		}
-		else if (strcmp(key, "relativeMethod") == 0)
-		{
-			relativeMethod = parse_relative_method(value);
-		}
-		else if (strcmp(key, "gasHitMethod") == 0)
-		{
-			gasHitMethod = parse_gas_hit_method(value);
-		}
-		else if (strcmp(key, "gasHitThres") == 0)
-		{
-			gas_hit_threshold = atoi(value);
-		}
-		else if (strcmp(key, "calibrationMode") == 0)
-		{
-			calibrationMode = parse_calibration_mode(value);
-		}
-		else if (strcmp(key, "R0") == 0)
-		{
-			R0 = atof(value);
-		}
-		else if (strcmp(key, "simuMode") == 0)
-		{
-			simuMode = parse_simu_mode(value);
-		}
-		else if (strcmp(key, "likelihoodSigma") == 0)
-		{
-			likelihoodSigma = atof(value);
-		}
-		else if (strcmp(key, "lambda") == 0)
-		{
-			lambda = atof(value);
-		}
-		else if (strcmp(key, "scoreSigma") == 0)
-		{
-			scoreSigma = atof(value);
-		}
-		else if (strcmp(key, "scoreFun") == 0)
-		{
-			scoreFun = parse_score_fun(value);
-		}
-		else if (strcmp(key, "planning_step") == 0)
-		{
-			planning_step = atoi(value);
-		}
-		else if (strcmp(key, "weighting_entropy_ratio") == 0)
-		{
-			weighting_entropy_ratio = atof(value);
-		}
-		else if (strcmp(key, "teamStrategy") == 0) {
-			teamStrategy = parse_team_strategy(value);
-		} 
-		else if (strcmp(key, "updateGoalTime") == 0) {
-			update_goal_time = atoi(value);
-		}
-		else if (strcmp(key, "stopCondition") == 0) {
-			stopCondition = parse_stop_condition(value);
-		}
-		else if (strcmp(key, "updateGoalPolicy") == 0) {
-			updateGoalPolicy = parse_update_goal_policy(value);
-		} 
-		else if (strcmp(key, "plumeModel") == 0) {
-			plumeModel = parse_plume_model(value);
-		} 
-		else if (strcmp(key, "estimationScale") == 0) {
-			estimationScale = parse_estimation_scale(value);
-		}
-        else if (strcmp(key, "windEstimationMethod") == 0)
-		{
-			windEstimationMethod = parse_wind_estimation_method(value);
-		}
-		else if (strcmp(key, "windInfo") == 0)
-		{
-			windInfo = parse_wind_info(value);
-		}
-        else if (strcmp(key, "modelUncertainty") == 0)
-		{
-			modelUncertainty = parse_model_uncertainty(value);
-		}
-		else if (strcmp(key, "experimental_logname") == 0) 
-		{
-			strcpy(experimental_logname, value);
-		}
-		else if (strcmp(key, "diffCoefficient") == 0)
-		{
-			diff_coefficient = atof(value);
-		}
-		else if (strcmp(key, "windBeliefWeight") == 0)
-		{
-			wind_belief_weight = atof(value);
-		}
-		else {
-			fprintf(stderr, "Unknown parameter: %s\n", key);
-			exit(1);
-		} 
+		auto n = config["simulation"];
+		simuMode    = parse_simu_mode(n["simuMode"].as<std::string>().c_str());
+		map_nbr     = n["map_nbr"].as<int>();
+		strcpy(experimental_logname, n["experimental_logname"].as<std::string>().c_str());
 	}
-	fclose(file);
+
+	// --- robot ---
+	{
+		auto n = config["robot"];
+		number_of_robots = n["number_of_robots"].as<int>();
+		scenario         = parse_scenario(n["scenario"].as<std::string>().c_str());
+		vel_factor       = n["vel_factor"].as<float>();
+	}
+
+	// --- sensing ---
+	{
+		auto n = config["sensing"];
+		samplingMode    = parse_sampling_mode(n["samplingMode"].as<std::string>().c_str());
+		processingMode  = parse_processing_mode(n["processingMode"].as<std::string>().c_str());
+		gasSensor       = parse_gas_sensor(n["gasSensor"].as<std::string>().c_str());
+		calibrationMode = parse_calibration_mode(n["calibrationMode"].as<std::string>().c_str());
+
+		// sampling_period and sampling_dist_thresh are nested under the active sampling mode
+		std::string samplingModeStr = n["samplingMode"].as<std::string>();
+		if (n[samplingModeStr]) {
+			auto s = n[samplingModeStr];
+			sampling_period      = s["sampling_period"].as<int>();
+			sampling_dist_thresh = s["sampling_dist_thresh"].as<float>();
+		}
+	}
+
+	// --- gas_feature ---
+	{
+		auto n = config["gas_feature"];
+		gasFeature = parse_gas_feature(n["gasFeature"].as<std::string>().c_str());
+
+		// RELATIVE_VALUE sub-params
+		if (gasFeature == RELATIVE_VALUE && n["RELATIVE_VALUE"]) {
+			relativeMethod = parse_relative_method(
+				n["RELATIVE_VALUE"]["relativeMethod"].as<std::string>().c_str());
+		}
+
+		// GASHIT sub-params
+		if (gasFeature == GASHIT && n["GASHIT"]) {
+			auto gh = n["GASHIT"];
+			gasHitMethod = parse_gas_hit_method(gh["gasHitMethod"].as<std::string>().c_str());
+			// threshold is shared by FIXED_THRES and FIXED_THRES_NUM
+			if ((gasHitMethod == FIXED_THRES || gasHitMethod == FIXED_THRES_NUM) && gh["FIXED_THRES"]) {
+				gas_hit_threshold = gh["FIXED_THRES"]["gasHitThres"].as<int>();
+			}
+		}
+	}
+
+	// --- bayesian_estimation ---
+	{
+		auto n = config["bayesian_estimation"];
+		BayesianModelingMethod = parse_evaluation_method(
+			n["BayesianModelingMethod"].as<std::string>().c_str());
+
+		// MCMC sub-params
+		if (BayesianModelingMethod == MCMC && n["MCMC"]) {
+			MCMC_iteration_num = n["MCMC"]["MCMC_iteration_num"].as<int>();
+		}
+
+		likelihood_error = n["likelihood_error"].as<float>();
+		R0               = n["R0"].as<float>();
+		likelihoodSigma  = n["likelihoodSigma"].as<float>();
+		lambda           = n["lambda"].as<float>();
+	}
+
+	// --- plume_model ---
+	{
+		auto n = config["plume_model"];
+		plumeModel = parse_plume_model(n["plumeModel"].as<std::string>().c_str());
+
+		// FDM_PDE sub-params
+		if (plumeModel == FDM_PDE && n["FDM_PDE"]) {
+			diff_coefficient = n["FDM_PDE"]["diffCoefficient"].as<float>();
+		}
+	}
+
+	// --- wind ---
+	{
+		auto n = config["wind"];
+		windInfo              = parse_wind_info(n["windInfo"].as<std::string>().c_str());
+		windEstimationMethod  = parse_wind_estimation_method(
+			n["windEstimationMethod"].as<std::string>().c_str());
+		estimationScale       = parse_estimation_scale(n["estimationScale"].as<std::string>().c_str());
+		modelUncertainty      = parse_model_uncertainty(n["modelUncertainty"].as<std::string>().c_str());
+
+		// DYNAMIC_UNCERTAINTY sub-params
+		if (modelUncertainty == DYNAMIC_UNCERTAINTY && n["DYNAMIC_UNCERTAINTY"]) {
+			wind_belief_weight = n["DYNAMIC_UNCERTAINTY"]["windBeliefWeight"].as<float>();
+		}
+	}
+
+	// --- planning ---
+	{
+		auto n = config["planning"];
+		planningStrategy      = parse_planning_strategy(n["planningStrategy"].as<std::string>().c_str());
+		visitedList           = parse_visited_list(n["visitedList"].as<std::string>().c_str());
+		infoFeature           = parse_info_feature(n["infoFeature"].as<std::string>().c_str());
+		scoreFun              = parse_score_fun(n["scoreFun"].as<std::string>().c_str());
+		scoreSigma            = n["scoreSigma"].as<float>();
+		planning_step         = n["planning_step"].as<int>();
+		global_local_search_ratio = n["global_local_search_ratio"].as<float>();
+
+		// BELIEF_CLUSTERING / INFO_CLUSTERING sub-params
+		if ((planningStrategy == BELIEF_CLUSTERING || planningStrategy == INFO_CLUSTERING)
+		     && n["BELIEF_CLUSTERING"]) {
+			cluster_entropy_ratio = n["BELIEF_CLUSTERING"]["cluster_entropy_ratio"].as<float>();
+		}
+
+		// SUM_DIJKSTRA_ADP / WEIGHTED_CLUSTERING sub-params
+		if ((planningStrategy == SUM_DIJKSTRA_ADP || planningStrategy == WEIGHTED_CLUSTERING)
+		     && n["SUM_DIJKSTRA_ADP"]) {
+			weighting_entropy_ratio = n["SUM_DIJKSTRA_ADP"]["weighting_entropy_ratio"].as<float>();
+		}
+	}
+
+	// --- team ---
+	{
+		auto n = config["team"];
+		teamStrategy   = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
+		stopCondition  = parse_stop_condition(n["stopCondition"].as<std::string>().c_str());
+		updateGoalPolicy = parse_update_goal_policy(n["updateGoalPolicy"].as<std::string>().c_str());
+
+		// FIXED_FREQ sub-params
+		if (updateGoalPolicy == FIXED_FREQ && n["FIXED_FREQ"]) {
+			update_goal_time = n["FIXED_FREQ"]["updateGoalTime"].as<int>();
+		}
+	}
 }
+
 void SimulationParameters::read_mapID_from_file()
 {
 	// read simulation parameters

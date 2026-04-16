@@ -1,80 +1,99 @@
-map_nbr: 0 
-number_of_robots: 1
-scenario: NO_COM_NO_COOR 
-simuMode: ONLINE
-BayesianModelingMethod: EXHAUSTIVE
-BayesianModelingConfig:
-    MCMC:
-      MCMC_iteration_num: 1000
- 	
-samplingMode: CONTINOUS_SAMPLING
-samplingConfig:
-  CONTINOUS_SAMPLING:
+# =============================================================================
+# Simulation Configuration
+# =============================================================================
+# Parameters are grouped by component. Conditional sub-parameters are nested
+# directly under the key whose value activates them, e.g.:
+#
+#   modelUncertainty: DYNAMIC_UNCERTAINTY
+#   DYNAMIC_UNCERTAINTY:          # only active when modelUncertainty = DYNAMIC_UNCERTAINTY
+#     windBeliefWeight: 0.4
+#
+# =============================================================================
+
+# --- General ---
+simulation:
+  simuMode: ONLINE                  # ONLINE | OFFLINE
+  experimental_logname: "physics_encoded_GSL/fixed_sigma_normalization_dijstra/10/1760633017749"
+  map_nbr: 0
+
+# --- Robot ---
+robot:
+  number_of_robots: 3
+  scenario: NO_COM_NO_COOR          # NO_COM_NO_COOR | COM_NO_COOR | COM_COOR
+  vel_factor: 1.0
+
+# --- Sensing ---
+sensing:
+  samplingMode: CONTINOUS_SAMPLING  # CONTINOUS_SAMPLING | STOP_AND_GO_SAMPLING | SENSE_WITHOUT_STOP
+  CONTINOUS_SAMPLING:               # sub-params: active when samplingMode = CONTINOUS_SAMPLING
+    sampling_period: 3
     sampling_dist_thresh: 0.1
-    sampling_period: 10
-    
-gasSensor: MOX
-gasSenosrConfig:
-    MOX:
-    	response_time_constant: 0.72
-    	recovery_time_constant: 0.92
-    SLOW_MOX:
-    	response_time_constant: 2.06
-    	recovery_time_constant: 4.53
-    VERY_SLOW_MOX:
-      response_time_constant: 5.19
-      recovery_time_constant: 19.74
-    sensorNoise:
-    	sigma_0: 69.33
-    	k: 10.80
+  STOP_AND_GO_SAMPLING:             # sub-params: active when samplingMode = STOP_AND_GO_SAMPLING
+    sampling_period: 3
+    sampling_dist_thresh: 0.1
+  processingMode: NO_PROCESSING     # NO_PROCESSING | KERNEL_MAPPING | DECONVOLUTION | MAPPING_AND_DECONVOLUTION
+  gasSensor: MOX                    # PID | MOX | NOISY_MOX | SLOW_MOX | VERY_SLOW_MOX | NOISY_SLOW_MOX | NOISY_VERY_SLOW_MOX
+  calibrationMode: OFF              # OFF | LINEAR | NOLINEAR
 
-gasFeature: ABSOLUTE_VALUE
-gasHitMethod: FIXED_THRES_NUM
-relativeMethod: EMPIRICAL_CDF_NUM
-gasFeatureConfig:
-    ABSOLUTE_VALUE:
-        likelihood_error: 2000
-    RELATIVE_VALUE:
-        NORMALIZATION:
-            likelihoodSigma: 0.49
-        EMPIRICAL_CDF:
-            likelihoodSigma: 0.45
-        EMPIRICAL_CDF_AND_SLOPE:
-            likelihoodSigma: 0.45
-        EMPIRICAL_CDF_NUM: 
-            likelihoodSigma: 0.48
-    GASHIT:
-        FIXED_THRES_NUM:
-            gasHitThres: 1000
-        SLIDING_WINDOW_THRES:
-            with_num_normalization: NUM_ON
-            lambda: 0.7
-        
-infoFeature: VARIANCE
-planningStrategy: SUM_DIJKSTRA_ADP
-planningConfig:
-    SUM_DIJKSTRA_FIX:
-        scoreFun: EXP
-        scoreSigma: 0.5
-        infoSum: LINEAR_SUM
-    SUM_DIJKSTRA_ADP:
-        scoreFun: EXP
-        weighting_entropy_ratio: 10
-        infoSum: LINEAR_SUM
-    BELIEF_CLUSTERING:
-        cluster_entropy_ratio: 10
-    INFORMATIVE_KLD:
-        global_local_search_ratio: 0.5
-    MULTI_DIJKSTRA:
-        planning_step: 10
+# --- Gas Feature Extraction ---
+gas_feature:
+  gasFeature: RELATIVE_VALUE        # ABSOLUTE_VALUE | RELATIVE_VALUE | GASHIT
 
+  RELATIVE_VALUE:                   # sub-params: active when gasFeature = RELATIVE_VALUE
+    relativeMethod: Z_SCORE         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
 
-processingMode: NO_PROCESSING
-visitedList: visitedList_OFF
-vel_factor: 1
-calibrationMode: OFF
-calibrationConfig:
-    NOLINEAR: 
-        R0: 100
+  GASHIT:                           # sub-params: active when gasFeature = GASHIT
+    gasHitMethod: FIXED_THRES_NUM   # FIXED_THRES | FIXED_THRES_NUM | MIN_MAX_THRES | SLIDING_WINDOW_THRES | SLIDING_WINDOW_THRES_NUM
+    FIXED_THRES:                    # sub-params: active when gasHitMethod = FIXED_THRES or FIXED_THRES_NUM
+      gasHitThres: 1000
 
+# --- Bayesian Source Estimation ---
+bayesian_estimation:
+  BayesianModelingMethod: EXHAUSTIVE  # MCMC | EXHAUSTIVE
+  MCMC:                               # sub-params: active when BayesianModelingMethod = MCMC
+    MCMC_iteration_num: 1000
+  likelihood_error: 3000
+  R0: 100
+  likelihoodSigma: 3.5
+  lambda: 0.7
 
+# --- Plume Model ---
+plume_model:
+  plumeModel: FDM_PDE               # GAUSSIAN_PLUME | DDPM | FDM_PDE
+  FDM_PDE:                          # sub-params: active when plumeModel = FDM_PDE
+    diffCoefficient: 0.008
+
+# --- Wind Estimation ---
+wind:
+  windInfo: WIND_ONLINE             # WIND_OFFLINE | WIND_ONLINE
+  windEstimationMethod: GAUSSIAN_KERNEL  # GROUND_TRUTH | GAUSSIAN_KERNEL | BASEFLOW_CORRECTION
+  estimationScale: GLOBAL           # LOCAL | GLOBAL
+  modelUncertainty: DYNAMIC_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
+  DYNAMIC_UNCERTAINTY:              # sub-params: active when modelUncertainty = DYNAMIC_UNCERTAINTY
+    windBeliefWeight: 0.4
+
+# --- Path Planning ---
+planning:
+  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
+                                       # BELIEF_CLUSTERING | INFORMATIVE_KLD | INFO_CLUSTERING |
+                                       # WEIGHTED_CLUSTERING | SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
+  visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
+  infoFeature: PDF                  # VARIANCE | MEAN | PDF
+  scoreFun: EXP                     # RATIO | LOG | SIGMOID | SUM | EXP
+  scoreSigma: 0.5
+  planning_step: 10
+  global_local_search_ratio: 0.5
+
+  BELIEF_CLUSTERING:                # sub-params: active when planningStrategy = BELIEF_CLUSTERING or INFO_CLUSTERING
+    cluster_entropy_ratio: 4
+
+  SUM_DIJKSTRA_ADP:                 # sub-params: active when planningStrategy = SUM_DIJKSTRA_ADP or WEIGHTED_CLUSTERING
+    weighting_entropy_ratio: 10
+
+# --- Team Coordination ---
+team:
+  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED | CENTRALIZED
+  stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD
+  updateGoalPolicy: GOAL_REACHED    # GOAL_REACHED | FIXED_FREQ | BELIEF_DIFF
+  FIXED_FREQ:                       # sub-params: active when updateGoalPolicy = FIXED_FREQ
+    updateGoalTime: 5
