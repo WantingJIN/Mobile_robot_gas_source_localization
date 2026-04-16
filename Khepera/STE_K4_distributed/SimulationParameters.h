@@ -130,6 +130,7 @@ typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
 	SPREAD_ONLY = 1,
 	ENTROPY_SPREAD = 2,
+	ITERATION_ONLY = 3,
 } eStopCondition;
 
 typedef enum updataGoalPolicy{

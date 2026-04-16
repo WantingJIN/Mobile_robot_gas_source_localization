@@ -1,7 +1,7 @@
 #!/bin/bash
 # NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
-ID_list=(102 106)
+ID_list=(102 105 103)
 session_name="robots_view"
 config_file="$STE_DDPM_ROOT/Khepera/Data/config.txt"
 binary_path="$STE_DDPM_ROOT/Khepera/STE_K4_distributed/STE_K4_distributed"

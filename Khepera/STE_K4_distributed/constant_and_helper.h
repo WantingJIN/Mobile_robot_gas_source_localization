@@ -10,7 +10,7 @@ constexpr float PI = 3.1415926f;
 constexpr int TIME_STEP = 64;            // milliseconds
 constexpr float SAFETY_MARGIN = 0.2f;    // meters
 constexpr int ODOR_FILTER_LENGTH = 50;   // samples
-constexpr int MAX_ITER = 30;
+constexpr int MAX_ITER = 10;
 
 // --- Robot hardware parameters ---
 constexpr float WHEEL_RADIUS = 0.0205f;  // meters
