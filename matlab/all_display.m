@@ -4,7 +4,7 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/test_random_source_random_start_position/gt_wind/10');
+folder_list = dir('/home/wjin/Workspace/continuous_STE/Results/online_wind_estimation/Gaussian_fixed_clustering_source_lists_different_bc_outlet/14');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
@@ -92,7 +92,7 @@ for i=1:exp_number
         hold on;
         if gas_feature == 0 || gas_feature == 2
              scatter3(position_history(:,2),position_history(:,3),position_history(:,4),25,measurement_history(:,2),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k');hold on;
-%              scatter3(positions(:,2),positions(:,3),positions(:,4),25,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on;
+             % scatter3(positions(:,2),positions(:,3),positions(:,4),25,measurements(:,3),'DisplayName',['Measurements ID ', num2str(ID(j))],'MarkerFaceColor','flat','MarkerEdgeColor','k', 'LineWidth', 0.05);hold on;
              c = colorbar('southoutside'); c.set('Position',[0.136020151133501 0.115853490011817 0.285894206549118 0.0545725751510899]);  load MyColormap.mat; colormap(mymap); %colormap jet;
         end
         if gas_feature == 1

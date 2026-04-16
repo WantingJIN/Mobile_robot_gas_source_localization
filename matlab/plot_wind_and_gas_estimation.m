@@ -2,7 +2,7 @@
 % navigation planning results
 clc; clear all
 
-general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/physics_encoded_GSL/test_new_belief_clustering/dynamic_sigma_cdf/10';
+general_folder='/home/wjin/Workspace/continuous_STE/Results/online_wind_estimation/Gaussian_fixed_clustering_source_lists_different_bc_outlet/14';
 % general_folder='/home/wanting/Workspace/kheperaodor/plume_model_learning/Results/ADE_vs_DDPM/ADE_FDM_gt_wind_relative/0';
 experiment_path = uigetdir(general_folder);
 experiment_file_path = [experiment_path,'/101'];
@@ -12,6 +12,8 @@ params = my_text2struct([experiment_file_path,'/param_log.csv']);
 pdf = dlmread([experiment_file_path, '/posterior_pdf_3D.csv']);
 
 map_nbr = params.map_nbr;
+obstacles_x = [];
+obstacles_y = [];
 if map_nbr~=0
     obst_file = ['../openfoam/test_maps/map' num2str(map_nbr) '/map' num2str(map_nbr) '_wind0.75/' num2str(map_nbr) '_obstacles.txt'];
     obst_fileID = fopen(obst_file);
@@ -87,7 +89,7 @@ quiver(X(1:ds:end, 1:ds:end), ...
 hold on;
 
 
-if map_nbr~=0
+if size(obstacles_x,1) ~= 0
     patch(obstacles_y,obstacles_x ,[0 0 0], 'DisplayName','Obstacle','LineStyle', 'none');
 end
 hold on

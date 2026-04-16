@@ -1,0 +1,5 @@
+# Source locations for this environment (x y), one location per line
+# The test scripts will cycle these positions when run count > number of lines.
+8.0 1.0
+10.5 2.2
+12.0 3.0
