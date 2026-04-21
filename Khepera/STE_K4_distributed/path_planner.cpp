@@ -28,7 +28,8 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 {
       plume_model = input_model;
       posterior = input_posterior;
-	history = input_history;
+	  history = input_history;
+	  reach_end_of_fix_path = false;
 }
 PathPlanner:: ~PathPlanner()
 {
@@ -172,21 +173,36 @@ void PathPlanner::random_planning()
 }
 
 //TODO - Now can only be used in obstacle free environment
+// Split the environment to n sub-regions, where n is the number of robots, and each robot is responsible for searching in its own sub-region. The goal selection is based on the maximal belief in each sub-region.
 void PathPlanner::lawnmower_planning()
 {
 	printf("Enter lawnmower planning \n");
-	int static direction = 1;
+	static int direction = 1;
 	float x_step = 1.0;
-	float y_step = 4;
+	float y_step = 4.0;
+
+	// Compute this robot's Y sub-region based on its index within the team.
+	// Robot IDs start at 101, so robot_idx = ID - 101 (0-based).
+	int n = simulation_parameters.number_of_robots;
+	float y_range_min = YMIN + SAFETY_MARGIN;
+	float y_range_max = YMAX - SAFETY_MARGIN;
+	int robot_idx = (n > 1) ? (ID - 101) : 0;
+	float sub_height = (y_range_max - y_range_min) / n;
+	float y_sub_min = y_range_min + robot_idx * sub_height;
+	float y_sub_max = y_range_min + (robot_idx + 1) * sub_height;
+
+	printf("Robot [%d]: lawnmower sub-region Y [%.2f, %.2f]\n", ID, y_sub_min, y_sub_max);
+
 	goal_position.y = current_position.y + direction * y_step;
 	goal_position.x = current_position.x;
 	goal_position.heading = 0;
-	if (current_position.y > YMAX - SAFETY_MARGIN - 0.05 && direction == 1)
+
+	if (current_position.y > y_sub_max - 0.05 && direction == 1)
 	{
 		goal_position.x = current_position.x + x_step;
 		direction = -1;
 	}
-	if (current_position.y < YMIN + SAFETY_MARGIN + 0.1 && direction == -1)
+	if (current_position.y < y_sub_min + 0.1 && direction == -1)
 	{
 		goal_position.x = current_position.x + x_step;
 		direction = 1;
@@ -196,6 +212,10 @@ void PathPlanner::lawnmower_planning()
 		FSM.state = STATE_FINISHED;
 		printf("FINISHED \n");
 	}
+
+	if (goal_position.x > XMAX + margin) {
+        reach_end_of_fix_path = true;
+    }
 }
 
 void PathPlanner::calculate_information_gain()

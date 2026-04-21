@@ -612,12 +612,12 @@ void cleaning_up(){
     udp_msg_clean_up();
     odorboard_pump_speed_set(0, 1024);
     //exit Cortex
-    int retval = RC_Okay;
-    void *pResponse;
-    int nBytes;
-    printf("*** Paused live mode ***\n");
-    retval = Cortex_Request("Pause", &pResponse, &nBytes);
-    printf("****** Cortex_Exit ******\n");
+    // int retval = RC_Okay;
+    // void *pResponse;
+    // int nBytes;
+    // printf("*** Paused live mode ***\n");
+    // retval = Cortex_Request("Pause", &pResponse, &nBytes);
+    // printf("****** Cortex_Exit ******\n");
     // retval = Cortex_Exit();
 }
 

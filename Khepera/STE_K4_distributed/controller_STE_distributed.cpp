@@ -1209,6 +1209,10 @@ bool check_stop_condition()
 		if (FSM.n_cycles == MAX_ITER){
 			is_stop_condition_reached = true;
 		}
+	} else if (simulation_parameters.stopCondition == END_OF_FIX_PATH){
+		if (path_planner.reach_end_of_fix_path){
+			is_stop_condition_reached = true;
+		}
 	}
 	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	//fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
