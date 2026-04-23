@@ -2,12 +2,6 @@
 #define SIMULATION_PARAMETER_H
 
 
-typedef enum scenario{
-	NO_COM_NO_COOR = 0,
-	COM_NO_COOR = 1,
-	COM_COOR = 2,
-} eScenario;
-
 typedef enum evaluationMethod{
 	MCMC = 0,
 	EXHAUSTIVE = 1,
@@ -200,7 +194,6 @@ class SimulationParameters{
 		float wind_belief_weight;
 
 		eEvaluationMethod BayesianModelingMethod;
-		eScenario scenario; 
 		eSamplingMode samplingMode; 
 		eProcessingMode processingMode; 
 		eGasSensor gasSensor; 

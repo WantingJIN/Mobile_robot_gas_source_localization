@@ -19,7 +19,6 @@ simulation:
 # --- Robot ---
 robot:
   number_of_robots: 3
-  scenario: NO_COM_NO_COOR          # NO_COM_NO_COOR | COM_NO_COOR | COM_COOR
   vel_factor: 1.0
 
 # --- Sensing ---
@@ -34,6 +33,8 @@ sensing:
   processingMode: NO_PROCESSING     # NO_PROCESSING | KERNEL_MAPPING | DECONVOLUTION | MAPPING_AND_DECONVOLUTION
   gasSensor: MOX                    # PID | MOX | NOISY_MOX | SLOW_MOX | VERY_SLOW_MOX | NOISY_SLOW_MOX | NOISY_VERY_SLOW_MOX
   calibrationMode: OFF              # OFF | LINEAR | NOLINEAR
+  NOLINEAR:                         # sub-params: active when calibrationMode = NOLINEAR
+    R0: 100
 
 # --- Gas Feature Extraction ---
 gas_feature:
@@ -41,11 +42,27 @@ gas_feature:
 
   RELATIVE_VALUE:                   # sub-params: active when gasFeature = RELATIVE_VALUE
     relativeMethod: Z_SCORE         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
+    # likelihoodSigma is read from the active relativeMethod sub-block below
+    NORMALIZATION:
+      likelihoodSigma: 1.0
+    Z_SCORE:
+      likelihoodSigma: 3.5
+    EMPIRICAL_CDF:
+      likelihoodSigma: 0.48
+    EMPIRICAL_CDF_AND_SLOPE:
+      likelihoodSigma: 0.48
+    EMPIRICAL_CDF_NUM:
+      likelihoodSigma: 0.48
+    # Note: Gaussian CDF interpretation of NORMALIZATION uses likelihoodSigma: 0.22
 
   GASHIT:                           # sub-params: active when gasFeature = GASHIT
     gasHitMethod: FIXED_THRES_NUM   # FIXED_THRES | FIXED_THRES_NUM | MIN_MAX_THRES | SLIDING_WINDOW_THRES | SLIDING_WINDOW_THRES_NUM
     FIXED_THRES:                    # sub-params: active when gasHitMethod = FIXED_THRES or FIXED_THRES_NUM
       gasHitThres: 1000
+    SLIDING_WINDOW_THRES:           # sub-params: active when gasHitMethod = SLIDING_WINDOW_THRES
+      lambda: 0.7
+    SLIDING_WINDOW_THRES_NUM:       # sub-params: active when gasHitMethod = SLIDING_WINDOW_THRES_NUM
+      lambda: 0.7
 
 # --- Bayesian Source Estimation ---
 bayesian_estimation:
@@ -53,9 +70,6 @@ bayesian_estimation:
   MCMC:                               # sub-params: active when BayesianModelingMethod = MCMC
     MCMC_iteration_num: 1000
   likelihood_error: 3000
-  R0: 100
-  likelihoodSigma: 3.5
-  lambda: 0.7
 
 # --- Plume Model ---
 plume_model:
@@ -93,7 +107,10 @@ planning:
 # --- Team Coordination ---
 team:
   teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED | CENTRALIZED
-  stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD
   updateGoalPolicy: GOAL_REACHED    # GOAL_REACHED | FIXED_FREQ | BELIEF_DIFF
   FIXED_FREQ:                       # sub-params: active when updateGoalPolicy = FIXED_FREQ
     updateGoalTime: 5
+
+# --- Termination ---
+termination:
+  stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD

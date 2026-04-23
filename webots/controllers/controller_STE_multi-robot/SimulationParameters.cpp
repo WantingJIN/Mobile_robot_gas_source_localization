@@ -7,17 +7,6 @@
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
-eScenario parse_scenario(const char *str)
-{
-	if (strcmp(str, "NO_COM_NO_COOR") == 0)
-		return NO_COM_NO_COOR;
-	if (strcmp(str, "COM_NO_COOR") == 0)
-		return COM_NO_COOR;
-	if (strcmp(str, "COM_COOR") == 0)
-		return COM_COOR;
-	fprintf(stderr, "Unknown scenario: %s\n", str);
-	exit(1);
-}
 eEvaluationMethod parse_evaluation_method(const char *str)
 {
 	if (strcmp(str, "MCMC") == 0)
@@ -282,7 +271,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	{
 		auto n = config["robot"];
 		number_of_robots = n["number_of_robots"].as<int>();
-		scenario         = parse_scenario(n["scenario"].as<std::string>().c_str());
 		vel_factor       = n["vel_factor"].as<float>();
 	}
 
@@ -301,6 +289,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			sampling_period      = s["sampling_period"].as<int>();
 			sampling_dist_thresh = s["sampling_dist_thresh"].as<float>();
 		}
+
+		// NOLINEAR sub-params
+		if (calibrationMode == NOLINEAR && n["NOLINEAR"]) {
+			R0 = n["NOLINEAR"]["R0"].as<float>();
+		}
 	}
 
 	// --- gas_feature ---
@@ -310,8 +303,13 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 
 		// RELATIVE_VALUE sub-params
 		if (gasFeature == RELATIVE_VALUE && n["RELATIVE_VALUE"]) {
-			relativeMethod = parse_relative_method(
-				n["RELATIVE_VALUE"]["relativeMethod"].as<std::string>().c_str());
+			auto rv = n["RELATIVE_VALUE"];
+			std::string rmStr = rv["relativeMethod"].as<std::string>();
+			relativeMethod = parse_relative_method(rmStr.c_str());
+			// likelihoodSigma is nested under the active relativeMethod
+			if (rv[rmStr] && rv[rmStr]["likelihoodSigma"]) {
+				likelihoodSigma = rv[rmStr]["likelihoodSigma"].as<float>();
+			}
 		}
 
 		// GASHIT sub-params
@@ -321,6 +319,13 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			// threshold is shared by FIXED_THRES and FIXED_THRES_NUM
 			if ((gasHitMethod == FIXED_THRES || gasHitMethod == FIXED_THRES_NUM) && gh["FIXED_THRES"]) {
 				gas_hit_threshold = gh["FIXED_THRES"]["gasHitThres"].as<int>();
+			}
+			// lambda is shared by SLIDING_WINDOW_THRES and SLIDING_WINDOW_THRES_NUM
+			if (gasHitMethod == SLIDING_WINDOW_THRES && gh["SLIDING_WINDOW_THRES"]) {
+				lambda = gh["SLIDING_WINDOW_THRES"]["lambda"].as<float>();
+			}
+			if (gasHitMethod == SLIDING_WINDOW_THRES_NUM && gh["SLIDING_WINDOW_THRES_NUM"]) {
+				lambda = gh["SLIDING_WINDOW_THRES_NUM"]["lambda"].as<float>();
 			}
 		}
 	}
@@ -337,9 +342,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		}
 
 		likelihood_error = n["likelihood_error"].as<float>();
-		R0               = n["R0"].as<float>();
-		likelihoodSigma  = n["likelihoodSigma"].as<float>();
-		lambda           = n["lambda"].as<float>();
 	}
 
 	// --- plume_model ---
@@ -395,14 +397,19 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	// --- team ---
 	{
 		auto n = config["team"];
-		teamStrategy   = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
-		stopCondition  = parse_stop_condition(n["stopCondition"].as<std::string>().c_str());
+		teamStrategy     = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
 		updateGoalPolicy = parse_update_goal_policy(n["updateGoalPolicy"].as<std::string>().c_str());
 
 		// FIXED_FREQ sub-params
 		if (updateGoalPolicy == FIXED_FREQ && n["FIXED_FREQ"]) {
 			update_goal_time = n["FIXED_FREQ"]["updateGoalTime"].as<int>();
 		}
+	}
+
+	// --- termination ---
+	{
+		auto n = config["termination"];
+		stopCondition = parse_stop_condition(n["stopCondition"].as<std::string>().c_str());
 	}
 }
 
@@ -417,7 +424,7 @@ void SimulationParameters::read_mapID_from_file()
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");
 		ok = fscanf(sim_param_file, "%d", &map_nbr);
 		if (ok)
-			printf("scenario : %d\n", map_nbr);
+			printf("map ID : %d\n", map_nbr);
 		fclose(sim_param_file);
 	}
 }
@@ -432,7 +439,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);
 	fprintf(sim_param_file, "BayesianModelingMethod %d\n", BayesianModelingMethod);
 	fprintf(sim_param_file, "number_of_robots %d\n", number_of_robots);
-	fprintf(sim_param_file, "scenario %d\n", scenario);
 	fprintf(sim_param_file, "map_nbr %d\n", map_nbr);
 	fprintf(sim_param_file, "sampling_mode %d\n", samplingMode);
 	fprintf(sim_param_file, "data_processing_mode %d\n", processingMode);

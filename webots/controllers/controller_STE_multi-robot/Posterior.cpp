@@ -466,7 +466,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		char gas_concentration_map_each_cycle_logfile_name[600];
 		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
 		iter ++;
-		model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
+		//model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{

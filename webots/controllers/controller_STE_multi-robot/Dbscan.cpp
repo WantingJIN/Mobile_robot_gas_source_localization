@@ -70,28 +70,6 @@ void DBSCAN::expandCluster(CellPoint &cell, vector<int> &neighbors, int clusterI
 			}
 		}
 	}
-	//printf("Exit expandCluster \n");
-	// std::stack<CellMeasurements> stack;
-	// stack.push(cell);
-	// cell.cluster_id = clusterId;
-
-	// while (!stack.empty()) {
-	//     CellMeasurements currentPoint = stack.top();
-	//     stack.pop();
-
-	//     // Find neighbors of the current point
-	//     std::vector<CellMeasurements> currentNeighbors = findNeighbors(currentPoint, cell_list);
-
-	//     // Check if the current point is a core point
-	//     if (currentNeighbors.size() >= minPoints) {
-	//         for (auto & neighbor : currentNeighbors) {
-	//             if (neighbor.cluster_id == -1) {
-	//                 neighbor.cluster_id = clusterId;
-	//                 stack.push(neighbor);
-	//             }
-	//         }
-	//     }
-	// }
 }
 
 void DBSCAN::run(double *information)
@@ -109,9 +87,7 @@ void DBSCAN::run(double *information)
 			min_info = information[i];
 		}
 	}
-	// fprintf(console_logfile, "threshold is : %f \n", ratio * (max_info - min_info) + min_info);
-	// fprintf(console_logfile, "max_info : %f , min_info: %f\n", max_info, min_info);
-	// fprintf(console_logfile, "ratio : %f\n", ratio);
+
 	// first fill y then fill x
 	for (int j = 0; j < source_y_nbins; j++)
 	{

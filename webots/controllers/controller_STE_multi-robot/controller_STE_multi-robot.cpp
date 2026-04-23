@@ -601,13 +601,6 @@ void state_measuring()
 		printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 	log_position();
 
-	// // send it to friends
-	// if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
-	// {
-	// 	Message msg(ID, 1, history.position[(history.size) - 1], sampleBuffer.average_concentration, goal_position, 0);
-	// 	send_msg(msg);
-	// }
-
 	// go to estimation
 	FSM.state = STATE_ESTIMATING;
 	FSM.hook = state_estimating;
@@ -660,10 +653,9 @@ void state_estimating()
 	// 	printf("[%d] entropy : %f\n", ID, posterior.entropy);
 
 	long long current_estimation_time = current_timestamp() - time_before_estimating;
-	// printf("Current estimation time is : %lld\n", current_estimation_time);
 
 	estimating_time_sum += current_estimation_time;
-	// printf("estimating_time_sum : %lld\n", estimating_time_sum);
+
 
 	// check if stopping condition is reached
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
@@ -801,13 +793,6 @@ void state_updategoal()
 	}
 	if (FSM.state != STATE_FINISHED)
 	{
-		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-		// {
-		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		// 	random_planning();
-		// }
 		if (use_visibility_path)
 		{
 
@@ -863,12 +848,6 @@ void state_moving()
 	if (!entered_state_moving)
 	{
 		printf("Robot ID [%d]: STATE_MOVING \n", ID);
-
-		// this one doesnt make sense because it enters again in state_moving quite fast (0.288 sec) but forces waiting for n_iter=frequency or distance to the goal < 0.05
-		// double time_now = wb_robot_get_time();
-		// double time_between_movements = time_now - time_after_moving;
-		// printf("Robot ID [%d]: Time outside STATE_MOVING: %f seconds\n", ID, time_between_movements);
-
 		entered_state_moving = true;
 	}
 
@@ -985,13 +964,6 @@ void state_send_goal()
 
 	if (FSM.state != STATE_FINISHED)
 	{
-		// The goal position is very close to current postion, swith to random planning
-		// if (current_position.dist_to_goal(goal_position) <= std::max(0.05, static_cast<double>(simulation_parameters.sampling_dist_thresh)))
-		// {
-		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		// 	random_planning();
-		// }
 
 		// goal position for Robot [101]
 		goal_position = goal_position_team[0];
@@ -1533,34 +1505,6 @@ int main(int argc, char **argv)
 		if (simulation_parameters.simuMode == ONLINE)
 		{
 			update_position();
-		}
-		// if we are not stopped to sample, let's log the trajectory
-		/*if(speed[0]!=0 && speed[1]!=0){
-			log_trajectory();
-		}*/
-		// send info (current position and goal position) to friends for joint planning
-		if (simulation_parameters.scenario == COM_COOR)
-		{
-			// //if a robot is already sampling (i.e. STATE_MEASURING), its goal should not be swapped with anyone. Therefore we send 0 as goal and current position
-			if (FSM.state == STATE_MEASURING)
-			{
-				Position tmp;
-				Message msg(ID, 1, tmp, sampleBuffer.average_concentration, tmp, 1);
-				send_msg(msg);
-			}
-			else
-			{
-				Message msg(ID, 1, current_position, sampleBuffer.average_concentration, goal_position, 1);
-				// printf("[%d] I am sendig my position %f %f %f and my goal %f %f %f\n", msg.sender_ID, msg.position[0],msg.position[1], msg.position[2], msg.goal[0],msg.goal[1],msg.goal[2]);
-				send_msg(msg);
-			}
-		}
-		// receive info from colleagues for joint planning and history
-		if (simulation_parameters.scenario == COM_NO_COOR || simulation_parameters.scenario == COM_COOR)
-		{
-			// printf("Robot %d has %d unread messages! \n", ID, wb_receiver_get_queue_length(receiver));
-			receive_from_friends();
-			// printf("[%d] my history size is %d\n", ID, history.size);
 		}
 		// change state
 		FSM.hook();
