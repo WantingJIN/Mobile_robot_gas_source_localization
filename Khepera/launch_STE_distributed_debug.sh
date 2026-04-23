@@ -1,9 +1,11 @@
 #!/bin/bash
 # NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
-ID_list=(102 106)
+ID_list=(102 105 103)
+source_position="11 3"
 session_name="robots_view"
 config_file="$STE_DDPM_ROOT/Khepera/Data/config.txt"
+source_position_file="$STE_DDPM_ROOT/Khepera/Data/source_position.txt"
 binary_path="$STE_DDPM_ROOT/Khepera/STE_K4_distributed/STE_K4_distributed"
 STE_DDPM_ROOT=${STE_DDPM_ROOT:-/your/path/to/project/root}  # Set default if not defined
 # ---------------------------------------- #
@@ -12,6 +14,10 @@ STE_DDPM_ROOT=${STE_DDPM_ROOT:-/your/path/to/project/root}  # Set default if not
 ID_list_str=$(IFS=,; echo "${ID_list[*]}")
 sed -i -E "s/^ID_list *= *.*/ID_list = $ID_list_str/" "$config_file"
 echo "✅ Updated config.txt with ID_list=$ID_list_str"
+
+# Write source position to file
+echo "$source_position" > "$source_position_file"
+echo "✅ Updated source_position.txt with source_position=$source_position"
 
 # Build the executable
 cd "$STE_DDPM_ROOT/Khepera/STE_K4_distributed" || exit 1

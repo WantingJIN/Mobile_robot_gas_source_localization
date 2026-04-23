@@ -346,20 +346,43 @@ void log_entropy()
 }
 
 void log_history(){
-	// position
-	//FILE* position_history_logfile;
-	position_history_logfile = fopen(position_history_logfile_name, "w");
-	for (int i = 0; i < history.size; i++){
-		fprintf(position_history_logfile,"%d, %f, %f, %f\n", i, history.position[i].x,history.position[i].y,history.position[i].heading);
+	static int logged_history_size = 0;
+
+	if (logged_history_size > history.size)
+		logged_history_size = 0;
+
+	if (logged_history_size == 0){
+		position_history_logfile = fopen(position_history_logfile_name, "w");
+		if (position_history_logfile != NULL)
+			fclose(position_history_logfile);
+
+		measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
+		if (measurement_history_logfile != NULL)
+			fclose(measurement_history_logfile);
 	}
+
+	if (logged_history_size >= history.size)
+		return;
+
+	position_history_logfile = fopen(position_history_logfile_name, "a");
+	measurement_history_logfile = fopen(measurement_history_logfile_name, "a");
+
+	if (position_history_logfile == NULL || measurement_history_logfile == NULL){
+		if (position_history_logfile != NULL)
+			fclose(position_history_logfile);
+		if (measurement_history_logfile != NULL)
+			fclose(measurement_history_logfile);
+		return;
+	}
+
+	for (int i = logged_history_size; i < history.size; i++){
+		fprintf(position_history_logfile, "%d, %f, %f, %f\n", i, history.position[i].x, history.position[i].y, history.position[i].heading);
+		fprintf(measurement_history_logfile, "%d, %f, %f, %f, %f\n", i, history.gas_meas_avg[i], history.gas_meas_std[i], history.wind_intensity[i], history.wind_angle[i]);
+	}
+
 	fclose(position_history_logfile);
-	// measurement
-	//FILE * measurement_history_logfile;
-	measurement_history_logfile = fopen(measurement_history_logfile_name, "w");
-	for (int i = 0; i < history.size; i++){
-		fprintf(measurement_history_logfile,"%d, %f, %f, %f, %f\n", i, history.gas_meas_avg[i], history.gas_meas_std[i], history.wind_intensity[i], history.wind_angle[i]);
-	}
-    	fclose(measurement_history_logfile);
+	fclose(measurement_history_logfile);
+	logged_history_size = history.size;
    
 	//posterior 3D
 	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
@@ -766,6 +789,7 @@ void state_moving(){
 
 				      last_measurement_pos.x = current_position.x;
 				      last_measurement_pos.y = current_position.y;
+					  //printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
 				}
 				
 			//}
@@ -1181,6 +1205,14 @@ bool check_stop_condition()
 		if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
 			is_stop_condition_reached = true;
 		}
+	} else if (simulation_parameters.stopCondition == ITERATION_ONLY){
+		if (FSM.n_cycles == MAX_ITER){
+			is_stop_condition_reached = true;
+		}
+	} else if (simulation_parameters.stopCondition == END_OF_FIX_PATH){
+		if (path_planner.reach_end_of_fix_path){
+			is_stop_condition_reached = true;
+		}
 	}
 	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
 	//fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
@@ -1229,12 +1261,12 @@ int main(int argc, char **argv){
 		update_position();
 	   	//change state
 		FSM.hook();
+		log_history();
 		//next
 		next_iteration_time();
 		n_time_step++;
 	}
-	// final logs
-	log_history();
+	// final logs are written incrementally during each iteration
 	cleaning_up();
 	//free the allocated memory to obstacle array
 	for(int i = 0; i < nbr_obs; i++)

@@ -79,6 +79,7 @@ public:
     void KLD_distance_balance();
     void goal_outside_obstacles(Position *goal);
     vector<pair<CellPoint, CellPoint>> clustering_information_blocks(float information_map[]);
+    bool reach_end_of_fix_path;
 
 };
 

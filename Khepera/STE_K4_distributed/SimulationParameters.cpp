@@ -197,6 +197,8 @@ eStopCondition parse_stop_condition(const char* str) {
 	if (strcmp(str, "ENTROPY_ONLY") == 0) return ENTROPY_ONLY;
 	if (strcmp(str, "SPREAD_ONLY") == 0) return SPREAD_ONLY;
 	if (strcmp(str, "ENTROPY_SPREAD") == 0) return ENTROPY_SPREAD;
+	if (strcmp(str, "ITERATION_ONLY") == 0) return ITERATION_ONLY;
+	if (strcmp(str, "END_OF_FIX_PATH") == 0) return END_OF_FIX_PATH;
 	fprintf(stderr, "Unknown stop condition: %s\n", str);
 	exit(1);
 }

@@ -11,6 +11,7 @@ cleanup() {
         (
             ssh root@192.168.1.$ID 'pkill -f STE_K4_distributed'
             ssh root@192.168.1.$ID './motor_stop'   
+            ssh root@192.168.1.$ID './odorboard_pump_speed 0 1024'
         ) &
     done
     wait

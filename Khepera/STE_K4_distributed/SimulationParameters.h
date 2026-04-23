@@ -130,6 +130,8 @@ typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
 	SPREAD_ONLY = 1,
 	ENTROPY_SPREAD = 2,
+	ITERATION_ONLY = 3,
+	END_OF_FIX_PATH = 4,
 } eStopCondition;
 
 typedef enum updataGoalPolicy{
@@ -188,7 +190,7 @@ class SimulationParameters{
 		eGasHitMethod gasHitMethod;
 		eTeamStrategy teamStrategy;
 
-	      eScoreFun scoreFun;
+	    eScoreFun scoreFun;
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;

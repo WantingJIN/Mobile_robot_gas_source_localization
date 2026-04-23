@@ -13,9 +13,6 @@ static int broadcastR = 1;
 void init(){
 	if(VERBOSE) printf("initialization\n");
 	
-	// seed the RNG
-	srand(time(NULL));
-	
 	//robot
 	khepera4_init();
 
@@ -29,6 +26,9 @@ void init(){
 		if(ok) printf("My ID is %d\n", ID);
 		fclose(ID_file);
 	}
+	
+	// seed the RNG with both time and robot ID to ensure different sequences across robots
+	srand(time(NULL) + ID);
      	//printf("My ID is %d\n", ID);
 
 	// Initialise motors
@@ -81,7 +81,6 @@ void init(){
     // load the simulation parameters
     simulation_parameters.load_simulation_parameters_from_config("/home/root/wanting/config.txt");
     simulation_parameters.read_mapID_from_file();
-    //simulation_parameters = (struct simulation_parameters) {775, 0.5, 100, 1, 1, 0, 0, CONTINOUS_SAMPLING, NO_PROCESSING, OFF, 8, 400, 0.1};
 
 	//read simulation parameters
 	FILE* sim_param_file;
@@ -373,7 +372,7 @@ void updateCortexPos(Position * position){
             position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
             //while (position[2] > 2*PI) current_position[2] -= 2.0*PI;
             //while (position[2] < 0   ) current_position[2] += 2.0*PI;
-            //printf("current_position - x: %f - y: %f - o3: %f\n", current_position[0], current_position[1], current_position[2]);
+            //printf("current_position - x: %f - y: %f - o3: %f\n", position->x, position->y, position->heading);
         }
     }
 }
@@ -394,8 +393,9 @@ int obstacle_or_not(){
 	for (int i = 1; i < SENSOR_NUMBER-2; i++){
 		sensors_value[i] = khepera4.infrared_proximity.sensor[i];
 		//if one of the sensors detect something, then obstacle
-		if(sensors_value[i] > 100){
-			//printf("obstacle detected..!!!!!\n");
+		if(sensors_value[i] > 200){
+            printf("sensor %d value : %f\n", i, sensors_value[i]);
+			printf("obstacle detected..!!!!!\n");
 			return 1;
 		}
 	}
@@ -515,7 +515,11 @@ void go_to_goal(Position goal){
     movement[1] = (goal.y - current_position.y);
 
     float dist = sqrt(pow(movement[0],2)+pow(movement[1],2));
-    
+    // if (dist < 0.01f) {
+    //     speed[0] = 0;
+    //     speed[1] = 0;
+    //     return;
+    // }
     movement[0] = movement[0]/dist;
     movement[1] = movement[1]/dist;
 
@@ -608,12 +612,12 @@ void cleaning_up(){
     udp_msg_clean_up();
     odorboard_pump_speed_set(0, 1024);
     //exit Cortex
-    int retval = RC_Okay;
-    void *pResponse;
-    int nBytes;
-    printf("*** Paused live mode ***\n");
-    retval = Cortex_Request("Pause", &pResponse, &nBytes);
-    printf("****** Cortex_Exit ******\n");
+    // int retval = RC_Okay;
+    // void *pResponse;
+    // int nBytes;
+    // printf("*** Paused live mode ***\n");
+    // retval = Cortex_Request("Pause", &pResponse, &nBytes);
+    // printf("****** Cortex_Exit ******\n");
     // retval = Cortex_Exit();
 }
 
@@ -673,8 +677,8 @@ void braitenberg_run(struct sBraitenberg *braitenberg) {
     }
 
     // Shift to be in the right order of magnitude
-    speed_left = speed_left / 10;
-    speed_right = speed_right / 10;
+    speed_left = speed_left / 5;
+    speed_right = speed_right / 5;
 
     // Add the bias speed
     speed_left += braitenberg->speed.left;
