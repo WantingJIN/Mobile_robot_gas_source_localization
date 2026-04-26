@@ -73,13 +73,13 @@ bayesian_estimation:
 
 # --- Plume Model ---
 plume_model:
-  plumeModel: FDM_PDE               # GAUSSIAN_PLUME | DDPM | FDM_PDE
+  plumeModel: DDPM               # GAUSSIAN_PLUME | DDPM | FDM_PDE
   FDM_PDE:                          # sub-params: active when plumeModel = FDM_PDE
     diffCoefficient: 0.008
 
 # --- Wind Estimation ---
 wind:
-  windInfo: WIND_ONLINE             # WIND_OFFLINE | WIND_ONLINE
+  windInfo: WIND_OFFLINE             # WIND_OFFLINE | WIND_ONLINE
   windEstimationMethod: GAUSSIAN_KERNEL  # GROUND_TRUTH | GAUSSIAN_KERNEL | BASEFLOW_CORRECTION
   estimationScale: GLOBAL           # LOCAL | GLOBAL
   modelUncertainty: DYNAMIC_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
@@ -88,7 +88,7 @@ wind:
 
 # --- Path Planning ---
 planning:
-  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
+  planningStrategy: RANDOM  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
                                        # BELIEF_CLUSTERING | INFORMATIVE_KLD | INFO_CLUSTERING |
                                        # WEIGHTED_CLUSTERING | SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
   visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
@@ -106,7 +106,7 @@ planning:
 
 # --- Team Coordination ---
 team:
-  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED | CENTRALIZED
+  teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED | CENTRALIZED
   updateGoalPolicy: GOAL_REACHED    # GOAL_REACHED | FIXED_FREQ | BELIEF_DIFF
   FIXED_FREQ:                       # sub-params: active when updateGoalPolicy = FIXED_FREQ
     updateGoalTime: 5

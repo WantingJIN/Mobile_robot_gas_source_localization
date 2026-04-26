@@ -26,7 +26,7 @@ set_yaml_value() {
 # ---------------------------------------------------------------------------
 # Source position bounds (used when no source_locations file exists)
 # ---------------------------------------------------------------------------
-nbr_source_pos=30
+nbr_source_pos=10
 source_pos_y_min=0.5
 source_pos_y_max=3.5
 source_pos_x_min=3.2

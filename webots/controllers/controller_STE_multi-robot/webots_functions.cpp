@@ -23,15 +23,15 @@ void init()
 
 	start_time = current_timestamp();
 
-	// seed the RNG
-	srand(time(NULL));
-
 	// robot
 	wb_robot_init();
 	khepera4_drive_init();
 	const char *ID_char = wb_robot_get_name();
 	ID = atoi(ID_char);
 	self_index = ID - 101;
+
+	// seed the RNG with both time and robot ID to ensure different sequences across robots
+	srand(time(NULL) + ID);
 
 	// odor and wind sensors
 	char tag_name[256];
