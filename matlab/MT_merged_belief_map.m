@@ -1,5 +1,5 @@
 % === Base experiment path (we assume only one subfolder) ===
-base_path = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/cluster_analysis';
+base_path = '/home/wjin/Workspace/Multi-robot_GSL/Results/Multi-GSL/REGION_GROWING_D/9';
 d = dir(base_path);
 subfolder = d([d.isdir] & ~startsWith({d.name}, '.'));  % filter out hidden/system folders
 
@@ -7,7 +7,7 @@ if isempty(subfolder)
     error('No subfolder found inside cluster_analysis');
 end
 
-exp_folder = fullfile(base_path, subfolder(1).name);  % full path to experiment folder
+exp_folder = fullfile(base_path, subfolder(3).name);  % full path to experiment folder
 
 % === Visualization speed settings ===
 show_cell_indices = false;
@@ -162,7 +162,7 @@ end
 
 
 % === Create video writer object ===
-output_video_path = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/videos/animation.avi';
+output_video_path = [base_path '/animation.avi'];
 v = VideoWriter(output_video_path, 'Motion JPEG AVI');
 v.FrameRate = video_repr_vel;
 open(v);

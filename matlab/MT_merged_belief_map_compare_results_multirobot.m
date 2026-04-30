@@ -4,9 +4,9 @@ clear all; clc; close all;
 dataTable = table();
 
 % Rutas
-general_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/';
-dispatched_folder = fullfile(general_folder, 'test');
-dispatched_folder_map = fullfile(general_folder, 'test/9');
+general_folder = '/home/wjin/Workspace/Multi-robot_GSL/Results';
+dispatched_folder = fullfile(general_folder, 'Multi-GSL/REGION_GROWING_2D_BALANCED_center_different_MOX');
+% dispatched_folder_map = fullfile(general_folder, 'Multi-GSL/REGION_GROWING_2D_BALANCED_center/9');
 folder_list = dir(general_folder);
 folder_list = folder_list([folder_list.isdir]); % Solo carpetas
 
@@ -171,7 +171,7 @@ for i = 1:numExperiments
     % Etiquetas
     sampling_modes = ["sense in motion", "stop sense go", "visit sense go"];
     planning_modes = ["greedy","", "", "", "", "belief clustering", "informative kld"];
-    sensor_modes = ["PID", "MOX"];
+    sensor_modes = ["PID", "MOX","NOISY_MOX", "SLOW_MOX","VERY_SLOW_MOX"];
     
     sampling_mode = sampling_modes(params.sampling_mode + 1);
     planning_mode = 13;
@@ -193,7 +193,7 @@ for i = 1:numExperiments
 end
 
 % Guardar CSV
-csv_path = fullfile(dispatched_folder_map, 'experiment_data.csv');
+csv_path = fullfile(dispatched_folder, 'experiment_data.csv');
 writetable(dataTable, csv_path);
 disp(['Datos exportados a: ', csv_path]);
 
@@ -289,4 +289,4 @@ annotation(f, 'textbox', [0 0.015 1 0.04], ...
 
 
 %% Guardar figura
-saveas(f, fullfile(dispatched_folder_map, 'results_boxplot.png'));
+saveas(f, fullfile(dispatched_folder, 'results_boxplot.png'));

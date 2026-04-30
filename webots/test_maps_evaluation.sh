@@ -1,3 +1,4 @@
+#!/bin/bash
 now=$(date +"%T")
 echo "Start time : $now"
 
@@ -13,7 +14,7 @@ config_file="../webots/data/config.txt"
 s=0
 echo $s > $MCMC_exhaustive_filename
 
-nbr_source_pos=30
+nbr_source_pos=20
 # source_pos_x=12.7   # default: 12.7
 source_pos_y_min=0.5
 source_pos_y_max=3.5
@@ -44,7 +45,7 @@ sigma=0.4 #noise level for the STE likelihood
 for r in 53 #53 #200 #10 30 53 80 200 #10 53 200 #53 #10 53 200 # 10 120 200 30 53 80 # default release amount 53
 do
 	echo $r > $rr_filename
-	for m in 0 #5 #1 2 3 5 10 #0 1  
+	for m in 1 5 9 #5 #1 2 3 5 10 #0 1  
 	do
 		echo $m > $map_nbr_filename
 		# for likelihood in 2000 3000

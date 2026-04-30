@@ -206,6 +206,8 @@ eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
 	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
 	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
 	if (strcmp(str, "NONE") == 0) return NONE;
+	if (strcmp(str, "PATH_CLUSTER") == 0) return PATH_CLUSTER;
+	if (strcmp(str, "VORONOI_REPAIR") == 0) return VORONOI_REPAIR;
 	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }

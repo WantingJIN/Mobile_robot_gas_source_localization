@@ -1255,9 +1255,16 @@ void clusterize_belief_map_obstacle_dist_LLOYD(const std::vector<int>& selected_
     const int K = simulation_parameters.number_of_robots;
     const int max_iterations = 10;
 
+    // Seeds: top-K cells by probability.
+    std::vector<std::pair<double, int>> top_cells_lloyd;
+    for (int i = 0; i < x_nbins * y_nbins; ++i)
+        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize)
+            top_cells_lloyd.emplace_back(posterior.pdf[i], i);
+    std::sort(top_cells_lloyd.begin(), top_cells_lloyd.end(), std::greater<>());
+
     std::vector<std::pair<int, int>> seeds(K);
-    for (int i = 0; i < K; ++i)
-        index_to_xy(selected_indices[i], seeds[i].first, seeds[i].second);
+    for (int i = 0; i < K && i < (int)top_cells_lloyd.size(); ++i)
+        index_to_xy(top_cells_lloyd[i].second, seeds[i].first, seeds[i].second);
 
     // Distance maps (considering obstacles)
     std::vector<std::vector<double>> dist_map(K, std::vector<double>(x_nbins * y_nbins, std::numeric_limits<double>::max()));
@@ -1418,53 +1425,64 @@ void clusterize_belief_map_obstacle_dist_LLOYD(const std::vector<int>& selected_
         log_posterior_pdf_3d_cluster_lloyd(belief_clusters);
     }
 
+    // Optimal robot-to-cluster assignment: minimise total distance robot → cluster centroid.
+    // seeds[k] after Lloyd is the centroid of cluster k.
+    std::vector<int> perm(K);
+    std::iota(perm.begin(), perm.end(), 0);
+    std::vector<int> best_perm = perm;
+    double best_cost = std::numeric_limits<double>::max();
+    do {
+        double cost = 0.0;
+        for (int k = 0; k < K; ++k) {
+            double cx = XMIN + (seeds[perm[k]].first  + 0.5) * (XMAX - XMIN) / x_nbins;
+            double cy = YMIN + (seeds[perm[k]].second + 0.5) * (YMAX - YMIN) / y_nbins;
+            double ddx = received_current_pos[k][0] - cx;
+            double ddy = received_current_pos[k][1] - cy;
+            cost += std::sqrt(ddx * ddx + ddy * ddy);
+        }
+        if (cost < best_cost) {
+            best_cost = cost;
+            best_perm = perm;
+        }
+    } while (std::next_permutation(perm.begin(), perm.end()));
+    // best_perm[k] = cluster index assigned to robot k
+
+    // Inverse permutation: inv_perm[cluster] = robot index
+    std::vector<int> inv_perm(K);
+    for (int k = 0; k < K; ++k) inv_perm[best_perm[k]] = k;
+
     // Cut Belief Map according to the assigned cluster
-	// Assign labels to the cells (clustering)
-	std::vector<int> cluster_sizes(simulation_parameters.number_of_robots, 0);
+    std::vector<int> cluster_sizes(K, 0);
     std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
     std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(x_nbins * y_nbins, 0));
 
     for (int i = 0; i < x_nbins * y_nbins; ++i) {
         if (posterior.pdf[i] <= simulation_parameters.epsilon_clusterize) continue;
         int cluster = cluster_assignments[i];
-        belief_clusters[i] = cluster + 1;
-        pdf_masks[cluster][i] = 1;
-		cluster_sizes[cluster]++;
+        int robot_k = inv_perm[cluster];
+        belief_clusters[i] = robot_k + 1;
+        pdf_masks[robot_k][i] = 1;
+        cluster_sizes[robot_k]++;
     }
 
-	log_cluster_sizes_geometric(cluster_sizes);
+    log_cluster_sizes_geometric(cluster_sizes);
     log_posterior_pdf_3d_cluster(belief_clusters);
 
-	// Bucle para procesar todos los clusters
-	std::vector<double> cluster_sizes_info(simulation_parameters.number_of_robots, 0.0);
+    std::vector<double> cluster_sizes_info(K, 0.0);
+    for (int k = 0; k < K; ++k)
+        for (int i = 0; i < x_nbins * y_nbins; ++i)
+            cluster_sizes_info[k] += posterior.pdf[i] * pdf_masks[k][i];
+    log_cluster_sizes_informative(cluster_sizes_info);
 
-	for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
-		double sum_prob = 0.0;
-
-		for (int i = 0; i < x_nbins * y_nbins; ++i) {
-			// Aplicar la máscara correspondiente al cluster k
-			double masked_value = posterior.pdf[i] * pdf_masks[k][i];
-
-			// Acumular la suma de probabilidades para este cluster
-			sum_prob += masked_value;
-		}
-
-		// Guardamos la suma de probabilidades en el vector
-		cluster_sizes_info[k] = sum_prob;
-	}
-	log_cluster_sizes_informative(cluster_sizes_info);
-
-		
     for (int k = 0; k < K; ++k) {
         if (ID == 101 + k) {
             for (int i = 0; i < x_nbins * y_nbins; ++i)
                 posterior.pdf[i] *= pdf_masks[k][i];
 
             double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
-            if (sum > 0.0) {
+            if (sum > 0.0)
                 for (int i = 0; i < x_nbins * y_nbins; ++i)
                     posterior.pdf[i] /= sum;
-            }
 
             printf("Robot ID [%d]: Sum of Lloyd-obstacle-aware pdf is %f \n", ID, sum);
         }
@@ -1472,178 +1490,667 @@ void clusterize_belief_map_obstacle_dist_LLOYD(const std::vector<int>& selected_
 
 }
 
+void clusterize_belief_map_obstacle_dist_VORONOI_REPAIR(const std::vector<int>& selected_indices)
+{
+    const int K = simulation_parameters.number_of_robots;
+    const int N = x_nbins * y_nbins;
+    const double INF = std::numeric_limits<double>::max();
+
+    // ---------------------------------------------------------------------
+    // STEP 0: Seeds = top-K cells by belief value
+    // ---------------------------------------------------------------------
+    std::vector<std::pair<double, int>> top_cells_voronoi;
+    for (int i = 0; i < N; ++i) {
+        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize &&
+            obstacle_map[i] == 0) {
+            top_cells_voronoi.emplace_back(posterior.pdf[i], i);
+        }
+    }
+
+    std::sort(top_cells_voronoi.begin(), top_cells_voronoi.end(), std::greater<>());
+
+    std::vector<std::pair<int, int>> seeds(K, {-1, -1});
+    std::vector<int> seed_indices(K, -1);
+
+    for (int k = 0; k < K && k < (int)top_cells_voronoi.size(); ++k) {
+        seed_indices[k] = top_cells_voronoi[k].second;
+        index_to_xy(seed_indices[k], seeds[k].first, seeds[k].second);
+    }
+
+    // If not enough valid seeds, stop safely.
+    for (int k = 0; k < K; ++k) {
+        if (seed_indices[k] < 0) {
+            printf("Robot ID [%d]: Not enough valid Voronoi seeds.\n", ID);
+            return;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // STEP 1: Convert obstacle map to 2D
+    // ---------------------------------------------------------------------
+    std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
+    for (int y = 0; y < y_nbins; ++y)
+        for (int x = 0; x < x_nbins; ++x)
+            obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
+
+    double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);
+    double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);
+
+    const std::vector<std::pair<int, int>> directions = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    };
+
+    // ---------------------------------------------------------------------
+    // STEP 2: Obstacle-aware distance maps from each seed
+    // Use Dijkstra, not FIFO queue, because diagonal/axis costs differ.
+    // ---------------------------------------------------------------------
+    std::vector<std::vector<double>> dist_map(
+        K, std::vector<double>(N, INF)
+    );
+
+    for (int k = 0; k < K; ++k) {
+        std::vector<double> local_dist(N, INF);
+
+        using Node = std::pair<double, int>; // distance, flat index
+        std::priority_queue<Node, std::vector<Node>, std::greater<Node>> pq;
+
+        int sx = seeds[k].first;
+        int sy = seeds[k].second;
+        int sidx = sy * x_nbins + sx;
+
+        local_dist[sidx] = 0.0;
+        pq.push({0.0, sidx});
+
+        while (!pq.empty()) {
+            auto [d, idx] = pq.top();
+            pq.pop();
+
+            if (d > local_dist[idx]) continue;
+
+            int x, y;
+            index_to_xy(idx, x, y);
+
+            for (const auto& [dx, dy] : directions) {
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                if (obstacle_map_2d[ny][nx] == 1) continue;
+
+                int nidx = ny * x_nbins + nx;
+
+                double step_cost = std::sqrt(
+                    std::pow(dx * cell_size_x, 2) +
+                    std::pow(dy * cell_size_y, 2)
+                );
+
+                if (local_dist[nidx] > d + step_cost) {
+                    local_dist[nidx] = d + step_cost;
+                    pq.push({local_dist[nidx], nidx});
+                }
+            }
+        }
+
+        dist_map[k] = local_dist;
+    }
+
+    // ---------------------------------------------------------------------
+    // STEP 3: Initial Voronoi assignment
+    // Each active cell goes to nearest seed.
+    // ---------------------------------------------------------------------
+    std::vector<int> cluster_assignments(N, -1);
+    std::vector<int> temp_cluster_sizes(K, 0);
+
+    for (int i = 0; i < N; ++i) {
+        if (posterior.pdf[i] <= simulation_parameters.epsilon_clusterize) continue;
+        if (obstacle_map[i] == 1) continue;
+
+        double best_dist = INF;
+        int best_k = -1;
+
+        for (int k = 0; k < K; ++k) {
+            double d = dist_map[k][i];
+
+            if (d < best_dist ||
+                (d == best_dist && best_k >= 0 &&
+                 temp_cluster_sizes[k] < temp_cluster_sizes[best_k])) {
+                best_dist = d;
+                best_k = k;
+            }
+        }
+
+        if (best_k >= 0 && best_dist < INF) {
+            cluster_assignments[i] = best_k;
+            temp_cluster_sizes[best_k]++;
+        }
+    }
+
+    // Force each seed to remain in its own cluster.
+    for (int k = 0; k < K; ++k) {
+        cluster_assignments[seed_indices[k]] = k;
+    }
+
+    // ---------------------------------------------------------------------
+    // STEP 4: Connectivity repair
+    //
+    // For each cluster:
+    // - Keep only the component connected to its seed.
+    // - Mark disconnected cells as orphans.
+    // Then reassign orphans to neighboring clusters when possible.
+    // ---------------------------------------------------------------------
+    std::vector<int> repaired_assignments = cluster_assignments;
+    std::vector<int> is_seed_component(N, 0);
+    std::vector<int> orphan_cells;
+
+    for (int k = 0; k < K; ++k) {
+        std::fill(is_seed_component.begin(), is_seed_component.end(), 0);
+
+        std::queue<int> q;
+        int sidx = seed_indices[k];
+
+        if (repaired_assignments[sidx] != k)
+            repaired_assignments[sidx] = k;
+
+        is_seed_component[sidx] = 1;
+        q.push(sidx);
+
+        while (!q.empty()) {
+            int idx = q.front();
+            q.pop();
+
+            int x, y;
+            index_to_xy(idx, x, y);
+
+            for (const auto& [dx, dy] : directions) {
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+
+                int nidx = ny * x_nbins + nx;
+                if (obstacle_map[nidx] == 1) continue;
+                if (posterior.pdf[nidx] <= simulation_parameters.epsilon_clusterize) continue;
+                if (repaired_assignments[nidx] != k) continue;
+                if (is_seed_component[nidx]) continue;
+
+                is_seed_component[nidx] = 1;
+                q.push(nidx);
+            }
+        }
+
+        for (int i = 0; i < N; ++i) {
+            if (repaired_assignments[i] == k && !is_seed_component[i]) {
+                repaired_assignments[i] = -2; // orphan
+                orphan_cells.push_back(i);
+            }
+        }
+    }
+
+    // Reassign orphan cells.
+    // Repeat because assigning one orphan may create a valid neighbor for another.
+    bool changed = true;
+    int repair_iter = 0;
+    const int max_repair_iter = N;
+
+    while (changed && repair_iter < max_repair_iter) {
+        changed = false;
+        repair_iter++;
+
+        for (int idx : orphan_cells) {
+            if (repaired_assignments[idx] != -2) continue;
+
+            int x, y;
+            index_to_xy(idx, x, y);
+
+            int best_k = -1;
+            double best_cost = INF;
+
+            for (const auto& [dx, dy] : directions) {
+                int nx = x + dx;
+                int ny = y + dy;
+
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+
+                int nidx = ny * x_nbins + nx;
+                int neighbor_k = repaired_assignments[nidx];
+
+                if (neighbor_k < 0 || neighbor_k >= K) continue;
+
+                double cost = dist_map[neighbor_k][idx];
+
+                if (cost < best_cost) {
+                    best_cost = cost;
+                    best_k = neighbor_k;
+                }
+            }
+
+            if (best_k >= 0) {
+                repaired_assignments[idx] = best_k;
+                changed = true;
+            }
+        }
+    }
+
+    // Any remaining orphan cell is assigned to nearest valid seed.
+    for (int idx : orphan_cells) {
+        if (repaired_assignments[idx] != -2) continue;
+
+        int best_k = -1;
+        double best_dist = INF;
+
+        for (int k = 0; k < K; ++k) {
+            if (dist_map[k][idx] < best_dist) {
+                best_dist = dist_map[k][idx];
+                best_k = k;
+            }
+        }
+
+        if (best_k >= 0 && best_dist < INF)
+            repaired_assignments[idx] = best_k;
+        else
+            repaired_assignments[idx] = -1;
+    }
+
+    cluster_assignments = repaired_assignments;
+
+    // Force seeds again after repair.
+    for (int k = 0; k < K; ++k) {
+        cluster_assignments[seed_indices[k]] = k;
+    }
+
+    // Optional visualization before robot permutation.
+    for (int i = 0; i < N; ++i) {
+        belief_clusters[i] =
+            (posterior.pdf[i] > simulation_parameters.epsilon_clusterize &&
+             cluster_assignments[i] >= 0)
+            ? cluster_assignments[i] + 1
+            : 0;
+    }
+
+    log_posterior_pdf_3d_cluster_lloyd(belief_clusters);
+
+    // ---------------------------------------------------------------------
+    // STEP 5: Compute cluster representative centers for robot assignment
+    // Here we use belief-weighted centroids, but seeds remain fixed for topology.
+    // ---------------------------------------------------------------------
+    std::vector<double> weighted_sum_x(K, 0.0), weighted_sum_y(K, 0.0), total_weight(K, 0.0);
+
+    for (int i = 0; i < N; ++i) {
+        int cluster = cluster_assignments[i];
+        if (cluster < 0) continue;
+
+        double weight = posterior.pdf[i];
+        if (weight <= simulation_parameters.epsilon_clusterize) continue;
+
+        int x, y;
+        index_to_xy(i, x, y);
+
+        weighted_sum_x[cluster] += x * weight;
+        weighted_sum_y[cluster] += y * weight;
+        total_weight[cluster] += weight;
+    }
+
+    std::vector<std::pair<int, int>> cluster_centroids = seeds;
+
+    for (int k = 0; k < K; ++k) {
+        if (total_weight[k] > simulation_parameters.epsilon_clusterize) {
+            cluster_centroids[k].first =
+                static_cast<int>(weighted_sum_x[k] / total_weight[k]);
+            cluster_centroids[k].second =
+                static_cast<int>(weighted_sum_y[k] / total_weight[k]);
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // STEP 6: Optimal robot-to-cluster assignment
+    // Same permutation style as your Lloyd function.
+    // ---------------------------------------------------------------------
+    std::vector<int> perm(K);
+    std::iota(perm.begin(), perm.end(), 0);
+
+    std::vector<int> best_perm = perm;
+    double best_cost = INF;
+
+    do {
+        double cost = 0.0;
+
+        for (int k = 0; k < K; ++k) {
+            double cx = XMIN + (cluster_centroids[perm[k]].first + 0.5)
+                              * (XMAX - XMIN) / x_nbins;
+            double cy = YMIN + (cluster_centroids[perm[k]].second + 0.5)
+                              * (YMAX - YMIN) / y_nbins;
+
+            double ddx = received_current_pos[k][0] - cx;
+            double ddy = received_current_pos[k][1] - cy;
+
+            cost += std::sqrt(ddx * ddx + ddy * ddy);
+        }
+
+        if (cost < best_cost) {
+            best_cost = cost;
+            best_perm = perm;
+        }
+
+    } while (std::next_permutation(perm.begin(), perm.end()));
+
+    // best_perm[robot] = cluster
+    std::vector<int> inv_perm(K);
+    for (int k = 0; k < K; ++k)
+        inv_perm[best_perm[k]] = k;
+
+    // ---------------------------------------------------------------------
+    // STEP 7: Cut belief map according to assigned robot cluster
+    // Same as your original function.
+    // ---------------------------------------------------------------------
+    std::vector<int> cluster_sizes(K, 0);
+    std::fill(belief_clusters, belief_clusters + N, 0);
+
+    std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(N, 0));
+
+    for (int i = 0; i < N; ++i) {
+        if (posterior.pdf[i] <= simulation_parameters.epsilon_clusterize) continue;
+
+        int cluster = cluster_assignments[i];
+        if (cluster < 0 || cluster >= K) continue;
+
+        int robot_k = inv_perm[cluster];
+
+        belief_clusters[i] = robot_k + 1;
+        pdf_masks[robot_k][i] = 1;
+        cluster_sizes[robot_k]++;
+    }
+
+    log_cluster_sizes_geometric(cluster_sizes);
+    log_posterior_pdf_3d_cluster(belief_clusters);
+
+    std::vector<double> cluster_sizes_info(K, 0.0);
+
+    for (int k = 0; k < K; ++k)
+        for (int i = 0; i < N; ++i)
+            cluster_sizes_info[k] += posterior.pdf[i] * pdf_masks[k][i];
+
+    log_cluster_sizes_informative(cluster_sizes_info);
+
+    for (int k = 0; k < K; ++k) {
+        if (ID == 101 + k) {
+            for (int i = 0; i < N; ++i)
+                posterior.pdf[i] *= pdf_masks[k][i];
+
+            double sum = std::accumulate(
+                posterior.pdf,
+                posterior.pdf + N,
+                0.0
+            );
+
+            if (sum > 0.0) {
+                for (int i = 0; i < N; ++i)
+                    posterior.pdf[i] /= sum;
+            }
+
+            printf("Robot ID [%d]: Sum of Voronoi-repaired pdf is %f \n", ID, sum);
+        }
+    }
+}
+
 void clusterize_belief_map_obstacle_dist_REGION_GROWING_D() {
 
-    std::vector<std::vector<int>> pdf_masks(simulation_parameters.number_of_robots, std::vector<int>(x_nbins * y_nbins, 0));
+      const int K = simulation_parameters.number_of_robots;
+    const int N = x_nbins * y_nbins;
+
+    std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(N, 0));
     std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
 
     for (int y = 0; y < y_nbins; ++y)
         for (int x = 0; x < x_nbins; ++x)
             obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
 
+    // ------------------------------------------------------------
+    // STEP 1: Select top-K valid belief cells as seeds
+    // ------------------------------------------------------------
     std::vector<std::pair<double, int>> top_cells;
-    for (int i = 0; i < x_nbins * y_nbins; ++i) {
-        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize)
+
+    for (int i = 0; i < N; ++i) {
+        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize &&
+            obstacle_map[i] == 0) {
             top_cells.push_back({posterior.pdf[i], i});
+        }
     }
+
     std::sort(top_cells.begin(), top_cells.end(), std::greater<>());
 
-    std::vector<int> seeds_x(3), seeds_y(3);
-    for (int i = 0; i < 3 && i < top_cells.size(); ++i)
-        index_to_xy(top_cells[i].second, seeds_x[i], seeds_y[i]);
+    if ((int)top_cells.size() < K) {
+        printf("Robot ID [%d]: Not enough valid seed cells for balanced region growing.\n", ID);
+        return;
+    }
 
-    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
+    std::vector<int> seeds_x(K), seeds_y(K);
 
-    // 8 posibles direcciones (cardinales y diagonales)
+    for (int k = 0; k < K; ++k)
+        index_to_xy(top_cells[k].second, seeds_x[k], seeds_y[k]);
+
+    // ------------------------------------------------------------
+    // STEP 2: Assign seeds to robots by minimum total Euclidean distance
+    // ------------------------------------------------------------
+    std::vector<int> perm(K);
+    std::iota(perm.begin(), perm.end(), 0);
+
+    std::vector<int> best_perm = perm;
+    double best_cost = std::numeric_limits<double>::max();
+
+    do {
+        double cost = 0.0;
+
+        for (int k = 0; k < K; ++k) {
+            double cx = XMIN + (seeds_x[perm[k]] + 0.5) * (XMAX - XMIN) / x_nbins;
+            double cy = YMIN + (seeds_y[perm[k]] + 0.5) * (YMAX - YMIN) / y_nbins;
+
+            double ddx = received_current_pos[k][0] - cx;
+            double ddy = received_current_pos[k][1] - cy;
+
+            cost += std::sqrt(ddx * ddx + ddy * ddy);
+        }
+
+        if (cost < best_cost) {
+            best_cost = cost;
+            best_perm = perm;
+        }
+
+    } while (std::next_permutation(perm.begin(), perm.end()));
+
+    std::vector<int> tmp_x(K), tmp_y(K);
+
+    for (int k = 0; k < K; ++k) {
+        tmp_x[k] = seeds_x[best_perm[k]];
+        tmp_y[k] = seeds_y[best_perm[k]];
+    }
+
+    seeds_x = tmp_x;
+    seeds_y = tmp_y;
+
+    std::fill(belief_clusters, belief_clusters + N, 0);
+
+    // ------------------------------------------------------------
+    // STEP 3: 8-connected balanced 2D region growing
+    // ------------------------------------------------------------
     const std::vector<std::pair<int, int>> all_directions = {
         {1, 0}, {1, 1}, {0, 1}, {-1, 1},
         {-1, 0}, {-1, -1}, {0, -1}, {1, -1}
     };
 
-    std::vector<std::pair<int, int>> robot_directions(3);
-
-    // Función para clasificar ángulo en dirección 8-way
-    auto angle_to_direction = [](double angle) -> std::pair<int,int> {
-        // Ángulo en radianes en [-pi, pi]
-        // Convertir a grados para facilitar (opcional)
-        double deg = angle * 180.0 / M_PI;
-
-        // Ajustar grados a [0, 360)
-        if (deg < 0) deg += 360.0;
-
-        // Definimos sectores de 45° para cada dirección
-        // Range: [center-22.5, center+22.5)
-        // 0° -> (1, 0)
-        // 45° -> (1, 1)
-        // 90° -> (0, 1)
-        // 135° -> (-1, 1)
-        // 180° -> (-1, 0)
-        // 225° -> (-1, -1)
-        // 270° -> (0, -1)
-        // 315° -> (1, -1)
-
-        if ((deg >= 337.5 && deg < 360) || (deg >= 0 && deg < 22.5)) return {1, 0};
-        else if (deg >= 22.5 && deg < 67.5) return {1, 1};
-        else if (deg >= 67.5 && deg < 112.5) return {0, 1};
-        else if (deg >= 112.5 && deg < 157.5) return {-1, 1};
-        else if (deg >= 157.5 && deg < 202.5) return {-1, 0};
-        else if (deg >= 202.5 && deg < 247.5) return {-1, -1};
-        else if (deg >= 247.5 && deg < 292.5) return {0, -1};
-        else if (deg >= 292.5 && deg < 337.5) return {1, -1};
-
-        // Por defecto
-        return {0, 0};
-    };
-
-    // Clasifica cada semilla en dirección hacia su robot usando atan2
-	for (int k = 0; k < 3; ++k) {
-		double rx = received_current_pos[k][0];
-		double ry = received_current_pos[k][1];
-		int sx = seeds_x[k];
-		int sy = seeds_y[k];
-	
-		double sx_cont = XMIN + (sx + 0.5) * (XMAX - XMIN) / x_nbins;
-		double sy_cont = YMIN + (sy + 0.5) * (YMAX - YMIN) / y_nbins;
-	
-		double dx = rx - sx_cont; //-rx+sx_cont si queremos direccion en sentido contrario (sx-robot). Si no, rx - sx_cont
-		double dy = ry - sy_cont;
-	
-		if (dx == 0 && dy == 0) {
-			robot_directions[k] = {0, 0};
-			continue;
-		}
-	
-		double angle = std::atan2(dy, dx);
-		robot_directions[k] = angle_to_direction(angle);
-	}
-	
-
     std::vector<std::vector<bool>> visited(y_nbins, std::vector<bool>(x_nbins, false));
-    std::queue<std::pair<int, int>> queues[3];
-    int cluster_sizes[3] = {0, 0, 0};
+    std::vector<std::queue<std::pair<int, int>>> queues(K);
+    std::vector<int> cluster_sizes(K, 0);
 
     int total_active_cells = 0;
-    for (int i = 0; i < x_nbins * y_nbins; ++i)
-        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize && obstacle_map[i] == 0)
+
+    for (int i = 0; i < N; ++i) {
+        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize &&
+            obstacle_map[i] == 0) {
             total_active_cells++;
-
-    int target_size = total_active_cells / 3;
-    int max_size_margin = target_size * 1.2;
-
-    for (int k = 0; k < 3; ++k) {
-        queues[k].push({seeds_x[k], seeds_y[k]});
-        visited[seeds_y[k]][seeds_x[k]] = true;
-        belief_clusters[seeds_y[k] * x_nbins + seeds_x[k]] = k + 1;
-        cluster_sizes[k]++;
-    }
-
-    bool growing = true;
-    while (growing) {
-        growing = false;
-
-        for (int k = 0; k < 3; ++k) {
-            if (cluster_sizes[k] >= max_size_margin) continue;
-            if (queues[k].empty()) goto stop_region_growing;
-
-            auto [x, y] = queues[k].front(); queues[k].pop();
-            auto [dx, dy] = robot_directions[k];
-
-            int nx = x + dx;
-            int ny = y + dy;
-
-            if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
-            if (obstacle_map_2d[ny][nx] == 1) continue;
-            if (visited[ny][nx]) continue;
-
-            int idx = ny * x_nbins + nx;
-            if (posterior.pdf[idx] <= simulation_parameters.epsilon_clusterize) continue;
-
-            visited[ny][nx] = true;
-            belief_clusters[idx] = k + 1;
-            queues[k].push({nx, ny});
-            cluster_sizes[k]++;
-            growing = true;
         }
     }
 
-stop_region_growing:
+    int target_size = std::max(1, total_active_cells / K);
 
-    log_cluster_sizes_geometric(std::vector<int>(cluster_sizes, cluster_sizes + 3));
+    // Tune this:
+    // 1.00 = strict balance, may leave more unclustered cells
+    // 1.05 = recommended
+    // 1.20 = more coverage, less balanced
+    int max_size_margin = static_cast<int>(target_size * 1.05);
+
+    for (int k = 0; k < K; ++k) {
+        int sx = seeds_x[k];
+        int sy = seeds_y[k];
+        int idx = sy * x_nbins + sx;
+
+        if (sx < 0 || sx >= x_nbins || sy < 0 || sy >= y_nbins)
+            continue;
+
+        if (posterior.pdf[idx] <= simulation_parameters.epsilon_clusterize)
+            continue;
+
+        if (obstacle_map[idx] == 1)
+            continue;
+
+        queues[k].push({sx, sy});
+        visited[sy][sx] = true;
+        belief_clusters[idx] = k + 1;
+        cluster_sizes[k]++;
+    }
+
+    bool any_growth = true;
+
+    while (any_growth) {
+        any_growth = false;
+
+        // Smaller clusters grow first in every round.
+        std::vector<int> grow_order(K);
+        std::iota(grow_order.begin(), grow_order.end(), 0);
+
+        std::sort(grow_order.begin(), grow_order.end(),
+            [&](int a, int b) {
+                return cluster_sizes[a] < cluster_sizes[b];
+            }
+        );
+
+        for (int kk = 0; kk < K; ++kk) {
+            int k = grow_order[kk];
+
+            if (cluster_sizes[k] >= max_size_margin)
+                continue;
+
+            if (queues[k].empty())
+                continue;
+
+            int current_frontier_size = queues[k].size();
+
+            // Process only one BFS layer per round for this cluster.
+            for (int q_i = 0; q_i < current_frontier_size; ++q_i) {
+
+                if (cluster_sizes[k] >= max_size_margin)
+                    break;
+
+                auto [x, y] = queues[k].front();
+                queues[k].pop();
+
+                for (const auto& [dx, dy] : all_directions) {
+
+                    if (cluster_sizes[k] >= max_size_margin)
+                        break;
+
+                    int nx = x + dx;
+                    int ny = y + dy;
+
+                    if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins)
+                        continue;
+
+                    if (visited[ny][nx])
+                        continue;
+
+                    int nidx = ny * x_nbins + nx;
+
+                    if (obstacle_map[nidx] == 1)
+                        continue;
+
+                    if (posterior.pdf[nidx] <= simulation_parameters.epsilon_clusterize)
+                        continue;
+
+                    visited[ny][nx] = true;
+                    belief_clusters[nidx] = k + 1;
+                    queues[k].push({nx, ny});
+                    cluster_sizes[k]++;
+
+                    any_growth = true;
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // STEP 4: Logging
+    // ------------------------------------------------------------
+    log_cluster_sizes_geometric(cluster_sizes);
     log_posterior_pdf_3d_cluster(belief_clusters);
 
-    for (int i = 0; i < x_nbins * y_nbins; ++i) {
-        if (posterior.pdf[i] <= simulation_parameters.epsilon_clusterize) continue;
-        for (int k = 0; k < 3; ++k)
+    // ------------------------------------------------------------
+    // STEP 5: Build masks
+    // ------------------------------------------------------------
+    for (int i = 0; i < N; ++i) {
+        if (posterior.pdf[i] <= simulation_parameters.epsilon_clusterize)
+            continue;
+
+        for (int k = 0; k < K; ++k) {
             pdf_masks[k][i] = (belief_clusters[i] == k + 1) ? 1 : 0;
+        }
     }
 
-    std::vector<double> cluster_sizes_info(simulation_parameters.number_of_robots, 0.0);
-    for (int k = 0; k < simulation_parameters.number_of_robots; ++k) {
+    // ------------------------------------------------------------
+    // STEP 6: Informative cluster sizes
+    // ------------------------------------------------------------
+    std::vector<double> cluster_sizes_info(K, 0.0);
+
+    for (int k = 0; k < K; ++k) {
         double sum_prob = 0.0;
-        for (int i = 0; i < x_nbins * y_nbins; ++i)
+
+        for (int i = 0; i < N; ++i)
             sum_prob += posterior.pdf[i] * pdf_masks[k][i];
+
         cluster_sizes_info[k] = sum_prob;
     }
+
     log_cluster_sizes_informative(cluster_sizes_info);
 
-    for (int k = 0; k < 3; ++k) {
+    // ------------------------------------------------------------
+    // STEP 7: Keep only current robot's assigned cluster
+    // ------------------------------------------------------------
+    for (int k = 0; k < K; ++k) {
         if (ID == 101 + k) {
-            for (int i = 0; i < x_nbins * y_nbins; ++i)
+            for (int i = 0; i < N; ++i)
                 posterior.pdf[i] *= pdf_masks[k][i];
         }
     }
 
-    double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
-    if (sum > 0)
-        for (int i = 0; i < x_nbins * y_nbins; ++i)
+    double sum = std::accumulate(posterior.pdf, posterior.pdf + N, 0.0);
+
+    if (sum > 0) {
+        for (int i = 0; i < N; ++i)
             posterior.pdf[i] /= sum;
+    }
 
-    double sum_def = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
-    printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum_def);
+    double sum_def = std::accumulate(posterior.pdf, posterior.pdf + N, 0.0);
 
-    for (int k = 0; k < 3; ++k) {
+    printf("Robot ID [%d]: Sum of balanced 2D region-growing clusterized pdf is %f \n",
+           ID, sum_def);
+
+    // ------------------------------------------------------------
+    // STEP 8: Debug print
+    // ------------------------------------------------------------
+    for (int k = 0; k < K; ++k) {
         if (ID == 101 + k) {
-            fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (balanceado):\n");
+            fprintf(clustering_debugging_logfile,
+                    "\n Clusterized Belief Map 2D balanced region growing:\n");
+
             for (int y = 0; y < y_nbins; ++y) {
                 for (int x = 0; x < x_nbins; ++x) {
                     int idx = y * x_nbins + x;
@@ -1815,6 +2322,178 @@ void clusterize_belief_map_obstacle_dist_REGION_GROWING_P() {
     }
 }
 
+void clusterize_belief_map_PATH_CLUSTER() {
+    const int K = simulation_parameters.number_of_robots;
+
+    const std::vector<std::pair<int,int>> dirs8 = {
+        {1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}
+    };
+
+    std::vector<std::vector<int>> obstacle_map_2d(y_nbins, std::vector<int>(x_nbins));
+    for (int y = 0; y < y_nbins; ++y)
+        for (int x = 0; x < x_nbins; ++x)
+            obstacle_map_2d[y][x] = obstacle_map[y * x_nbins + x];
+
+    // Step 1: top-K seeds by probability
+    std::vector<std::pair<double,int>> top_cells;
+    for (int i = 0; i < x_nbins * y_nbins; ++i)
+        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize)
+            top_cells.emplace_back(posterior.pdf[i], i);
+    std::sort(top_cells.begin(), top_cells.end(), std::greater<>());
+
+    std::vector<std::pair<int,int>> seeds(K, {0, 0});
+    for (int i = 0; i < K && i < (int)top_cells.size(); ++i)
+        index_to_xy(top_cells[i].second, seeds[i].first, seeds[i].second);
+
+    // Step 2: optimal robot-to-seed assignment (minimise total distance)
+    std::vector<int> perm(K);
+    std::iota(perm.begin(), perm.end(), 0);
+    std::vector<int> best_perm = perm;
+    double best_cost = std::numeric_limits<double>::max();
+    do {
+        double cost = 0.0;
+        for (int k = 0; k < K; ++k) {
+            double cx = XMIN + (seeds[perm[k]].first  + 0.5) * (XMAX - XMIN) / x_nbins;
+            double cy = YMIN + (seeds[perm[k]].second + 0.5) * (YMAX - YMIN) / y_nbins;
+            double ddx = received_current_pos[k][0] - cx;
+            double ddy = received_current_pos[k][1] - cy;
+            cost += std::sqrt(ddx * ddx + ddy * ddy);
+        }
+        if (cost < best_cost) { best_cost = cost; best_perm = perm; }
+    } while (std::next_permutation(perm.begin(), perm.end()));
+
+    // Reorder seeds so seeds[k] is assigned to robot k
+    std::vector<std::pair<int,int>> assigned_seeds(K);
+    for (int k = 0; k < K; ++k)
+        assigned_seeds[k] = seeds[best_perm[k]];
+
+    // Step 3: BFS path (spine) from each robot's grid cell to its assigned seed
+    std::vector<std::vector<std::pair<int,int>>> spines(K);
+
+    for (int k = 0; k < K; ++k) {
+        int rx = (int)((received_current_pos[k][0] - XMIN) / (XMAX - XMIN) * x_nbins);
+        int ry = (int)((received_current_pos[k][1] - YMIN) / (YMAX - YMIN) * y_nbins);
+        rx = std::max(0, std::min(rx, x_nbins - 1));
+        ry = std::max(0, std::min(ry, y_nbins - 1));
+        int gx = assigned_seeds[k].first, gy = assigned_seeds[k].second;
+
+        if (obstacle_map_2d[ry][rx] == 1) { spines[k].push_back({gx, gy}); continue; }
+
+        std::vector<std::vector<std::pair<int,int>>> pred(y_nbins,
+            std::vector<std::pair<int,int>>(x_nbins, {-1,-1}));
+        std::vector<std::vector<bool>> bfs_vis(y_nbins, std::vector<bool>(x_nbins, false));
+        std::queue<std::pair<int,int>> q;
+        q.push({rx, ry});
+        bfs_vis[ry][rx] = true;
+        bool found = false;
+
+        while (!q.empty() && !found) {
+            auto [x, y] = q.front(); q.pop();
+            if (x == gx && y == gy) { found = true; break; }
+            for (auto [dx, dy] : dirs8) {
+                int nx = x + dx, ny = y + dy;
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                if (obstacle_map_2d[ny][nx] == 1) continue;
+                if (bfs_vis[ny][nx]) continue;
+                bfs_vis[ny][nx] = true;
+                pred[ny][nx] = {x, y};
+                q.push({nx, ny});
+            }
+        }
+
+        if (found) {
+            // Reconstruct path from seed back to robot via predecessors
+            int cx = gx, cy = gy;
+            while (true) {
+                spines[k].push_back({cx, cy});
+                if (cx == rx && cy == ry) break;
+                auto [px, py] = pred[cy][cx];
+                if (px < 0) break;
+                cx = px; cy = py;
+            }
+        } else {
+            spines[k].push_back({gx, gy});
+        }
+    }
+
+    // Step 4: initialise clusters with spine cells
+    int total_active = 0;
+    for (int i = 0; i < x_nbins * y_nbins; ++i)
+        if (posterior.pdf[i] > simulation_parameters.epsilon_clusterize && obstacle_map[i] == 0)
+            total_active++;
+    int target_size = total_active / K;
+    int max_size    = (int)(target_size * 1.2);
+
+    std::fill(belief_clusters, belief_clusters + x_nbins * y_nbins, 0);
+    std::vector<std::vector<bool>> visited(y_nbins, std::vector<bool>(x_nbins, false));
+    std::vector<std::queue<std::pair<int,int>>> queues(K);
+    std::vector<int> cluster_sizes(K, 0);
+
+    for (int k = 0; k < K; ++k) {
+        for (auto [x, y] : spines[k]) {
+            if (visited[y][x]) continue;
+            visited[y][x] = true;
+            int idx = y * x_nbins + x;
+            belief_clusters[idx] = k + 1;
+            queues[k].push({x, y});
+            if (posterior.pdf[idx] > simulation_parameters.epsilon_clusterize)
+                cluster_sizes[k]++;
+        }
+    }
+
+    // Step 5: balanced round-robin BFS expansion from spines
+    bool growing = true;
+    while (growing) {
+        growing = false;
+        for (int k = 0; k < K; ++k) {
+            if (cluster_sizes[k] >= max_size || queues[k].empty()) continue;
+            auto [x, y] = queues[k].front(); queues[k].pop();
+            for (auto [dx, dy] : dirs8) {
+                int nx = x + dx, ny = y + dy;
+                if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins) continue;
+                if (obstacle_map_2d[ny][nx] == 1) continue;
+                if (visited[ny][nx]) continue;
+                int idx = ny * x_nbins + nx;
+                if (posterior.pdf[idx] <= simulation_parameters.epsilon_clusterize) continue;
+                visited[ny][nx] = true;
+                belief_clusters[idx] = k + 1;
+                queues[k].push({nx, ny});
+                cluster_sizes[k]++;
+                growing = true;
+                if (cluster_sizes[k] >= max_size) break;
+            }
+        }
+    }
+
+    // Step 6: build masks, log, apply and renormalise
+    std::vector<std::vector<int>> pdf_masks(K, std::vector<int>(x_nbins * y_nbins, 0));
+    for (int i = 0; i < x_nbins * y_nbins; ++i) {
+        int c = belief_clusters[i];
+        if (c > 0) pdf_masks[c - 1][i] = 1;
+    }
+
+    log_cluster_sizes_geometric(cluster_sizes);
+    log_posterior_pdf_3d_cluster(belief_clusters);
+
+    std::vector<double> cluster_sizes_info(K, 0.0);
+    for (int k = 0; k < K; ++k)
+        for (int i = 0; i < x_nbins * y_nbins; ++i)
+            cluster_sizes_info[k] += posterior.pdf[i] * pdf_masks[k][i];
+    log_cluster_sizes_informative(cluster_sizes_info);
+
+    for (int k = 0; k < K; ++k) {
+        if (ID == 101 + k) {
+            for (int i = 0; i < x_nbins * y_nbins; ++i)
+                posterior.pdf[i] *= pdf_masks[k][i];
+            double sum = std::accumulate(posterior.pdf, posterior.pdf + x_nbins * y_nbins, 0.0);
+            if (sum > 0.0)
+                for (int i = 0; i < x_nbins * y_nbins; ++i)
+                    posterior.pdf[i] /= sum;
+            printf("Robot ID [%d]: Sum of PATH_CLUSTER pdf is %f\n", ID, sum);
+        }
+    }
+}
+
 void cluster_algorithm()
 {
 	// Select SEED
@@ -1875,6 +2554,8 @@ void cluster_algorithm()
 	
 	if (simulation_parameters.mapCoverageStrategy == REGION_GROWING_P) clusterize_belief_map_obstacle_dist_REGION_GROWING_P();
 	if (simulation_parameters.mapCoverageStrategy == REGION_GROWING_D) clusterize_belief_map_obstacle_dist_REGION_GROWING_D();
+	if (simulation_parameters.mapCoverageStrategy == PATH_CLUSTER) clusterize_belief_map_PATH_CLUSTER();
+	if (simulation_parameters.mapCoverageStrategy == VORONOI_REPAIR) clusterize_belief_map_obstacle_dist_VORONOI_REPAIR(selected_indices);
 
 }
 

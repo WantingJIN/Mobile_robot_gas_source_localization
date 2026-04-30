@@ -1,5 +1,5 @@
 % === Base experiment path (we assume only one subfolder) ===
-base_path = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/cluster_analysis';
+base_path = '/home/wjin/Workspace/Multi-robot_GSL/Results/Multi-GSL/REGION_GROWING_2D_BALANCED_center/9';
 d = dir(base_path);
 subfolder = d([d.isdir] & ~startsWith({d.name}, '.'));  % filter out hidden/system folders
 
@@ -207,7 +207,7 @@ for r = 1:3
 end
 
 % === Create video writer object ===
-output_video_path = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/videos/animation.avi';
+output_video_path = [base_path '/animation.avi'];
 v = VideoWriter(output_video_path, 'Motion JPEG AVI');
 v.FrameRate = video_repr_vel;
 open(v);

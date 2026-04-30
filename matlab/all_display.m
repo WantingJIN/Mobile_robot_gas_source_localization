@@ -4,13 +4,14 @@
 close all; clc; clear all;
 
 % choose the last folder in log files
-folder_list = dir('/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/test/1');
+folder_list = dir('/home/wjin/Workspace/Multi-robot_GSL/Results/Multi-GSL/REGION_GROWING_2D_BALANCED_center/1');
 folder_list = folder_list(~ismember({folder_list.name},{'.','..','datasets'}));
 exp_number = length(folder_list);
 
 
 %%
 for i=1:exp_number
+    close all; 
     folder_name = [folder_list(i).folder, '/', folder_list(i).name];
     if(folder_list(i).isdir==0) continue; end
     % multiple robots
