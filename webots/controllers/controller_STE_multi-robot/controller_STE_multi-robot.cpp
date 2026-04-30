@@ -2802,7 +2802,7 @@ void state_estimating()
 	}
 
 	// printf("sum posterior : %f \n", posterior.sum);
-	posterior.normalize();
+	//posterior.normalize();
 	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
 
 	if (simulation_parameters.mapCoverageStrategy != NONE)
