@@ -76,6 +76,7 @@ char whole_position_history_logfile_name[512];
 char kld_value_logfile_name[512];
 char time_logfile_name[512];
 char posterior_pdf_3D_name[512];
+char posterior_pdf_pre_merge_name[512];
 char posterior_pdf_3D_cluster_name[512];
 char posterior_pdf_3D_cluster_lloyd_name[512];
 char cluster_sizes_geometric_name[512];
@@ -2803,7 +2804,7 @@ void state_estimating()
 
 	// printf("sum posterior : %f \n", posterior.sum);
 	//posterior.normalize();
-	//posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	posterior.log_pdf(posterior_pdf_pre_merge_name, 'a');
 
 	if (simulation_parameters.mapCoverageStrategy != NONE)
 	{
@@ -3761,6 +3762,7 @@ void substate_merge_pdf()
 {
 	printf("Robot ID [%d]: SUBSTATE_MERGE_PDF \n", ID);
 
+	posterior.log_pdf(posterior_pdf_pre_merge_name, 'a');
 
 	// Original merge without weights
 	for (int i = 0; i < MAP_SIZE; i++)

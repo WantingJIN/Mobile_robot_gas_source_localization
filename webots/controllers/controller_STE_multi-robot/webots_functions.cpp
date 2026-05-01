@@ -600,6 +600,7 @@ void set_logfile_names()
 	sprintf(kld_value_logfile_name, "%s/kld_value.csv", folder_name);
 	sprintf(time_logfile_name, "%s/simulation_time.csv", folder_name);
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(posterior_pdf_pre_merge_name, "%s/posterior_pdf_pre_merge.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_lloyd_name, "%s/posterior_pdf_3D_cluster_lloyd.csv", folder_name);
 	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
