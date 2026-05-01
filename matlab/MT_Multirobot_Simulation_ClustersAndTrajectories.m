@@ -1,5 +1,5 @@
 % === Base experiment path (we assume only one subfolder) ===
-base_path = '/home/wjin/Workspace/Multi-robot_GSL/Results/Multi-GSL/REGION_GROWING_2D_BALANCED_center/9';
+base_path = '/home/wjin/Workspace/Multi-robot_GSL/Results/DARS_2026/proposed_method_generate_plot/9';
 d = dir(base_path);
 subfolder = d([d.isdir] & ~startsWith({d.name}, '.'));  % filter out hidden/system folders
 
