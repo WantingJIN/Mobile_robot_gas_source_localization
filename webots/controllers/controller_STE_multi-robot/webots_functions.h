@@ -50,8 +50,15 @@ extern char max_a_posteriori_logfile_name[512];
 extern char likelihood_logfile_name[512];
 extern char measurement_history_logfile_name[512];
 extern char position_history_logfile_name[512];
+extern char whole_position_history_logfile_name[512];
 extern char posterior_pdf_3D_name[512];
+extern char posterior_pdf_pre_merge_name[512];
+extern char posterior_pdf_3D_cluster_name[512];
+extern char cluster_sizes_geometric_name[512];
+extern char cluster_sizes_informative_name[512];
+extern char stop_time_name[512];
 extern char entropy_logfile_name[512];
+extern char entropy_individual_logfile_name[512];
 extern char config_logfile_name[512];
 extern char trajectory_logfile_name[512];
 extern char gas_concentration_map_logfile_name[512];
@@ -79,7 +86,12 @@ extern char experiment_position_logfile_name[512];
 
 // for storing debugging info
 extern FILE *console_logfile;
+extern FILE *clustering_debugging_logfile;
+extern FILE *KLD_debugging_logfile;
+extern FILE *cumulative_path_logfile;
 extern char console_logfile_name[512];
+extern char clustering_debugging_name[512];
+extern char cumulative_path_logfile_name[512];
 
 // finite state machine
 extern struct FSM FSM;
@@ -105,8 +117,6 @@ extern struct message message;
 extern struct friends friends[MAX_NB_ROBOTS];
 
 extern int n_time_step;
-
-extern double real_source_pos[3];
 
 extern SimulationParameters simulation_parameters;
 

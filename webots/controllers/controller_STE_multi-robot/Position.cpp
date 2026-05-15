@@ -23,6 +23,13 @@ Position::Position(float px, float py, float ph)
 	index = indices_to_index_2D(x_idx, y_idx);
 }
 
+// Position::Position(int px_idx, int py_idx)
+// {
+// 	x_idx = px_idx;
+// 	y_idx = py_idx;
+// 	index = indices_to_index_2D(x_idx, y_idx);
+// }
+
 Position::Position(int px_idx, int py_idx)
 {
 	x_idx = px_idx;
@@ -30,6 +37,8 @@ Position::Position(int px_idx, int py_idx)
 	indices_to_position_2D(x_idx, y_idx, &x, &y);
 	index = indices_to_index_2D(x_idx, y_idx);
 }
+
+
 
 Position::Position(const Position &to_copy_from)
 {

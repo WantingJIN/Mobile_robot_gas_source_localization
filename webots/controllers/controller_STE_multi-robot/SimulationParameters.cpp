@@ -61,8 +61,14 @@ eProcessingMode parse_processing_mode(const char *str)
 }
 ePlanningStrategy parse_planning_strategy(const char *str)
 {
+	if (strcmp(str, "COMBINED") == 0)
+		return COMBINED;
 	if (strcmp(str, "GREEDY") == 0)
 		return GREEDY;
+	if (strcmp(str, "INFO_CENTER") == 0)
+		return INFO_CENTER;
+	if (strcmp(str, "FARTHEST_CELL") == 0)
+		return FARTHEST_CELL;
 	if (strcmp(str, "BALANCE_MAXIMAL_EXPECTED") == 0)
 		return BALANCE_MAXIMAL_EXPECTED;
 	if (strcmp(str, "RANDOM") == 0)
@@ -167,11 +173,30 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
-eTeamStrategy parse_team_strategy(const char* str) {
+eControlArchitecture parse_control_architecture(const char* str) {
 	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
 	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
-	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
-	fprintf(stderr, "Unknown team strategy: %s\n", str);
+	fprintf(stderr, "Unknown controll architecture: %s\n", str);
+	exit(1);
+}
+
+eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
+	if (strcmp(str, "VORONOI") == 0) return VORONOI;
+	if (strcmp(str, "LLOYD_D") == 0) return LLOYD_D;
+	if (strcmp(str, "LLOYD_P") == 0) return LLOYD_P;
+	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
+	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
+	if (strcmp(str, "NONE") == 0) return NONE;
+	if (strcmp(str, "PATH_CLUSTER") == 0) return PATH_CLUSTER;
+	if (strcmp(str, "VORONOI_REPAIR") == 0) return VORONOI_REPAIR;
+	fprintf(stderr, "Unknown cluster method: %s\n", str);
+	exit(1);
+}
+
+eMapCoverageSeed parse_map_coverage_seed(const char* str) {
+	if (strcmp(str, "MAX_CELL") == 0) return MAX_CELL;
+	if (strcmp(str, "ROBOT_CELL") == 0) return ROBOT_CELL;
+	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }
 
@@ -183,13 +208,6 @@ eStopCondition parse_stop_condition(const char* str) {
 	exit(1);
 }
 
-eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
-	if (strcmp(str, "GOAL_REACHED") == 0) return GOAL_REACHED;
-	if (strcmp(str, "FIXED_FREQ") == 0) return FIXED_FREQ;
-	if (strcmp(str, "BELIEF_DIFF") == 0) return BELIEF_DIFF;
-	fprintf(stderr, "Unknown update goal policy: %s\n", str);
-	exit(1);
-}
 
 eScoreFun parse_score_fun(const char *str)
 {
@@ -400,10 +418,30 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		teamStrategy     = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
 		updateGoalPolicy = parse_update_goal_policy(n["updateGoalPolicy"].as<std::string>().c_str());
 
-		// FIXED_FREQ sub-params
-		if (updateGoalPolicy == FIXED_FREQ && n["FIXED_FREQ"]) {
-			update_goal_time = n["FIXED_FREQ"]["updateGoalTime"].as<int>();
-		}
+		// // FIXED_FREQ sub-params
+		// if (updateGoalPolicy == FIXED_FREQ && n["FIXED_FREQ"]) {
+		// 	update_goal_time = n["FIXED_FREQ"]["updateGoalTime"].as<int>();
+		// }
+		// else if (strcmp(key, "controlArchitecture") == 0) {
+		// 	controlArchitecture = parse_control_architecture(value);
+		// } 
+		// else if (strcmp(key, "mapCoverageStrategy") == 0) {
+		// 	mapCoverageStrategy = parse_map_coverage_strategy(value);
+		// } 
+		// else if (strcmp(key, "mapCoverageSeed") == 0) {
+		// 	mapCoverageSeed = parse_map_coverage_seed(value);
+		// } 
+		// else if (strcmp(key, "epsilon_clusterize") == 0) {
+		// 	epsilon_clusterize = atof(value);
+		// }
+		// else if (strcmp(key, "stopCondition") == 0) {
+		// 	stopCondition = parse_stop_condition(value);
+		// }	
+		// else
+		// {
+		// 	fprintf(stderr, "Unknown parameter: %s\n", key);
+		// 	exit(1);
+		// } 
 	}
 
 	// --- termination ---
@@ -474,6 +512,10 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
 	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
 	fprintf(sim_param_file, "wind_belief_weight %f\n", wind_belief_weight);
+
+	fprintf(sim_param_file, "cluster_method %d\n", mapCoverageStrategy);
+	fprintf(sim_param_file, "cluster_seed %d\n", mapCoverageSeed);
+	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
 	fclose(sim_param_file);
 }
 

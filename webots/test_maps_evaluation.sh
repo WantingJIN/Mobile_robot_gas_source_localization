@@ -1,5 +1,4 @@
 #!/bin/bash
-
 now=$(date +"%T")
 echo "Start time : $now"
 

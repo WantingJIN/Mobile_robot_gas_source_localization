@@ -8,6 +8,10 @@
 #include <random>
 // for storing debugging info
 extern FILE *console_logfile;
+extern FILE *clustering_debugging_logfile;
+extern FILE *KLD_debugging_logfile;
+extern FILE *cumulative_path_logfile;
+
 extern SimulationParameters simulation_parameters;
 extern char wind_field_u_logfile_name[512];
 extern char wind_field_v_logfile_name[512];
@@ -177,7 +181,8 @@ void Posterior::pdf_reset()
 		source_marginal_pdf[i] = 0;
 }
 
-// this function takes an array of indices for a multi-dimensional matrix and generates a single index for an array of the same number of elements
+// useful for VisitedCells = OFF
+//this function takes an array of indices for a multi-dimensional matrix and generates a single index for an array of the same number of elements
 int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_element)
 {
 	int i = 0, j = 0;
@@ -204,6 +209,30 @@ int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_ele
 	}
 	return index;
 }
+
+// useful for VisitedCells = ON
+// int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_element)
+// {
+// 	int index = indices[0];
+// 	int factor = 1;
+
+// 	for (int i = 1; i < a_nbr_dimension; i++)
+// 	{
+// 		for (int j = i - 1; j >= 0; j--)
+// 			factor *= model->param_list[j].nbins;
+
+// 		index += indices[i] * factor;
+// 		factor = 1;
+// 	}
+
+// 	// error detection
+// 	if (index < 0 || index >= a_nbr_element)
+// 	{
+// 		printf("ERROR in indices_to_index : index = %d\n", index);
+// 		return -1; // Retornás -1 indicando error
+// 	}
+// 	return index;
+// }
 
 // this function takes an array of indices for a multi-dimensional matrix and generates a single index for an array of the same number of elements
 int Posterior::indices_to_index(int *indices)
@@ -530,6 +559,25 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 		}
 	}
 	return KLD;
+}
+
+double Posterior::KLD_BM_Update(double* actual_pdf, double actual_sum)
+{
+    double KLD = 0.0;
+	//static double future_pdf[MAP_SIZE] = {0};
+	//memcpy(future_pdf, posterior.pdf, MAP_SIZE * sizeof(double));
+    for (int i = 0; i < MAP_SIZE; i++)
+    {
+        double q = actual_pdf[i] / actual_sum;  // Q: referencia (current actual BM)
+        double p = pdf[i];                      // P: (next))
+
+        if (p > 0 && q > 0)
+        {
+            KLD += p * log(p / q);
+        }
+    }
+
+    return KLD;
 }
 
 // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf

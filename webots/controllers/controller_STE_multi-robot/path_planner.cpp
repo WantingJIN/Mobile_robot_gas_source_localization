@@ -16,13 +16,25 @@ extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
 extern int ID;
+extern int self_index;
 extern int nbr_obs;
 extern float margin;
 extern float **obstacles;
 
 
+
 // text file for storing some prints for debugging
 extern FILE *console_logfile;
+extern FILE *clustering_debugging_logfile;
+extern FILE *KLD_debugging_logfile;
+extern FILE *trajectory_logfile;
+extern FILE *cumulative_path_logfile;
+
+extern char trajectory_logfile_name[512];
+
+
+// obstacle map
+extern std::vector<int> obstacle_map;
 
 PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, struct history *input_history)
 {
@@ -51,6 +63,47 @@ PathPlanner::PathPlanner(PlumeModel *input_model, Posterior *input_posterior, st
 PathPlanner:: ~PathPlanner()
 {
 }
+
+void PathPlanner::information_center_planning()
+{
+    printf("Enter information center planning \n");
+    fprintf(console_logfile, "Enter information center planning \n");
+
+    double weighted_sum_x = 0.0;
+    double weighted_sum_y = 0.0;
+    double total_weight = 0.0;
+
+    double coords[2];
+
+    for (int i = 0; i < MAP_SIZE; i++)
+    {
+        double weight = posterior->pdf[i];
+        if (weight < 1e-9)
+            continue; // ignorar pesos insignificantes
+
+        posterior->index_to_param_values(i, coords);
+		fprintf(clustering_debugging_logfile, "Robot ID [%d]: The bin %i correspond to the coordinates of the BM MASK (x,y)=(%f,%f), with a weight=%f\n", ID, i+1, coords[0], coords[1], posterior->pdf[i]);
+        weighted_sum_x += coords[0] * weight;
+        weighted_sum_y += coords[1] * weight;
+        total_weight += weight;
+    }
+
+    if (total_weight < 1e-9)
+    {
+        printf("Belief map is effectively empty\n");
+        fprintf(console_logfile, "Belief map is effectively empty, cannot compute information center\n");
+        return;
+    }
+
+    goal_position.x = weighted_sum_x / total_weight;
+    goal_position.y = weighted_sum_y / total_weight;
+    goal_position.heading = 0;
+
+    printf("Information center goal: %f %f\n", goal_position.x, goal_position.y);
+	// debugging purpose
+    fprintf(clustering_debugging_logfile, "Robot ID [%d]: Information center goal: %f %f\n", ID, goal_position.x, goal_position.y);
+}
+
 // TODO - maybe merge this to greedy_information_planning
 void PathPlanner::maximal_belief_planning()
 {
@@ -296,6 +349,7 @@ vector<pair<CellPoint, CellPoint>> PathPlanner::clustering_information_blocks(do
 	return dbscan.cluster_bounding_boxes;
 }
 
+// useful for VisitedCells = OFF
 void PathPlanner::belief_clustering_planning()
 {
 	// TODO - change the logic here; if a cluster exist, then it should scan the clusters anyway 
@@ -383,10 +437,6 @@ void PathPlanner::belief_clustering_planning()
 		}
 
 		fprintf(console_logfile, "my current position %f %f, selected cluster goal position : %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-
-		// fprintf(console_logfile, "clustering goal position : %f %f \n", goal_position.x, goal_position.y);
-		// fprintf(console_logfile, "current position : %f %f \n", current_position.x, current_position.y);
 	}
 }
 
@@ -627,7 +677,30 @@ void PathPlanner::markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int 
 
 
 // **Main Function: Compute Accumulative Information Gain Using Dijkstra**
-void PathPlanner::accumulative_Dijkstra() {
+//void PathPlanner::accumulative_Dijkstra() {
+std::list<Position> PathPlanner::accumulative_Dijkstra(){
+	
+	// update current_position index
+	double dx = (XMAX - XMIN) / x_nbins;
+    double dy = (YMAX - YMIN) / y_nbins;
+
+    current_position.x_idx = static_cast<int>(std::floor((current_position.x - XMIN) / dx));
+    current_position.y_idx = static_cast<int>(std::floor((current_position.y - YMIN) / dy));
+
+    if (current_position.x_idx < 0) current_position.x_idx = 0; 
+	else if (current_position.x_idx >= x_nbins) current_position.x_idx = x_nbins - 1;
+
+    if (current_position.y_idx < 0) current_position.y_idx = 0; 
+	else if (current_position.y_idx >= y_nbins) current_position.y_idx = y_nbins - 1;
+
+	// Actualizar índice lineal
+    current_position.index = current_position.y_idx * x_nbins + current_position.x_idx;
+
+	std::cout << "Current position index: " << current_position.index
+              << ", x_idx: " << current_position.x_idx
+              << ", y_idx: " << current_position.y_idx
+              << std::endl;
+
      calculate_information_gain();
      reset_metrics();
     // Directions for a 8-connected grid
@@ -772,14 +845,20 @@ void PathPlanner::accumulative_Dijkstra() {
         std::cout << "Optimal Path: ";
         for (const auto& pos : bestPath) {
             std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
+			//fprintf(cumulative_path_logfile, "%i,%f,%f,\n", FSM.n_cycles, pos.x, pos.y);
+			trajectory_logfile = fopen(trajectory_logfile_name, "a");
+			fprintf(trajectory_logfile, "%d, %f, %f\n", FSM.n_cycles, pos.x, pos.y);
+			fclose(trajectory_logfile);
         }
         std::cout << "Goal\n";
-	  goal_position.x = bestTarget.x;
-	  goal_position.y = bestTarget.y;
-	  cell_visited_list[bestTarget.index] = 1;
-	  markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, _xnbins, _ynbins, radius_neighbor, cell_visited_list);
+		goal_position.x = bestTarget.x;
+		goal_position.y = bestTarget.y;
+		cell_visited_list[bestTarget.index] = 1;
+		markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, x_nbins, y_nbins, radius_neighbor, cell_visited_list);
+		return bestPath;
     } else {
-        std::cout << "No valid path found.\n";
+    	std::cout << "No valid path found.\n";
+		return std::list<Position>();
     }
 }
 

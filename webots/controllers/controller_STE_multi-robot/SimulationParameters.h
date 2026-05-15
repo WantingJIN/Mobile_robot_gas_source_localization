@@ -49,6 +49,9 @@ typedef enum planningStrategy
 	SUM_DIJKSTRA_FIX = 10,
 	SUM_DIJKSTRA_ADP = 11,
 	MULTI_DIJKSTRA = 12,
+	INFO_CENTER = 13,
+	FARTHEST_CELL = 14,
+	COMBINED = 15,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -113,7 +116,6 @@ typedef enum gasHitMethod
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
-	CENTRALIZED = 2,
 } eTeamStrategy;
 typedef enum plumeModel
 {
@@ -121,6 +123,27 @@ typedef enum plumeModel
 	DDPM = 1,
 	FDM_PDE= 2,
 } ePlumeModel;
+typedef enum infoSum
+{
+	LINEAR_SUM = 0,
+	EXP_SUM = 1,
+} eInfoSum;
+typedef enum mapCoverageStrategy{
+	VORONOI = 0,
+	LLOYD_D = 1,
+	LLOYD_P = 2,
+	REGION_GROWING_P = 3,
+	REGION_GROWING_D = 4,
+	NONE = 5,
+	PATH_CLUSTER = 6,
+	VORONOI_REPAIR = 7,
+} eMapCoverageStrategy;
+
+typedef enum mapCoverageSeed{
+	MAX_CELL = 0,
+	ROBOT_CELL = 1,
+
+} eMapCoverageSeed;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
@@ -128,11 +151,6 @@ typedef enum stopCondition{
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
 
-typedef enum updataGoalPolicy{
-	GOAL_REACHED = 0,
-	FIXED_FREQ = 1,
-	BELIEF_DIFF = 2,
-} eUpdateGoalPolicy;
 
 typedef enum estimationScale
 {
@@ -183,7 +201,7 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	    float likelihoodSigma;
+	      float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
 		int planning_step;
@@ -192,6 +210,7 @@ class SimulationParameters{
 		char experimental_logname[128];
 		float diff_coefficient;
 		float wind_belief_weight;
+		double epsilon_clusterize;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eSamplingMode samplingMode; 
@@ -207,12 +226,12 @@ class SimulationParameters{
 		eCalibrationMode calibrationMode;
 
 		eGasHitMethod gasHitMethod;
-		eTeamStrategy teamStrategy;
+		eMapCoverageStrategy mapCoverageStrategy;
+		eMapCoverageSeed mapCoverageSeed;
 
-	    eScoreFun scoreFun;
+	      eScoreFun scoreFun;
 
 		eStopCondition stopCondition;
-		eUpdateGoalPolicy updateGoalPolicy;
 
 		ePlumeModel plumeModel;
 		eEstimationScale estimationScale;
@@ -224,7 +243,7 @@ class SimulationParameters{
 		SimulationParameters(const char *filename);
 		~SimulationParameters();
 
-        void load_simulation_parameters_from_config(const char *filename);
+            void load_simulation_parameters_from_config(const char *filename);
 		void read_mapID_from_file();
 		void log_simulation_parameters(const char *filename);
 };
