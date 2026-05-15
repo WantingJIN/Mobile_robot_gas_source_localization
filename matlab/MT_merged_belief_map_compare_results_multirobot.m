@@ -5,7 +5,7 @@ dataTable = table();
 
 % Rutas
 general_folder = '/home/wjin/Workspace/Multi-robot_GSL/Results';
-dispatched_folder = fullfile(general_folder, 'DARS_2026/absolute_calibrated_sensor_measurement_sharing');
+dispatched_folder = fullfile(general_folder, 'test/test');
 % dispatched_folder_map = fullfile(general_folder, 'Multi-GSL/REGION_GROWING_2D_BALANCED_center/9');
 folder_list = dir(general_folder);
 folder_list = folder_list([folder_list.isdir]); % Solo carpetas
@@ -70,7 +70,7 @@ for i = 1:numExperiments
     expected_a_posteriori_file = dlmread(fullfile(selected_subfolder, 'expected_a_posteriori.csv'));
     max_a_post_file = dlmread(fullfile(selected_subfolder, 'max_a_posteriori.csv'));
     % measurements = dlmread(fullfile(selected_subfolder, 'measurements.csv'));
-    sim_time = dlmread(fullfile(selected_subfolder, 'simulation_time.csv'));  % tamaño 1x1
+    % sim_time = dlmread(fullfile(selected_subfolder, 'simulation_time.csv'));  % tamaño 1x1
 
     % Cálculos principales
     %iteration_nbr = size(expected_a_posteriori_file, 1);
@@ -81,7 +81,7 @@ for i = 1:numExperiments
     error = params.source_position(1:2) - expected_a_posteriori;
     estimate_error = norm(error);
     entropy_val = entropy(end,1);
-    exp_time = sim_time;
+    % exp_time = sim_time;
 
     % Calcular distancia total usando todas las subcarpetas (101, 102, 103)
     traj_length = 0;
@@ -109,7 +109,7 @@ for i = 1:numExperiments
             stop_time_total = stop_time_total + sum(stop_data);
         end
     end
-    team_efficiency = (1 - (stop_time_total/3) / sim_time) * 100;
+    % team_efficiency = (1 - (stop_time_total/3) / sim_time) * 100;
 
 
      % === Balance scores ===
@@ -179,15 +179,15 @@ for i = 1:numExperiments
     sensor_mode = sensor_modes(params.gas_sensor_type + 1);
 
     % Guardar fila de resultados
-    %tempTable = table(params.map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error);
+    %tempTable = table(params.map_nbr, error(1), error(2), iteration_nbr,  traj_length, sampling_mode, planning_mode, sensor_mode, estimate_error);
     %tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error'};
-    tempTable = table(params.map_nbr, error(1), error(2), iteration_nbr, exp_time, traj_length, ...
+    tempTable = table(params.map_nbr, error(1), error(2), iteration_nbr, traj_length, ...
         sampling_mode, planning_mode, sensor_mode, estimate_error, ...
-        H_geometric, H_informative, team_efficiency);
+        H_geometric, H_informative);
 
-    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration', 'exp_time', ...
+    tempTable.Properties.VariableNames = {'Map', 'x_error', 'y_error', 'iteration' ...
         'traj_length', 'sampling_mode', 'planning_mode', 'sensor_mode', 'estimate_error', ...
-        'geometric_score', 'informative_score', 'team_efficiency'};
+        'geometric_score', 'informative_score'};
 
     dataTable = [dataTable; tempTable];
 end
@@ -207,13 +207,13 @@ blue = [44,136,217]/255;
 red = [217,83,79]/255;
 green = [91,183,91]/255;
 
-vars = {'x_error', 'y_error', 'iteration', 'exp_time', 'traj_length'};
-titles = {'X error', 'Y error', 'Iterations', 'Time', 'Distance'};
-ylabels = {'Error (m)', 'Error (m)', 'Iterations', 'Time (s)', 'Distance (m)'};
+vars = {'x_error', 'y_error', 'iteration','traj_length'};
+titles = {'X error', 'Y error', 'Iterations',  'Distance'};
+ylabels = {'Error (m)', 'Error (m)', 'Iterations',  'Distance (m)'};
 ylims = {[-1,10], [-3,4], [0,40], [0,300], [0,150]};
 
-for k = 1:5
-    subplot(1,5,k);
+for k = 1:4
+    subplot(1,4,k);
     boxplot(dataTable.(vars{k}), dataTable.Map, ...
         'Colors', blue, 'Symbol', 'k+', 'Widths', 0.5, 'Whisker', 1.5);
     hold on;
@@ -265,14 +265,14 @@ success_case = sum(abs(dataTable.x_error) < 1 & abs(dataTable.y_error) < 0.5);
 success_rate = success_case / height(dataTable);
 avg_geometric = mean(dataTable.geometric_score, 'omitnan');
 avg_informative = mean(dataTable.informative_score, 'omitnan');
-avg_team_eff = mean(dataTable.team_efficiency, 'omitnan');
+% avg_team_eff = mean(dataTable.team_efficiency, 'omitnan');
 
 % Mostrar métricas en la parte inferior de la figura
 metrics_text = {
     sprintf('\\bfAvg Success rate: \\rm%.2f%%', success_rate*100), ...
     sprintf('\\bfAvg Geometric Score: \\rm%.2f%%', avg_geometric*100), ...
     sprintf('\\bfAvg Informative Score: \\rm%.2f%%', avg_informative*100), ...
-    sprintf('\\bfAvg Team Efficiency: \\rm%.2f%%', avg_team_eff)
+    % sprintf('\\bfAvg Team Efficiency: \\rm%.2f%%', avg_team_eff)
 };
 
 
