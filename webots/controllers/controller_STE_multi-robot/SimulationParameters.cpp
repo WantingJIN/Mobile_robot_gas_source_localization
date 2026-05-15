@@ -194,7 +194,6 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 eControlArchitecture parse_control_architecture(const char* str) {
 	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
 	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
-	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
 	fprintf(stderr, "Unknown controll architecture: %s\n", str);
 	exit(1);
 }
@@ -227,27 +226,6 @@ eStopCondition parse_stop_condition(const char* str) {
 	exit(1);
 }
 
-eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
-	if (strcmp(str, "GOAL_REACHED") == 0) return GOAL_REACHED;
-	if (strcmp(str, "FIXED_FREQ") == 0) return FIXED_FREQ;
-	if (strcmp(str, "BELIEF_DIFF") == 0) return BELIEF_DIFF;
-	fprintf(stderr, "Unknown update goal policy: %s\n", str);
-	exit(1);
-}
-
-eIncreaseFreqBM parse_increase_freq_BM(const char* str) {
-	if (strcmp(str, "YES") == 0) return YES;
-	if (strcmp(str, "NO") == 0) return NO;
-	fprintf(stderr, "Unknown estimate while moving: %s\n", str);
-	exit(1);
-}
-
-eDistObstacleAware parse_dist_obstacle_aware(const char* str) {
-	if (strcmp(str, "EUCLIDEAN") == 0) return EUCLIDEAN;
-	if (strcmp(str, "DIJKSTRA") == 0) return DIJKSTRA;
-	fprintf(stderr, "Unknown estimate while moving: %s\n", str);
-	exit(1);
-}
 
 eScoreFun parse_score_fun(const char *str)
 {
@@ -293,15 +271,11 @@ SimulationParameters::SimulationParameters()
 	simuMode = ONLINE;
 	R0 = 100;
 	weighting_entropy_ratio = 6;
-	controlArchitecture = CENTRALIZED;
-	update_time = 10;
+	controlArchitecture = INDIVIDUAL;
 	epsilon_clusterize = 0;
-	KLD_thresh = 0.1;
 	stopCondition = ENTROPY_ONLY;
 	mapCoverageStrategy = LLOYD_P;
 	mapCoverageSeed = ROBOT_CELL;
-	increaseFreqBM = NO;
-	distObstacleAware = DIJKSTRA;
 
 }
 
@@ -451,27 +425,12 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "mapCoverageSeed") == 0) {
 			mapCoverageSeed = parse_map_coverage_seed(value);
 		} 
-		else if (strcmp(key, "update_time") == 0) {
-			update_time = atoi(value);
-		}
 		else if (strcmp(key, "epsilon_clusterize") == 0) {
-			epsilon_clusterize = atoi(value);
-		}
-		else if (strcmp(key, "KLD_thresh") == 0) {
-			KLD_thresh = atoi(value);
+			epsilon_clusterize = atof(value);
 		}
 		else if (strcmp(key, "stopCondition") == 0) {
 			stopCondition = parse_stop_condition(value);
-		}
-		else if (strcmp(key, "updateGoalPolicy") == 0) {
-			updateGoalPolicy = parse_update_goal_policy(value);
-		}
-		else if (strcmp(key, "increaseFreqBM") == 0) {
-			increaseFreqBM = parse_increase_freq_BM(value);
-		}
-		else if (strcmp(key, "distObstacleAware") == 0) {
-			distObstacleAware = parse_dist_obstacle_aware(value);
-		}
+		}	
 		else
 		{
 			fprintf(stderr, "Unknown parameter: %s\n", key);
@@ -535,9 +494,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "control_architecture %d\n", controlArchitecture);
 	fprintf(sim_param_file, "cluster_method %d\n", mapCoverageStrategy);
 	fprintf(sim_param_file, "cluster_seed %d\n", mapCoverageSeed);
-	fprintf(sim_param_file, "update_time %d\n", update_time);
 	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
-	fprintf(sim_param_file, "KLD_thresh %f\n", KLD_thresh);
 	fclose(sim_param_file);
 }
 

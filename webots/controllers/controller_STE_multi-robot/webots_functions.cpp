@@ -112,7 +112,8 @@ void init()
 			printf("release rate param : %d\n", release_amount);
 		fclose(sim_param_file);
 	}
-
+      
+	double real_source_pos[3];
 	if (simulation_parameters.simuMode == ONLINE){
 		if (access("../../data/source_pos.txt", F_OK) != -1) {
 			FILE * sim_param_file = fopen("../../data/source_pos.txt", "r");
@@ -597,15 +598,11 @@ void set_logfile_names()
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
 	sprintf(whole_position_history_logfile_name, "%s/whole_position_history.csv", folder_name);
-	sprintf(kld_value_logfile_name, "%s/kld_value.csv", folder_name);
-	sprintf(time_logfile_name, "%s/simulation_time.csv", folder_name);
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
 	sprintf(posterior_pdf_pre_merge_name, "%s/posterior_pdf_pre_merge.csv", folder_name);
 	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
-	sprintf(posterior_pdf_3D_cluster_lloyd_name, "%s/posterior_pdf_3D_cluster_lloyd.csv", folder_name);
 	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
 	sprintf(cluster_sizes_informative_name, "%s/cluster_sizes_informative.csv", folder_name);
-	sprintf(stop_time_name, "%s/stop_time.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(entropy_individual_logfile_name, "%s/entropy_individual.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
@@ -622,7 +619,6 @@ void set_logfile_names()
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
 	sprintf(clustering_debugging_name, "%s/console_multirobot.txt", folder_name);
-	sprintf(KLD_debugging_name, "%s/console_KLD.txt", folder_name);
 	sprintf(cumulative_path_logfile_name, "%s/cumulative_path.csv", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation

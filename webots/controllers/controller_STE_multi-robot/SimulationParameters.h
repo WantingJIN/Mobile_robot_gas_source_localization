@@ -126,7 +126,6 @@ typedef enum infoSum
 typedef enum controlArchitecture{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
-	CENTRALIZED = 2,
 } eControlArchitecture;
 
 typedef enum mapCoverageStrategy{
@@ -152,21 +151,6 @@ typedef enum stopCondition{
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
 
-typedef enum updateGoalPolicy{
-	GOAL_REACHED = 0,
-	FIXED_FREQ = 1,
-	BELIEF_DIFF = 2,
-} eUpdateGoalPolicy;
-
-typedef enum increaseFreqBM{
-	YES = 0,
-	NO = 1,
-} eIncreaseFreqBM;
-
-typedef enum distObstacleAware{
-	EUCLIDEAN = 0,
-	DIJKSTRA = 1,
-} eDistObstacleAware;
 
 // parameters to estimate
 struct parameters_set
@@ -198,9 +182,7 @@ class SimulationParameters{
 		float scoreSigma;
 		int planning_step;
 		float weighting_entropy_ratio;
-		int update_time;
 		double epsilon_clusterize;
-		double KLD_thresh;
 
 		eEvaluationMethod BayesianModelingMethod;
 		eScenario scenario; 
@@ -224,9 +206,6 @@ class SimulationParameters{
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
-		eUpdateGoalPolicy updateGoalPolicy;
-		eIncreaseFreqBM increaseFreqBM;
-		eDistObstacleAware distObstacleAware;
 
 		SimulationParameters();
 		~SimulationParameters();

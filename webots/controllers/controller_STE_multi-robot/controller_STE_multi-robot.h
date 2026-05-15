@@ -39,9 +39,7 @@ typedef enum state
 	STATE_OBSTACLE_AVOIDANCE = 6,
 	STATE_READ_ALL = 7,
 	STATE_READ_INITIAL = 8,
-	STATE_RECEIVE_GOAL = 9,
 	STATE_RECEIVE_PDF = 10,
-	STATE_SEND_GOAL = 11,
 	STATE_SEND_PDF = 12,
 	STATE_MERGE_PDF = 13,
 	STATE_UPDATEGOAL_TEAM = 14,
@@ -50,16 +48,6 @@ typedef enum state
 	STATE_SHARE_DIST = 17,
 	STATE_RECEIVE_DIST = 18,
 	STATE_MOVESTING = 19, // sub-FSM will run here
-
-	// sub-FSM for STATE_MOVESTING
-	SUBSTATE_MEASURING = 20,
-	SUBSTATE_ESTIMATING = 21,
-	SUBSTATE_SHARE_PDF = 22,
-	SUBSTATE_RECEIVE_PDF = 23,
-	SUBSTATE_MERGE_PDF = 24,
-	SUBSTATE_COMPARE_PDF = 25,
-	SUBSTATE_SHARE_KLD = 26,
-	SUBSTATE_RECEIVE_KLD = 27,
 } eState;
 
 // Sub-FSM
@@ -121,9 +109,7 @@ void state_waiting();
 void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
-void state_receive_goal();
 void state_receive_pdf();
-void state_send_goal();
 void state_send_pdf();
 void state_merge_pdf();
 void state_updategoal_team();
@@ -132,14 +118,6 @@ void state_region_allocation();
 void state_share_dist();
 void state_receive_dist();
 void state_movesting();
-void substate_measuring();
-void substate_estimating();
-void substate_share_pdf();
-void substate_receive_pdf();
-void substate_merge_pdf();
-void substate_compare_pdf();
-void substate_share_kld();
-void substate_receive_kld();
 
 double randu();
 long long current_timestamp();

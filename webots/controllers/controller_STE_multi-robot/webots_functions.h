@@ -51,12 +51,9 @@ extern char likelihood_logfile_name[512];
 extern char measurement_history_logfile_name[512];
 extern char position_history_logfile_name[512];
 extern char whole_position_history_logfile_name[512];
-extern char kld_value_logfile_name[512];
-extern char time_logfile_name[512];
 extern char posterior_pdf_3D_name[512];
 extern char posterior_pdf_pre_merge_name[512];
 extern char posterior_pdf_3D_cluster_name[512];
-extern char posterior_pdf_3D_cluster_lloyd_name[512];
 extern char cluster_sizes_geometric_name[512];
 extern char cluster_sizes_informative_name[512];
 extern char stop_time_name[512];
@@ -90,7 +87,6 @@ extern FILE *KLD_debugging_logfile;
 extern FILE *cumulative_path_logfile;
 extern char console_logfile_name[512];
 extern char clustering_debugging_name[512];
-extern char KLD_debugging_name[512];
 extern char cumulative_path_logfile_name[512];
 
 // finite state machine
@@ -117,8 +113,6 @@ extern struct message message;
 extern struct friends friends[MAX_NB_ROBOTS];
 
 extern int n_time_step;
-
-extern double real_source_pos[3];
 
 extern SimulationParameters simulation_parameters;
 
