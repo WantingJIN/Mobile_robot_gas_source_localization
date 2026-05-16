@@ -106,11 +106,11 @@ planning:
 
 # --- Team Coordination ---
 team:
-  teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED | CENTRALIZED
-  updateGoalPolicy: GOAL_REACHED    # GOAL_REACHED | FIXED_FREQ | BELIEF_DIFF
-  FIXED_FREQ:                       # sub-params: active when updateGoalPolicy = FIXED_FREQ
-    updateGoalTime: 5
-
+  teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED 
+  mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_P | REGION_GROWING_D | NONE
+  mapCoverageSeed: ROBOT_CELL    # MAX_CELL | ROBOT_CELL
+  epsilon_clusterize: 0
+  
 # --- Termination ---
 termination:
   stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD

@@ -173,12 +173,6 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
-eControlArchitecture parse_control_architecture(const char* str) {
-	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
-	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
-	fprintf(stderr, "Unknown controll architecture: %s\n", str);
-	exit(1);
-}
 
 eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
 	if (strcmp(str, "VORONOI") == 0) return VORONOI;
@@ -187,8 +181,6 @@ eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
 	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
 	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
 	if (strcmp(str, "NONE") == 0) return NONE;
-	if (strcmp(str, "PATH_CLUSTER") == 0) return PATH_CLUSTER;
-	if (strcmp(str, "VORONOI_REPAIR") == 0) return VORONOI_REPAIR;
 	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }
@@ -265,6 +257,13 @@ eModelUncertainty parse_model_uncertainty(const char* str) {
 
 SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
+}
+
+eTeamStrategy parse_team_strategy(const char* str) {
+	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
+	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
+	fprintf(stderr, "Unknown team strategy: %s\n", str);
+	exit(1);
 }
 
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
@@ -416,34 +415,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	{
 		auto n = config["team"];
 		teamStrategy     = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
-		updateGoalPolicy = parse_update_goal_policy(n["updateGoalPolicy"].as<std::string>().c_str());
-
-		// // FIXED_FREQ sub-params
-		// if (updateGoalPolicy == FIXED_FREQ && n["FIXED_FREQ"]) {
-		// 	update_goal_time = n["FIXED_FREQ"]["updateGoalTime"].as<int>();
-		// }
-		// else if (strcmp(key, "controlArchitecture") == 0) {
-		// 	controlArchitecture = parse_control_architecture(value);
-		// } 
-		// else if (strcmp(key, "mapCoverageStrategy") == 0) {
-		// 	mapCoverageStrategy = parse_map_coverage_strategy(value);
-		// } 
-		// else if (strcmp(key, "mapCoverageSeed") == 0) {
-		// 	mapCoverageSeed = parse_map_coverage_seed(value);
-		// } 
-		// else if (strcmp(key, "epsilon_clusterize") == 0) {
-		// 	epsilon_clusterize = atof(value);
-		// }
-		// else if (strcmp(key, "stopCondition") == 0) {
-		// 	stopCondition = parse_stop_condition(value);
-		// }	
-		// else
-		// {
-		// 	fprintf(stderr, "Unknown parameter: %s\n", key);
-		// 	exit(1);
-		// } 
+		mapCoverageStrategy = parse_map_coverage_strategy(n["mapCoverageStrategy"].as<std::string>().c_str());
+		mapCoverageSeed = parse_map_coverage_seed(n["mapCoverageSeed"].as<std::string>().c_str());
+		epsilon_clusterize = n["epsilon_clusterize"].as<float>();
 	}
-
 	// --- termination ---
 	{
 		auto n = config["termination"];
@@ -502,7 +477,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
-	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);
 	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);

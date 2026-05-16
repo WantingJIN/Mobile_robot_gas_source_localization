@@ -50,13 +50,6 @@ typedef enum state
 	STATE_MOVESTING = 19, // sub-FSM will run here
 } eState;
 
-// Sub-FSM
-struct FSM_Sub
-{
-	int n_cycles_sub;
-	eState substate;
-	void (*hook)();
-};
 
 // Main FSM
 struct FSM
@@ -65,8 +58,6 @@ struct FSM
 	int n_relocations;
 	eState state;
 	void (*hook)();
-
-	struct FSM_Sub *subfsm;
 };
 
 extern struct FSM FSM;

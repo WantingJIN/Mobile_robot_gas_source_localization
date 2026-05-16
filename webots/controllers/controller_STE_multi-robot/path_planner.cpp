@@ -681,20 +681,20 @@ void PathPlanner::markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int 
 std::list<Position> PathPlanner::accumulative_Dijkstra(){
 	
 	// update current_position index
-	double dx = (XMAX - XMIN) / x_nbins;
-    double dy = (YMAX - YMIN) / y_nbins;
+	double dx = (XMAX - XMIN) / source_x_nbins;
+    double dy = (YMAX - YMIN) / source_y_nbins;
 
     current_position.x_idx = static_cast<int>(std::floor((current_position.x - XMIN) / dx));
     current_position.y_idx = static_cast<int>(std::floor((current_position.y - YMIN) / dy));
 
     if (current_position.x_idx < 0) current_position.x_idx = 0; 
-	else if (current_position.x_idx >= x_nbins) current_position.x_idx = x_nbins - 1;
+	else if (current_position.x_idx >= source_x_nbins) current_position.x_idx = source_x_nbins - 1;
 
     if (current_position.y_idx < 0) current_position.y_idx = 0; 
-	else if (current_position.y_idx >= y_nbins) current_position.y_idx = y_nbins - 1;
+	else if (current_position.y_idx >= source_y_nbins) current_position.y_idx = source_y_nbins - 1;
 
 	// Actualizar índice lineal
-    current_position.index = current_position.y_idx * x_nbins + current_position.x_idx;
+    current_position.index = current_position.y_idx * source_x_nbins + current_position.x_idx;
 
 	std::cout << "Current position index: " << current_position.index
               << ", x_idx: " << current_position.x_idx
@@ -845,21 +845,16 @@ std::list<Position> PathPlanner::accumulative_Dijkstra(){
         std::cout << "Optimal Path: ";
         for (const auto& pos : bestPath) {
             std::cout << "(" << pos.x << ", " << pos.y << ") -> ";
-			//fprintf(cumulative_path_logfile, "%i,%f,%f,\n", FSM.n_cycles, pos.x, pos.y);
-			trajectory_logfile = fopen(trajectory_logfile_name, "a");
-			fprintf(trajectory_logfile, "%d, %f, %f\n", FSM.n_cycles, pos.x, pos.y);
-			fclose(trajectory_logfile);
         }
         std::cout << "Goal\n";
-		goal_position.x = bestTarget.x;
-		goal_position.y = bestTarget.y;
-		cell_visited_list[bestTarget.index] = 1;
-		markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, x_nbins, y_nbins, radius_neighbor, cell_visited_list);
-		return bestPath;
+	  goal_position.x = bestTarget.x;
+	  goal_position.y = bestTarget.y;
+	  cell_visited_list[bestTarget.index] = 1;
+	  markNeighboringCellsAsVisited(bestTarget.x_idx, bestTarget.y_idx, _xnbins, _ynbins, radius_neighbor, cell_visited_list);
     } else {
-    	std::cout << "No valid path found.\n";
-		return std::list<Position>();
+        std::cout << "No valid path found.\n";
     }
+    return bestPath;
 }
 
 

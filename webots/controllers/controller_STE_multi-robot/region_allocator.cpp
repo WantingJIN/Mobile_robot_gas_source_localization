@@ -66,12 +66,12 @@ void RegionAllocator::log_posterior_pdf_3d_cluster()
 
     fprintf(posterior_pdf_3D_cluster, "%f,%f,", current_position.x, current_position.y);
 
-    for (int y = 0; y < y_nbins; ++y) {
-        for (int x = 0; x < x_nbins; ++x) {
-            int idx = y * x_nbins + x;
+    for (int y = 0; y < source_y_nbins; ++y) {
+        for (int x = 0; x < source_x_nbins; ++x) {
+            int idx = y * source_x_nbins + x;
             fprintf(posterior_pdf_3D_cluster, "%d", belief_clusters[idx]);
 
-            if (x != x_nbins - 1 || y != y_nbins - 1)
+            if (x != source_x_nbins - 1 || y != source_y_nbins - 1)
                 fprintf(posterior_pdf_3D_cluster, ",");
         }
     }
@@ -82,7 +82,7 @@ void RegionAllocator::log_posterior_pdf_3d_cluster()
 
 bool RegionAllocator::is_inside_grid(int x, int y) const
 {
-    return x >= 0 && x < x_nbins && y >= 0 && y < y_nbins;
+    return x >= 0 && x < source_x_nbins && y >= 0 && y < source_y_nbins;
 }
 
 bool RegionAllocator::is_active_cell(int idx, bool avoid_obstacles) const
@@ -146,8 +146,8 @@ std::vector<RegionAllocator::GridPoint> RegionAllocator::seed_points_from_indice
 std::vector<std::vector<double>> RegionAllocator::compute_obstacle_aware_distance_maps(const std::vector<GridPoint>& seeds, const std::vector<GridPoint>& directions) const
 {
     const int K = seeds.size();
-    const double cell_size_x = (XMAX - XMIN) / static_cast<double>(x_nbins);
-    const double cell_size_y = (YMAX - YMIN) / static_cast<double>(y_nbins);
+    const double cell_size_x = (XMAX - XMIN) / static_cast<double>(source_x_nbins);
+    const double cell_size_y = (YMAX - YMIN) / static_cast<double>(source_y_nbins);
     std::vector<std::vector<double>> dist_map(K, std::vector<double>(MAP_SIZE, std::numeric_limits<double>::max()));
 
     for (int k = 0; k < K; ++k) {
@@ -158,7 +158,7 @@ std::vector<std::vector<double>> RegionAllocator::compute_obstacle_aware_distanc
         if (!is_inside_grid(sx, sy))
             continue;
 
-        int seed_idx = sy * x_nbins + sx;
+        int seed_idx = sy * source_x_nbins + sx;
         dist_map[k][seed_idx] = 0.0;
         q.push({sx, sy});
 
@@ -166,7 +166,7 @@ std::vector<std::vector<double>> RegionAllocator::compute_obstacle_aware_distanc
             auto [x, y] = q.front();
             q.pop();
 
-            int idx = y * x_nbins + x;
+            int idx = y * source_x_nbins + x;
             double d = dist_map[k][idx];
 
             for (const auto& [dx, dy] : directions) {
@@ -176,7 +176,7 @@ std::vector<std::vector<double>> RegionAllocator::compute_obstacle_aware_distanc
                 if (!is_inside_grid(nx, ny))
                     continue;
 
-                int nidx = ny * x_nbins + nx;
+                int nidx = ny * source_x_nbins + nx;
                 if (obstacle_map[nidx] == 1)
                     continue;
 
@@ -287,8 +287,8 @@ std::vector<int> RegionAllocator::best_seed_assignment_for_robots(const std::vec
 
         for (int k = 0; k < K; ++k) {
             const GridPoint& seed = seeds[perm[k]];
-            double cx = XMIN + (seed.first + 0.5) * (XMAX - XMIN) / x_nbins;
-            double cy = YMIN + (seed.second + 0.5) * (YMAX - YMIN) / y_nbins;
+            double cx = XMIN + (seed.first + 0.5) * (XMAX - XMIN) / source_x_nbins;
+            double cy = YMIN + (seed.second + 0.5) * (YMAX - YMIN) / source_y_nbins;
             double ddx = received_current_pos[k][0] - cx;
             double ddy = received_current_pos[k][1] - cy;
             cost += std::sqrt(ddx * ddx + ddy * ddy);
@@ -308,9 +308,9 @@ void RegionAllocator::log_cluster_map_debug_for_current_robot(int cluster_count)
     for (int k = 0; k < cluster_count; ++k) {
         if (ID == 101 + k) {
             fprintf(clustering_debugging_logfile, "\n Clusterized Belief Map (balanceado):\n");
-            for (int y = 0; y < y_nbins; ++y) {
-                for (int x = 0; x < x_nbins; ++x) {
-                    int idx = y * x_nbins + x;
+            for (int y = 0; y < source_y_nbins; ++y) {
+                for (int x = 0; x < source_x_nbins; ++x) {
+                    int idx = y * source_x_nbins + x;
                     fprintf(clustering_debugging_logfile, "%d ", belief_clusters[idx]);
                 }
                 fprintf(clustering_debugging_logfile, "\n");
@@ -338,9 +338,9 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_VORONOI(const std::vec
     log_informative_sizes_and_apply_masks(K, K, N);
 
     fprintf(clustering_debugging_logfile, "Robot ID [%d]: NO Normalized Individual pdf after mask:\n", ID);
-    for (int y = 0; y < y_nbins; ++y) {
-        for (int x = 0; x < x_nbins; ++x) {
-            int idx = y * x_nbins + x;
+    for (int y = 0; y < source_y_nbins; ++y) {
+        for (int x = 0; x < source_x_nbins; ++x) {
+            int idx = y * source_x_nbins + x;
             fprintf(clustering_debugging_logfile, "%.9f ", posterior->pdf[idx]);
         }
         fprintf(clustering_debugging_logfile, "\n");
@@ -463,7 +463,7 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
         {-1, 0}, {-1, -1}, {0, -1}, {1, -1}
     };
 
-    std::vector<std::vector<bool>> visited(y_nbins, std::vector<bool>(x_nbins, false));
+    std::vector<std::vector<bool>> visited(source_y_nbins, std::vector<bool>(source_x_nbins, false));
     std::vector<std::queue<std::pair<int, int>>> queues(K);
     std::vector<int> cluster_sizes(K, 0);
 
@@ -475,7 +475,7 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
     for (int k = 0; k < K; ++k) {
         int sx = seeds[k].first;
         int sy = seeds[k].second;
-        int idx = sy * x_nbins + sx;
+        int idx = sy * source_x_nbins + sx;
 
         if (!is_inside_grid(sx, sy))
             continue;
@@ -531,13 +531,13 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
                     int nx = x + dx;
                     int ny = y + dy;
 
-                    if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins)
+                    if (nx < 0 || nx >= source_x_nbins || ny < 0 || ny >= source_y_nbins)
                         continue;
 
                     if (visited[ny][nx])
                         continue;
 
-                    int nidx = ny * x_nbins + nx;
+                    int nidx = ny * source_x_nbins + nx;
 
                     if (obstacle_map[nidx] == 1)
                         continue;
@@ -579,7 +579,7 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_P()
 
     std::fill(belief_clusters, belief_clusters + N, 0);
 
-    std::vector<std::vector<bool>> visited(y_nbins, std::vector<bool>(x_nbins, false));
+    std::vector<std::vector<bool>> visited(source_y_nbins, std::vector<bool>(source_x_nbins, false));
     std::queue<GridPoint> queues[K];
     int cluster_sizes[K] = {0, 0, 0};
 
@@ -589,7 +589,7 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_P()
     for (int k = 0; k < K; ++k) {
         queues[k].push({seeds_x[k], seeds_y[k]});
         visited[seeds_y[k]][seeds_x[k]] = true;
-        belief_clusters[seeds_y[k] * x_nbins + seeds_x[k]] = k + 1;
+        belief_clusters[seeds_y[k] * source_x_nbins + seeds_x[k]] = k + 1;
         cluster_sizes[k]++;
     }
 
@@ -610,10 +610,10 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_P()
             for (const auto& [dx, dy] : von_neumann_directions()) {
                 int nx = x + dx, ny = y + dy;
                 if (!is_inside_grid(nx, ny)) continue;
-                if (obstacle_map[ny * x_nbins + nx] == 1) continue;
+                if (obstacle_map[ny * source_x_nbins + nx] == 1) continue;
                 if (visited[ny][nx]) continue;
 
-                int idx = ny * x_nbins + nx;
+                int idx = ny * source_x_nbins + nx;
                 if (posterior->pdf[idx] <= simulation_parameters.epsilon_clusterize) continue;
 
                 if (posterior->pdf[idx] > best_pdf) {
@@ -624,7 +624,7 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_P()
             }
 
             if (best_nx != -1 && best_ny != -1) {
-                int idx = best_ny * x_nbins + best_nx;
+                int idx = best_ny * source_x_nbins + best_nx;
                 visited[best_ny][best_nx] = true;
                 belief_clusters[idx] = k + 1;
                 queues[k].push({best_nx, best_ny});

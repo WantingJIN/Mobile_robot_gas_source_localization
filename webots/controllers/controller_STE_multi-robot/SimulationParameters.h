@@ -135,8 +135,6 @@ typedef enum mapCoverageStrategy{
 	REGION_GROWING_P = 3,
 	REGION_GROWING_D = 4,
 	NONE = 5,
-	PATH_CLUSTER = 6,
-	VORONOI_REPAIR = 7,
 } eMapCoverageStrategy;
 
 typedef enum mapCoverageSeed{
@@ -228,6 +226,8 @@ class SimulationParameters{
 		eGasHitMethod gasHitMethod;
 		eMapCoverageStrategy mapCoverageStrategy;
 		eMapCoverageSeed mapCoverageSeed;
+
+		eTeamStrategy teamStrategy;
 
 	      eScoreFun scoreFun;
 
