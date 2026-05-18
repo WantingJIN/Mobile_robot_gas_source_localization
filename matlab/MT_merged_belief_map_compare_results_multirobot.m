@@ -5,7 +5,7 @@ dataTable = table();
 
 % Rutas
 general_folder = '/home/wjin/Workspace/Multi-robot_GSL/Results';
-dispatched_folder = fullfile(general_folder, 'test/test');
+dispatched_folder = fullfile(general_folder, 'test/rank_feature');
 % dispatched_folder_map = fullfile(general_folder, 'Multi-GSL/REGION_GROWING_2D_BALANCED_center/9');
 folder_list = dir(general_folder);
 folder_list = folder_list([folder_list.isdir]); % Solo carpetas
