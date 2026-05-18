@@ -904,22 +904,38 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<floa
 
 void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode)
 {
+	const char mode[2] = {writing_mode, '\0'};
 	// log u field
-	FILE *file_u = fopen(filename_u, &writing_mode);
+	FILE *file_u = fopen(filename_u, mode);
+	if (!file_u)
+	{
+		fprintf(stderr, "Failed to open wind U log file: %s\n", filename_u);
+		return;
+	}
 	for (int i = 0; i < N_-1; i++) {
 		fprintf(file_u, "%f,", u_[i]);
 	}
 	fprintf(file_u, "%f \n", u_[N_-1]);
 	fclose(file_u);
 	// log v field
-	FILE *file_v = fopen(filename_v, &writing_mode);
+	FILE *file_v = fopen(filename_v, mode);
+	if (!file_v)
+	{
+		fprintf(stderr, "Failed to open wind V log file: %s\n", filename_v);
+		return;
+	}
 	for (int i = 0; i < N_-1; i++) {
 		fprintf(file_v, "%f,", v_[i]);
 	}
 	fprintf(file_v, "%f \n", v_[N_-1]);		
 	fclose(file_v);
 	// log w field
-	FILE *file_w = fopen(filename_w, &writing_mode);
+	FILE *file_w = fopen(filename_w, mode);
+	if (!file_w)
+	{
+		fprintf(stderr, "Failed to open wind W log file: %s\n", filename_w);
+		return;
+	}
 	for (int i = 0; i < N_-1; i++) {
 		fprintf(file_w, "%f,", w_[i]);
 	}

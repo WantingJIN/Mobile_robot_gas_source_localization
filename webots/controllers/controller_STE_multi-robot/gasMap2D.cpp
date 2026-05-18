@@ -117,12 +117,20 @@ float GasMap2D::compute_gaussian(const double x_dist, const double y_dist)
   return exp(-num) * _gaussian_divisor;
 }
 
-void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> history_position, vector<double> &concentrations_from_map)
+void GasMap2D::retrieve_readings_from_gasmap(const vector<Position> &history_position, vector<double> &concentrations_from_map)
 {
   for (int i = 0; i < history_position.size(); i++)
   {
     int idx_x = round((history_position[i].x - mx_min) / mx_resol);
     int idx_y = round((history_position[i].y - my_min) / my_resol);
+    if (idx_x < 0)
+      idx_x = 0;
+    if (idx_x >= map_x_nbins)
+      idx_x = map_x_nbins - 1;
+    if (idx_y < 0)
+      idx_y = 0;
+    if (idx_y >= map_y_nbins)
+      idx_y = map_y_nbins - 1;
     concentrations_from_map.push_back(gasAverConMap[idx_x][idx_y]);
   }
 }

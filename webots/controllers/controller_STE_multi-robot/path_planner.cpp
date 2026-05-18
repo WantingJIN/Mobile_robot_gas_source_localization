@@ -653,7 +653,7 @@ void PathPlanner::reset_metrics(){
     }
 }
 
-void PathPlanner::markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> cell_visited_list)
+void PathPlanner::markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> &cell_visited_list)
 {
 	// Parcours des cellules dans le voisinage
 	for (int dx = -radius_neighbor; dx <= radius_neighbor; ++dx)

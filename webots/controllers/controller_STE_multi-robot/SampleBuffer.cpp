@@ -146,13 +146,30 @@ void SampleBuffer::reset_all()
 
 void SampleBuffer::add_all_to_buffer()
 {
-	add_odor_to_buffer();
-	add_wind_to_buffer();
-	n_samples--; // it was done twice
+	if (n_samples >= buffer_length)
+		return;
+
+	concentration_buffer[n_samples] = instant_concentration;
+	average_concentration += instant_concentration;
+
+	wind_intensity_buffer[n_samples] = instant_wind_intensity;
+	average_wind_intensity += instant_wind_intensity;
+	wind_angle_buffer[n_samples] = instant_wind_angle;
+	wind_vx_buffer[n_samples] = instant_wind_vx;
+	average_wind_vx += instant_wind_vx;
+	wind_vy_buffer[n_samples] = instant_wind_vy;
+	average_wind_vy += instant_wind_vy;
+	wind_vz_buffer[n_samples] = instant_wind_vz;
+	average_wind_vz += instant_wind_vz;
+
+	n_samples++;
 }
 
 void SampleBuffer::add_odor_to_buffer()
 {
+	if (n_samples >= buffer_length)
+		return;
+
 	concentration_buffer[n_samples] = instant_concentration;
 	average_concentration += instant_concentration; // use it as a sum temporarily
 	n_samples++;
@@ -160,6 +177,9 @@ void SampleBuffer::add_odor_to_buffer()
 
 void SampleBuffer::add_wind_to_buffer()
 {
+	if (n_samples >= buffer_length)
+		return;
+
 	wind_intensity_buffer[n_samples] = instant_wind_intensity;
 	average_wind_intensity += instant_wind_intensity;
 	wind_angle_buffer[n_samples] = instant_wind_angle;
@@ -174,6 +194,9 @@ void SampleBuffer::add_wind_to_buffer()
 
 void SampleBuffer::average_all()
 {
+	if (n_samples <= 0)
+		return;
+
 	average_odor();
 	average_wind();
 }

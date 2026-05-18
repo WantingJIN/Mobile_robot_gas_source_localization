@@ -15,7 +15,13 @@ GasDispersionMap::GasDispersionMap(int index_sx, int index_sy)
 void GasDispersionMap::log_map(const char *filename, char writing_mode)
 {
 
-	FILE *gas_dispersion_maps = fopen(filename, &writing_mode);
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *gas_dispersion_maps = fopen(filename, mode);
+	if (!gas_dispersion_maps)
+	{
+		fprintf(stderr, "Failed to open gas dispersion map log file: %s\n", filename);
+		return;
+	}
 	fprintf(gas_dispersion_maps, "%.9f, %9f", sx, sy);
 	for (int i = 0; i < source_x_nbins; i++)
 	{

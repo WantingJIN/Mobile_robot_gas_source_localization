@@ -196,7 +196,7 @@ bool use_visibility_path = true;
 // static int belief_clusters[source_x_nbins*source_y_nbins] = {0};
 
 // visited list
-std::vector<int> cell_visited_list;
+std::vector<int> cell_visited_list(MAP_SIZE, 0);
 static double belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
 static int received_flags[MAX_NB_ROBOTS] = {0};
 static double belief_map_merged[MAP_SIZE] = {0};
@@ -1397,9 +1397,21 @@ int main(int argc, char **argv)
 
 	// File for saving console messages
 	console_logfile = fopen(console_logfile_name, "a");
+	if (!console_logfile)
+	{
+		fprintf(stderr, "Failed to open console log file: %s\n", console_logfile_name);
+		console_logfile = stderr;
+	}
+	clustering_debugging_logfile = fopen(clustering_debugging_name, "a");
+	if (!clustering_debugging_logfile)
+	{
+		fprintf(stderr, "Failed to open clustering debugging log file: %s\n", clustering_debugging_name);
+		clustering_debugging_logfile = stderr;
+	}
 	// Initialize the appropriate plume model based on the simulation parameters
 	plume_model = initializePlumeModel();
 	posterior = new Posterior(plume_model);
+	region_allocator = RegionAllocator(posterior, received_current_pos);
 	path_planner = new PathPlanner(plume_model, posterior, &history);
 
 	// Precompute gas concentration maps for all possible source locations, resolution 20x20
@@ -1423,7 +1435,10 @@ int main(int argc, char **argv)
 		next_iteration_time();
 	}
 
-	fclose(console_logfile);
+	if (console_logfile && console_logfile != stderr)
+		fclose(console_logfile);
+	if (clustering_debugging_logfile && clustering_debugging_logfile != stderr)
+		fclose(clustering_debugging_logfile);
 
 	// final logs
 	if (simulation_parameters.simuMode == ONLINE)

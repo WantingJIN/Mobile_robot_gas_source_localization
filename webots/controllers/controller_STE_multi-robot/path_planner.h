@@ -50,7 +50,7 @@ private:
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::list<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom);
-    void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> cell_visited_list);
+    void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> &cell_visited_list);
     std::vector<Position> findOptimalPath(Position start, double target[2]);
     //
 public:
@@ -90,4 +90,3 @@ public:
 };
 
 #endif
-

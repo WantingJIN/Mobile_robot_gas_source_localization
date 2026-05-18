@@ -48,7 +48,7 @@ public:
   void runKernelAlgorithm(Position current_position, float current_odor);
   KernelParameters kp;
   void initialize_gas_map_features();
-  void retrieve_readings_from_gasmap(const vector<Position> history_position, vector<double> &concentrations_from_map);
+  void retrieve_readings_from_gasmap(const vector<Position> &history_position, vector<double> &concentrations_from_map);
 
 private:
   // Eigen::Matrix2f _sigma_matrix;

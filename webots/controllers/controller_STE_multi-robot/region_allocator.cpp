@@ -11,7 +11,7 @@
 
 extern SimulationParameters simulation_parameters;
 extern Position current_position;
-extern int cell_visited_list[MAP_SIZE];
+extern std::vector<int> cell_visited_list;
 extern int ID;
 extern FILE *clustering_debugging_logfile;
 extern char posterior_pdf_3D_cluster_name[512];
