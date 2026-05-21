@@ -774,43 +774,12 @@ void state_estimating()
 		{
 			// FSM.state = STATE_FINISHED;
 			// return;
-			if (simulation_parameters.estimationScale == GLOBAL){
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-				broadcast_state_finished();
-				return;
-			} 
-			else {
-				// Change the estimation range and move robot to new area
-				// reset the posterior and plume range
-				// if the estimation converge inside the estimation range, then stop
-				// if the estimation converge on the boundary, then it need to be checked
-				// Also set a maximum number of relocations
-				if (posterior->is_converged_on_boundary() && (FSM.n_relocations < MAX_RELOCATIONS)){
-					FSM.n_relocations++;
-					// move the robot to the converged position
-					goal_position.x = plume_model->max_a_post_value[0];
-					goal_position.y = plume_model->max_a_post_value[1];
-					goal_position.heading = 0;
-					Message msg(ID, 0, goal_position, -1, goal_position, 0);
-					send_msg(msg);
-					printf("Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
-					fprintf(console_logfile, "Robot ID [%d]: relocating to new area (%f, %f) \n", ID, goal_position.x, goal_position.y);
-					FSM.state = STATE_MOVING;
-					FSM.hook = state_moving;
-
-					printf("The estimation converged on the boundary, change the estimation range and relocate robot \n");
-					fprintf(console_logfile, "The estimation converged on the boundary, change the estimation range and relocate robot \n");
-				} else {
-					FSM.state = STATE_FINISHED;
-					printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-					fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-					broadcast_state_finished();
-					return;
-				}
-				
-			}
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+			fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
+			broadcast_state_finished();
+			return;
+			
 		} else {
 			FSM.state = STATE_UPDATEGOAL;
 			FSM.hook = state_updategoal;

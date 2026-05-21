@@ -527,7 +527,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
 			// pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); // with precomputed maps
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_absolute_value(history, sample, i, model); // with precomputed maps
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{

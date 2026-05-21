@@ -149,13 +149,6 @@ typedef enum stopCondition{
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
 
-
-typedef enum estimationScale
-{
-	LOCAL = 0,
-	GLOBAL = 1,
-} eEstimationScale;
-
 typedef enum windEstimationMethod
 {
 	GROUND_TRUTH = 0,
@@ -192,7 +185,6 @@ class SimulationParameters{
 		int number_of_robots; 
 		int map_nbr; 
 		int sampling_period; 
-		float likelihood_error;  
 		float global_local_search_ratio; 
 		float cluster_entropy_ratio; 
 		float vel_factor; 
@@ -234,7 +226,6 @@ class SimulationParameters{
 		eStopCondition stopCondition;
 
 		ePlumeModel plumeModel;
-		eEstimationScale estimationScale;
 		
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;

@@ -226,13 +226,6 @@ ePlumeModel parse_plume_model(const char* str) {
 	exit(1);
 }
 
-eEstimationScale parse_estimation_scale(const char* str) {
-	if (strcmp(str, "LOCAL") == 0) return LOCAL;
-	if (strcmp(str, "GLOBAL") == 0) return GLOBAL;
-	fprintf(stderr, "Unknown estimation scale: %s\n", str);
-	exit(1);
-}
-
 eWindEstimationMethod parse_wind_estimation_method(const char* str) {
 	if (strcmp(str, "GROUND_TRUTH") == 0) return GROUND_TRUTH;
 	if (strcmp(str, "GAUSSIAN_KERNEL") == 0) return GAUSSIAN_KERNEL;
@@ -328,6 +321,10 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 				likelihoodSigma = rv[rmStr]["likelihoodSigma"].as<float>();
 			}
 		}
+		if (gasFeature == ABSOLUTE_VALUE && n["ABSOLUTE_VALUE"]) {
+			auto av = n["ABSOLUTE_VALUE"];
+			likelihoodSigma = av["likelihoodSigma"].as<float>();
+		}
 
 		// GASHIT sub-params
 		if (gasFeature == GASHIT && n["GASHIT"]) {
@@ -357,8 +354,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		if (BayesianModelingMethod == MCMC && n["MCMC"]) {
 			MCMC_iteration_num = n["MCMC"]["MCMC_iteration_num"].as<int>();
 		}
-
-		likelihood_error = n["likelihood_error"].as<float>();
 	}
 
 	// --- plume_model ---
@@ -378,7 +373,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		windInfo              = parse_wind_info(n["windInfo"].as<std::string>().c_str());
 		windEstimationMethod  = parse_wind_estimation_method(
 			n["windEstimationMethod"].as<std::string>().c_str());
-		estimationScale       = parse_estimation_scale(n["estimationScale"].as<std::string>().c_str());
 		modelUncertainty      = parse_model_uncertainty(n["modelUncertainty"].as<std::string>().c_str());
 
 		// DYNAMIC_UNCERTAINTY sub-params
@@ -447,7 +441,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	// write simulation parameters to file
 	FILE *sim_param_file;
 	sim_param_file = fopen(config_logfile_name, "a");
-	fprintf(sim_param_file, "likelihood_error %f\n", likelihood_error);
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);
 	fprintf(sim_param_file, "BayesianModelingMethod %d\n", BayesianModelingMethod);
@@ -480,7 +473,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
-	fprintf(sim_param_file, "estimation_scale %d\n", estimationScale);
 	fprintf(sim_param_file, "wind_info %d\n", windInfo);
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);

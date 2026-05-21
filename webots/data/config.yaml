@@ -14,11 +14,11 @@
 simulation:
   simuMode: ONLINE                  # ONLINE | OFFLINE
   experimental_logname: "physics_encoded_GSL/fixed_sigma_normalization_dijstra/10/1760633017749"
-  map_nbr: 0
+  map_nbr: 1
 
 # --- Robot ---
 robot:
-  number_of_robots: 3
+  number_of_robots: 1
   vel_factor: 1.0
 
 # --- Sensing ---
@@ -39,9 +39,10 @@ sensing:
 # --- Gas Feature Extraction ---
 gas_feature:
   gasFeature: RELATIVE_VALUE        # ABSOLUTE_VALUE | RELATIVE_VALUE | GASHIT
-
+  ABSOLUTE_VALUE:                        # sub-params: active when gasFeature = ABSOLUTE_VALUE
+    likelihoodSigma: 3000
   RELATIVE_VALUE:                   # sub-params: active when gasFeature = RELATIVE_VALUE
-    relativeMethod: Z_SCORE         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
+    relativeMethod: EMPIRICAL_CDF_NUM         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
     # likelihoodSigma is read from the active relativeMethod sub-block below
     NORMALIZATION:
       likelihoodSigma: 1.0
@@ -69,7 +70,6 @@ bayesian_estimation:
   BayesianModelingMethod: EXHAUSTIVE  # MCMC | EXHAUSTIVE
   MCMC:                               # sub-params: active when BayesianModelingMethod = MCMC
     MCMC_iteration_num: 1000
-  likelihood_error: 3000
 
 # --- Plume Model ---
 plume_model:
@@ -81,17 +81,16 @@ plume_model:
 wind:
   windInfo: WIND_OFFLINE             # WIND_OFFLINE | WIND_ONLINE
   windEstimationMethod: GAUSSIAN_KERNEL  # GROUND_TRUTH | GAUSSIAN_KERNEL | BASEFLOW_CORRECTION
-  estimationScale: GLOBAL           # LOCAL | GLOBAL
-  modelUncertainty: DYNAMIC_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
+  modelUncertainty: FIXED_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
   DYNAMIC_UNCERTAINTY:              # sub-params: active when modelUncertainty = DYNAMIC_UNCERTAINTY
     windBeliefWeight: 0.4
 
 # --- Path Planning ---
 planning:
-  planningStrategy: RANDOM  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
+  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
                                        # BELIEF_CLUSTERING | INFORMATIVE_KLD | INFO_CLUSTERING |
                                        # WEIGHTED_CLUSTERING | SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
-  visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
+  visitedList: visitedList_OFF       # visitedList_ON | visitedList_OFF
   infoFeature: PDF                  # VARIANCE | MEAN | PDF
   scoreFun: EXP                     # RATIO | LOG | SIGMOID | SUM | EXP
   scoreSigma: 0.5
@@ -106,7 +105,7 @@ planning:
 
 # --- Team Coordination ---
 team:
-  teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED 
+  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED 
   mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_P | REGION_GROWING_D | NONE
   mapCoverageSeed: ROBOT_CELL    # MAX_CELL | ROBOT_CELL
   epsilon_clusterize: 0
