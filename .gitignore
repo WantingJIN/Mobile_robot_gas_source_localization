@@ -84,6 +84,8 @@ Khepera/Data/gas_concentration_maps.csv
 # some figures
 **feature**.png
 **truth**.png
+**.png
+**.pdf
 
 # matlab
 *.asv
