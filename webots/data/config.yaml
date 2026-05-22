@@ -25,14 +25,14 @@ robot:
 sensing:
   samplingMode: CONTINOUS_SAMPLING  # CONTINOUS_SAMPLING | STOP_AND_GO_SAMPLING | SENSE_WITHOUT_STOP
   CONTINOUS_SAMPLING:               # sub-params: active when samplingMode = CONTINOUS_SAMPLING
-    sampling_period: 3
+    sampling_period: 10
     sampling_dist_thresh: 0.1
   STOP_AND_GO_SAMPLING:             # sub-params: active when samplingMode = STOP_AND_GO_SAMPLING
-    sampling_period: 3
+    sampling_period: 10
     sampling_dist_thresh: 0.1
   processingMode: NO_PROCESSING     # NO_PROCESSING | KERNEL_MAPPING | DECONVOLUTION | MAPPING_AND_DECONVOLUTION
   gasSensor: MOX                    # PID | MOX | NOISY_MOX | SLOW_MOX | VERY_SLOW_MOX | NOISY_SLOW_MOX | NOISY_VERY_SLOW_MOX
-  calibrationMode: OFF              # OFF | LINEAR | NOLINEAR
+  calibrationMode: NOLINEAR              # OFF | LINEAR | NOLINEAR
   NOLINEAR:                         # sub-params: active when calibrationMode = NOLINEAR
     R0: 100
 
@@ -42,7 +42,7 @@ gas_feature:
   ABSOLUTE_VALUE:                        # sub-params: active when gasFeature = ABSOLUTE_VALUE
     likelihoodSigma: 3000
   RELATIVE_VALUE:                   # sub-params: active when gasFeature = RELATIVE_VALUE
-    relativeMethod: EMPIRICAL_CDF_NUM         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
+    relativeMethod: Z_SCORE         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
     # likelihoodSigma is read from the active relativeMethod sub-block below
     NORMALIZATION:
       likelihoodSigma: 1.0
@@ -90,7 +90,7 @@ planning:
   planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
                                        # BELIEF_CLUSTERING | INFORMATIVE_KLD | INFO_CLUSTERING |
                                        # WEIGHTED_CLUSTERING | SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
-  visitedList: visitedList_OFF       # visitedList_ON | visitedList_OFF
+  visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
   infoFeature: PDF                  # VARIANCE | MEAN | PDF
   scoreFun: EXP                     # RATIO | LOG | SIGMOID | SUM | EXP
   scoreSigma: 0.5
@@ -112,4 +112,4 @@ team:
   
 # --- Termination ---
 termination:
-  stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD
+  stopCondition: ENTROPY_SPREAD       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD

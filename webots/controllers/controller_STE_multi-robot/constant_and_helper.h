@@ -27,19 +27,21 @@ inline constexpr int MAX_NB_ROBOTS = 5;
 // ------------------------------------------------------------
 // 🌬️ Wind tunnel boundaries
 // ------------------------------------------------------------
-inline constexpr double XMIN = 3.0;
-inline constexpr double YMIN = 0.0;
-inline constexpr double XMAX = 12.75;
-inline constexpr double YMAX = 4.0;
+// Source estimation boundaries
+inline constexpr float source_x_min = 3.0;
+inline constexpr float source_y_min = 0.0;
+inline constexpr float source_x_max = 12.75;
+inline constexpr float source_y_max = 4.0;
+
+inline constexpr double XMIN = source_x_min + SAFETY_MARGIN;
+inline constexpr double YMIN = source_y_min + SAFETY_MARGIN;
+inline constexpr double XMAX = source_x_max - SAFETY_MARGIN;
+inline constexpr double YMAX = source_y_max - SAFETY_MARGIN;
+
 // inline constexpr double ZMIN = 0.1;
 // inline constexpr double ZMAX = 1.9;
 
 
-// Source estimation boundaries
-inline constexpr float source_x_min = XMIN + SAFETY_MARGIN;
-inline constexpr float source_y_min = YMIN + SAFETY_MARGIN;
-inline constexpr float source_x_max = XMAX - SAFETY_MARGIN;
-inline constexpr float source_y_max = YMAX - SAFETY_MARGIN;
 inline constexpr int source_x_nbins = 20;
 inline constexpr int source_y_nbins = 20;
 inline constexpr float source_x_resol = (source_x_max - source_x_min) / source_x_nbins;

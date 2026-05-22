@@ -10,7 +10,7 @@ rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
 config_file="../webots/data/config.yaml"
 source_locations_filename="source_locations.txt"
 # Source position mode: source_at_boundary, source_in_middle, source_from_file
-source_position_mode="source_at_boundary"
+source_position_mode="source_in_middle"
 
 # ---------------------------------------------------------------------------
 # Helper: set a scalar value in the YAML config file.
@@ -30,8 +30,8 @@ set_yaml_value() {
 nbr_source_pos=10
 source_pos_y_min=0.5
 source_pos_y_max=3.5
-source_pos_x_min=3.2
-source_pos_x_max=12.7
+source_pos_x_min=10
+source_pos_x_max=12
 
 random_between() {
     local min="$1"
