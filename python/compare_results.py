@@ -29,7 +29,7 @@ import pandas as pd
 # DEFAULT PATHS  –  edit these two lines to match your setup
 # ===========================================================================
 GENERAL_FOLDER    = "/home/wjin/Workspace/Multi-robot_GSL/Results"
-DISPATCHED_FOLDER = "/home/wjin/Workspace/Multi-robot_GSL/Results/test/single_robot_relative_value"
+DISPATCHED_FOLDER = "/home/wjin/Workspace/Multi-robot_GSL/Results/test/z-score_nonlinear"
 # Folder names inside GENERAL_FOLDER that are never treated as experiments
 DISPATCH_EXCLUDED = {".", "..", "current", "101", "102", "103"}
 # ===========================================================================

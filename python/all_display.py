@@ -19,8 +19,8 @@ import sys
 # ---------------------------------------------------------------------------
 # Configuration — edit these to run the script without command-line arguments
 # ---------------------------------------------------------------------------
-DEFAULT_RESULTS_DIR = '../Results/test/single_robot_belief_clustering/1'
-SHOW_PLOTS = False   # set True to display figures interactively after saving
+DEFAULT_RESULTS_DIR = '/home/wjin/Workspace/Multi-robot_GSL/Results/test/edf_entropy_spread_visit_list_on/9'
+SHOW_PLOTS = True   # set True to display figures interactively after saving
 # ---------------------------------------------------------------------------
 
 import matplotlib.patches as mpatches
@@ -456,8 +456,23 @@ def process_experiment(folder_name, workspace_root, show=False):
         fig_ind.savefig(os.path.join(folder_name, 'trajectory_all_robots.png'))
 
     if show:
-        plt.show()
-    else:
+        figs = [fig_meas, fig_traj, fig_est]
+        if fig_ind is not None:
+            figs.append(fig_ind)
+        # Tile windows so they don't overlap: two columns, two rows
+        positions = [(0, 0), (960, 0), (0, 600), (960, 600)]
+        backend = plt.get_backend()
+        for fig, (px, py) in zip(figs, positions):
+            try:
+                mgr = fig.canvas.manager
+                if 'Qt' in backend:
+                    mgr.window.move(px, py)
+                elif 'Tk' in backend:
+                    mgr.window.wm_geometry(f'+{px}+{py}')
+            except Exception:
+                pass
+            fig.canvas.draw()
+        plt.pause(2)
         plt.close('all')
 
     saved = ['measurements_entropy.png', 'trajectory.png', 'estimation_evolution.png']
