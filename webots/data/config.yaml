@@ -18,17 +18,17 @@ simulation:
 
 # --- Robot ---
 robot:
-  number_of_robots: 1
+  number_of_robots: 3
   vel_factor: 1.0
 
 # --- Sensing ---
 sensing:
   samplingMode: CONTINOUS_SAMPLING  # CONTINOUS_SAMPLING | STOP_AND_GO_SAMPLING | SENSE_WITHOUT_STOP
   CONTINOUS_SAMPLING:               # sub-params: active when samplingMode = CONTINOUS_SAMPLING
-    sampling_period: 10
+    sampling_period: 1
     sampling_dist_thresh: 0.1
   STOP_AND_GO_SAMPLING:             # sub-params: active when samplingMode = STOP_AND_GO_SAMPLING
-    sampling_period: 10
+    sampling_period: 1
     sampling_dist_thresh: 0.1
   processingMode: NO_PROCESSING     # NO_PROCESSING | KERNEL_MAPPING | DECONVOLUTION | MAPPING_AND_DECONVOLUTION
   gasSensor: MOX                    # PID | MOX | NOISY_MOX | SLOW_MOX | VERY_SLOW_MOX | NOISY_SLOW_MOX | NOISY_VERY_SLOW_MOX
@@ -73,13 +73,13 @@ bayesian_estimation:
 
 # --- Plume Model ---
 plume_model:
-  plumeModel: DDPM               # GAUSSIAN_PLUME | DDPM | FDM_PDE
+  plumeModel: FDM_PDE               # GAUSSIAN_PLUME | DDPM | FDM_PDE
   FDM_PDE:                          # sub-params: active when plumeModel = FDM_PDE
     diffCoefficient: 0.008
 
 # --- Wind Estimation ---
 wind:
-  windInfo: WIND_OFFLINE             # WIND_OFFLINE | WIND_ONLINE
+  windInfo: WIND_ONLINE             # WIND_OFFLINE | WIND_ONLINE
   windEstimationMethod: GAUSSIAN_KERNEL  # GROUND_TRUTH | GAUSSIAN_KERNEL | BASEFLOW_CORRECTION
   modelUncertainty: FIXED_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
   DYNAMIC_UNCERTAINTY:              # sub-params: active when modelUncertainty = DYNAMIC_UNCERTAINTY
@@ -105,7 +105,7 @@ planning:
 
 # --- Team Coordination ---
 team:
-  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED 
+  teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED 
   mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_P | REGION_GROWING_D | NONE
   mapCoverageSeed: ROBOT_CELL    # MAX_CELL | ROBOT_CELL
   epsilon_clusterize: 0
