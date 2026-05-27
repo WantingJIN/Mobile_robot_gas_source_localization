@@ -52,6 +52,11 @@ struct history
 	vector<double> gas_meas;
 	vector<double> wind_meas_u;
 	vector<double> wind_meas_v;
+	vector<Position> team_wind_position;
+	vector<double> team_wind_meas_u;
+	vector<double> team_wind_meas_v;
+	vector<int> team_wind_sender_id;
+	vector<int> team_wind_sample_id;
 	vector<int> gas_hit_event;
 	vector<double> relative_meas;
 };

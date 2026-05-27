@@ -9,6 +9,7 @@
 // custom libraries
 #include <fstream>
 #include <iostream>
+#include <array>
 #include "controller_STE_multi-robot.h"
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
@@ -25,6 +26,7 @@
 
 #define MSG_STATE_SHARE_PDF -99
 #define MSG_STATE_SHARE_DIST -98
+#define MSG_STATE_WIND_SAMPLE -97
 
 
 using namespace std;
@@ -205,6 +207,12 @@ static float received_current_pos[MAX_NB_ROBOTS][2] = {0};
 static double received_current_dist[MAX_NB_ROBOTS] = {0};
 static int ready_from[MAX_NB_ROBOTS] = {0};
 static int i_am_ready = 0;
+static std::array<int, MAX_NB_ROBOTS> latest_team_wind_sample_id = [] {
+	std::array<int, MAX_NB_ROBOTS> ids{};
+	ids.fill(-1);
+	return ids;
+}();
+static int local_wind_sample_id = 0;
 
 // region allocator
 RegionAllocator region_allocator(posterior, received_current_pos);
@@ -221,6 +229,123 @@ std::vector<int> obstacle_map(source_x_nbins * source_y_nbins, 0);  // GLOBAL
 
 
 // =========================== FUNCTIONS ================================ //
+
+bool should_share_team_wind()
+{
+	return simulation_parameters.number_of_robots > 1 &&
+		   simulation_parameters.teamStrategy == DISTRIBUTED &&
+		   simulation_parameters.windInfo == WIND_ONLINE;
+}
+
+bool should_process_team_messages()
+{
+	return simulation_parameters.number_of_robots > 1 &&
+		   simulation_parameters.teamStrategy == DISTRIBUTED;
+}
+
+void record_team_wind_sample(Position sample_position, double wind_u, double wind_v, int sender_ID, int sample_id)
+{
+	int sender_index = sender_ID - 101;
+	if (sender_index < 0 || sender_index >= MAX_NB_ROBOTS)
+		return;
+
+	if (sample_id <= latest_team_wind_sample_id[sender_index])
+		return;
+
+	latest_team_wind_sample_id[sender_index] = sample_id;
+	history.team_wind_position.push_back(sample_position);
+	history.team_wind_meas_u.push_back(wind_u);
+	history.team_wind_meas_v.push_back(wind_v);
+	history.team_wind_sender_id.push_back(sender_ID);
+	history.team_wind_sample_id.push_back(sample_id);
+}
+
+void share_team_wind_sample(Position sample_position, double wind_u, double wind_v)
+{
+	if (!should_share_team_wind())
+		return;
+
+	int sample_id = ++local_wind_sample_id;
+	record_team_wind_sample(sample_position, wind_u, wind_v, ID, sample_id);
+
+	// Compact wind packet: concentration carries u, goal.x carries v, goal.y carries the sample id.
+	Position wind_payload(static_cast<float>(wind_v), static_cast<float>(sample_id), 0);
+	Message msg(ID, MSG_STATE_WIND_SAMPLE, sample_position, wind_u, wind_payload, 0);
+	send_msg(msg);
+}
+
+void process_team_messages()
+{
+	if (!should_process_team_messages())
+		return;
+
+	while (wb_receiver_get_queue_length(receiver) > 0)
+	{
+		const void *data = wb_receiver_get_data(receiver);
+		const double *buffer = static_cast<const double *>(data);
+		const int data_count = wb_receiver_get_data_size(receiver) / sizeof(double);
+
+		if (data_count < 10)
+		{
+			wb_receiver_next_packet(receiver);
+			continue;
+		}
+
+		int sender_ID = static_cast<int>(buffer[0]);
+		int message_type = static_cast<int>(buffer[1]);
+		int sender_index = sender_ID - 101;
+
+		if (message_type == MSG_STATE_WIND_SAMPLE)
+		{
+			if (sender_ID != ID && should_share_team_wind())
+			{
+				Position sample_position(buffer[2], buffer[3], buffer[4]);
+				double wind_u = buffer[5];
+				double wind_v = buffer[6];
+				int sample_id = static_cast<int>(buffer[7]);
+				record_team_wind_sample(sample_position, wind_u, wind_v, sender_ID, sample_id);
+			}
+			wb_receiver_next_packet(receiver);
+			continue;
+		}
+
+		if (sender_index < 0 || sender_index >= MAX_NB_ROBOTS || sender_ID == ID)
+		{
+			wb_receiver_next_packet(receiver);
+			continue;
+		}
+
+		if (message_type == MSG_STATE_SHARE_PDF)
+		{
+			ready_from[sender_index] = 1;
+			printf("Robot ID [%d]: Received READY from Robot ID [%d]\n", ID, sender_ID);
+			wb_receiver_next_packet(receiver);
+			continue;
+		}
+
+		if (message_type == ID)
+		{
+			int finish_flag = static_cast<int>(buffer[9]);
+			if (finish_flag == -1)
+			{
+				FSM.state = STATE_FINISHED;
+				printf("Robot ID [%d]: Received STATE_FINISHED from Robot ID [%d]\n", ID, sender_ID);
+				wb_receiver_next_packet(receiver);
+				continue;
+			}
+
+			if (data_count >= MAP_SIZE + 10)
+			{
+				memcpy(belief_maps[sender_index], &buffer[10], MAP_SIZE * sizeof(double));
+				received_current_pos[sender_index][0] = buffer[2];
+				received_current_pos[sender_index][1] = buffer[3];
+				received_flags[sender_index] = 1;
+			}
+		}
+
+		wb_receiver_next_packet(receiver);
+	}
+}
 
 
 // random value sampled from a normal distribution
@@ -666,6 +791,7 @@ void state_measuring()
 	history.gas_meas.push_back(sampleBuffer.average_concentration);
 	history.wind_meas_u.push_back(sampleBuffer.average_wind_vx);
 	history.wind_meas_v.push_back(sampleBuffer.average_wind_vy);
+	share_team_wind_sample({current_position.x, current_position.y, 0}, sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy);
 	history.FSM_iter.push_back(FSM.n_cycles);
 	history.size++;
 	//history_print(history);
@@ -935,6 +1061,7 @@ void state_moving()
 			sample_in_motion.gas_meas.push_back(sensor_reading);
 			sample_in_motion.wind_meas_u.push_back(wind_vx);
 			sample_in_motion.wind_meas_v.push_back(wind_vy);
+			share_team_wind_sample({current_position.x, current_position.y, 0}, wind_vx, wind_vy);
 			sample_in_motion.size++;
 			last_measurement_pos.x = current_position.x;
 			last_measurement_pos.y = current_position.y;
@@ -1122,36 +1249,9 @@ void state_receive_pdf()
 		printed = true;
 	}
 
-	while (wb_receiver_get_queue_length(receiver) > 0)
-	{
-		const void *data = wb_receiver_get_data(receiver);
-		const double *buffer = (const double *)data;
-
-		int sender_ID = (int)buffer[0];
-		int message_type = (int)buffer[1];
-		float received_current_pos_x = buffer[2];
-		float received_current_pos_y = buffer[3];
-
-		int sender_index = sender_ID - 101;
-
-		if (message_type == MSG_STATE_SHARE_PDF)
-		{
-			ready_from[sender_index] = 1;
-			printf("Robot ID [%d]: Received READY from Robot ID [%d]\n", ID, sender_ID);
-			wb_receiver_next_packet(receiver);
-			continue;
-		}
-
-		if (sender_ID != ID && sender_index >= 0 && sender_index < MAX_NB_ROBOTS)
-		{
-			memcpy(belief_maps[sender_index], &buffer[10], MAP_SIZE * sizeof(double));
-			received_current_pos[sender_index][0] = received_current_pos_x;
-			received_current_pos[sender_index][1] = received_current_pos_y;
-			received_flags[sender_index] = 1;
-		}
-
-		wb_receiver_next_packet(receiver);
-	}
+	process_team_messages();
+	if (FSM.state == STATE_FINISHED)
+		return;
 
 	// Send READY message if received all maps
 	int all_received = 1;
@@ -1398,6 +1498,9 @@ int main(int argc, char **argv)
 		{
 			update_position();
 		}
+		process_team_messages();
+		if (FSM.state == STATE_FINISHED)
+			break;
 		// change state
 		FSM.hook();
 		// next

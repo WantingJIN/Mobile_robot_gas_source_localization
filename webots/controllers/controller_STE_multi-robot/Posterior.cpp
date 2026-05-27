@@ -490,12 +490,32 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	}	
 	if (simulation_parameters.windInfo == WIND_ONLINE)
 	{
-		model->update_wind_field_and_gas_concentration_map(meas_x, meas_y, history.wind_meas_u, history.wind_meas_v);
-		model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
-		char gas_concentration_map_each_cycle_logfile_name[600];
-		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
-		iter ++;
-		//model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
+		bool use_team_wind = simulation_parameters.number_of_robots > 1 &&
+							 simulation_parameters.teamStrategy == DISTRIBUTED &&
+							 !history.team_wind_position.empty();
+
+		const vector<Position> &wind_positions = use_team_wind ? history.team_wind_position : history.position;
+		const vector<double> &wind_meas_u = use_team_wind ? history.team_wind_meas_u : history.wind_meas_u;
+		const vector<double> &wind_meas_v = use_team_wind ? history.team_wind_meas_v : history.wind_meas_v;
+		size_t wind_nbr = std::min(wind_positions.size(), std::min(wind_meas_u.size(), wind_meas_v.size()));
+
+		if (wind_nbr > 0)
+		{
+			vector<float> wind_meas_x(wind_nbr), wind_meas_y(wind_nbr);
+			for (size_t i = 0; i < wind_nbr; i++)
+			{
+				wind_meas_x[i] = wind_positions[i].x;
+				wind_meas_y[i] = wind_positions[i].y;
+			}
+
+			printf("Updating online wind with %zu %s wind samples.\n", wind_nbr, use_team_wind ? "team" : "local");
+			model->update_wind_field_and_gas_concentration_map(wind_meas_x, wind_meas_y, wind_meas_u, wind_meas_v);
+			model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
+			char gas_concentration_map_each_cycle_logfile_name[600];
+			sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
+			iter ++;
+			//model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
+		}
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
