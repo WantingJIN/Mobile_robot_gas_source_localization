@@ -851,7 +851,7 @@ void state_estimating()
 	printf("sum posterior : %f \n", posterior->sum);
 	posterior->normalize();
 	printf("sum posterior after normalization : %f \n", posterior->sum);
-	posterior->log_pdf(posterior_pdf_3D_name, 'a');
+	posterior->log_pdf(posterior_pdf_pre_merge_name, 'a');
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		posterior->log_relative_history_meas(relative_history_meas_logfile_name, 'a', history.relative_meas);
 	FSM.n_cycles++;
@@ -1200,7 +1200,6 @@ void state_merge_pdf()
 		// Avoid STATE_FINISHED if Merged Belief Map equal 0
 		if (sum_merged_pdf > 0)
 		{
-			log_position();
 			log_whole_position_history();
 			posterior->log_pdf(posterior_pdf_3D_name, 'a');
 			broadcast_state_finished();
@@ -1336,9 +1335,8 @@ void state_share_pdf()
 void state_region_allocation()
 {
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
-	log_position();
 	log_whole_position_history();
-	posterior->log_pdf(posterior_pdf_3D_name, 'a');
+      posterior->log_pdf(posterior_pdf_3D_name, 'a');
 
 	region_allocator.region_allocation_algorithm();
 

@@ -135,7 +135,7 @@ void init()
 
     // experiment results folder
 	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
-    experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
+      experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
 	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
 
 	// write the simulation parameters
@@ -636,7 +636,7 @@ void set_logfile_names()
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment
-    sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
+      sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
 	printf("logfile_folder_name: %s\n", logfile_folder_name);
 	sprintf(experiment_measurements_logfile_name, "%s/measurements.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);
