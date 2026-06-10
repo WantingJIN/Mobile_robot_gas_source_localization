@@ -14,25 +14,25 @@
 simulation:
   simuMode: ONLINE                  # ONLINE | OFFLINE
   experimental_logname: "physics_encoded_GSL/fixed_sigma_normalization_dijstra/10/1760633017749"
-  map_nbr: 1
+  map_nbr: 10
 
 # --- Robot ---
 robot:
-  number_of_robots: 3
+  number_of_robots: 1
   vel_factor: 1.0
 
 # --- Sensing ---
 sensing:
   samplingMode: CONTINOUS_SAMPLING  # CONTINOUS_SAMPLING | STOP_AND_GO_SAMPLING | SENSE_WITHOUT_STOP
   CONTINOUS_SAMPLING:               # sub-params: active when samplingMode = CONTINOUS_SAMPLING
-    sampling_period: 1
+    sampling_period: 3
     sampling_dist_thresh: 0.1
   STOP_AND_GO_SAMPLING:             # sub-params: active when samplingMode = STOP_AND_GO_SAMPLING
     sampling_period: 1
     sampling_dist_thresh: 0.1
   processingMode: NO_PROCESSING     # NO_PROCESSING | KERNEL_MAPPING | DECONVOLUTION | MAPPING_AND_DECONVOLUTION
   gasSensor: MOX                    # PID | MOX | NOISY_MOX | SLOW_MOX | VERY_SLOW_MOX | NOISY_SLOW_MOX | NOISY_VERY_SLOW_MOX
-  calibrationMode: NOLINEAR              # OFF | LINEAR | NOLINEAR
+  calibrationMode: OFF              # OFF | LINEAR | NOLINEAR
   NOLINEAR:                         # sub-params: active when calibrationMode = NOLINEAR
     R0: 100
 
@@ -87,9 +87,9 @@ wind:
 
 # --- Path Planning ---
 planning:
-  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
-                                       # BELIEF_CLUSTERING | INFORMATIVE_KLD | INFO_CLUSTERING |
-                                       # WEIGHTED_CLUSTERING | SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
+  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |INFORMATIVE_KLD
+                                       # BELIEF_CLUSTERING | WEIGHTED_CLUSTERING | INFO_CLUSTERING |
+                                       # INFO_CENTER| SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
   visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
   infoFeature: PDF                  # VARIANCE | MEAN | PDF
   scoreFun: EXP                     # RATIO | LOG | SIGMOID | SUM | EXP
@@ -105,11 +105,11 @@ planning:
 
 # --- Team Coordination ---
 team:
-  teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED 
+  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED 
   mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_P | REGION_GROWING_D | NONE
   mapCoverageSeed: ROBOT_CELL    # MAX_CELL | ROBOT_CELL
   epsilon_clusterize: 0
   
 # --- Termination ---
 termination:
-  stopCondition: ENTROPY_SPREAD       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD
+  stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD

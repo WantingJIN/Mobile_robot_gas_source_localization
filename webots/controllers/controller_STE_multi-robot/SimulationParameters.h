@@ -235,7 +235,6 @@ class SimulationParameters{
 		~SimulationParameters();
 
             void load_simulation_parameters_from_config(const char *filename);
-		void read_mapID_from_file();
 		void log_simulation_parameters(const char *filename);
 };
 

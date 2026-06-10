@@ -345,10 +345,7 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D()
 void DeepCFDPlumeModel2D::initialize_model_features()
 {
 	// Load the number of maps
-	int m;
-	std::ifstream f("../../data/map_nbr.txt");
-	f >> m;
-	f.close();
+	int m = simulation_parameters.map_nbr;
 
 	// Load the model
 	// std::cout << "Loading model..." << std::endl;

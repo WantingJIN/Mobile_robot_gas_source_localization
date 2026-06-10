@@ -4,7 +4,6 @@ echo "Start time : $now"
 
 webots=$WEBOTS_HOME/webots
 webots_folder="../webots"
-map_nbr_filename="../webots/data/map_nbr.txt"
 source_pos_filename="../webots/data/source_pos.txt"
 rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
 config_file="../webots/data/config.yaml"
@@ -67,9 +66,9 @@ for r in 53 #10 30 53 80 200
 do
     echo $r > $rr_filename
 
-    for m in 9 #1 2 3 5 10
+    for m in 10 #1 2 3 5 10
     do
-        echo $m > $map_nbr_filename
+        set_yaml_value map_nbr $m
         env_folder="../openfoam/test_maps/map${m}/map${m}_wind0.75"
         source_locations_file="${env_folder}/${source_locations_filename}"
 
@@ -150,7 +149,7 @@ do
 
         # copy environment data
         cp "$env_folder"/"$m".txt data/plugin_parameters/wind_map.txt
-      #  cp "$env_folder"/wind_map_2D_"$m".csv data/wind_map_2D.csv
+        cp "$env_folder"/wind_map_2D_"$m".csv data/wind_map_2D.csv
         cp "$env_folder"/"$m"_obstacles.txt data/obstacle_list.txt
         cp ../Results/test_maps/map"$m"/test_map"$m".environment data/test_map.environment
 

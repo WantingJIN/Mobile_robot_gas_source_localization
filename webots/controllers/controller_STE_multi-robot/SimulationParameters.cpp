@@ -420,21 +420,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	}
 }
 
-void SimulationParameters::read_mapID_from_file()
-{
-	// read simulation parameters
-	FILE *sim_param_file;
-	int ok = 0;
-
-	if (access("../../data/map_nbr.txt", F_OK) != -1)
-	{
-		sim_param_file = fopen("../../data/map_nbr.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &map_nbr);
-		if (ok)
-			printf("map ID : %d\n", map_nbr);
-		fclose(sim_param_file);
-	}
-}
 
 void SimulationParameters::log_simulation_parameters(const char *config_logfile_name)
 {

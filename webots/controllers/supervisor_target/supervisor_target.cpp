@@ -35,6 +35,7 @@
 #define ARENA_XMAX            12.75
 
 #define SAFETY_MARGIN   0.2
+#define ROBOT_INIT_MIN_DISTANCE SAFETY_MARGIN
 #define VERBOSE         1
 //#define TIMEOUT         600000 // miliseconds
 
@@ -101,6 +102,22 @@ int is_in_obstacle_list(float x, float y, float ** obs_list, int nbr_obs){
     return -1;
 }
 
+bool is_close_to_robot(float x, float y, double robot_positions[][3], int placed_robot_count){
+    const double min_distance_squared = ROBOT_INIT_MIN_DISTANCE * ROBOT_INIT_MIN_DISTANCE;
+    for(int i = 0; i < placed_robot_count; i++){
+        const double dx = x - robot_positions[i][0];
+        const double dy = y - robot_positions[i][1];
+        if(dx * dx + dy * dy < min_distance_squared)
+            return true;
+    }
+    return false;
+}
+
+bool is_valid_robot_position(float x, float y, double robot_positions[][3], int placed_robot_count){
+    return is_in_obstacle_list(x, y, obstacles, nbr_obs) == -1 &&
+           !is_close_to_robot(x, y, robot_positions, placed_robot_count);
+}
+
 // _________main___________
 int main(void){
     const void * news;
@@ -158,13 +175,17 @@ int main(void){
     }*/
 
     // randomize the robot's inital position
+    double robot_positions[MAX_NB_ROBOTS][3] = {0};
     for(int i=0; i<number_of_robots; i++){
         double robot_position[3] = {0};
         do{
             robot_position[0] = (((double)rand() / (double)RAND_MAX) * (ARENA_XMAX - ARENA_XMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_XMIN;
             robot_position[1] = (((double)rand() / (double)RAND_MAX) * (ARENA_YMAX - ARENA_YMIN - SAFETY_MARGIN*2)) + SAFETY_MARGIN + ARENA_YMIN;
             robot_position[2] = 0;
-        }while(is_in_obstacle_list(robot_position[0], robot_position[1], obstacles, nbr_obs) != -1);
+        }while(!is_valid_robot_position(robot_position[0], robot_position[1], robot_positions, i));
+        robot_positions[i][0] = robot_position[0];
+        robot_positions[i][1] = robot_position[1];
+        robot_positions[i][2] = robot_position[2];
         wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("n",i+101)),"translation"), robot_position);
         wb_supervisor_field_set_sf_vec3f(wb_supervisor_node_get_field(wb_supervisor_node_get_from_def(strcat_robot_ID("goal_",i+101)),"translation"), robot_position);
     
