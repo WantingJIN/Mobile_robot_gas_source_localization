@@ -62,14 +62,22 @@ extern char config_logfile_name[256];
 extern char trajectory_logfile_name[256];
 extern char baseline_measurements_logfile_name[256];
 extern char visited_list_logfile_name[256];
+extern char posterior_pdf_3D_cluster_name[512];
+extern char cluster_sizes_geometric_name[512];
+extern char cluster_sizes_informative_name[512];
 
 extern char clustering_bounding_boxes_logfile_name[512];
 extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
 extern char console_logfile_name[512];
+extern char clustering_debugging_name[512];
 extern char gas_information_map_logfile_name[512];
 extern char gas_concentration_map_logfile_name[512];
+extern char gas_concentration_maps_log_root[512];
+extern char wind_field_u_logfile_name[512];
+extern char wind_field_v_logfile_name[512];
+extern char wind_field_w_logfile_name[512];
 extern char experiment_time_logfile_name[512];
 
 
@@ -147,6 +155,7 @@ void set_logfile_names();
 void establish_baseline();
 float odor_read();
 void wind_read(float* wind_intensity, float* wind_angle);
+void wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz);
 void update_position();
 void updateSwisTrack(float position[3]);
 void updateCortexPos(Position *position);

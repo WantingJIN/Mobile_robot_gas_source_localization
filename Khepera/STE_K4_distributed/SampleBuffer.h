@@ -20,6 +20,15 @@ class SampleBuffer{
     float* wind_angle_buffer;
     float instant_wind_angle;
     float average_wind_angle;
+    float* wind_vx_buffer;
+    float instant_wind_vx;
+    float average_wind_vx;
+    float* wind_vy_buffer;
+    float instant_wind_vy;
+    float average_wind_vy;
+    float* wind_vz_buffer;
+    float instant_wind_vz;
+    float average_wind_vz;
     //!\ angle must be in radian [0,2PI]
 
     //default constructor

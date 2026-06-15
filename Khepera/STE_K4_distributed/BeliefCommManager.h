@@ -15,6 +15,7 @@ public:
     BeliefCommManager();
     void initialize(int self_ID_, const std::vector<int>& all_IDs);
     void send_message_to_all(const Message& msg);
+    bool poll_message(Message& msg_out, int& from_peer, int timeout_ms = 0);
     void wait_for_all_maps(std::map<int, Message>& received_maps);
 
 private:
@@ -25,5 +26,5 @@ private:
 
     void start_server();
     void start_clients();
-    bool receive_from_any(Message& msg_out, int& from_peer);
+    bool receive_from_any(Message& msg_out, int& from_peer, int timeout_ms);
 };

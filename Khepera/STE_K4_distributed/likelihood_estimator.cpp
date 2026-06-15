@@ -51,8 +51,13 @@ float likelihood_precomp(struct history &history, float *parameters, int source_
 float likelihood_rel_con(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
 {
 
-	// float sigma = 0.22;// works well for Gaussian CDF
-	float sigma = 0.35; // works well for Empirical CDF
+	float sigma = simulation_parameters.likelihoodSigma;
+	if (simulation_parameters.modelUncertainty == DYNAMIC_UNCERTAINTY)
+	{
+		float wind_confidence = model->get_wind_estimation_confidence(soure_pos_idx);
+		sigma = simulation_parameters.likelihoodSigma *
+		        (1.0f + simulation_parameters.wind_belief_weight * exp(-wind_confidence * wind_confidence * 2.0f));
+	}
 	float sum_tmp = 0;
 
 	vector<float> model_c_avg(history.size);
@@ -78,7 +83,6 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
-		sigma = 0.49; // works well for Normalization
 		for (int i = 0; i < history.size; i++)
 		{
 			rel_hist_val = history.relative_meas[i];
@@ -133,7 +137,22 @@ float likelihood(struct history &history, float *parameters, PlumeModel *model)
 	// getting all model concentrations for all sample positions and then calculate the likelihood
 	vector<float> model_c_avg(history.size);
 	vector<float> model_c_std(history.size);
-	model->concentration(history.position, history.size, sampleBuffer.average_wind_intensity, parameters, model_c_avg, model_c_std);
+	float average_wind_intensity = sampleBuffer.average_wind_intensity;
+	if (!history.wind_meas_u.empty() && history.wind_meas_u.size() == history.wind_meas_v.size())
+	{
+		float average_wind_u = 0.0f;
+		float average_wind_v = 0.0f;
+		for (size_t i = 0; i < history.wind_meas_u.size(); i++)
+		{
+			average_wind_u += history.wind_meas_u[i];
+			average_wind_v += history.wind_meas_v[i];
+		}
+		average_wind_u /= history.wind_meas_u.size();
+		average_wind_v /= history.wind_meas_v.size();
+		average_wind_intensity = sqrt(average_wind_u * average_wind_u + average_wind_v * average_wind_v);
+	}
+
+	model->concentration(history.position, history.size, average_wind_intensity, parameters, model_c_avg, model_c_std);
 
 	for (int i = 0; i < history.size; i++)
 	{
