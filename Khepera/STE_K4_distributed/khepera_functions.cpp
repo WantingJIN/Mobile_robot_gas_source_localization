@@ -58,9 +58,6 @@ void init(){
     //updateSwisTrack(current_position);
     updateCortexPos(&current_position);
 
-	//set the state to wait for stationary plume
-	FSM.state = STATE_WAITFORPLUME;
-	FSM.hook  = state_waiting;
 	FSM.n_cycles = 0;
 
 
@@ -230,10 +227,19 @@ void establish_baseline(){
     printf("[%d] Establishing the odor baseline ... \n", ID);
 
     //starting point at the begining of the map to establish the baseline
-    goal_position.x = 3 + float(ID-101)/5.0;
+    int n_robots = simulation_parameters.number_of_robots;
+	int robot_rank = 0;
+	if (n_robots > 1) {
+		std::vector<int> sorted_ids = simulation_parameters.ID_list;
+		std::sort(sorted_ids.begin(), sorted_ids.end());
+		for (int j = 0; j < (int)sorted_ids.size(); j++) {
+			if (sorted_ids[j] == ID) { robot_rank = j; break; }
+		}
+	}
+    goal_position.x = 3 + robot_rank;
 
     //stop every 35 cm to make a measurement 
-    for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.35){
+    for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.5){
     	//move until reached
     	 while (dist_to_goal(goal_position)>0.05){
         	//updateSwisTrack(current_position);
@@ -271,43 +277,12 @@ void establish_baseline(){
     }
     //once reached the end of the line
     khepera4_drive_set_speed(0,0);
-    odor_baseline_value = (max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
+    odor_baseline_value = min; //(max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
     printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
     log_baseline(min, max, odor_baseline_value);
-    //odor_baseline_value = 15890;
-    //starting point of the actuall algorithm random on Y
-    goal_position.x = current_position.x;
-    //NOTE - Khepera start position
-    goal_position.y = (randu() * (4 - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
-    //goal_position.y = 2;
 
-    printf("find the path using visibility graph \n");
-    printf("[%d] Current posotion : %f, %f\n",ID, current_position.x, current_position.y);    
-    //find the path using visibility graph
-    VisiLibity::Point start(current_position.x, current_position.y);
-    VisiLibity::Point finish(goal_position.x, goal_position.y);
-    VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-    // copy the path in another variable
-    for(unsigned k=0; k<Polyline_path.size(); k++){
-        Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-        path.push_back(p);
-    }
-    i = path.begin();
-     printf("[%d] Goal posotiom : %f, %f\n",ID, i->x, i->y);
-    //keep receiving the position until you reach the starting point
-    // while (dist_to_goal()>0.05){
-    //     updateSwisTrack(current_position);
-    //     go_to_goal();  
-    //     if(obstacle_or_not() == 1)
-    //     	obstacle_avoidance(speed);
-    //     set_wheels_speed(speed[0],speed[1]);
-    //     usleep(SLEEP_PERIOD * 100);
-    // }
-    printf("[%d] starting point : %f %f \n",  ID, goal_position.x,  goal_position.y);
-    //khepera4_drive_set_speed(0,0);
-    //move to the goal position
-    FSM.state = STATE_MOVING;
-    FSM.hook = state_moving;
+    FSM.state = STATE_INITIALIZATION;
+    FSM.hook = state_initializing;
 }
 
 float odor_read(){
@@ -394,7 +369,7 @@ int obstacle_or_not(){
 		sensors_value[i] = khepera4.infrared_proximity.sensor[i];
 		//if one of the sensors detect something, then obstacle
 		if(sensors_value[i] > 200){
-            printf("sensor %d value : %f\n", i, sensors_value[i]);
+            // printf("sensor %d value : %f\n", i, sensors_value[i]);
 			printf("obstacle detected..!!!!!\n");
 			return 1;
 		}
@@ -402,6 +377,7 @@ int obstacle_or_not(){
 	//otherwise no obstacle
 	return 0;
 }
+
 
 // void receive_from_friends(){
 // 	//printf("I am receiving\n");

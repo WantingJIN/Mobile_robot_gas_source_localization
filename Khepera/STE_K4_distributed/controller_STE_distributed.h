@@ -29,7 +29,7 @@
 //states of the finite state machine
 typedef enum state {
 	STATE_UNKNOWN		=	-1,
-	STATE_WAITFORPLUME	=   0,
+	STATE_INITIALIZATION	=   0,
 	STATE_MEASURING 		=	4,
 	STATE_ESTIMATING		=	1,
 	STATE_UPDATEGOAL		=	2,
@@ -100,7 +100,7 @@ void state_measuring();
 void state_estimating();
 void state_updategoal();
 void state_moving();
-void state_waiting();
+void state_initializing();
 void state_obstacle_avoidance();
 void state_listen();
 void state_receive_goal();

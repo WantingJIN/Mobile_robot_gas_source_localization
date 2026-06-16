@@ -185,6 +185,7 @@ static int received_flags[MAX_NB_ROBOTS] = {0};
 static float belief_map_merged[MAP_SIZE] = {0};
 
 bool entered_state_receive_pdf = false;
+bool initial_point_calculated = false;
 
 // =========================== FUNCTIONS ================================ //
 //random value sampled from a uniform distribution
@@ -253,50 +254,6 @@ void read_obstacle_list(){
 		printf("obstacle %d: %f %f %f %f\n", i, obstacles[i][0], obstacles[i][1], obstacles[i][2], obstacles[i][3]);
 	}
 }
-
-// add a message to ack required msgs or remove one from the list
-// void ack_msg(Message msg){
-//     //check if it's an ack or a new message
-//     if(msg.ack_flag == 2){
-//         //i'ts an ack => find the corresponding msg in the vector and remove it
-//         //for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
-//         //    if(it->msg_ID == msg.msg_ID){
-//         //        //remove the acked message
-//         //        printf("%d acked and removed\n", (int)(it->concentration));
-//         //        ack_msg_vec.erase(it);
-//         //   }
-//         //} // --> makes seg fault because of erase
-//         std::vector<Message>::iterator it = ack_msg_vec.begin();
-//         while(it != ack_msg_vec.end()){
-//     		if(it->msg_ID == msg.msg_ID && it->receiver_ID == msg.sender_ID){
-//       			//remove the acked message
-//                 //printf("[%lld] %d acked by %d and removed\n", current_timestamp(), (int)(it->msg_ID), msg.sender_ID);
-//                 ack_msg_vec.erase(it);
-//     		}else
-//       			it++;
-//   		}
-//     }else{
-//         //it has to be added to the table with all IP addresses
-//         if(msg.receiver_ID == 1){
-//             for(int i=0; i<nb_robots; i++){
-//                 if(robots_ID_list[i] == ID) continue;
-//                 Message tmp(msg.msg_ID, ID, robots_ID_list[i], msg.position, msg.concentration, msg.goal, msg.measurement0_goal1, msg.ack_flag);
-//                 //msg.receiver_ID = robots_ID_list[i];
-//                 //printf("[%lld] %d waiting for ack by %d\n", current_timestamp(),(int)(msg.msg_ID), tmp.receiver_ID);
-//                 ack_msg_vec.push_back(tmp);
-//             }
-//         }else{
-//         	ack_msg_vec.push_back(msg);
-//         }
-//     }
-//     //send all the messages in the table
-//     printf("----> waiting for ack: ");
-//     for(std::vector<Message>::iterator it = ack_msg_vec.begin(); it != ack_msg_vec.end(); it++){
-//         printf("%d(%d) ", (int)(it->msg_ID), (int)(it->receiver_ID));
-
-//     }
-//     printf("\n");
-// }
 
 
 // ===================== LOG FILES FUNCTIONS ========================== //
@@ -407,12 +364,69 @@ void log_trajectory(Position p){
 }
 
 // ============================== STATES ================================= //
-void state_waiting(){
-	// initial waiting for the plume to get established
-	static int counter = 0;
-	counter++;
+void state_initializing(){
 
-	if(counter > 300){
+	 // Compute this robot's Y sub-region using sorted ID ranking
+    if (initial_point_calculated == false) {
+
+		int n_robots = simulation_parameters.number_of_robots;
+		float y_range_min = YMIN + SAFETY_MARGIN;
+		float y_range_max = YMAX - SAFETY_MARGIN;
+		int robot_rank = 0;
+		if (n_robots > 1) {
+			std::vector<int> sorted_ids = simulation_parameters.ID_list;
+			std::sort(sorted_ids.begin(), sorted_ids.end());
+			for (int j = 0; j < (int)sorted_ids.size(); j++) {
+				if (sorted_ids[j] == ID) { robot_rank = j; break; }
+			}
+		}
+		float sub_height = (y_range_max - y_range_min) / n_robots;
+		float y_sub_min = y_range_min + robot_rank * sub_height;
+		float y_sub_max = y_range_min + (robot_rank + 1) * sub_height;
+		do
+		{
+			//goal_position.x = randu() * (XMAX - XMIN - 2 * SAFETY_MARGIN) + XMIN;
+			goal_position.x = XMIN;
+			goal_position.y = y_sub_min + randu() * (y_sub_max - y_sub_min);
+		} while (goal_position.is_in_obstacle_list(obstacles, nbr_obs) != -1);
+
+		// find the path using visibility graph
+		VisiLibity::Point start(current_position.x, current_position.y);
+		VisiLibity::Point finish(goal_position.x, goal_position.y);
+		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+		// copy the path in another variable
+		for (size_t k = 0; k < Polyline_path.size(); k++)
+		{
+			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+			path.push_back(p);
+			log_trajectory(p);
+		}
+		i = path.begin();
+		initial_point_calculated = true;
+    }
+    
+
+    if(dist_to_goal(goal_position) > 0.05){
+		//move
+		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
+			i++;
+			printf("current goal is: %f, %f\n", i->x, i->y);
+		}
+		if(obstacle_or_not() == 0){
+			go_to_goal(*i);
+			set_wheels_speed(speed[0],speed[1]);
+		} else {
+			//obstacle avoidance if necessary
+			braitenberg_run(&braitenberg);
+		}
+		
+	}else{
+		//wb_differential_wheels_set_speed(0,0);
+		set_wheels_speed(0,0);
+		path.clear();
+		khepera4_drive_set_speed(0, 0);
+    	printf("[%d] Reached initial position (%.2f, %.2f). Starting FSM.\n",
+           ID, current_position.x, current_position.y);
 		FSM.state = STATE_MEASURING;
 		FSM.hook  = state_measuring;
 	}
@@ -422,7 +436,7 @@ void state_measuring(){
       printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	std::vector<float> sample_from_map;
 	int history_size_before_sampling = history.size;
-      if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
+    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
 		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
@@ -493,7 +507,7 @@ void state_measuring(){
 	history.wind_intensity.push_back(sampleBuffer.average_wind_intensity);
 	history.wind_angle.push_back(sampleBuffer.average_wind_angle);
 	history.size++;
-	history_print(history);
+	//history_print(history);
 
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
@@ -502,54 +516,6 @@ void state_measuring(){
 		int idx = posterior.indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 	}
-
-	// send the measurement to the server
-	// float m_buffer[5] = {0};
-	// int timeout = 10;
-	// int success = -1;
-
-	// //send the message
-	// int history_size_after_sampling = history.size;
-
-	// printf("history size before : %d, after ; %d \n", history_size_before_sampling, history_size_after_sampling);
-	// // first send the size of the message
-	// int measurement_size = history_size_after_sampling -  history_size_before_sampling;
-	// do{
-	// 	success = send(sock, &measurement_size, sizeof(measurement_size), 0);
-	// 	--timeout;
-	// } while(success == -1 && timeout > 0);
-	// if(success > 0){
-	// 	printf("successfully sent measurement_size %d \n", measurement_size);
-	// 	timeout = 10;
-	// }
-	// else
-	// 	printf("failed to send measurement_size %d \n", measurement_size);
-
-
-	// for (int i = history_size_before_sampling; i < history_size_after_sampling; i++) {
-	// 	m_buffer[0] = i;
-	// 	m_buffer[1] = history.position[i].x;
-	// 	m_buffer[2] = history.position[i].y;
-	// 	m_buffer[3] = history.gas_meas_avg[i];
-	// 	m_buffer[4] = history.gas_meas_std[i];
-	// 	//variable = (condition) ? expressionTrue : expressionFalse;
-	// 	do{
-	// 		success = send(sock, m_buffer, sizeof(m_buffer), 0);
-	// 		--timeout;
-	// 	} while(success == -1 && timeout > 0);
-	// 	if(success > 0){
-	// 		printf("successfully sent measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
-	// 		timeout = 10;
-
-	// 	}
-	// 	else
-	// 		printf("failed to send measurement %f: (%f, %f) %f +- %f\n", m_buffer[0], m_buffer[1], m_buffer[2], m_buffer[3], m_buffer[4]);
-	
-
-	// // send the measurement to the server and wait for new orders
-	// FSM.state = STATE_LISTEN;
-	// FSM.hook  = state_listen;
-	// }
 
 	FSM.state = STATE_ESTIMATING;
 	FSM.hook  = state_estimating;
@@ -1233,9 +1199,11 @@ int main(int argc, char **argv){
 	
 	init();
 	inter_robot_comm.initialize(ID, simulation_parameters.ID_list);
+   
+	read_obstacle_list();
 
 	establish_baseline();
-	read_obstacle_list();
+
 	//odor_baseline_value = 30000
 	// visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";

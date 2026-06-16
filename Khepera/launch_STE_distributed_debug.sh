@@ -1,8 +1,8 @@
 #!/bin/bash
 # NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
-ID_list=(102 105 103)
-source_position="11 3"
+ID_list=(102 103 105)
+source_position="11 2"
 session_name="robots_view"
 config_file="$STE_DDPM_ROOT/Khepera/Data/config.txt"
 source_position_file="$STE_DDPM_ROOT/Khepera/Data/source_position.txt"
@@ -10,10 +10,31 @@ binary_path="$STE_DDPM_ROOT/Khepera/STE_K4_distributed/STE_K4_distributed"
 STE_DDPM_ROOT=${STE_DDPM_ROOT:-/your/path/to/project/root}  # Set default if not defined
 # ---------------------------------------- #
 
-# Update config.txt with ID_list
+#set the map number
+map=0
+echo "+++ Map number $map +++"
+
+cp $STE_DDPM_ROOT/Khepera/Data/Env_map/test_map"$map".environment $STE_DDPM_ROOT/Khepera/Data/test_map.environment
+cp $STE_DDPM_ROOT/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt
+cp $STE_DDPM_ROOT/Khepera/Data/DeepCFD_result/gas_concentration_maps_"$map".csv $STE_DDPM_ROOT/Khepera/Data/gas_concentration_maps.csv
+
+
+
+# Check if map files need to be re-uploaded
+config_map_nbr=$(grep -E "^map_nbr" "$config_file" | sed -E "s/map_nbr *= *([0-9]+).*/\1/")
+if [ "$config_map_nbr" = "$map" ]; then
+    upload_map_files=false
+    echo "ℹ️  Map $map already in config.txt, skipping test_map.environment and obstacle_list.txt upload"
+else
+    upload_map_files=true
+fi
+
+# Update config.txt with ID_list and map_nbr
 ID_list_str=$(IFS=,; echo "${ID_list[*]}")
 sed -i -E "s/^ID_list *= *.*/ID_list = $ID_list_str/" "$config_file"
-echo "✅ Updated config.txt with ID_list=$ID_list_str"
+sed -i -E "s/^map_nbr *= *.*/map_nbr = $map/" "$config_file"
+sed -i -E "s/^number_of_robots *= *.*/number_of_robots = ${#ID_list[@]}/" "$config_file"
+echo "✅ Updated config.txt with ID_list=$ID_list_str, map_nbr=$map, number_of_robots=${#ID_list[@]}"
 
 # Write source position to file
 echo "$source_position" > "$source_position_file"
@@ -25,11 +46,19 @@ make
 
 cd "$STE_DDPM_ROOT/Khepera" || exit 1
 
+
+
+
 # Upload config & binary to each robot
 for ID in "${ID_list[@]}"; do
     echo "📤 Uploading to Robot $ID..."
     k4put "$config_file" +$ID
     k4put "$binary_path" +$ID
+    # environment map and obstacle list (skip if map unchanged)
+    if [ "$upload_map_files" = true ]; then
+        k4put $STE_DDPM_ROOT/Khepera/Data/test_map.environment +$ID
+        k4put $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt +$ID
+    fi
 done
 
 # Prepare result folders
@@ -44,9 +73,12 @@ for ID in "${ID_list[@]}"; do
     touch "$results_path/terminal/$ID.txt"
 done
 
-
-# Kill any existing tmux session
-tmux has-session -t $session_name 2>/dev/null && tmux kill-session -t $session_name
+# Kill any existing tmux session (skip if we're currently inside it)
+current_tmux_session=""
+[ -n "$TMUX" ] && current_tmux_session=$(tmux display-message -p '#S')
+if tmux has-session -t "$session_name" 2>/dev/null && [ "$current_tmux_session" != "$session_name" ]; then
+    tmux kill-session -t "$session_name"
+fi
 
 # Create tmux session
 tmux new-session -d -s $session_name
@@ -95,4 +127,6 @@ tmux select-pane -t 0
 
 # Attach to tmux session
 tmux attach-session -t $session_name
+
+
 
