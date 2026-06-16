@@ -7,17 +7,6 @@
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
-eScenario parse_scenario(const char *str)
-{
-	if (strcmp(str, "NO_COM_NO_COOR") == 0)
-		return NO_COM_NO_COOR;
-	if (strcmp(str, "COM_NO_COOR") == 0)
-		return COM_NO_COOR;
-	if (strcmp(str, "COM_COOR") == 0)
-		return COM_COOR;
-	fprintf(stderr, "Unknown scenario: %s\n", str);
-	exit(1);
-}
 eEvaluationMethod parse_evaluation_method(const char *str)
 {
 	if (strcmp(str, "MCMC") == 0)
@@ -72,8 +61,14 @@ eProcessingMode parse_processing_mode(const char *str)
 }
 ePlanningStrategy parse_planning_strategy(const char *str)
 {
+	if (strcmp(str, "COMBINED") == 0)
+		return COMBINED;
 	if (strcmp(str, "GREEDY") == 0)
 		return GREEDY;
+	if (strcmp(str, "INFO_CENTER") == 0)
+		return INFO_CENTER;
+	if (strcmp(str, "FARTHEST_CELL") == 0)
+		return FARTHEST_CELL;
 	if (strcmp(str, "BALANCE_MAXIMAL_EXPECTED") == 0)
 		return BALANCE_MAXIMAL_EXPECTED;
 	if (strcmp(str, "RANDOM") == 0)
@@ -178,11 +173,22 @@ eGasHitMethod parse_gas_hit_method(const char *str)
 	fprintf(stderr, "Unknown gas hit method: %s\n", str);
 	exit(1);
 }
-eTeamStrategy parse_team_strategy(const char* str) {
-	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
-	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
-	if (strcmp(str, "CENTRALIZED") == 0) return CENTRALIZED;
-	fprintf(stderr, "Unknown team strategy: %s\n", str);
+
+eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
+	if (strcmp(str, "VORONOI") == 0) return VORONOI;
+	if (strcmp(str, "LLOYD_D") == 0) return LLOYD_D;
+	if (strcmp(str, "LLOYD_P") == 0) return LLOYD_P;
+	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
+	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
+	if (strcmp(str, "NONE") == 0) return NONE;
+	fprintf(stderr, "Unknown cluster method: %s\n", str);
+	exit(1);
+}
+
+eMapCoverageSeed parse_map_coverage_seed(const char* str) {
+	if (strcmp(str, "MAX_CELL") == 0) return MAX_CELL;
+	if (strcmp(str, "ROBOT_CELL") == 0) return ROBOT_CELL;
+	fprintf(stderr, "Unknown cluster method: %s\n", str);
 	exit(1);
 }
 
@@ -194,13 +200,6 @@ eStopCondition parse_stop_condition(const char* str) {
 	exit(1);
 }
 
-eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
-	if (strcmp(str, "GOAL_REACHED") == 0) return GOAL_REACHED;
-	if (strcmp(str, "FIXED_FREQ") == 0) return FIXED_FREQ;
-	if (strcmp(str, "BELIEF_DIFF") == 0) return BELIEF_DIFF;
-	fprintf(stderr, "Unknown update goal policy: %s\n", str);
-	exit(1);
-}
 
 eScoreFun parse_score_fun(const char *str)
 {
@@ -224,13 +223,6 @@ ePlumeModel parse_plume_model(const char* str) {
 	if (strcmp(str, "DDPM") == 0) return DDPM;
 	if (strcmp(str, "FDM_PDE") == 0) return FDM_PDE;
 	fprintf(stderr, "Unknown plume model: %s\n", str);
-	exit(1);
-}
-
-eEstimationScale parse_estimation_scale(const char* str) {
-	if (strcmp(str, "LOCAL") == 0) return LOCAL;
-	if (strcmp(str, "GLOBAL") == 0) return GLOBAL;
-	fprintf(stderr, "Unknown estimation scale: %s\n", str);
 	exit(1);
 }
 
@@ -260,6 +252,13 @@ SimulationParameters::SimulationParameters(const char *filename){
 	load_simulation_parameters_from_config(filename);
 }
 
+eTeamStrategy parse_team_strategy(const char* str) {
+	if (strcmp(str, "INDIVIDUAL") == 0) return INDIVIDUAL;
+	if (strcmp(str, "DISTRIBUTED") == 0) return DISTRIBUTED;
+	fprintf(stderr, "Unknown team strategy: %s\n", str);
+	exit(1);
+}
+
 void SimulationParameters::load_simulation_parameters_from_config(const char *filename)
 {
 	YAML::Node config;
@@ -282,7 +281,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	{
 		auto n = config["robot"];
 		number_of_robots = n["number_of_robots"].as<int>();
-		scenario         = parse_scenario(n["scenario"].as<std::string>().c_str());
 		vel_factor       = n["vel_factor"].as<float>();
 	}
 
@@ -301,6 +299,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			sampling_period      = s["sampling_period"].as<int>();
 			sampling_dist_thresh = s["sampling_dist_thresh"].as<float>();
 		}
+
+		// NOLINEAR sub-params
+		if (calibrationMode == NOLINEAR && n["NOLINEAR"]) {
+			R0 = n["NOLINEAR"]["R0"].as<float>();
+		}
 	}
 
 	// --- gas_feature ---
@@ -310,8 +313,17 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 
 		// RELATIVE_VALUE sub-params
 		if (gasFeature == RELATIVE_VALUE && n["RELATIVE_VALUE"]) {
-			relativeMethod = parse_relative_method(
-				n["RELATIVE_VALUE"]["relativeMethod"].as<std::string>().c_str());
+			auto rv = n["RELATIVE_VALUE"];
+			std::string rmStr = rv["relativeMethod"].as<std::string>();
+			relativeMethod = parse_relative_method(rmStr.c_str());
+			// likelihoodSigma is nested under the active relativeMethod
+			if (rv[rmStr] && rv[rmStr]["likelihoodSigma"]) {
+				likelihoodSigma = rv[rmStr]["likelihoodSigma"].as<float>();
+			}
+		}
+		if (gasFeature == ABSOLUTE_VALUE && n["ABSOLUTE_VALUE"]) {
+			auto av = n["ABSOLUTE_VALUE"];
+			likelihoodSigma = av["likelihoodSigma"].as<float>();
 		}
 
 		// GASHIT sub-params
@@ -321,6 +333,13 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 			// threshold is shared by FIXED_THRES and FIXED_THRES_NUM
 			if ((gasHitMethod == FIXED_THRES || gasHitMethod == FIXED_THRES_NUM) && gh["FIXED_THRES"]) {
 				gas_hit_threshold = gh["FIXED_THRES"]["gasHitThres"].as<int>();
+			}
+			// lambda is shared by SLIDING_WINDOW_THRES and SLIDING_WINDOW_THRES_NUM
+			if (gasHitMethod == SLIDING_WINDOW_THRES && gh["SLIDING_WINDOW_THRES"]) {
+				lambda = gh["SLIDING_WINDOW_THRES"]["lambda"].as<float>();
+			}
+			if (gasHitMethod == SLIDING_WINDOW_THRES_NUM && gh["SLIDING_WINDOW_THRES_NUM"]) {
+				lambda = gh["SLIDING_WINDOW_THRES_NUM"]["lambda"].as<float>();
 			}
 		}
 	}
@@ -335,11 +354,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		if (BayesianModelingMethod == MCMC && n["MCMC"]) {
 			MCMC_iteration_num = n["MCMC"]["MCMC_iteration_num"].as<int>();
 		}
-
-		likelihood_error = n["likelihood_error"].as<float>();
-		R0               = n["R0"].as<float>();
-		likelihoodSigma  = n["likelihoodSigma"].as<float>();
-		lambda           = n["lambda"].as<float>();
 	}
 
 	// --- plume_model ---
@@ -359,7 +373,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		windInfo              = parse_wind_info(n["windInfo"].as<std::string>().c_str());
 		windEstimationMethod  = parse_wind_estimation_method(
 			n["windEstimationMethod"].as<std::string>().c_str());
-		estimationScale       = parse_estimation_scale(n["estimationScale"].as<std::string>().c_str());
 		modelUncertainty      = parse_model_uncertainty(n["modelUncertainty"].as<std::string>().c_str());
 
 		// DYNAMIC_UNCERTAINTY sub-params
@@ -395,44 +408,28 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	// --- team ---
 	{
 		auto n = config["team"];
-		teamStrategy   = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
-		stopCondition  = parse_stop_condition(n["stopCondition"].as<std::string>().c_str());
-		updateGoalPolicy = parse_update_goal_policy(n["updateGoalPolicy"].as<std::string>().c_str());
-
-		// FIXED_FREQ sub-params
-		if (updateGoalPolicy == FIXED_FREQ && n["FIXED_FREQ"]) {
-			update_goal_time = n["FIXED_FREQ"]["updateGoalTime"].as<int>();
-		}
+		teamStrategy     = parse_team_strategy(n["teamStrategy"].as<std::string>().c_str());
+		mapCoverageStrategy = parse_map_coverage_strategy(n["mapCoverageStrategy"].as<std::string>().c_str());
+		mapCoverageSeed = parse_map_coverage_seed(n["mapCoverageSeed"].as<std::string>().c_str());
+		epsilon_clusterize = n["epsilon_clusterize"].as<float>();
 	}
-}
-
-void SimulationParameters::read_mapID_from_file()
-{
-	// read simulation parameters
-	FILE *sim_param_file;
-	int ok = 0;
-
-	if (access("../../data/map_nbr.txt", F_OK) != -1)
+	// --- termination ---
 	{
-		sim_param_file = fopen("../../data/map_nbr.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &map_nbr);
-		if (ok)
-			printf("scenario : %d\n", map_nbr);
-		fclose(sim_param_file);
+		auto n = config["termination"];
+		stopCondition = parse_stop_condition(n["stopCondition"].as<std::string>().c_str());
 	}
 }
+
 
 void SimulationParameters::log_simulation_parameters(const char *config_logfile_name)
 {
 	// write simulation parameters to file
 	FILE *sim_param_file;
 	sim_param_file = fopen(config_logfile_name, "a");
-	fprintf(sim_param_file, "likelihood_error %f\n", likelihood_error);
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);
 	fprintf(sim_param_file, "BayesianModelingMethod %d\n", BayesianModelingMethod);
 	fprintf(sim_param_file, "number_of_robots %d\n", number_of_robots);
-	fprintf(sim_param_file, "scenario %d\n", scenario);
 	fprintf(sim_param_file, "map_nbr %d\n", map_nbr);
 	fprintf(sim_param_file, "sampling_mode %d\n", samplingMode);
 	fprintf(sim_param_file, "data_processing_mode %d\n", processingMode);
@@ -458,16 +455,18 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
-	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);
 	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
-	fprintf(sim_param_file, "estimation_scale %d\n", estimationScale);
 	fprintf(sim_param_file, "wind_info %d\n", windInfo);
 	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
 	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
 	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
 	fprintf(sim_param_file, "wind_belief_weight %f\n", wind_belief_weight);
+
+	fprintf(sim_param_file, "cluster_method %d\n", mapCoverageStrategy);
+	fprintf(sim_param_file, "cluster_seed %d\n", mapCoverageSeed);
+	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
 	fclose(sim_param_file);
 }
 

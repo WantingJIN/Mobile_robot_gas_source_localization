@@ -8,6 +8,7 @@
 
 //custom libraries
 #include <fstream>
+#include <array>
 #include "controller_STE_distributed.h"
 #include "Posterior.h"
 #include "khepera_functions.h"
@@ -16,9 +17,14 @@
 #include "path_planner.h"
 #include "Position.h"
 #include "BeliefCommManager.h"
+#include "region_allocator.h"
 
 //#define PORT 3011
 #define SA struct sockaddr 
+#define MSG_STATE_BELIEF_MAP 1
+#define MSG_STATE_SHARE_PDF -99
+#define MSG_STATE_WIND_SAMPLE -97
+#define MSG_STATE_FINISHED -100
 
 //using namespace std; //can't use it because of isnan !
 
@@ -43,9 +49,13 @@ FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* baseline_measurements_logfile;
+FILE* posterior_pdf_3D_cluster;
+FILE* cluster_sizes_geometric;
+FILE* cluster_sizes_informative;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
+FILE *clustering_debugging_logfile;
 
 char goalposition_logfile_name[256];
 char measurements_logfile_name[256];
@@ -62,6 +72,9 @@ char config_logfile_name[256];
 char trajectory_logfile_name[256];
 char baseline_measurements_logfile_name[256];
 char visited_list_logfile_name[256];
+char posterior_pdf_3D_cluster_name[512];
+char cluster_sizes_geometric_name[512];
+char cluster_sizes_informative_name[512];
 char clustering_bounding_boxes_logfile_name[512];
 char gas_information_map_logfile_name[512];
 char scores_map_logfile_name[512];
@@ -69,7 +82,12 @@ char distance_map_logfile_name[512];
 char acc_info_map_logfile_name[512];
 // text file for storing some prints for debugging
 char console_logfile_name[512];
+char clustering_debugging_name[512];
 char gas_concentration_map_logfile_name[512];
+char gas_concentration_maps_log_root[512];
+char wind_field_u_logfile_name[512];
+char wind_field_v_logfile_name[512];
+char wind_field_w_logfile_name[512];
 char experiment_time_logfile_name[512];
 
 
@@ -122,14 +140,9 @@ float previous_sensor_reading = 0.0;
 
 int cell_visited_list[MAP_SIZE] = {0};
 
-// plume model
-DeepCFDPlumeModel2D plume_model;
-
-// current posterior distribution
-Posterior posterior(&plume_model);
-
-// path planner
-PathPlanner path_planner(&plume_model, &posterior, &history);
+PlumeModel *plume_model = NULL;
+Posterior *posterior = NULL;
+PathPlanner *path_planner = NULL;
 
 int sample_counter = 0;
 
@@ -183,7 +196,20 @@ long long planning_time_sum = 0;   // computation time of the planning part
 static float belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
 static int received_flags[MAX_NB_ROBOTS] = {0};
 static float belief_map_merged[MAP_SIZE] = {0};
+static float received_current_pos[MAX_NB_ROBOTS][2] = {0};
+static int ready_from[MAX_NB_ROBOTS] = {0};
+static int i_am_ready = 0;
+static std::array<int, MAX_NB_ROBOTS> latest_team_wind_sample_id = [] {
+	std::array<int, MAX_NB_ROBOTS> ids;
+	ids.fill(-1);
+	return ids;
+}();
+static int local_wind_sample_id = 0;
 
+std::vector<int> obstacle_map(MAP_SIZE, 0);
+RegionAllocator *region_allocator = NULL;
+
+bool printed = false;
 bool entered_state_receive_pdf = false;
 bool initial_point_calculated = false;
 
@@ -228,7 +254,11 @@ float dist_to_goal(Position goal_position){
 void history_print(struct history history){
 	printf("_____ Sample History _____ \n");
 	for(int i=0; i<history.size; i++){
-		printf("%d : gas=%f (+/- %f), wind=(%f, %f) @ (%f, %f)\n", i, history.gas_meas_avg[i], history.gas_meas_std[i], history.wind_intensity[i], history.wind_angle[i], history.position[i].x, history.position[i].y);
+		printf("%d : gas=%f (+/- %f), wind=(%f, %f), uv=(%f, %f) @ (%f, %f)\n",
+		       i, history.gas_meas_avg[i], history.gas_meas_std[i],
+		       history.wind_intensity[i], history.wind_angle[i],
+		       history.wind_meas_u[i], history.wind_meas_v[i],
+		       history.position[i].x, history.position[i].y);
 	}
 	printf("__________________________ \n");
 }
@@ -253,6 +283,112 @@ void read_obstacle_list(){
 	for(int i = 0; i < nbr_obs; i++){
 		printf("obstacle %d: %f %f %f %f\n", i, obstacles[i][0], obstacles[i][1], obstacles[i][2], obstacles[i][3]);
 	}
+
+	for (int idx = 0; idx < MAP_SIZE; ++idx)
+	{
+		float x = 0.0f;
+		float y = 0.0f;
+		index_to_position_2D(idx, &x, &y);
+		Position p(x, y, 0);
+		obstacle_map[idx] = (p.is_in_obstacle_list(obstacles, nbr_obs) == -1) ? 0 : 1;
+	}
+}
+
+bool should_process_team_messages()
+{
+	return simulation_parameters.number_of_robots > 1 &&
+	       simulation_parameters.teamStrategy == DISTRIBUTED;
+}
+
+bool should_share_team_wind()
+{
+	return simulation_parameters.number_of_robots > 1 &&
+	       simulation_parameters.teamStrategy == DISTRIBUTED &&
+	       simulation_parameters.windInfo == WIND_ONLINE;
+}
+
+void record_team_wind_sample(Position sample_position, float wind_u, float wind_v, int sender_ID, int sample_id)
+{
+	int sender_index = find_index_in_ID_list(sender_ID, simulation_parameters.ID_list);
+	if (sender_index < 0 || sender_index >= MAX_NB_ROBOTS)
+		return;
+
+	if (sample_id <= latest_team_wind_sample_id[sender_index])
+		return;
+
+	latest_team_wind_sample_id[sender_index] = sample_id;
+	history.team_wind_position.push_back(sample_position);
+	history.team_wind_meas_u.push_back(wind_u);
+	history.team_wind_meas_v.push_back(wind_v);
+	history.team_wind_sender_id.push_back(sender_ID);
+	history.team_wind_sample_id.push_back(sample_id);
+}
+
+void share_team_wind_sample(Position sample_position, float wind_u, float wind_v)
+{
+	if (!should_share_team_wind())
+		return;
+
+	int sample_id = ++local_wind_sample_id;
+	record_team_wind_sample(sample_position, wind_u, wind_v, ID, sample_id);
+
+	Position wind_payload(wind_v, static_cast<float>(sample_id), 0.0f);
+	Message msg(MSG_STATE_WIND_SAMPLE, ID, 0, sample_position, wind_u, wind_payload, 0);
+	inter_robot_comm.send_message_to_all(msg);
+}
+
+void process_team_messages()
+{
+	if (!should_process_team_messages())
+		return;
+
+	Message msg;
+	int from_peer = 0;
+	while (inter_robot_comm.poll_message(msg, from_peer, 0))
+	{
+		if (msg.sender_ID == ID)
+			continue;
+		if (msg.receiver_ID != 0 && msg.receiver_ID != ID)
+			continue;
+
+		int sender_index = find_index_in_ID_list(msg.sender_ID, simulation_parameters.ID_list);
+		if (sender_index < 0 || sender_index >= MAX_NB_ROBOTS)
+			continue;
+
+		if (msg.msg_ID == MSG_STATE_WIND_SAMPLE)
+		{
+			if (should_share_team_wind())
+			{
+				int sample_id = static_cast<int>(msg.goal.y);
+				record_team_wind_sample(msg.position, msg.concentration, msg.goal.x, msg.sender_ID, sample_id);
+			}
+			continue;
+		}
+
+		if (msg.finish_flag == -1 || msg.msg_ID == MSG_STATE_FINISHED)
+		{
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: Received STATE_FINISHED from Robot ID [%d]\n", ID, msg.sender_ID);
+			return;
+		}
+
+		if (msg.msg_ID == MSG_STATE_SHARE_PDF)
+		{
+			ready_from[sender_index] = 1;
+			printf("Robot ID [%d]: Received READY from Robot ID [%d]\n", ID, msg.sender_ID);
+			continue;
+		}
+
+		if (msg.msg_ID == MSG_STATE_BELIEF_MAP)
+		{
+			memcpy(belief_maps[sender_index], msg.belief_map, sizeof(float) * MAP_SIZE);
+			received_current_pos[sender_index][0] = msg.position.x;
+			received_current_pos[sender_index][1] = msg.position.y;
+			received_flags[sender_index] = 1;
+			printf("Robot ID [%d]: Received belief map from Robot ID [%d]\n", ID, msg.sender_ID);
+			continue;
+		}
+	}
 }
 
 
@@ -269,7 +405,10 @@ void log_measurements(){
 	//int i = 0;
 	double time = get_exp_time();
 	measurements_logfile = fopen(measurements_logfile_name, "a");
-	fprintf(measurements_logfile,"%d, %f, %f, %f\n", FSM.n_cycles, sampleBuffer.average_wind_intensity, sampleBuffer.average_concentration, time);
+	fprintf(measurements_logfile,"%d, %f, %f, %f, %f, %f\n",
+	        FSM.n_cycles, sampleBuffer.average_wind_intensity,
+	        sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy,
+	        sampleBuffer.average_concentration, time);
 	//for (i = 0; i < ODOR_FILTER_LENGTH; i++)
 	//	fprintf(measurements_logfile,"%f, ", measurements.odor_sample_memory.buffer[i]);
 	//fprintf(measurements_logfile,"\n");
@@ -279,18 +418,20 @@ void log_measurements(){
 void log_expected_a_posteriori()
 {
 	expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "a");
-	fprintf(expected_a_posteriori_logfile, "%d, %f, %f, %f, %f, %f\n", FSM.n_cycles,
-		  plume_model.expected_value[0], plume_model.expected_value[1], plume_model.expected_value[2],
-		  plume_model.expected_value[3], plume_model.expected_value[4]);
+	fprintf(expected_a_posteriori_logfile, "%d", FSM.n_cycles);
+	for (int i = 0; i < plume_model->nbr_param; ++i)
+		fprintf(expected_a_posteriori_logfile, ", %f", plume_model->expected_value[i]);
+	fprintf(expected_a_posteriori_logfile, "\n");
 	fclose(expected_a_posteriori_logfile);
 }
 
 void log_max_a_posteriori()
 {
 	max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "a");
-	fprintf(max_a_posteriori_logfile, "%d, %f, %f, %f, %f, %f\n", FSM.n_cycles,
-		  plume_model.max_a_post_value[0], plume_model.max_a_post_value[1], plume_model.max_a_post_value[2],
-		  plume_model.max_a_post_value[3], plume_model.max_a_post_value[4]);
+	fprintf(max_a_posteriori_logfile, "%d", FSM.n_cycles);
+	for (int i = 0; i < plume_model->nbr_param; ++i)
+		fprintf(max_a_posteriori_logfile, ", %f", plume_model->max_a_post_value[i]);
+	fprintf(max_a_posteriori_logfile, "\n");
 	fclose(max_a_posteriori_logfile);
 }
 
@@ -298,7 +439,7 @@ void log_entropy()
 {
 	double time = get_exp_time();
 	entropy_logfile = fopen(entropy_logfile_name, "a");
-	fprintf(entropy_logfile, "%f, %f\n", posterior.entropy, time);
+	fprintf(entropy_logfile, "%f, %f\n", posterior->entropy, time);
 	fclose(entropy_logfile);
 }
 
@@ -334,7 +475,10 @@ void log_history(){
 
 	for (int i = logged_history_size; i < history.size; i++){
 		fprintf(position_history_logfile, "%d, %f, %f, %f\n", i, history.position[i].x, history.position[i].y, history.position[i].heading);
-		fprintf(measurement_history_logfile, "%d, %f, %f, %f, %f\n", i, history.gas_meas_avg[i], history.gas_meas_std[i], history.wind_intensity[i], history.wind_angle[i]);
+		fprintf(measurement_history_logfile, "%d, %f, %f, %f, %f, %f, %f\n",
+		        i, history.gas_meas_avg[i], history.gas_meas_std[i],
+		        history.wind_intensity[i], history.wind_angle[i],
+		        history.wind_meas_u[i], history.wind_meas_v[i]);
 	}
 
 	fclose(position_history_logfile);
@@ -342,7 +486,7 @@ void log_history(){
 	logged_history_size = history.size;
    
 	//posterior 3D
-	//posterior.log_pdf(posterior_pdf_3D_name, 'w');
+	//posterior->log_pdf(posterior_pdf_3D_name, 'w');
 }
 
 void log_visited_list(){
@@ -435,8 +579,7 @@ void state_initializing(){
 void state_measuring(){
       printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	std::vector<float> sample_from_map;
-	int history_size_before_sampling = history.size;
-    if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
+      if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
 		// if the kernel mapping is enabled, then retrieve the measurement from the gas map
 		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
@@ -456,6 +599,8 @@ void state_measuring(){
 			history.gas_meas_std.push_back(0.0);
 			history.wind_intensity.push_back(sample_in_motion.wind_intensity[i]);
 			history.wind_angle.push_back(sample_in_motion.wind_angle[i]);
+			history.wind_meas_u.push_back(sample_in_motion.wind_meas_u[i]);
+			history.wind_meas_v.push_back(sample_in_motion.wind_meas_v[i]);
 			history.FSM_iter.push_back(FSM.n_cycles);
 			history.size++;
 			// mark the cell as visited
@@ -463,7 +608,7 @@ void state_measuring(){
 			{
 				int pos_coord[2];
 				position_to_indices_2D(sample_in_motion.position[i].x, sample_in_motion.position[i].y, &pos_coord[0], &pos_coord[1]);
-				int idx = posterior.indices_to_index(pos_coord);
+				int idx = posterior->indices_to_index(pos_coord);
 				cell_visited_list[idx] = 1;
 			}
 		}
@@ -471,6 +616,8 @@ void state_measuring(){
 		sample_in_motion.gas_meas_avg.clear();
 		sample_in_motion.wind_intensity.clear();
 		sample_in_motion.wind_angle.clear();
+		sample_in_motion.wind_meas_u.clear();
+		sample_in_motion.wind_meas_v.clear();
 		sample_in_motion.size = 0;
 		sample_from_map.clear();
 	}
@@ -479,7 +626,8 @@ void state_measuring(){
 			//continue measuring odor concentration
 			sampleBuffer.instant_concentration = odor_read();
 			//measuring wind
-			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
+					  &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
 			//add samples to buffers
 			sampleBuffer.add_all_to_buffer();
 			next_iteration_time();
@@ -489,7 +637,8 @@ void state_measuring(){
 		sampleBuffer.average_all();
 	} else if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING || simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
 		sampleBuffer.instant_concentration = odor_read();
-		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle);
+		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
+				  &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
 	}
@@ -506,6 +655,10 @@ void state_measuring(){
 	history.gas_meas_std.push_back(sampleBuffer.stdDev_concentration);
 	history.wind_intensity.push_back(sampleBuffer.average_wind_intensity);
 	history.wind_angle.push_back(sampleBuffer.average_wind_angle);
+	history.wind_meas_u.push_back(sampleBuffer.average_wind_vx);
+	history.wind_meas_v.push_back(sampleBuffer.average_wind_vy);
+	share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f),
+	                       sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy);
 	history.size++;
 	//history_print(history);
 
@@ -513,10 +666,9 @@ void state_measuring(){
 	{
 		int pos_coord[2];
 		position_to_indices_2D(current_position.x, current_position.y, &pos_coord[0], &pos_coord[1]);
-		int idx = posterior.indices_to_index(pos_coord);
+		int idx = posterior->indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 	}
-
 	FSM.state = STATE_ESTIMATING;
 	FSM.hook  = state_estimating;
 }
@@ -528,29 +680,29 @@ void state_estimating(){
 	long long time_before_estimating = current_timestamp();
 
 	// reinitialize
-	posterior.pdf_reset();
+	posterior->pdf_reset();
 	// estimation
 	if (simulation_parameters.BayesianModelingMethod == MCMC)
 	{
 		printf("going for MCMC\n");
-		posterior.MCMC_evaluation(history);
+		posterior->MCMC_evaluation(history);
 	}
 	if (simulation_parameters.BayesianModelingMethod == EXHAUSTIVE)
 	{
 		printf("going for exhaustive\n");
-		posterior.exhaustive_evaluation(history);
+		posterior->exhaustive_evaluation(history);
 	}
 	// only when using MCMC
-	if (posterior.dirac_flag)
+	if (posterior->dirac_flag)
 	{
 		if (VERBOSE)
 			printf("[%d] exhaustive search!\n", ID);
-		posterior.exhaustive_evaluation(history);
+		posterior->exhaustive_evaluation(history);
 	}
 
-	// printf("sum posterior : %f \n", posterior.sum);
-	posterior.normalize();
-	posterior.log_pdf(posterior_pdf_3D_name, 'a');
+	// printf("sum posterior : %f \n", posterior->sum);
+	posterior->normalize();
+	posterior->log_pdf(posterior_pdf_3D_name, 'a');
 
 	FSM.n_cycles++;
 	if (VERBOSE)
@@ -564,8 +716,8 @@ void state_estimating(){
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
 	{
 		// calculate entropy and spread
-		posterior.process();
-      	posterior.calculate_entropy_and_spread();
+		posterior->process();
+      	posterior->calculate_entropy_and_spread();
 		log_expected_a_posteriori();
 		log_max_a_posteriori();
 		log_entropy();
@@ -598,38 +750,41 @@ void state_updategoal()
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
-		path_planner.maximal_belief_planning();
+		path_planner->maximal_belief_planning();
+		break;
+	case INFO_CENTER:
+		path_planner->information_center_planning();
 		break;
 	case BALANCE_MAXIMAL_EXPECTED:
-		path_planner.balance_expected_maximal_pdf();
+		path_planner->balance_expected_maximal_pdf();
 		break;
 	case RANDOM:
-		path_planner.random_planning();
+		path_planner->random_planning();
 		break;
 	case LAWNMOWER:
-		path_planner.lawnmower_planning();
+		path_planner->lawnmower_planning();
 		break;
 	case BELIEF_CLUSTERING:
-		path_planner.belief_clustering_planning();
+		path_planner->belief_clustering_planning();
 		break;
 	case WEIGHTED_CLUSTERING:
-		path_planner.weighted_belief_clustering();
+		path_planner->weighted_belief_clustering();
 		break;
 	case INFO_CLUSTERING:
-		path_planner.informative_clustering_planning();
+		path_planner->informative_clustering_planning();
 		break;
 	case INFORMATIVE_KLD:
-		path_planner.KLD_informative_goal_selection();
-		path_planner.KLD_distance_balance();
+		path_planner->KLD_informative_goal_selection();
+		path_planner->KLD_distance_balance();
 		break;
 	case SUM_DIJKSTRA_FIX:
-		path_planner.accumulative_Dijkstra();
+		path_planner->accumulative_Dijkstra();
 		break;
 	case SUM_DIJKSTRA_ADP:
-		path_planner.accumulative_Dijkstra();
+		path_planner->accumulative_Dijkstra();
 		break;
 	case MULTI_DIJKSTRA:
-		path = path_planner.multi_objective_Dijkstra();
+		path = path_planner->multi_objective_Dijkstra();
 		use_visibility_path = false;
 		break;
 	default:
@@ -648,7 +803,7 @@ void state_updategoal()
 		{
 
 			printf("goal position : %f %f \n", goal_position.x, goal_position.y);
-			path_planner.goal_outside_obstacles(&goal_position);
+			path_planner->goal_outside_obstacles(&goal_position);
 			printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 			// find the path using visibility graph
@@ -664,6 +819,12 @@ void state_updategoal()
 			}
 		}
 		i = path.begin();
+		if (simulation_parameters.visitedList == visitedList_ON)
+		{
+			int idx = position_to_index_2D(goal_position.x, goal_position.y);
+			if (idx >= 0 && idx < MAP_SIZE)
+				cell_visited_list[idx] = 1;
+		}
 		// printf("my position (%f, %f) - my goal (%f, %f)\n", current_position.x, current_position.y, i->x, i->y);
 		// update goal
 		FSM.state = STATE_MOVING;
@@ -728,7 +889,10 @@ void state_moving(){
 		float sensor_reading = odor_read();
 		float wind_intensity = 0.0;
 		float wind_angle = 0.0;
-		wind_read(&wind_intensity, &wind_angle);
+		float wind_vx = 0.0;
+		float wind_vy = 0.0;
+		float wind_vz = 0.0;
+		wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
 		float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
 		if (instant_concentration < 0) instant_concentration = 0;
 		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
@@ -748,10 +912,13 @@ void state_moving(){
 				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
 				if (MCS_data_available){
 					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-				      sample_in_motion.gas_meas_avg.push_back(instant_concentration);
-				      sample_in_motion.wind_intensity.push_back(wind_intensity);
-				      sample_in_motion.wind_angle.push_back(wind_angle);
-				      sample_in_motion.size++;
+					sample_in_motion.gas_meas_avg.push_back(instant_concentration);
+					sample_in_motion.wind_intensity.push_back(wind_intensity);
+					sample_in_motion.wind_angle.push_back(wind_angle);
+					sample_in_motion.wind_meas_u.push_back(wind_vx);
+					sample_in_motion.wind_meas_v.push_back(wind_vy);
+					share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f), wind_vx, wind_vy);
+					sample_in_motion.size++;
 
 				      last_measurement_pos.x = current_position.x;
 				      last_measurement_pos.y = current_position.y;
@@ -845,7 +1012,7 @@ void state_send_goal()
 		// goal position for Robot
 		goal_position = goal_position_team[0];
 		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		path_planner.goal_outside_obstacles(&goal_position);
+		path_planner->goal_outside_obstacles(&goal_position);
 		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 		// find the path using visibility graph
@@ -901,7 +1068,7 @@ void state_receive_goal()
 
 	// print goal position for some of the robots
 	// printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-	path_planner.goal_outside_obstacles(&goal_position);
+	path_planner->goal_outside_obstacles(&goal_position);
 	printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
 
 	VisiLibity::Point start(current_position.x, current_position.y);
@@ -923,70 +1090,68 @@ void state_receive_goal()
 	time_before_moving = current_timestamp();
 }
 
-// FIXME: still need to fix the state_receive_pdf function
 void state_receive_pdf()
 {
-
-	if (simulation_parameters.teamStrategy == DISTRIBUTED)
+	if (!entered_state_receive_pdf)
 	{
-		if (posterior.pdf != nullptr)
+		printf("Robot ID [%d]: STATE_RECEIVE_PDF \n", ID);
+		entered_state_receive_pdf = true;
+	}
+
+	if (!printed && posterior->pdf != nullptr)
+	{
+		memcpy(belief_maps[self_index], posterior->pdf, MAP_SIZE * sizeof(float));
+		printed = true;
+	}
+
+	process_team_messages();
+	if (FSM.state == STATE_FINISHED)
+		return;
+
+	int all_received = 1;
+	for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+	{
+		if (i == self_index)
+			continue;
+		if (!received_flags[i])
 		{
-			memcpy(belief_maps[self_index], posterior.pdf, MAP_SIZE * sizeof(float));
+			all_received = 0;
+			break;
 		}
+	}
 
-        std::map<int, Message> received_msgs;
-	    inter_robot_comm.wait_for_all_maps(received_msgs);
-		for (const auto& pair : received_msgs)
-		{
-			int sender_ID = pair.first;
-			const Message& msg = pair.second;
+	if (all_received && !i_am_ready)
+	{
+		Message ready_msg(MSG_STATE_SHARE_PDF, ID, 0, Position(), 0.0f, Position(), 1);
+		inter_robot_comm.send_message_to_all(ready_msg);
+		i_am_ready = 1;
+		printf("Robot ID [%d]: Sent READY message.\n", ID);
+	}
 
-			if (msg.finish_flag == -1) {
-				// finish the task
-				FSM.state = STATE_FINISHED;
-				printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-				return;
-			} else {
-				int sender_index = find_index_in_ID_list(sender_ID, simulation_parameters.ID_list);
-				memcpy(belief_maps[sender_index], msg.belief_map, sizeof(float) * MAP_SIZE);
-				received_flags[sender_index] = 1;
-			}
-		}
+	int ready_count = 0;
+	for (int i = 0; i < simulation_parameters.number_of_robots; i++)
+	{
+		if (i == self_index)
+			continue;
+		if (ready_from[i])
+			ready_count++;
+	}
 
-		//Check if all others have sent their belief maps
-		int all_received = 1;
+	if (i_am_ready && ready_count == simulation_parameters.number_of_robots - 1)
+	{
+		entered_state_receive_pdf = false;
+		printed = false;
+		i_am_ready = 0;
+
 		for (int i = 0; i < simulation_parameters.number_of_robots; i++)
 		{
-			if (i == self_index)
-				continue;
-			if (!received_flags[i])
-			{
-				all_received = 0;
-				printf("Robot ID [%d]: Waiting for belief map from Robot ID [%d]\n", ID, simulation_parameters.ID_list[i]);
-				break;
-			}
+			received_flags[i] = 0;
+			ready_from[i] = 0;
 		}
-	
-		if (all_received)
-		{
 
-			// Reset state for next round
-			for (int i = 0; i < simulation_parameters.number_of_robots; i++)
-			{
-				received_flags[i] = 0;
-			}
-			//printed = false;
-			FSM.state = STATE_MERGE_PDF;
-			FSM.hook = state_merge_pdf;
-			// FSM.state = STATE_UPDATEGOAL;
-	    	// FSM.hook = state_updategoal;
-
-		}
-		// FSM.state = STATE_UPDATEGOAL;
-	    // FSM.hook = state_updategoal;
-		// usleep(5000*1000); // Wait for 5s
-		// FSM.state = STATE_SHARE_PDF;
-		// FSM.hook = state_share_pdf;
+		printf("Robot ID [%d]: All robots READY. Transitioning to STATE_MERGE_PDF.\n", ID);
+		FSM.state = STATE_MERGE_PDF;
+		FSM.hook = state_merge_pdf;
 	}
 }
 
@@ -999,12 +1164,9 @@ void state_merge_pdf()
 		belief_map_merged[i] = 1.0;
 	}
 
-	// Multiply belief maps from other robots (excluding self)
+	// Multiply belief maps from all robots, including self.
 	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
 	{
-		if (r == self_index)
-			continue; // Skip self
-
 		for (int i = 0; i < MAP_SIZE; i++)
 		{
 			belief_map_merged[i] *= belief_maps[r][i];
@@ -1033,20 +1195,26 @@ void state_merge_pdf()
 		printf("%f ", belief_map_merged[i]);
 	}
 	printf("\n");
-	memcpy(posterior.pdf, belief_map_merged, MAP_SIZE * sizeof(float));
+	memcpy(posterior->pdf, belief_map_merged, MAP_SIZE * sizeof(float));
       // Check the stopping condition after merging
-	posterior.process();
-      posterior.calculate_entropy_and_spread();
+	posterior->process();
+      posterior->calculate_entropy_and_spread();
 	log_expected_a_posteriori();
 	log_max_a_posteriori();
 	log_entropy();
 	bool is_stop_condition_reached = check_stop_condition();
 	if (is_stop_condition_reached)
 	{
-		FSM.state = STATE_FINISHED;
-		printf("Robot ID [%d]: STATE_FINISHED\n", ID);
-		//fprintf(console_logfile, "Robot ID [%d]: STATE_FINISHED\n", ID);
-		broadcast_state_finished();
+		if (sum > 0)
+		{
+			FSM.state = STATE_FINISHED;
+			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
+			broadcast_state_finished();
+			return;
+		}
+		printf("Robot ID [%d]: Avoided STATE_FINISHED because merged belief map is zero\n", ID);
+		FSM.state = STATE_MEASURING;
+		FSM.hook = state_measuring;
 		return;
 	} else {
 		if (simulation_parameters.teamStrategy == CENTRALIZED)
@@ -1057,8 +1225,16 @@ void state_merge_pdf()
 		}
 		else if (simulation_parameters.teamStrategy == DISTRIBUTED)
 		{
-			FSM.state = STATE_REGION_ALLOCATION;
-			FSM.hook = state_region_allocation;
+			if (simulation_parameters.mapCoverageStrategy != NONE)
+			{
+				FSM.state = STATE_REGION_ALLOCATION;
+				FSM.hook = state_region_allocation;
+			}
+			else
+			{
+				FSM.state = STATE_UPDATEGOAL;
+				FSM.hook = state_updategoal;
+			}
 		}
 	}
 	
@@ -1068,7 +1244,7 @@ void state_updategoal_team()
 {
 	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
 
-	path_planner.maximal_merged_belief_planning();
+	path_planner->maximal_merged_belief_planning();
 
 	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
 
@@ -1085,47 +1261,18 @@ void state_share_pdf()
 {
     printf("Robot ID [%d]: STATE_SHARE_PDF\n", ID);
 
-    if (posterior.pdf == NULL) {
+    if (posterior->pdf == NULL) {
         printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
     } else {
-        // FIXME: maybe remove target ID from the message
-		// FIXME: maybe use message ID to represent different type of message
-        //int message_ID = ID + message_counter++;
-		int message_ID = 1;
-		int target_ID = 0; // 0 indicates that this is a broadcast message
-		int finish_flag = 0; // -1 indicates that this is not a finish message
-        Message msg(message_ID, ID, target_ID, current_position, finish_flag, posterior.pdf);
-		//message belief map
-		// printf("Send belief map is: \n");
-		// for (int i = 0; i < MAP_SIZE; i++)
-		// {
-		// 	printf("%f ", msg.belief_map[i]);
-		// }
-        // printf("\n");
-
-		// printf("Size of buffer is: %d \n", sizeof(msg.buffer));	
-		// // message buffer
-		// printf("msg is:");
-	
-		// for (int i = 0; i < 407; i++)
-		// {
-		// 	printf("%f ", msg.buffer[i]);
-		// }
-		// printf("\n");
-		
+		received_current_pos[self_index][0] = current_position.x;
+		received_current_pos[self_index][1] = current_position.y;
+		Message msg(MSG_STATE_BELIEF_MAP, ID, 0, current_position, 0.0f, Position(), 0, posterior->pdf);
 		inter_robot_comm.send_message_to_all(msg);
+		printf("Robot ID [%d]: Broadcast belief map.\n", ID);
     }
 
     FSM.state = STATE_RECEIVE_PDF;
     FSM.hook = state_receive_pdf;
-	// FSM.state = STATE_UPDATEGOAL;
-	// FSM.hook = state_updategoal;
-
-	// Reset the flags for the next round
-	for (int i = 0; i < simulation_parameters.number_of_robots; i++)
-	{
-		received_flags[i] = 0;
-	}
 }
 
 void state_region_allocation()
@@ -1133,6 +1280,9 @@ void state_region_allocation()
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
+		posterior->log_pdf(posterior_pdf_3D_name, 'a');
+		if (region_allocator)
+			region_allocator->region_allocation_algorithm();
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
 	}
@@ -1143,32 +1293,24 @@ void broadcast_state_finished()
 {
     printf("Robot ID [%d]: Broadcasting STATE_FINISHED\n", ID);
 
-    // for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-    //     int target_ID = 101 + i;
-    //     if (target_ID == ID) continue;  // Skip self
-      int message_ID = ID + message_counter++;
-	  //send STATE_FINISHED message to other robots
-	  // FIXME: maybe remove target ID from the message
-	  int target_ID = 0; // 0 indicates that this is a broadcast message
-      Message msg(message_ID, ID, target_ID, current_position, -1, nullptr); // -1 for STATE_FINISHED flag
-	
-	// inter_robot_comm.send_message_to_all(msg);
+	Message msg(MSG_STATE_FINISHED, ID, 0, current_position, 0.0f, Position(), -1);
+	inter_robot_comm.send_message_to_all(msg);
 }
 
 bool check_stop_condition()
 {
 	bool is_stop_condition_reached = false;
-	printf("current_entropy is %f\n", posterior.entropy);
+	printf("current_entropy is %f\n", posterior->entropy);
 	if (simulation_parameters.stopCondition == ENTROPY_ONLY){
-		if (FSM.n_cycles == MAX_ITER || posterior.entropy < 0.1 ){
+		if (FSM.n_cycles == MAX_ITER || posterior->entropy < 0.1 ){
 			is_stop_condition_reached = true;
 		}
 	} else if (simulation_parameters.stopCondition == SPREAD_ONLY){
-		if (FSM.n_cycles == MAX_ITER || (posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+		if (FSM.n_cycles == MAX_ITER || (posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
 			is_stop_condition_reached = true;
 		}
 	} else if (simulation_parameters.stopCondition == ENTROPY_SPREAD){
-		if (FSM.n_cycles == MAX_ITER || (posterior.entropy < 0.3 && posterior.x_spatial_spread < 2 && posterior.y_spatial_spread < 2)){
+		if (FSM.n_cycles == MAX_ITER || (posterior->entropy < 0.3 && posterior->x_spatial_spread < 2 && posterior->y_spatial_spread < 2)){
 			is_stop_condition_reached = true;
 		}
 	} else if (simulation_parameters.stopCondition == ITERATION_ONLY){
@@ -1176,12 +1318,12 @@ bool check_stop_condition()
 			is_stop_condition_reached = true;
 		}
 	} else if (simulation_parameters.stopCondition == END_OF_FIX_PATH){
-		if (path_planner.reach_end_of_fix_path){
+		if (path_planner->reach_end_of_fix_path){
 			is_stop_condition_reached = true;
 		}
 	}
-	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
-	//fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior.entropy, posterior.x_spatial_spread, posterior.y_spatial_spread);
+	printf("entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
+	//fprintf(console_logfile, "entropy : %f, x_spatial_spread : %d, y_spatial_spread : %d\n", posterior->entropy, posterior->x_spatial_spread, posterior->y_spatial_spread);
 	if (is_stop_condition_reached)
 	{
 		// log the finish time stamp
@@ -1192,6 +1334,34 @@ bool check_stop_condition()
 	return is_stop_condition_reached;
 }
 
+PlumeModel* initialize_plume_model()
+{
+	if (simulation_parameters.plumeModel == FDM_PDE)
+	{
+		printf("Initializing ADE-FDM plume model.\n");
+		return new AdeFDMPlumeModel2D();
+	}
+	if (simulation_parameters.plumeModel == GAUSSIAN_PLUME)
+	{
+		printf("Initializing Gaussian plume model.\n");
+		return new GaussianPlumeModel2D();
+	}
+
+	printf("Initializing precomputed DDPM plume model.\n");
+	return new DeepCFDPlumeModel2D();
+}
+
+void initialize_plume_stack()
+{
+	if (plume_model || posterior || path_planner || region_allocator)
+		return;
+
+	plume_model = initialize_plume_model();
+	posterior = new Posterior(plume_model);
+	path_planner = new PathPlanner(plume_model, posterior, &history);
+	region_allocator = new RegionAllocator(posterior, received_current_pos);
+}
+
 // =========================== MAIN ============================== //
 
 
@@ -1199,10 +1369,11 @@ int main(int argc, char **argv){
 	
 	init();
 	inter_robot_comm.initialize(ID, simulation_parameters.ID_list);
-   
+
 	read_obstacle_list();
 
 	establish_baseline();
+    initialize_plume_stack();
 
 	//odor_baseline_value = 30000
 	// visibility graph (visilibity library)
@@ -1227,6 +1398,9 @@ int main(int argc, char **argv){
 	// main loop
 	while (FSM.state != STATE_FINISHED){
 		update_position();
+		process_team_messages();
+		if (FSM.state == STATE_FINISHED)
+			break;
 	   	//change state
 		FSM.hook();
 		log_history();
@@ -1235,11 +1409,16 @@ int main(int argc, char **argv){
 		n_time_step++;
 	}
 	// final logs are written incrementally during each iteration
+	if (clustering_debugging_logfile && clustering_debugging_logfile != stderr)
+		fclose(clustering_debugging_logfile);
 	cleaning_up();
+	delete region_allocator;
+	delete path_planner;
+	delete posterior;
+	delete plume_model;
 	//free the allocated memory to obstacle array
 	for(int i = 0; i < nbr_obs; i++)
 		delete[] obstacles[i];
 		delete[] obstacles;
 		exit(0);
 }
-

@@ -7,9 +7,9 @@ extern SimulationParameters simulation_parameters;
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)
-double likelihood_precomp(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+double likelihood_absolute_value(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
-	float sigmaE = simulation_parameters.likelihood_error;
+	float sigmaE = simulation_parameters.likelihoodSigma;
 	float sigmaD = 0; // 125;
 	double sum_tmp = 0;
 
@@ -192,7 +192,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	// 	// dynamic uncertainty based on wind estimation confidence
 	// 	double wind_confidence = model->get_wind_estimation_confidence(source_pos_idx);
 	// 	if (wind_confidence < 1e-3){
-	// 		// sigmaE = simulation_parameters.likelihood_error * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
+	// 		// sigmaE = simulation_parameters.likelihoodSigma * (5.0 + (1.0 - wind_confidence)); // increase uncertainty when wind confidence is low
 	// 		sum_tmp = 0.001; // very high likelihood
 	// 	}
 	
@@ -202,7 +202,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 
 double likelihood(struct history &history, double *parameters, PlumeModel *model)
 {
-	float sigmaE = simulation_parameters.likelihood_error;
+	float sigmaE = simulation_parameters.likelihoodSigma;
 	float sigmaD = 0; // 125;
 	double sum_tmp = 0;
 

@@ -202,6 +202,15 @@ for i=1:size(pdf,1)
 
 end
 
+mat = reshape(pdf(i,:), params.nbins(1), params.nbins(2));
+for row = 1:params.nbins(1)
+    for col = 1:params.nbins(2)
+        cell_number = (col-1)*params.nbins(1) + row;
+        text(y(col), x(row), num2str(cell_number), 'Color', 'w', 'FontSize', 8);
+    end
+end
+
+
 % Close the figure 
 close(f1);
 close all

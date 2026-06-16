@@ -23,15 +23,15 @@ void init()
 
 	start_time = current_timestamp();
 
-	// seed the RNG
-	srand(time(NULL));
-
 	// robot
 	wb_robot_init();
 	khepera4_drive_init();
 	const char *ID_char = wb_robot_get_name();
 	ID = atoi(ID_char);
 	self_index = ID - 101;
+
+	// seed the RNG with both time and robot ID to ensure different sequences across robots
+	srand(time(NULL) + ID);
 
 	// odor and wind sensors
 	char tag_name[256];
@@ -94,7 +94,6 @@ void init()
 
     // load the simulation parameters
     simulation_parameters.load_simulation_parameters_from_config("../../data/config.yaml");
-    simulation_parameters.read_mapID_from_file();
 
 	FILE *sim_param_file;
 	int ok = 0;
@@ -107,7 +106,8 @@ void init()
 			printf("release rate param : %d\n", release_amount);
 		fclose(sim_param_file);
 	}
-
+      
+	double real_source_pos[3];
 	if (simulation_parameters.simuMode == ONLINE){
 		if (access("../../data/source_pos.txt", F_OK) != -1) {
 			FILE * sim_param_file = fopen("../../data/source_pos.txt", "r");
@@ -134,7 +134,7 @@ void init()
 
     // experiment results folder
 	experiment_measurements_logfile = fopen(experiment_measurements_logfile_name,"r");
-    experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
+      experiment_position_logfile = fopen(experiment_position_logfile_name, "r");
 	experiment_goalposition_logfile = fopen(experiment_goalposition_logfile_name, "r");
 
 	// write the simulation parameters
@@ -313,7 +313,18 @@ void nolinear_reverse_con_to_raw_reading(double* odor_concentration, double& MOX
 	// the odor concentration is actually simulating the sensor reading instead of the concentration on [ppm]
 	// in the datesheet, the detectable gases concentration range is from 10 to 500
 	// divide thhe simulated measurement by 100 to approximate the concentration in ppm
-	double Rs = pow(*odor_concentration/(100*1.488),-0.632) * simulation_parameters.R0;
+
+	// if the robot id is 101, then R0 = 100
+	// if the robot id is 102, then R0 = 500
+	// if the robot id is 103, then R0 = 1500
+      double R0;
+	if (ID == 101)
+		R0 = 100;
+	else if (ID == 102)
+		R0 = 500;
+	else if (ID == 103)
+		R0 = 1500;
+	double Rs = pow(*odor_concentration/(100*1.488),-0.632) * R0;
 	double RL = 51.0; //kOhm
 	double Vc = 3300; //mV
 	MOX_sensor_reading = Vc * RL / (RL + Rs);  // the gas sensor output is the voltage of the loading resistor
@@ -405,8 +416,10 @@ void obstacle_avoidance_k4()
 		// wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0, 0);
 		// back to moving
+
 		FSM.state = STATE_MOVING;
 		FSM.hook = state_moving;
+
 		return;
 	}
 
@@ -591,8 +604,14 @@ void set_logfile_names()
 	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
+	sprintf(whole_position_history_logfile_name, "%s/whole_position_history.csv", folder_name);
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(posterior_pdf_pre_merge_name, "%s/posterior_pdf_pre_merge.csv", folder_name);
+	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
+	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
+	sprintf(cluster_sizes_informative_name, "%s/cluster_sizes_informative.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
+	sprintf(entropy_individual_logfile_name, "%s/entropy_individual.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
 	sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
 	sprintf(gas_concentration_map_logfile_name, "%s/gas_concentration_map.csv", folder_name);
@@ -611,10 +630,12 @@ void set_logfile_names()
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+	sprintf(clustering_debugging_name, "%s/console_multirobot.txt", folder_name);
+	sprintf(cumulative_path_logfile_name, "%s/cumulative_path.csv", folder_name);
 
       // Running STE offline : run STE from loaded data of previous simulation
 	// log name of the experiment
-    sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
+      sprintf(logfile_folder_name, "%s/Results/%s/101", workspacePath, simulation_parameters.experimental_logname);
 	printf("logfile_folder_name: %s\n", logfile_folder_name);
 	sprintf(experiment_measurements_logfile_name, "%s/measurements.csv", logfile_folder_name);
 	sprintf(experiment_position_logfile_name, "%s/position_history.csv", logfile_folder_name);

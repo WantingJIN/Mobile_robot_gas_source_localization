@@ -16,6 +16,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "odor_filter.h"
 #include "Message.h"
@@ -25,6 +26,7 @@
 #include "SimulationParameters.h"
 #include "Dbscan.h"
 
+class PlumeModel;
 
 //states of the finite state machine
 typedef enum state {
@@ -64,6 +66,13 @@ struct history{
 	vector<float> gas_meas_std;
 	vector<float> wind_intensity;
 	vector<float> wind_angle;
+	vector<float> wind_meas_u;
+	vector<float> wind_meas_v;
+	vector<Position> team_wind_position;
+	vector<float> team_wind_meas_u;
+	vector<float> team_wind_meas_v;
+	vector<int> team_wind_sender_id;
+	vector<int> team_wind_sample_id;
 	vector<float> relative_meas;
 	vector<int> gas_hit_event;
 };
@@ -111,6 +120,8 @@ void state_merge_pdf();
 void state_share_pdf();
 void state_region_allocation();
 void state_updategoal_team();
+void initialize_plume_stack();
+PlumeModel* initialize_plume_model();
 
 float pseudo_gaussian_plume_model(float robot_position[], float wind_intensity, struct parameters_set parameters);
 float likelihood(struct history history, struct parameters_set parameters);

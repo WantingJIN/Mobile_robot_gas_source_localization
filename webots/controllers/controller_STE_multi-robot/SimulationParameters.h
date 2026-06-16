@@ -2,12 +2,6 @@
 #define SIMULATION_PARAMETER_H
 
 
-typedef enum scenario{
-	NO_COM_NO_COOR = 0,
-	COM_NO_COOR = 1,
-	COM_COOR = 2,
-} eScenario;
-
 typedef enum evaluationMethod{
 	MCMC = 0,
 	EXHAUSTIVE = 1,
@@ -55,6 +49,9 @@ typedef enum planningStrategy
 	SUM_DIJKSTRA_FIX = 10,
 	SUM_DIJKSTRA_ADP = 11,
 	MULTI_DIJKSTRA = 12,
+	INFO_CENTER = 13,
+	FARTHEST_CELL = 14,
+	COMBINED = 15,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -119,7 +116,6 @@ typedef enum gasHitMethod
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
-	CENTRALIZED = 2,
 } eTeamStrategy;
 typedef enum plumeModel
 {
@@ -127,24 +123,31 @@ typedef enum plumeModel
 	DDPM = 1,
 	FDM_PDE= 2,
 } ePlumeModel;
+typedef enum infoSum
+{
+	LINEAR_SUM = 0,
+	EXP_SUM = 1,
+} eInfoSum;
+typedef enum mapCoverageStrategy{
+	VORONOI = 0,
+	LLOYD_D = 1,
+	LLOYD_P = 2,
+	REGION_GROWING_P = 3,
+	REGION_GROWING_D = 4,
+	NONE = 5,
+} eMapCoverageStrategy;
+
+typedef enum mapCoverageSeed{
+	MAX_CELL = 0,
+	ROBOT_CELL = 1,
+
+} eMapCoverageSeed;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
 	SPREAD_ONLY = 1,
 	ENTROPY_SPREAD = 2,
 } eStopCondition;
-
-typedef enum updataGoalPolicy{
-	GOAL_REACHED = 0,
-	FIXED_FREQ = 1,
-	BELIEF_DIFF = 2,
-} eUpdateGoalPolicy;
-
-typedef enum estimationScale
-{
-	LOCAL = 0,
-	GLOBAL = 1,
-} eEstimationScale;
 
 typedef enum windEstimationMethod
 {
@@ -182,14 +185,13 @@ class SimulationParameters{
 		int number_of_robots; 
 		int map_nbr; 
 		int sampling_period; 
-		float likelihood_error;  
 		float global_local_search_ratio; 
 		float cluster_entropy_ratio; 
 		float vel_factor; 
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	    float likelihoodSigma;
+	      float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
 		int planning_step;
@@ -198,9 +200,9 @@ class SimulationParameters{
 		char experimental_logname[128];
 		float diff_coefficient;
 		float wind_belief_weight;
+		double epsilon_clusterize;
 
 		eEvaluationMethod BayesianModelingMethod;
-		eScenario scenario; 
 		eSamplingMode samplingMode; 
 		eProcessingMode processingMode; 
 		eGasSensor gasSensor; 
@@ -214,15 +216,16 @@ class SimulationParameters{
 		eCalibrationMode calibrationMode;
 
 		eGasHitMethod gasHitMethod;
+		eMapCoverageStrategy mapCoverageStrategy;
+		eMapCoverageSeed mapCoverageSeed;
+
 		eTeamStrategy teamStrategy;
 
-	    eScoreFun scoreFun;
+	      eScoreFun scoreFun;
 
 		eStopCondition stopCondition;
-		eUpdateGoalPolicy updateGoalPolicy;
 
 		ePlumeModel plumeModel;
-		eEstimationScale estimationScale;
 		
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
@@ -231,8 +234,7 @@ class SimulationParameters{
 		SimulationParameters(const char *filename);
 		~SimulationParameters();
 
-        void load_simulation_parameters_from_config(const char *filename);
-		void read_mapID_from_file();
+            void load_simulation_parameters_from_config(const char *filename);
 		void log_simulation_parameters(const char *filename);
 };
 

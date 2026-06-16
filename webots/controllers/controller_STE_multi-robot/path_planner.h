@@ -50,7 +50,7 @@ private:
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::pair<std::vector<double>, std::unordered_map<int, Position>> computeMultiDijkstra(Position start, std::vector<std::tuple<int, int, double>> directions);
     std::list<Position> reconstructPath(Position goal, const std::unordered_map<int, Position>& cameFrom);
-    void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> cell_visited_list);
+    void markNeighboringCellsAsVisited(int x, int y, int x_nbins_, int y_nbins_, int radius_neighbor, vector<int> &cell_visited_list);
     std::vector<Position> findOptimalPath(Position start, double target[2]);
     //
 public:
@@ -62,6 +62,7 @@ public:
     ~PathPlanner();
 
     void maximal_belief_planning();
+    void information_center_planning();
     void random_navigation();
     bool position_outside_arena(Position p);
     void KLD_informative_goal_selection();
@@ -71,7 +72,8 @@ public:
     void maximal_information_planning();
     void informative_clustering_planning();
     void belief_clustering_planning();
-    void accumulative_Dijkstra();
+    //void accumulative_Dijkstra();
+    std::list<Position> accumulative_Dijkstra();
     std::list<Position> multi_objective_Dijkstra();
     void maximal_merged_belief_planning();
 
@@ -88,4 +90,3 @@ public:
 };
 
 #endif
-

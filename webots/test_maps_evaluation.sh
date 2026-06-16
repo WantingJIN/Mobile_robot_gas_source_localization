@@ -1,15 +1,15 @@
 #!/bin/bash
-
 now=$(date +"%T")
 echo "Start time : $now"
 
 webots=$WEBOTS_HOME/webots
 webots_folder="../webots"
-map_nbr_filename="../webots/data/map_nbr.txt"
 source_pos_filename="../webots/data/source_pos.txt"
 rr_filename="../webots/data/plugin_parameters/releaseAmount.txt"
 config_file="../webots/data/config.yaml"
 source_locations_filename="source_locations.txt"
+# Source position mode: source_at_boundary, source_in_middle, source_from_file
+source_position_mode="source_in_middle"
 
 # ---------------------------------------------------------------------------
 # Helper: set a scalar value in the YAML config file.
@@ -24,13 +24,20 @@ set_yaml_value() {
 }
 
 # ---------------------------------------------------------------------------
-# Source position bounds (used when no source_locations file exists)
+# Source position bounds
 # ---------------------------------------------------------------------------
-nbr_source_pos=30
+nbr_source_pos=10
 source_pos_y_min=0.5
 source_pos_y_max=3.5
-source_pos_x_min=3.2
-source_pos_x_max=12.7
+source_pos_x_min=10
+source_pos_x_max=12
+
+random_between() {
+    local min="$1"
+    local max="$2"
+    awk -v min="$min" -v max="$max" -v seed="$RANDOM" \
+        'BEGIN { srand(seed); print min + rand() * (max - min) }'
+}
 
 # ---------------------------------------------------------------------------
 # Delete last unfinished result folder
@@ -59,22 +66,38 @@ for r in 53 #10 30 53 80 200
 do
     echo $r > $rr_filename
 
-    for m in 1 #1 2 3 5 10
+    for m in 10 #1 2 3 5 10
     do
-        echo $m > $map_nbr_filename
+        set_yaml_value map_nbr $m
         env_folder="../openfoam/test_maps/map${m}/map${m}_wind0.75"
         source_locations_file="${env_folder}/${source_locations_filename}"
 
         source_locations=()
-        if [ -f "$source_locations_file" ]; then
-            mapfile -t source_locations < <(grep -Ehv '^\s*(#|$)' "$source_locations_file")
-        fi
-        source_locations_count=${#source_locations[@]}
-        if [ "$source_locations_count" -gt 0 ]; then
-            echo "Use source locations from $source_locations_file"
-        else
-            echo "No source locations file (or empty) for map $m, using random source positions"
-        fi
+        source_locations_count=0
+        case "$source_position_mode" in
+            source_from_file)
+                if [ -f "$source_locations_file" ]; then
+                    mapfile -t source_locations < <(grep -Ehv '^\s*(#|$)' "$source_locations_file")
+                fi
+                source_locations_count=${#source_locations[@]}
+                if [ "$source_locations_count" -gt 0 ]; then
+                    echo "Use source locations from $source_locations_file"
+                else
+                    echo "No source locations file (or empty) for map $m, using random source positions"
+                fi
+                ;;
+            source_at_boundary)
+                echo "Use random source positions at x boundary: $source_pos_x_max"
+                ;;
+            source_in_middle)
+                echo "Use random source positions inside x range: [$source_pos_x_min, $source_pos_x_max]"
+                ;;
+            *)
+                echo "Unknown source_position_mode: $source_position_mode" >&2
+                echo "Expected: source_at_boundary, source_in_middle, or source_from_file" >&2
+                exit 1
+                ;;
+        esac
 
         # -- parameter sweep loops (uncomment to activate) ------------------
 
@@ -132,15 +155,25 @@ do
 
         for ((k=1; k<=$nbr_source_pos; k++))
         do
-            if [ "$source_locations_count" -gt 0 ]; then
-                loc_idx=$(( (k - 1) % source_locations_count ))
-                read -r source_pos_x source_pos_y <<< "${source_locations[$loc_idx]}"
-            else
-                source_pos_x=$(awk -v min="$source_pos_x_min" -v max="$source_pos_x_max" \
-                    -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
-                source_pos_y=$(awk -v min="$source_pos_y_min" -v max="$source_pos_y_max" \
-                    -v seed="$RANDOM" 'BEGIN { srand(seed); print min + rand() * (max - min) }')
-            fi
+            case "$source_position_mode" in
+                source_at_boundary)
+                    source_pos_x=$source_pos_x_max
+                    source_pos_y=$(random_between "$source_pos_y_min" "$source_pos_y_max")
+                    ;;
+                source_in_middle)
+                    source_pos_x=$(random_between "$source_pos_x_min" "$source_pos_x_max")
+                    source_pos_y=$(random_between "$source_pos_y_min" "$source_pos_y_max")
+                    ;;
+                source_from_file)
+                    if [ "$source_locations_count" -gt 0 ]; then
+                        loc_idx=$(( (k - 1) % source_locations_count ))
+                        read -r source_pos_x source_pos_y <<< "${source_locations[$loc_idx]}"
+                    else
+                        source_pos_x=$(random_between "$source_pos_x_min" "$source_pos_x_max")
+                        source_pos_y=$(random_between "$source_pos_y_min" "$source_pos_y_max")
+                    fi
+                    ;;
+            esac
             echo $source_pos_x $source_pos_y > $source_pos_filename
             $webots '--minimize' '--mode=fast' $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt
             now=$(date +"%T")

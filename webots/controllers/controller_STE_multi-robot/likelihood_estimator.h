@@ -3,7 +3,7 @@
 
 // likelihood function
 double likelihood(struct history &history, double *parameters, PlumeModel *model);
-double likelihood_precomp(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model);
+double likelihood_absolute_value(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model);
 double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model);
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model);
 

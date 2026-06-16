@@ -2,7 +2,7 @@ clear all; clc; close all;
 dataTable = table();
 %% dispatch the result to target folder
 % the general folder
-general_folder = '/home/mzarias/Workspace/MT_Marc/plume_model_learning/Results/';
+general_folder = '/home/mzarias/Workspace/MT_Marc_orig/plume_model_learning/Results/';
 dispatched_folder = [general_folder,'test'];
 folder_list = dir(general_folder);
 disp(folder_list)
@@ -10,6 +10,7 @@ folder_list = folder_list(~ismember({folder_list.name},{'.','..','current','101'
 folder_list = folder_list([folder_list.isdir]);
 exp_number = length(folder_list);
 
+robot_id = 102;
 % dispatch
 for i=1:exp_number
 
@@ -23,15 +24,22 @@ for i=1:exp_number
     ID = arrayfun(@(struct) str2double(struct.name),robot_list);
 
     % skip if it's not a job folder
-    if(~exist([folder_name, '/', num2str(ID(1)), '/param_log.csv'],'file')), continue; end
+    %if(~exist([folder_name, '/', num2str(robot_id), '/param_log.csv'],'file')), continue; end
+    if isempty(ID) || ~exist([folder_name, '/', num2str(robot_id), '/param_log.csv'],'file')
+        fprintf('Saltando carpeta (sin robots o sin param_log): %s\n', folder_name);
+        continue;
+    end
 
     % get simulation's parameter values
-    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
+
+    params = my_text2struct([folder_name, '/', num2str(robot_id), '/param_log.csv']);
+
+    %params = my_text2struct([folder_name, '/', num2str(robot_id), '/param_log.csv']);
 
     % remove folders with unfinished jobs
     file_list = dir([folder_name '/**']);
     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
-    entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
+    entropy = dlmread([folder_name, '/', num2str(robot_id), '/entropy.csv']);
     %if(entropy(end,1) > 0.1 && size(entropy,1) < params.max_iter_number), rmdir(folder_name,'s'); continue; end
 
     % the right path of the folder
@@ -63,28 +71,28 @@ for i = 1:numExperiments
     % remove folders with unfinished jobs
     file_list = dir([folder_name '/**']);
     if(sum(ismember({file_list.name},{'position_history.csv'})) == 0), rmdir(folder_name,'s'); continue; end
-    entropy = dlmread([folder_name, '/', num2str(ID(1)), '/entropy.csv']);
+    entropy = dlmread([folder_name, '/', num2str(robot_id), '/entropy.csv']);
     % ground truth and other params
-    params = my_text2struct([folder_name, '/', num2str(ID(1)), '/param_log.csv']);
+    params = my_text2struct([folder_name, '/', num2str(robot_id), '/param_log.csv']);
     map_nbr = params.map_nbr;
     % stats
-    expected_a_posteriori_file = dlmread([folder_name, '/' num2str(ID(1)), '/expected_a_posteriori.csv']);
+    expected_a_posteriori_file = dlmread([folder_name, '/' num2str(robot_id), '/expected_a_posteriori.csv']);
     iteration_nbr = size(expected_a_posteriori_file,1);
     expected_a_posteriori(1:2) = expected_a_posteriori_file(end,2:3);
     if(isnan(expected_a_posteriori(1))), expected_a_posteriori(1) = max_a_post(end,2); end
     if(isnan(expected_a_posteriori(2))), expected_a_posteriori(2) = max_a_post(end,3); end
     error(1) = params.source_position(1) - expected_a_posteriori(1);
     error(2) = params.source_position(2) - expected_a_posteriori(2);
-    entropy_file = dlmread([folder_name, '/' num2str(ID(1)), '/entropy.csv']);
+    entropy_file = dlmread([folder_name, '/' num2str(robot_id), '/entropy.csv']);
     entropy(1) = entropy_file(end,1);
-    max_a_post_file = dlmread([folder_name, '/' num2str(ID(1)), '/max_a_posteriori.csv']);
+    max_a_post_file = dlmread([folder_name, '/' num2str(robot_id), '/max_a_posteriori.csv']);
     max_a_post(1:2) = max_a_post_file(end,2:3);
     convergence_list(1) = sqrt((max_a_post(1) - expected_a_posteriori(1))^2 + (max_a_post(2) - expected_a_posteriori(2))^2);
     % time taken for each run 
-    measurements = dlmread([folder_name, '/' num2str(ID(1)), '/measurements.csv']);
+    measurements = dlmread([folder_name, '/' num2str(robot_id), '/measurements.csv']);
     exp_time = measurements(end,4);
     % traveling_distance
-    trajectory = dlmread([folder_name, '/' num2str(ID(1)), '/trajectory.csv']);
+    trajectory = dlmread([folder_name, '/' num2str(robot_id), '/trajectory.csv']);
     traj_length_sum = 0;
     for iter = 2:size(trajectory,1)
         traj_length_sum = traj_length_sum + sqrt((trajectory(iter,2)-trajectory(iter-1,2))^2 + (trajectory(iter,3) - trajectory(iter-1,3))^2); 

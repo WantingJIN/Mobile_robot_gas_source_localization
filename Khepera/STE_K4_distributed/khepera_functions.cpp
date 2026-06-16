@@ -118,6 +118,13 @@ void set_logfile_names(){
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
 	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
+	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
+	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
+	sprintf(cluster_sizes_informative_name, "%s/cluster_sizes_informative.csv", folder_name);
+	sprintf(gas_concentration_maps_log_root, "%s/gas_concentration_maps", folder_name);
+	sprintf(wind_field_u_logfile_name, "%s/wind_field_u.csv", folder_name);
+	sprintf(wind_field_v_logfile_name, "%s/wind_field_v.csv", folder_name);
+	sprintf(wind_field_w_logfile_name, "%s/wind_field_w.csv", folder_name);
 	sprintf(entropy_logfile_name, "%s/entropy.csv", folder_name);
 	sprintf(config_logfile_name, "%s/config_log.csv", folder_name);
     sprintf(trajectory_logfile_name, "%s/trajectory.csv", folder_name);
@@ -134,6 +141,7 @@ void set_logfile_names(){
 
 	// to save some debugging console input
 	sprintf(console_logfile_name, "%s/console.txt", folder_name);
+	sprintf(clustering_debugging_name, "%s/console_multirobot.txt", folder_name);
     //console_logfile = fopen(console_logfile_name, "a");
 }
 
@@ -297,6 +305,13 @@ float odor_read(){
 }
 
 void wind_read(float* wind_intensity, float* wind_angle){
+	float wind_vx = 0.0f;
+	float wind_vy = 0.0f;
+	float wind_vz = 0.0f;
+	wind_read(wind_intensity, wind_angle, &wind_vx, &wind_vy, &wind_vz);
+}
+
+void wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz){
 	float current_wind = 0;
     float heading = 0;
 
@@ -307,6 +322,10 @@ void wind_read(float* wind_intensity, float* wind_angle){
     heading = current_position.heading * 180 / PI;
     current_wind = fmod(-(current_wind * 180 / PI) + 3 * 180, 2 * 180);
     *wind_angle = (heading - current_wind) * PI / 180.0;
+	float wind_world_angle = current_wind * PI / 180.0f;
+	*wind_vx = (*wind_intensity) * cos(wind_world_angle);
+	*wind_vy = (*wind_intensity) * sin(wind_world_angle);
+	*wind_vz = 0.0f;
 }
 
 
@@ -470,8 +489,8 @@ int receive_udp_msg(Message * msg){
     struct sockaddr_in sender;
     socklen_t sender_len;
     sender_len = sizeof (sender);
-    memset((char *) (*msg).buffer, '\0', sizeof(float)*12);
-    result = recvfrom(udp_msgR.rcv.sock, (*msg).buffer, sizeof(float)*12, 0, (struct sockaddr*) &sender, &sender_len);
+    memset((char *) (*msg).buffer, '\0', sizeof(float) * BUFFER_LEN);
+    result = recvfrom(udp_msgR.rcv.sock, (*msg).buffer, sizeof(float) * BUFFER_LEN, 0, (struct sockaddr*) &sender, &sender_len);
     // If reception ok
     if (result > 0 ){ //&& (*msg).buffer[1] != ID
         //printf("RECEIVED msg %f from %f for %f - (%f %f %f) %f (%f %f %f) %f %f \n", (*msg).buffer[0], (*msg).buffer[1], (*msg).buffer[2], (*msg).buffer[3], (*msg).buffer[4], (*msg).buffer[5], (*msg).buffer[6], (*msg).buffer[7], (*msg).buffer[8], (*msg).buffer[9], (*msg).buffer[10], (*msg).buffer[11], (*msg).buffer[12]);
@@ -479,7 +498,7 @@ int receive_udp_msg(Message * msg){
         //printf("RECEIVED msg %d from %d for %d \n", (*msg).msg_ID, (*msg).sender_ID, (*msg).receiver_ID);
         return 1;
     }else{
-    	memset((char *) (*msg).buffer, '\0', sizeof(float)*12);
+    	memset((char *) (*msg).buffer, '\0', sizeof(float) * BUFFER_LEN);
     	return 0;
     }
 }

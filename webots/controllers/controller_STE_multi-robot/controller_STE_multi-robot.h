@@ -39,17 +39,19 @@ typedef enum state
 	STATE_OBSTACLE_AVOIDANCE = 6,
 	STATE_READ_ALL = 7,
 	STATE_READ_INITIAL = 8,
-	STATE_RECEIVE_GOAL = 9,
 	STATE_RECEIVE_PDF = 10,
-	STATE_SEND_GOAL = 11,
 	STATE_SEND_PDF = 12,
 	STATE_MERGE_PDF = 13,
 	STATE_UPDATEGOAL_TEAM = 14,
 	STATE_SHARE_PDF = 15,
 	STATE_REGION_ALLOCATION = 16,
+	STATE_SHARE_DIST = 17,
+	STATE_RECEIVE_DIST = 18,
+	STATE_MOVESTING = 19, // sub-FSM will run here
 } eState;
 
-// finite state machine
+
+// Main FSM
 struct FSM
 {
 	int n_cycles;
@@ -57,6 +59,7 @@ struct FSM
 	eState state;
 	void (*hook)();
 };
+
 extern struct FSM FSM;
 
 // measurement history
@@ -86,14 +89,15 @@ void state_waiting();
 void state_obstacle_avoidance();
 void state_read_positions_measurements();
 void state_read_initial_position_measurement();
-void state_receive_goal();
 void state_receive_pdf();
-void state_send_goal();
 void state_send_pdf();
 void state_merge_pdf();
 void state_updategoal_team();
 void state_share_pdf();
 void state_region_allocation();
+void state_share_dist();
+void state_receive_dist();
+void state_movesting();
 
 PlumeModel* initializePlumeModel();
 

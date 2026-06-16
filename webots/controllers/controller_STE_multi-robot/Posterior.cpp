@@ -8,6 +8,10 @@
 #include <random>
 // for storing debugging info
 extern FILE *console_logfile;
+extern FILE *clustering_debugging_logfile;
+extern FILE *KLD_debugging_logfile;
+extern FILE *cumulative_path_logfile;
+
 extern SimulationParameters simulation_parameters;
 extern char wind_field_u_logfile_name[512];
 extern char wind_field_v_logfile_name[512];
@@ -177,7 +181,8 @@ void Posterior::pdf_reset()
 		source_marginal_pdf[i] = 0;
 }
 
-// this function takes an array of indices for a multi-dimensional matrix and generates a single index for an array of the same number of elements
+// useful for VisitedCells = OFF
+//this function takes an array of indices for a multi-dimensional matrix and generates a single index for an array of the same number of elements
 int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_element)
 {
 	int i = 0, j = 0;
@@ -204,6 +209,30 @@ int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_ele
 	}
 	return index;
 }
+
+// useful for VisitedCells = ON
+// int Posterior::indices_to_index(int *indices, int a_nbr_dimension, int a_nbr_element)
+// {
+// 	int index = indices[0];
+// 	int factor = 1;
+
+// 	for (int i = 1; i < a_nbr_dimension; i++)
+// 	{
+// 		for (int j = i - 1; j >= 0; j--)
+// 			factor *= model->param_list[j].nbins;
+
+// 		index += indices[i] * factor;
+// 		factor = 1;
+// 	}
+
+// 	// error detection
+// 	if (index < 0 || index >= a_nbr_element)
+// 	{
+// 		printf("ERROR in indices_to_index : index = %d\n", index);
+// 		return -1; // Retornás -1 indicando error
+// 	}
+// 	return index;
+// }
 
 // this function takes an array of indices for a multi-dimensional matrix and generates a single index for an array of the same number of elements
 int Posterior::indices_to_index(int *indices)
@@ -461,12 +490,32 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	}	
 	if (simulation_parameters.windInfo == WIND_ONLINE)
 	{
-		model->update_wind_field_and_gas_concentration_map(meas_x, meas_y, history.wind_meas_u, history.wind_meas_v);
-		model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
-		char gas_concentration_map_each_cycle_logfile_name[600];
-		sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
-		iter ++;
-		model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
+		bool use_team_wind = simulation_parameters.number_of_robots > 1 &&
+							 simulation_parameters.teamStrategy == DISTRIBUTED &&
+							 !history.team_wind_position.empty();
+
+		const vector<Position> &wind_positions = use_team_wind ? history.team_wind_position : history.position;
+		const vector<double> &wind_meas_u = use_team_wind ? history.team_wind_meas_u : history.wind_meas_u;
+		const vector<double> &wind_meas_v = use_team_wind ? history.team_wind_meas_v : history.wind_meas_v;
+		size_t wind_nbr = std::min(wind_positions.size(), std::min(wind_meas_u.size(), wind_meas_v.size()));
+
+		if (wind_nbr > 0)
+		{
+			vector<float> wind_meas_x(wind_nbr), wind_meas_y(wind_nbr);
+			for (size_t i = 0; i < wind_nbr; i++)
+			{
+				wind_meas_x[i] = wind_positions[i].x;
+				wind_meas_y[i] = wind_positions[i].y;
+			}
+
+			printf("Updating online wind with %zu %s wind samples.\n", wind_nbr, use_team_wind ? "team" : "local");
+			model->update_wind_field_and_gas_concentration_map(wind_meas_x, wind_meas_y, wind_meas_u, wind_meas_v);
+			model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
+			char gas_concentration_map_each_cycle_logfile_name[600];
+			sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
+			iter ++;
+			//model->log_gas_concentration_map(gas_concentration_map_each_cycle_logfile_name, 'a');
+		}
 	}
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
@@ -498,7 +547,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
 			// pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_precomp(history, sample, i, model); // with precomputed maps
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_absolute_value(history, sample, i, model); // with precomputed maps
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
@@ -530,6 +579,25 @@ double Posterior::Kullback_Leibler_divergence(Posterior P)
 		}
 	}
 	return KLD;
+}
+
+double Posterior::KLD_BM_Update(double* actual_pdf, double actual_sum)
+{
+    double KLD = 0.0;
+	//static double future_pdf[MAP_SIZE] = {0};
+	//memcpy(future_pdf, posterior.pdf, MAP_SIZE * sizeof(double));
+    for (int i = 0; i < MAP_SIZE; i++)
+    {
+        double q = actual_pdf[i] / actual_sum;  // Q: referencia (current actual BM)
+        double p = pdf[i];                      // P: (next))
+
+        if (p > 0 && q > 0)
+        {
+            KLD += p * log(p / q);
+        }
+    }
+
+    return KLD;
 }
 
 // calculates the marginal posterior pdf for source position on X and Y, multiplied by the distance inverse pdf
@@ -611,7 +679,13 @@ bool Posterior::is_converged_on_boundary(){
 void Posterior::log_pdf(const char *file_name, char writing_mode)
 {
 	int i = 0;
-	FILE *posterior_pdf_3D = fopen(file_name, &writing_mode);
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *posterior_pdf_3D = fopen(file_name, mode);
+	if (!posterior_pdf_3D)
+	{
+		fprintf(stderr, "Failed to open posterior PDF log file: %s\n", file_name);
+		return;
+	}
 
 	for (i = 0; i < nbr_element - 1; i++)
 		fprintf(posterior_pdf_3D, "%.9f, ", pdf[i]);
@@ -623,7 +697,20 @@ void Posterior::log_pdf(const char *file_name, char writing_mode)
 
 void Posterior::log_relative_history_meas(const char *file_name, const char writing_mode, const vector<double> rel_history_meas)
 {
-	FILE *log_relative_history_meas_file = fopen(file_name, &writing_mode);
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *log_relative_history_meas_file = fopen(file_name, mode);
+	if (!log_relative_history_meas_file)
+	{
+		fprintf(stderr, "Failed to open relative history measurement log file: %s\n", file_name);
+		return;
+	}
+
+	if (rel_history_meas.empty())
+	{
+		fprintf(log_relative_history_meas_file, "\n");
+		fclose(log_relative_history_meas_file);
+		return;
+	}
 
 	for (int i = 0; i < rel_history_meas.size() - 1; i++)
 	{
@@ -637,7 +724,13 @@ void Posterior::log_relative_history_meas(const char *file_name, const char writ
 void Posterior::log_marginal_pdf(const char *file_name, char writing_mode)
 {
 	int i = 0;
-	FILE *posterior_pdf_marginal = fopen(file_name, &writing_mode);
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *posterior_pdf_marginal = fopen(file_name, mode);
+	if (!posterior_pdf_marginal)
+	{
+		fprintf(stderr, "Failed to open marginal posterior PDF log file: %s\n", file_name);
+		return;
+	}
 
 	for (i = 0; i < nbr_element_marginal - 1; i++)
 		fprintf(posterior_pdf_marginal, "%f ", source_marginal_pdf[i]);

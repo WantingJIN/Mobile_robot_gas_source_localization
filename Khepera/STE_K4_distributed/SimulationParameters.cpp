@@ -74,8 +74,14 @@ eProcessingMode parse_processing_mode(const char *str)
 }
 ePlanningStrategy parse_planning_strategy(const char *str)
 {
+	if (strcmp(str, "COMBINED") == 0)
+		return COMBINED;
 	if (strcmp(str, "GREEDY") == 0)
 		return GREEDY;
+	if (strcmp(str, "INFO_CENTER") == 0)
+		return INFO_CENTER;
+	if (strcmp(str, "FARTHEST_CELL") == 0)
+		return FARTHEST_CELL;
 	if (strcmp(str, "BALANCE_MAXIMAL_EXPECTED") == 0)
 		return BALANCE_MAXIMAL_EXPECTED;
 	if (strcmp(str, "RANDOM") == 0)
@@ -108,6 +114,51 @@ eInfoSum parse_info_sum(const char *str)
 	fprintf(stderr, "Unknown info sum: %s\n", str);
 	exit(1);
 }
+
+ePlumeModel parse_plume_model(const char *str)
+{
+	if (strcmp(str, "GAUSSIAN_PLUME") == 0)
+		return GAUSSIAN_PLUME;
+	if (strcmp(str, "DDPM") == 0)
+		return DDPM;
+	if (strcmp(str, "FDM_PDE") == 0)
+		return FDM_PDE;
+	fprintf(stderr, "Unknown plume model: %s\n", str);
+	exit(1);
+}
+
+eWindInfo parse_wind_info(const char *str)
+{
+	if (strcmp(str, "WIND_OFFLINE") == 0)
+		return WIND_OFFLINE;
+	if (strcmp(str, "WIND_ONLINE") == 0)
+		return WIND_ONLINE;
+	fprintf(stderr, "Unknown wind info: %s\n", str);
+	exit(1);
+}
+
+eWindEstimationMethod parse_wind_estimation_method(const char *str)
+{
+	if (strcmp(str, "GROUND_TRUTH") == 0)
+		return GROUND_TRUTH;
+	if (strcmp(str, "GAUSSIAN_KERNEL") == 0)
+		return GAUSSIAN_KERNEL;
+	if (strcmp(str, "BASEFLOW_CORRECTION") == 0)
+		return BASEFLOW_CORRECTION;
+	fprintf(stderr, "Unknown wind estimation method: %s\n", str);
+	exit(1);
+}
+
+eModelUncertainty parse_model_uncertainty(const char *str)
+{
+	if (strcmp(str, "FIXED_UNCERTAINTY") == 0)
+		return FIXED_UNCERTAINTY;
+	if (strcmp(str, "DYNAMIC_UNCERTAINTY") == 0)
+		return DYNAMIC_UNCERTAINTY;
+	fprintf(stderr, "Unknown model uncertainty: %s\n", str);
+	exit(1);
+}
+
 eGasFeature parse_gas_feature(const char *str)
 {
 	if (strcmp(str, "ABSOLUTE_VALUE") == 0)
@@ -193,6 +244,24 @@ eTeamStrategy parse_team_strategy(const char* str) {
 	exit(1);
 }
 
+eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
+	if (strcmp(str, "VORONOI") == 0) return VORONOI;
+	if (strcmp(str, "LLOYD_D") == 0) return LLOYD_D;
+	if (strcmp(str, "LLOYD_P") == 0) return LLOYD_P;
+	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
+	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
+	if (strcmp(str, "NONE") == 0) return NONE;
+	fprintf(stderr, "Unknown map coverage strategy: %s\n", str);
+	exit(1);
+}
+
+eMapCoverageSeed parse_map_coverage_seed(const char* str) {
+	if (strcmp(str, "MAX_CELL") == 0) return MAX_CELL;
+	if (strcmp(str, "ROBOT_CELL") == 0) return ROBOT_CELL;
+	fprintf(stderr, "Unknown map coverage seed: %s\n", str);
+	exit(1);
+}
+
 eStopCondition parse_stop_condition(const char* str) {
 	if (strcmp(str, "ENTROPY_ONLY") == 0) return ENTROPY_ONLY;
 	if (strcmp(str, "SPREAD_ONLY") == 0) return SPREAD_ONLY;
@@ -272,9 +341,18 @@ SimulationParameters::SimulationParameters()
 	R0 = 100;
 	weighting_entropy_ratio = 6;
 	teamStrategy = CENTRALIZED;
+	mapCoverageStrategy = NONE;
+	mapCoverageSeed = MAX_CELL;
+	epsilon_clusterize = 1e-9;
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
 	wheel_speed = 400;
+	plumeModel = DDPM;
+	windInfo = WIND_OFFLINE;
+	windEstimationMethod = GAUSSIAN_KERNEL;
+	modelUncertainty = FIXED_UNCERTAINTY;
+	diff_coefficient = 0.05f;
+	wind_belief_weight = 1.0f;
 	ID_list= {101, 102, 103, 104, 105, 106, 107, 108, 109, 110}; 
 }
 
@@ -407,6 +485,30 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		{
 			infoSum = parse_info_sum(value);
 		}
+		else if (strcmp(key, "plumeModel") == 0 || strcmp(key, "plume_model") == 0)
+		{
+			plumeModel = parse_plume_model(value);
+		}
+		else if (strcmp(key, "windInfo") == 0 || strcmp(key, "wind_info") == 0)
+		{
+			windInfo = parse_wind_info(value);
+		}
+		else if (strcmp(key, "windEstimationMethod") == 0 || strcmp(key, "wind_estimation_method") == 0)
+		{
+			windEstimationMethod = parse_wind_estimation_method(value);
+		}
+		else if (strcmp(key, "modelUncertainty") == 0 || strcmp(key, "model_uncertainty") == 0)
+		{
+			modelUncertainty = parse_model_uncertainty(value);
+		}
+		else if (strcmp(key, "diffCoefficient") == 0 || strcmp(key, "diff_coefficient") == 0)
+		{
+			diff_coefficient = atof(value);
+		}
+		else if (strcmp(key, "windBeliefWeight") == 0 || strcmp(key, "wind_belief_weight") == 0)
+		{
+			wind_belief_weight = atof(value);
+		}
 		else if (strcmp(key, "planning_step") == 0)
 		{
 			planning_step = atoi(value);
@@ -418,6 +520,15 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "teamStrategy") == 0) {
 			teamStrategy = parse_team_strategy(value);
 		} 
+		else if (strcmp(key, "mapCoverageStrategy") == 0) {
+			mapCoverageStrategy = parse_map_coverage_strategy(value);
+		}
+		else if (strcmp(key, "mapCoverageSeed") == 0) {
+			mapCoverageSeed = parse_map_coverage_seed(value);
+		}
+		else if (strcmp(key, "epsilon_clusterize") == 0) {
+			epsilon_clusterize = atof(value);
+		}
 		else if (strcmp(key, "updateGoalTime") == 0) {
 			update_goal_time = atoi(value);
 		}
@@ -491,9 +602,18 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "score_sigma %f\n", scoreSigma);
 	fprintf(sim_param_file, "score_fun %d\n", scoreFun);
 	fprintf(sim_param_file, "info_sum %d\n", infoSum);
+	fprintf(sim_param_file, "plume_model %d\n", plumeModel);
+	fprintf(sim_param_file, "wind_info %d\n", windInfo);
+	fprintf(sim_param_file, "wind_estimation_method %d\n", windEstimationMethod);
+	fprintf(sim_param_file, "model_uncertainty %d\n", modelUncertainty);
+	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
+	fprintf(sim_param_file, "wind_belief_weight %f\n", wind_belief_weight);
 	fprintf(sim_param_file, "planning_step %d\n", planning_step);
 	fprintf(sim_param_file, "weighting_entropy_ratio %f\n", weighting_entropy_ratio);
 	fprintf(sim_param_file, "team_strategy %d\n", teamStrategy);
+	fprintf(sim_param_file, "map_coverage_strategy %d\n", mapCoverageStrategy);
+	fprintf(sim_param_file, "map_coverage_seed %d\n", mapCoverageSeed);
+	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
 	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);

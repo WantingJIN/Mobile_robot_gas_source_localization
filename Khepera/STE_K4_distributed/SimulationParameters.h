@@ -56,6 +56,9 @@ typedef enum planningStrategy
 	SUM_DIJKSTRA_FIX = 10,
 	SUM_DIJKSTRA_ADP = 11,
 	MULTI_DIJKSTRA = 12,
+	INFO_CENTER = 13,
+	FARTHEST_CELL = 14,
+	COMBINED = 15,
 } ePlanningStrategy;
 
 typedef enum scoreFun
@@ -120,11 +123,33 @@ typedef enum infoSum
 	LINEAR_SUM = 0,
 	EXP_SUM = 1,
 } eInfoSum;
+
+typedef enum plumeModel
+{
+	GAUSSIAN_PLUME = 0,
+	DDPM = 1,
+	FDM_PDE = 2,
+} ePlumeModel;
+
 typedef enum teamStrategy{
 	INDIVIDUAL = 0,
 	DISTRIBUTED = 1,
 	CENTRALIZED = 2,
 } eTeamStrategy;
+
+typedef enum mapCoverageStrategy{
+	VORONOI = 0,
+	LLOYD_D = 1,
+	LLOYD_P = 2,
+	REGION_GROWING_P = 3,
+	REGION_GROWING_D = 4,
+	NONE = 5,
+} eMapCoverageStrategy;
+
+typedef enum mapCoverageSeed{
+	MAX_CELL = 0,
+	ROBOT_CELL = 1,
+} eMapCoverageSeed;
 
 typedef enum stopCondition{
 	ENTROPY_ONLY = 0,
@@ -139,6 +164,25 @@ typedef enum updataGoalPolicy{
 	FIXED_FREQ = 1,
 	BELIEF_DIFF = 2,
 } eUpdateGoalPolicy;
+
+typedef enum windEstimationMethod
+{
+	GROUND_TRUTH = 0,
+	GAUSSIAN_KERNEL = 1,
+	BASEFLOW_CORRECTION = 2,
+} eWindEstimationMethod;
+
+typedef enum windInfo
+{
+	WIND_OFFLINE = 0,
+	WIND_ONLINE = 1,
+} eWindInfo;
+
+typedef enum modelUncertainty
+{
+	FIXED_UNCERTAINTY = 0,
+	DYNAMIC_UNCERTAINTY = 1,
+} eModelUncertainty;
 
 // parameters to estimate
 struct parameters_set
@@ -172,6 +216,9 @@ class SimulationParameters{
 		float weighting_entropy_ratio;
 		int update_goal_time;
 		int wheel_speed;
+		float diff_coefficient;
+		float wind_belief_weight;
+		double epsilon_clusterize;
 		std::vector<int> ID_list; // IDs of the robots
 
 		eEvaluationMethod BayesianModelingMethod;
@@ -188,6 +235,8 @@ class SimulationParameters{
 		eworkMode workMode; 
 		eSensorCalibration sensorCalibration;
 		eGasHitMethod gasHitMethod;
+		eMapCoverageStrategy mapCoverageStrategy;
+		eMapCoverageSeed mapCoverageSeed;
 		eTeamStrategy teamStrategy;
 
 	    eScoreFun scoreFun;
@@ -195,6 +244,10 @@ class SimulationParameters{
 
 		eStopCondition stopCondition;
 		eUpdateGoalPolicy updateGoalPolicy;
+		ePlumeModel plumeModel;
+		eWindInfo windInfo;
+		eWindEstimationMethod windEstimationMethod;
+		eModelUncertainty modelUncertainty;
 
 		SimulationParameters();
 		~SimulationParameters();

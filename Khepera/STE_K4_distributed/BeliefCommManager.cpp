@@ -5,6 +5,35 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
+#include <sys/select.h>
+
+namespace {
+bool send_all(int sock, const char *data, int total_bytes) {
+    int sent = 0;
+    while (sent < total_bytes) {
+        int n = send(sock, data + sent, total_bytes - sent, 0);
+        if (n <= 0) {
+            perror("send");
+            return false;
+        }
+        sent += n;
+    }
+    return true;
+}
+
+bool read_all(int sock, char *data, int total_bytes) {
+    int received = 0;
+    while (received < total_bytes) {
+        int n = read(sock, data + received, total_bytes - received);
+        if (n <= 0) {
+            perror("read");
+            return false;
+        }
+        received += n;
+    }
+    return true;
+}
+}
 
 BeliefCommManager::BeliefCommManager() {}
 
@@ -21,8 +50,12 @@ void BeliefCommManager::initialize(int self_ID_, const std::vector<int>& all_IDs
 void BeliefCommManager::send_message_to_all(const Message& msg) {
     for (auto& entry : peer_sockets) {
         int sock = entry.second;
-        send(sock, msg.buffer, msg.buffer_size * sizeof(float), 0);
+        send_all(sock, reinterpret_cast<const char *>(msg.buffer), msg.buffer_size);
     }
+}
+
+bool BeliefCommManager::poll_message(Message& msg_out, int& from_peer, int timeout_ms) {
+    return receive_from_any(msg_out, from_peer, timeout_ms);
 }
 
 void BeliefCommManager::wait_for_all_maps(std::map<int, Message>& received_maps) {
@@ -31,11 +64,11 @@ void BeliefCommManager::wait_for_all_maps(std::map<int, Message>& received_maps)
 
         Message msg;
         int from_peer;
-        if (receive_from_any(msg, from_peer)) {
+        if (receive_from_any(msg, from_peer, 1000)) {
            if (int(msg.msg_ID) == 1 && received_from.count(from_peer) == 0) {
                 received_from.insert(from_peer);
                 received_maps[from_peer] = msg;
-                printf("✅ Received belief map from Robot %d \n", from_peer);
+                printf("Received belief map from Robot %d \n", from_peer);
            }
         }
         printf("msg.msg_ID = %d, from_peer = %d\n", int(msg.msg_ID), from_peer);
@@ -69,7 +102,7 @@ void BeliefCommManager::start_server() {
 
         peer_sockets[id] = sock;
         server_sockets.push_back(sock);
-        std::cout << "✅ Accepted connection from Robot " << id << std::endl;
+        std::cout << "Accepted connection from Robot " << id << std::endl;
     }
 }
 
@@ -89,17 +122,20 @@ void BeliefCommManager::start_clients() {
         int retry = 0;
         while (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
             if (++retry > 10) {
-                std::cerr << "❌ Could not connect to " << ip << std::endl;
+                std::cerr << "Could not connect to " << ip << std::endl;
                 break;
             }
             sleep(1);
         }
         peer_sockets[id] = sock;
-        std::cout << "🔗 Connected to Robot " << id << std::endl;
+        std::cout << "Connected to Robot " << id << std::endl;
     }
 }
 
-bool BeliefCommManager::receive_from_any(Message& msg_out, int& from_peer) {
+bool BeliefCommManager::receive_from_any(Message& msg_out, int& from_peer, int timeout_ms) {
+    if (peer_sockets.empty())
+        return false;
+
     fd_set readfds;
     FD_ZERO(&readfds);
     int max_sd = -1;
@@ -110,7 +146,7 @@ bool BeliefCommManager::receive_from_any(Message& msg_out, int& from_peer) {
         if (sock > max_sd) max_sd = sock;
     }
 
-    timeval timeout{1, 0};
+    timeval timeout{timeout_ms / 1000, (timeout_ms % 1000) * 1000};
     int activity = select(max_sd + 1, &readfds, nullptr, nullptr, &timeout);
     if (activity <= 0) return false;
 
@@ -119,36 +155,10 @@ bool BeliefCommManager::receive_from_any(Message& msg_out, int& from_peer) {
         int sock = entry.second;
 
         if (FD_ISSET(sock, &readfds)) {
-            // float buf[MAP_SIZE + 7];
-            // int total = 0;
-            // int expected = sizeof(buf);
-            // while (total < expected) {
-            //     int bytes = recv(sock, ((char*)buf) + total, expected - total, 0);
-            //     if (bytes <= 0) {
-            //         perror("recv error");
-            //         break;
-            //     }
-            //     total += bytes;
-            // }
-            // if (total < expected) return false;
             float buf[BUFFER_LEN];
-            int success_recv_map = -1;
-            success_recv_map = read(sock, buf, sizeof(double)*BUFFER_LEN); 
-
-            if (success_recv_map){
+            if (read_all(sock, reinterpret_cast<char *>(buf), sizeof(buf))) {
                 printf("Received message from Robot %d\n", peer_id);
-                //check the size of the message
-                if (sizeof(buf) != sizeof(float) * (MAP_SIZE + 7)) {
-                    std::cerr << "❌ Received message size mismatch from Robot " << peer_id << std::endl;
-                    return false;
-                }
                 msg_out = Message(buf);
-                msg_out.buffer_to_params();
-                // printf("Received belief map is: \n");
-                // for (int i = 0; i < MAP_SIZE; ++i) {
-                //     std::cout << msg_out.belief_map[i] << " ";
-                // }
-                // printf("\n");            
                 from_peer = peer_id;
                 return true;
             } else {

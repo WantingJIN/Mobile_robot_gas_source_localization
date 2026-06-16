@@ -14,12 +14,11 @@
 simulation:
   simuMode: ONLINE                  # ONLINE | OFFLINE
   experimental_logname: "physics_encoded_GSL/fixed_sigma_normalization_dijstra/10/1760633017749"
-  map_nbr: 0
+  map_nbr: 10
 
 # --- Robot ---
 robot:
-  number_of_robots: 3
-  scenario: NO_COM_NO_COOR          # NO_COM_NO_COOR | COM_NO_COOR | COM_COOR
+  number_of_robots: 1
   vel_factor: 1.0
 
 # --- Sensing ---
@@ -29,33 +28,48 @@ sensing:
     sampling_period: 3
     sampling_dist_thresh: 0.1
   STOP_AND_GO_SAMPLING:             # sub-params: active when samplingMode = STOP_AND_GO_SAMPLING
-    sampling_period: 3
+    sampling_period: 1
     sampling_dist_thresh: 0.1
   processingMode: NO_PROCESSING     # NO_PROCESSING | KERNEL_MAPPING | DECONVOLUTION | MAPPING_AND_DECONVOLUTION
   gasSensor: MOX                    # PID | MOX | NOISY_MOX | SLOW_MOX | VERY_SLOW_MOX | NOISY_SLOW_MOX | NOISY_VERY_SLOW_MOX
   calibrationMode: OFF              # OFF | LINEAR | NOLINEAR
+  NOLINEAR:                         # sub-params: active when calibrationMode = NOLINEAR
+    R0: 100
 
 # --- Gas Feature Extraction ---
 gas_feature:
   gasFeature: RELATIVE_VALUE        # ABSOLUTE_VALUE | RELATIVE_VALUE | GASHIT
-
+  ABSOLUTE_VALUE:                        # sub-params: active when gasFeature = ABSOLUTE_VALUE
+    likelihoodSigma: 3000
   RELATIVE_VALUE:                   # sub-params: active when gasFeature = RELATIVE_VALUE
     relativeMethod: Z_SCORE         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
+    # likelihoodSigma is read from the active relativeMethod sub-block below
+    NORMALIZATION:
+      likelihoodSigma: 1.0
+    Z_SCORE:
+      likelihoodSigma: 3.5
+    EMPIRICAL_CDF:
+      likelihoodSigma: 0.48
+    EMPIRICAL_CDF_AND_SLOPE:
+      likelihoodSigma: 0.48
+    EMPIRICAL_CDF_NUM:
+      likelihoodSigma: 0.48
+    # Note: Gaussian CDF interpretation of NORMALIZATION uses likelihoodSigma: 0.22
 
   GASHIT:                           # sub-params: active when gasFeature = GASHIT
     gasHitMethod: FIXED_THRES_NUM   # FIXED_THRES | FIXED_THRES_NUM | MIN_MAX_THRES | SLIDING_WINDOW_THRES | SLIDING_WINDOW_THRES_NUM
     FIXED_THRES:                    # sub-params: active when gasHitMethod = FIXED_THRES or FIXED_THRES_NUM
       gasHitThres: 1000
+    SLIDING_WINDOW_THRES:           # sub-params: active when gasHitMethod = SLIDING_WINDOW_THRES
+      lambda: 0.7
+    SLIDING_WINDOW_THRES_NUM:       # sub-params: active when gasHitMethod = SLIDING_WINDOW_THRES_NUM
+      lambda: 0.7
 
 # --- Bayesian Source Estimation ---
 bayesian_estimation:
   BayesianModelingMethod: EXHAUSTIVE  # MCMC | EXHAUSTIVE
   MCMC:                               # sub-params: active when BayesianModelingMethod = MCMC
     MCMC_iteration_num: 1000
-  likelihood_error: 3000
-  R0: 100
-  likelihoodSigma: 3.5
-  lambda: 0.7
 
 # --- Plume Model ---
 plume_model:
@@ -67,16 +81,15 @@ plume_model:
 wind:
   windInfo: WIND_ONLINE             # WIND_OFFLINE | WIND_ONLINE
   windEstimationMethod: GAUSSIAN_KERNEL  # GROUND_TRUTH | GAUSSIAN_KERNEL | BASEFLOW_CORRECTION
-  estimationScale: GLOBAL           # LOCAL | GLOBAL
-  modelUncertainty: DYNAMIC_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
+  modelUncertainty: FIXED_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
   DYNAMIC_UNCERTAINTY:              # sub-params: active when modelUncertainty = DYNAMIC_UNCERTAINTY
     windBeliefWeight: 0.4
 
 # --- Path Planning ---
 planning:
-  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |
-                                       # BELIEF_CLUSTERING | INFORMATIVE_KLD | INFO_CLUSTERING |
-                                       # WEIGHTED_CLUSTERING | SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
+  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |INFORMATIVE_KLD
+                                       # BELIEF_CLUSTERING | WEIGHTED_CLUSTERING | INFO_CLUSTERING |
+                                       # INFO_CENTER| SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
   visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
   infoFeature: PDF                  # VARIANCE | MEAN | PDF
   scoreFun: EXP                     # RATIO | LOG | SIGMOID | SUM | EXP
@@ -92,8 +105,11 @@ planning:
 
 # --- Team Coordination ---
 team:
-  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED | CENTRALIZED
+  teamStrategy: INDIVIDUAL          # INDIVIDUAL | DISTRIBUTED 
+  mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_P | REGION_GROWING_D | NONE
+  mapCoverageSeed: ROBOT_CELL    # MAX_CELL | ROBOT_CELL
+  epsilon_clusterize: 0
+  
+# --- Termination ---
+termination:
   stopCondition: ENTROPY_ONLY       # ENTROPY_ONLY | SPREAD_ONLY | ENTROPY_SPREAD
-  updateGoalPolicy: GOAL_REACHED    # GOAL_REACHED | FIXED_FREQ | BELIEF_DIFF
-  FIXED_FREQ:                       # sub-params: active when updateGoalPolicy = FIXED_FREQ
-    updateGoalTime: 5

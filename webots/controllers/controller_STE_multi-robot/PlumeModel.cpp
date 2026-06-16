@@ -275,7 +275,7 @@ double GaussianPlumeModel2D::approx_concentration(Position robot_position, doubl
 
 void GaussianPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void GaussianPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
-double GaussianPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
+double GaussianPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return INT_MAX; }
 /********************************************************/
 //					DeepCFDPlumeModel2D 				//
 /********************************************************/
@@ -345,10 +345,7 @@ DeepCFDPlumeModel2D::~DeepCFDPlumeModel2D()
 void DeepCFDPlumeModel2D::initialize_model_features()
 {
 	// Load the number of maps
-	int m;
-	std::ifstream f("../../data/map_nbr.txt");
-	f >> m;
-	f.close();
+	int m = simulation_parameters.map_nbr;
 
 	// Load the model
 	// std::cout << "Loading model..." << std::endl;
@@ -505,7 +502,7 @@ double DeepCFDPlumeModel2D::approx_concentration(Position robot_position, double
 
 void DeepCFDPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<float> meas_x, vector<float> meas_y, vector<double> wind_meas_u, vector<double> wind_meas_v) {}
 void DeepCFDPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode){}
-double DeepCFDPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return 1.0; }
+double DeepCFDPlumeModel2D::get_wind_estimation_confidence(int soure_pos_idx){ return INT_MAX; }
 /*************************************************************************************************/
 //	ADEPlumeModel2D (2D Steady state of Advection-Diffusion Model sloved by FDM) 				//
 /************************************************************************************************/
@@ -904,22 +901,38 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(vector<floa
 
 void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w,char writing_mode)
 {
+	const char mode[2] = {writing_mode, '\0'};
 	// log u field
-	FILE *file_u = fopen(filename_u, &writing_mode);
+	FILE *file_u = fopen(filename_u, mode);
+	if (!file_u)
+	{
+		fprintf(stderr, "Failed to open wind U log file: %s\n", filename_u);
+		return;
+	}
 	for (int i = 0; i < N_-1; i++) {
 		fprintf(file_u, "%f,", u_[i]);
 	}
 	fprintf(file_u, "%f \n", u_[N_-1]);
 	fclose(file_u);
 	// log v field
-	FILE *file_v = fopen(filename_v, &writing_mode);
+	FILE *file_v = fopen(filename_v, mode);
+	if (!file_v)
+	{
+		fprintf(stderr, "Failed to open wind V log file: %s\n", filename_v);
+		return;
+	}
 	for (int i = 0; i < N_-1; i++) {
 		fprintf(file_v, "%f,", v_[i]);
 	}
 	fprintf(file_v, "%f \n", v_[N_-1]);		
 	fclose(file_v);
 	// log w field
-	FILE *file_w = fopen(filename_w, &writing_mode);
+	FILE *file_w = fopen(filename_w, mode);
+	if (!file_w)
+	{
+		fprintf(stderr, "Failed to open wind W log file: %s\n", filename_w);
+		return;
+	}
 	for (int i = 0; i < N_-1; i++) {
 		fprintf(file_w, "%f,", w_[i]);
 	}

@@ -9,6 +9,40 @@
 // for storing debugging info
 extern FILE *console_logfile;
 extern SimulationParameters simulation_parameters;
+extern char wind_field_u_logfile_name[512];
+extern char wind_field_v_logfile_name[512];
+extern char wind_field_w_logfile_name[512];
+
+static void update_online_wind_model_if_needed(struct history &history, PlumeModel *model)
+{
+	if (simulation_parameters.windInfo != WIND_ONLINE || model == NULL)
+		return;
+
+	bool use_team_wind = simulation_parameters.number_of_robots > 1 &&
+						 simulation_parameters.teamStrategy == DISTRIBUTED &&
+						 !history.team_wind_position.empty();
+
+	const vector<Position> &wind_positions = use_team_wind ? history.team_wind_position : history.position;
+	const vector<float> &wind_meas_u = use_team_wind ? history.team_wind_meas_u : history.wind_meas_u;
+	const vector<float> &wind_meas_v = use_team_wind ? history.team_wind_meas_v : history.wind_meas_v;
+	size_t wind_nbr = std::min(wind_positions.size(), std::min(wind_meas_u.size(), wind_meas_v.size()));
+
+	if (wind_nbr == 0)
+		return;
+
+	vector<float> wind_meas_x(wind_nbr);
+	vector<float> wind_meas_y(wind_nbr);
+	for (size_t i = 0; i < wind_nbr; i++)
+	{
+		wind_meas_x[i] = wind_positions[i].x;
+		wind_meas_y[i] = wind_positions[i].y;
+	}
+
+	printf("Updating online wind with %zu %s wind samples.\n", wind_nbr, use_team_wind ? "team" : "local");
+	model->update_wind_field_and_gas_concentration_map(wind_meas_x, wind_meas_y, wind_meas_u, wind_meas_v);
+	model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name, 'a');
+}
+
 // struct normal_random_variable
 // {
 // 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -394,6 +428,8 @@ float randn(float mu, float sigma){
 // efficient sampling through MCMC
 void Posterior::MCMC_evaluation(struct history history)
 {
+	update_online_wind_model_if_needed(history, model);
+
 	int i = 0, j = 0, count = simulation_parameters.MCMC_iteration_num; // number of iterations
 	float p_acceptance = 0, posterior_value = 0;
 	int acceptance_rate = 0;
@@ -481,6 +517,8 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	float sample[nbr_dimension];
 	vector<float> slope_history_meas;
+	update_online_wind_model_if_needed(history, model);
+
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
 		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
