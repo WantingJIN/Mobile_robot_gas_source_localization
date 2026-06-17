@@ -150,7 +150,6 @@ struct sBraitenberg {
 void init();
 void initCommSwisTrack();
 int initCortexComm();
-void initCommRobot();
 void set_logfile_names();
 void establish_baseline();
 float odor_read();

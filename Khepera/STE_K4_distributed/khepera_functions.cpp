@@ -48,7 +48,6 @@ void init(){
     udp_msg_init(3000, ID);
     //initCommSwisTrack();
     initCortexComm();
-    initCommRobot();
 
     // Initialise infrared
     khepera4_infrared_init();
@@ -194,37 +193,6 @@ int initCortexComm(){
         printf("ERROR, live mode\n");
 
     return 0;
-}
-
-void initCommRobot(){
-//   	udp_msgR.myID = ID;
-//   	udp_msgR.len = sizeof(float)*12;
-
-//   	//initialize receiver
-//   	memset(&udp_msgR.rcv.address, 0, sizeof (udp_msgR.rcv.address));
-//   	udp_msgR.rcv.address.sin_family = AF_INET;
-//   	udp_msgR.rcv.address.sin_port = htons(3010);
-//   	udp_msgR.rcv.address.sin_addr.s_addr = htonl(INADDR_ANY);
-
-//   	//create and bind to socket
-//   	udp_msgR.rcv.sock = socket(AF_INET, SOCK_DGRAM, 0);
-// 	//if (setsockopt(udp_msgR.rcv.sock, SOL_SOCKET, SO_REUSEADDR, (void*) &broadcastR, sizeof (broadcastR)) <0)
-//    		//fail_with_error("no reuse \n");
-//   	if (udp_msgR.rcv.sock < 0)
-//     	fail_with_error("Unable to create receiver socket");
-//   	fcntl(udp_msgR.rcv.sock, F_SETFL, O_NONBLOCK);
-//   	if (bind(udp_msgR.rcv.sock, (struct sockaddr*) &udp_msgR.rcv.address, sizeof (udp_msgR.rcv.address)))
-//     	fail_with_error("Bind failed robot");
-
-//   	//initialize sender
-//   	memset(&udp_msgR.snd.address, 0, sizeof (udp_msgR.snd.address));
-//   	udp_msgR.snd.address.sin_family = AF_INET;
-//   	udp_msgR.snd.address.sin_port = htons(3010);
-//   	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
-//   	udp_msgR.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-//   	if (setsockopt(udp_msgR.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcastR, sizeof (broadcastR)) < 0)
-//     	fail_with_error("Unable to set broadcast option");
 }
 
 void establish_baseline(){

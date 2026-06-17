@@ -577,7 +577,7 @@ void state_initializing(){
 }
 
 void state_measuring(){
-      printf("Robot ID [%d]: STATE_MEASURING \n", ID);
+    printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	std::vector<float> sample_from_map;
       if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
@@ -660,7 +660,7 @@ void state_measuring(){
 	share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f),
 	                       sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy);
 	history.size++;
-	//history_print(history);
+	history_print(history);
 
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
@@ -835,43 +835,6 @@ void state_updategoal()
 		
 	}
 }
-
-void state_listen(){
-	// int result;
-	// float g_buffer[2] = {0}; 
-
-	// //wait for new orders
-	// result = read(sock, g_buffer, sizeof(g_buffer));
-	// if(result > 0){
-	// 	printf("received a goal position : (%f, %f)\n", g_buffer[0], g_buffer[1]);
-	// 	// check if it was a termination message
-	// 	if(g_buffer[0] == -1 && g_buffer[1] == -1){
-	// 		goal_position.x = 3;
-    	// 	goal_position.y = float(ID-100)/2.0;
-    	// 	finished = 1;
-	// 	}else{
-	// 		//set the goal position
-	// 		goal_position.x = g_buffer[0];
-	// 		goal_position.y = g_buffer[1];
-	// 	}
-	// 	//find the path using visibility graph
-	// 	VisiLibity::Point start(current_position.x, current_position.y);
-	// 	VisiLibity::Point finish(goal_position.x, goal_position.y);
-	// 	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-	// 	// copy the path in another variable
-	// 	for(size_t k=0; k<Polyline_path.size(); k++){
-	// 		Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-	// 		path.push_back(p);
-	// 		log_trajectory(p);
-	// 	}
-	// 	i = path.begin();
-
-	// 	//move to the goal position
-	// 	FSM.state = STATE_MOVING;
-	// 	FSM.hook = state_moving;
-	// }
-}
-
 bool entered_state_moving = false;
 
 void state_moving(){
@@ -984,8 +947,6 @@ void state_obstacle_avoidance(){
 	
 	//if no obstacle,
 	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
-		//printf("no obstacle anymore..XXXXXXX\n");
-		//wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0,0);
 		//back to moving
 		FSM.state = STATE_MOVING;
@@ -993,101 +954,6 @@ void state_obstacle_avoidance(){
 		return;
 	}
 	braitenberg_run(&braitenberg);
-}
-
-void state_send_goal()
-{
-	if(VERBOSE) printf("Robot ID [%d]: STATE_SEND_GOAL \n", ID);
-
-	if (FSM.state != STATE_FINISHED)
-	{
-		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<float>(simulation_parameters.sampling_dist_thresh)))
-		// {
-		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	//fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		// 	random_planning();
-		// }
-
-		// goal position for Robot
-		goal_position = goal_position_team[0];
-		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		path_planner->goal_outside_obstacles(&goal_position);
-		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-		// find the path using visibility graph
-		VisiLibity::Point start(current_position.x, current_position.y);
-		VisiLibity::Point finish(goal_position.x, goal_position.y);
-		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-
-		// copy the path in another variable
-		for (size_t k = 0; k < Polyline_path.size(); k++)
-		{
-			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-			path.push_back(p);
-			log_trajectory(p);
-		}
-		i = path.begin();
-
-		for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-			int target_ID = 101 + i;
-			if (target_ID == ID) continue;  // Skip self
-	    
-			// Message msg(ID, target_ID, goal_position_team[i], -1, goal_position_team[i], 0); // -1 for STATE_FINISHED flag
-			// send_udp_msg(msg);
-			// TODO: Implement the logic to send goal position to other robots
-		}
-
-		// move to the goal position
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		time_before_moving = current_timestamp();
-	}
-}
-
-bool entered_state_receive_goal = false;
-
-void state_receive_goal()
-{
-
-	if (!entered_state_receive_goal)
-	{
-		printf("Robot ID [%d]: STATE_RECEIVE_GOAL \n", ID);
-		entered_state_receive_goal = true;
-	}
-
-	bool goal_received = false;
-      // TODO: Implement the logic to receive goal position from other robots
-
-	// in case no goals received yet, remain in this state
-	if (!goal_received)
-	{
-		// printf("Robot ID [%d]: No goal received, staying in STATE_RECEIVE_GOAL.\n", ID);
-		return;
-	}
-
-	// print goal position for some of the robots
-	// printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-	path_planner->goal_outside_obstacles(&goal_position);
-	printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-	VisiLibity::Point start(current_position.x, current_position.y);
-	VisiLibity::Point finish(goal_position.x, goal_position.y);
-	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-
-	for (size_t k = 0; k < Polyline_path.size(); k++)
-	{
-		Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-		path.push_back(p);
-		log_trajectory(p);
-	}
-
-	i = path.begin();
-
-	FSM.state = STATE_MOVING;
-	FSM.hook = state_moving;
-	entered_state_receive_goal = true;
-	time_before_moving = current_timestamp();
 }
 
 void state_receive_pdf()
@@ -1217,13 +1083,7 @@ void state_merge_pdf()
 		FSM.hook = state_measuring;
 		return;
 	} else {
-		if (simulation_parameters.teamStrategy == CENTRALIZED)
-		{
-				FSM.state = STATE_UPDATEGOAL_TEAM;
-				FSM.hook = state_updategoal_team;
-			
-		}
-		else if (simulation_parameters.teamStrategy == DISTRIBUTED)
+		if (simulation_parameters.teamStrategy == DISTRIBUTED)
 		{
 			if (simulation_parameters.mapCoverageStrategy != NONE)
 			{
@@ -1238,23 +1098,6 @@ void state_merge_pdf()
 		}
 	}
 	
-}
-
-void state_updategoal_team()
-{
-	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
-
-	path_planner->maximal_merged_belief_planning();
-
-	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
-
-	for (int i = 0; i < 3; i++)
-	{
-		printf("Robot [%d]: Goal position -> x: %f, y: %f\n", 101 + i, goal_position_team[i].x, goal_position_team[i].y);
-	}
-
-	FSM.state = STATE_SEND_GOAL;
-	FSM.hook = state_send_goal;
 }
 
 void state_share_pdf()
@@ -1399,6 +1242,7 @@ int main(int argc, char **argv){
 	while (FSM.state != STATE_FINISHED){
 		update_position();
 		process_team_messages();
+		printf("FSM state: %d \n", FSM.state);
 		if (FSM.state == STATE_FINISHED)
 			break;
 	   	//change state

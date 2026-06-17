@@ -38,13 +38,8 @@ typedef enum state {
 	STATE_MOVING    		=	3,
 	STATE_FINISHED    	=	5,
 	STATE_OBSTACLE_AVOIDANCE = 6,
-	STATE_LISTEN = 7,
-	STATE_RECEIVE_GOAL = 9,
 	STATE_RECEIVE_PDF = 10,
-	STATE_SEND_GOAL = 11,
-	STATE_SEND_PDF = 12,
 	STATE_MERGE_PDF = 13,
-	STATE_UPDATEGOAL_TEAM = 14,
 	STATE_SHARE_PDF = 15,
 	STATE_REGION_ALLOCATION = 16,
 }eState;
@@ -112,14 +107,10 @@ void state_moving();
 void state_initializing();
 void state_obstacle_avoidance();
 void state_listen();
-void state_receive_goal();
 void state_receive_pdf();
-void state_send_goal();
-void state_send_pdf();
 void state_merge_pdf();
 void state_share_pdf();
 void state_region_allocation();
-void state_updategoal_team();
 void initialize_plume_stack();
 PlumeModel* initialize_plume_model();
 

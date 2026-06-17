@@ -209,7 +209,7 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	      float likelihoodSigma;
+	    float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
 		int planning_step;
