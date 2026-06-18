@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <climits>
+#include <algorithm>
 // #include "nvwa/debug_new.h"
 #include "PlumeModel.h"
 #include "CellMeasurements.h"
@@ -367,9 +368,17 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 
 void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, float wind_intensity, int soure_pos_idx, vector<float> &c_avg)
 {
+	if (soure_pos_idx < 0 || soure_pos_idx >= static_cast<int>(gas_con_map_list.size()))
+	{
+		std::fill(c_avg.begin(), c_avg.end(), 0.0f);
+		return;
+	}
+
 	for (int i = 0; i < nbr; i++)
 	{
-		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
+		int ix = std::max(0, std::min(idx[i], x_nbins - 1));
+		int iy = std::max(0, std::min(idy[i], y_nbins - 1));
+		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[ix][iy];
 	}
 }
 
@@ -381,8 +390,7 @@ void DeepCFDPlumeModel2D::load_gas_concentration_map_list_from_file(const char *
     FILE *fp = fopen(filename, "r");
     if (!fp)
     {
-        std::cerr << "Failed to open file: " << filename << std::endl;
-        return;
+        throw std::runtime_error(std::string("Failed to open DDPM gas concentration map file: ") + filename);
     }
 
     char line[10000]; // adjust if needed
@@ -414,6 +422,8 @@ void DeepCFDPlumeModel2D::load_gas_concentration_map_list_from_file(const char *
     }
 
     fclose(fp);
+    if (gas_con_map_list.empty())
+        throw std::runtime_error(std::string("DDPM gas concentration map file is empty or invalid: ") + filename);
 }
 
 

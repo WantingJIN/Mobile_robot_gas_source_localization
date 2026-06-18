@@ -645,7 +645,10 @@ void Posterior::XYmarginal_distance_combined(Position current_position, float ra
 void Posterior::log_pdf(const char *file_name, char writing_mode)
 {
 	int i = 0;
-	FILE *posterior_pdf_3D = fopen(file_name, &writing_mode);
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *posterior_pdf_3D = fopen(file_name, mode);
+	if (posterior_pdf_3D == NULL)
+		return;
 
 	for (i = 0; i < nbr_element - 1; i++)
 		fprintf(posterior_pdf_3D, "%.9f, ", pdf[i]);
@@ -657,7 +660,13 @@ void Posterior::log_pdf(const char *file_name, char writing_mode)
 
 void Posterior::log_relative_history_meas(const char *file_name, const char writing_mode, const vector<float> rel_history_meas)
 {
-	FILE *log_relative_history_meas_file = fopen(file_name, &writing_mode);
+	if (rel_history_meas.empty())
+		return;
+
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *log_relative_history_meas_file = fopen(file_name, mode);
+	if (log_relative_history_meas_file == NULL)
+		return;
 
 	for (size_t i = 0; i < rel_history_meas.size() - 1; i++)
 	{
@@ -671,7 +680,10 @@ void Posterior::log_relative_history_meas(const char *file_name, const char writ
 void Posterior::log_marginal_pdf(const char *file_name, char writing_mode)
 {
 	int i = 0;
-	FILE *posterior_pdf_marginal = fopen(file_name, &writing_mode);
+	const char mode[2] = {writing_mode, '\0'};
+	FILE *posterior_pdf_marginal = fopen(file_name, mode);
+	if (posterior_pdf_marginal == NULL)
+		return;
 
 	for (i = 0; i < nbr_element_marginal - 1; i++)
 		fprintf(posterior_pdf_marginal, "%f ", source_marginal_pdf[i]);

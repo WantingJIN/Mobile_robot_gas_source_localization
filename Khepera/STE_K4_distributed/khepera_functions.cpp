@@ -22,9 +22,11 @@ void init(){
 	//get ID from file
 	if(access("ID.txt", F_OK) != -1 ){
 		FILE * ID_file = fopen("ID.txt", "r");
-		int ok = fscanf(ID_file, "%d", &ID);
-		if(ok) printf("My ID is %d\n", ID);
-		fclose(ID_file);
+		if (ID_file != NULL) {
+			int ok = fscanf(ID_file, "%d", &ID);
+			if(ok) printf("My ID is %d\n", ID);
+			fclose(ID_file);
+		}
 	}
 	
 	// seed the RNG with both time and robot ID to ensure different sequences across robots
@@ -82,11 +84,13 @@ void init(){
 	FILE* sim_param_file;
 	int ok = 0;
     float real_source_position[2]={0};
-    if(access("/home/root/wanting/source_location.txt", F_OK) != -1 ){
+    if(access("/home/root/wanting/source_position.txt", F_OK) != -1 ){
        sim_param_file = fopen("/home/root/wanting/source_position.txt", "r");
-       ok = fscanf(sim_param_file, "%f %f", &real_source_position[0], &real_source_position[1]);
-       if(ok) printf("source position : %f %f\n", real_source_position[0], real_source_position[1]);
-       fclose(sim_param_file);
+       if (sim_param_file != NULL) {
+           ok = fscanf(sim_param_file, "%f %f", &real_source_position[0], &real_source_position[1]);
+           if(ok) printf("source position : %f %f\n", real_source_position[0], real_source_position[1]);
+           fclose(sim_param_file);
+       }
     }
 
 	printf("Number of robots : %d - scenario : %d \n", simulation_parameters.number_of_robots, simulation_parameters.scenario);
@@ -94,8 +98,12 @@ void init(){
 	//write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
+	if (sim_param_file == NULL) {
+		fprintf(stderr, "Error opening parameter log file: %s\n", config_logfile_name);
+		exit(1);
+	}
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
-	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
     fprintf(sim_param_file, "source_position %f %f %f\n", real_source_position[0], real_source_position[1], 0.1);
     fprintf(sim_param_file, "ID %d\n", ID);
     fclose(sim_param_file);
@@ -103,8 +111,23 @@ void init(){
     simulation_parameters.log_simulation_parameters(config_logfile_name);
     
     self_index = find_index_in_ID_list(ID, simulation_parameters.ID_list);
+    if (simulation_parameters.number_of_robots < 1 || simulation_parameters.number_of_robots > MAX_NB_ROBOTS) {
+        fprintf(stderr, "Invalid number_of_robots: %d (supported range is 1..%d)\n",
+                simulation_parameters.number_of_robots, MAX_NB_ROBOTS);
+        exit(1);
+    }
+    if ((int)simulation_parameters.ID_list.size() < simulation_parameters.number_of_robots) {
+        fprintf(stderr, "ID_list has %zu entries, but number_of_robots is %d\n",
+                simulation_parameters.ID_list.size(), simulation_parameters.number_of_robots);
+        exit(1);
+    }
+    if (simulation_parameters.teamStrategy == DISTRIBUTED &&
+        (self_index < 0 || self_index >= simulation_parameters.number_of_robots)) {
+        fprintf(stderr, "Robot ID %d is not in the active ID_list entries for distributed mode\n", ID);
+        exit(1);
+    }
     
-}
+	}
 
 void set_logfile_names(){
 
@@ -590,6 +613,8 @@ void next_iteration_time(){
 
 void log_baseline(float min_c, float max_c, float baseline_c){
 	baseline_measurements_logfile = fopen(baseline_measurements_logfile_name, "a");
+	if (baseline_measurements_logfile == NULL)
+		return;
 	fprintf(baseline_measurements_logfile,"%f, %f, %f\n", min_c, max_c, baseline_c);
 	fclose(baseline_measurements_logfile);
 }

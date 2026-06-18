@@ -1405,6 +1405,8 @@ void PathPlanner::goal_outside_obstacles(Position *goal)
 void PathPlanner::log_scores_map()
 {
 	scores_map_logfile = fopen(scores_map_logfile_name, "a");
+	if (scores_map_logfile == NULL)
+		return;
 
 	for (int i = 0; i < (MAP_SIZE) - 1; i++) // Jusqu'à l'avant-dernière valeur
 		fprintf(scores_map_logfile, "%.9f, ", scores_map[i]);
@@ -1418,6 +1420,8 @@ void PathPlanner::log_scores_map()
 void PathPlanner::log_distance_map()
 {
 	distance_map_logfile = fopen(distance_map_logfile_name, "a");
+	if (distance_map_logfile == NULL)
+		return;
 
 	for (int i = 0; i < (MAP_SIZE) - 1; i++) // Jusqu'à l'avant-dernière valeur
 		fprintf(distance_map_logfile, "%.9f, ", distance_map[i]);
@@ -1431,6 +1435,8 @@ void PathPlanner::log_distance_map()
 void PathPlanner::log_acc_info_map()
 {
 	acc_info_map_logfile = fopen(acc_info_map_logfile_name, "a");
+	if (acc_info_map_logfile == NULL)
+		return;
 
 	for (int i = 0; i < (MAP_SIZE) - 1; i++) // Jusqu'à l'avant-dernière valeur
 		fprintf(acc_info_map_logfile, "%.9f, ", acc_info_map[i]);
@@ -1444,6 +1450,8 @@ void PathPlanner::log_acc_info_map()
 void PathPlanner::log_gas_information_map()
 {
 	gas_information_map_logfile = fopen(gas_information_map_logfile_name, "a");
+	if (gas_information_map_logfile == NULL)
+		return;
 
 	// Parcourez jusqu'à l'avant-dernière valeur
 	for (int i = 0; i < (MAP_SIZE - 1); i++)

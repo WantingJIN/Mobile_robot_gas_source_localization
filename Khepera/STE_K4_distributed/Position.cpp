@@ -98,8 +98,12 @@ int Position::is_in_obstacle_list(float **obs_list, int nbr_obs)
 	// gets an obstacle list and number of obstacles as input
 	// returns the index of the obstacle that the position is in
 	// if the position is not in any obstacles, then -1 is returned
+	if (obs_list == nullptr || nbr_obs <= 0)
+		return -1;
 	for (int i = 0; i < nbr_obs; i++)
 	{
+		if (obs_list[i] == nullptr)
+			continue;
 		if (is_in_obstacle(obs_list[i][0], obs_list[i][2], obs_list[i][1], obs_list[i][3]))
 			return i;
 	}

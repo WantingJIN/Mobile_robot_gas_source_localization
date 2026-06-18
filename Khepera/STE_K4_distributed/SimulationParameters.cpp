@@ -336,9 +336,16 @@ SimulationParameters::SimulationParameters()
 	sampling_dist_thresh = 0.1;
 	relativeMethod = EMPIRICAL_CDF;
 	gasHitMethod = SLIDING_WINDOW_THRES;
+	gas_hit_threshold = 1000;
 	sensorCalibration = OFF;
 	workMode = EXPERIMENT;
 	R0 = 100;
+	likelihoodSigma = 1;
+	lambda = 0.8;
+	scoreSigma = 0.5;
+	scoreFun = EXP;
+	infoSum = LINEAR_SUM;
+	planning_step = 10;
 	weighting_entropy_ratio = 6;
 	teamStrategy = CENTRALIZED;
 	mapCoverageStrategy = NONE;
@@ -346,6 +353,7 @@ SimulationParameters::SimulationParameters()
 	epsilon_clusterize = 1e-9;
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
+	updateGoalPolicy = GOAL_REACHED;
 	wheel_speed = 400;
 	plumeModel = DDPM;
 	windInfo = WIND_OFFLINE;
@@ -362,7 +370,7 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 	FILE *file = fopen(filename, "r");
 	if (!file)
 	{
-		fprintf(stderr, "Error opening config file\n");
+		fprintf(stderr, "Error opening config file: %s\n", filename);
 		exit(1);
 	}
 
@@ -561,10 +569,13 @@ void SimulationParameters::read_mapID_from_file()
 	if (access("../../data/map_nbr.txt", F_OK) != -1)
 	{
 		sim_param_file = fopen("../../data/map_nbr.txt", "r");
-		ok = fscanf(sim_param_file, "%d", &map_nbr);
-		if (ok)
-			printf("scenario : %d\n", map_nbr);
-		fclose(sim_param_file);
+		if (sim_param_file != NULL)
+		{
+			ok = fscanf(sim_param_file, "%d", &map_nbr);
+			if (ok)
+				printf("scenario : %d\n", map_nbr);
+			fclose(sim_param_file);
+		}
 	}
 }
 
@@ -573,6 +584,11 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	// write simulation parameters to file
 	FILE *sim_param_file;
 	sim_param_file = fopen(config_logfile_name, "a");
+	if (sim_param_file == NULL)
+	{
+		fprintf(stderr, "Error opening simulation parameter log file: %s\n", config_logfile_name);
+		return;
+	}
 	fprintf(sim_param_file, "likelihood_error %f\n", likelihood_error);
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);

@@ -9,6 +9,8 @@
 //custom libraries
 #include <fstream>
 #include <array>
+#include <algorithm>
+#include <exception>
 #include "controller_STE_distributed.h"
 #include "Posterior.h"
 #include "khepera_functions.h"
@@ -164,8 +166,18 @@ float ** obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
+static VisiLibity::Environment load_environment_or_exit(const std::string &filename)
+{
+	if (access(filename.c_str(), F_OK) == -1)
+	{
+		fprintf(stderr, "Error opening environment file: %s\n", filename.c_str());
+		exit(1);
+	}
+	return VisiLibity::Environment(filename);
+}
+
 std::string environment_file("/home/root/wanting/test_map.environment");
-VisiLibity::Environment my_environment(environment_file);
+VisiLibity::Environment my_environment(load_environment_or_exit(environment_file));
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 
@@ -214,6 +226,40 @@ bool entered_state_receive_pdf = false;
 bool initial_point_calculated = false;
 
 // =========================== FUNCTIONS ================================ //
+static FILE *open_log_file(const char *filename, const char *mode)
+{
+	FILE *file = fopen(filename, mode);
+	if (file == NULL)
+		fprintf(stderr, "Error opening log file: %s\n", filename);
+	return file;
+}
+
+static bool ensure_current_path_target(const char *state_name)
+{
+	if (path.empty())
+	{
+		printf("Robot ID [%d]: %s has empty path; falling back to direct goal.\n", ID, state_name);
+		path.push_back(goal_position);
+		i = path.begin();
+	}
+
+	while (i != path.end() && dist_to_goal(*i) <= 0.05f)
+		i++;
+
+	if (i == path.end())
+	{
+		if (dist_to_goal(goal_position) <= 0.05f)
+			return false;
+
+		printf("Robot ID [%d]: %s path exhausted before goal; falling back to direct goal.\n", ID, state_name);
+		path.push_back(goal_position);
+		i = path.end();
+		i--;
+	}
+
+	return true;
+}
+
 //random value sampled from a uniform distribution
 float randu(){
 	//random variable between 0 and 1
@@ -266,19 +312,45 @@ void history_print(struct history history){
 void read_obstacle_list(){
 	// open file
 	std::ifstream infile("/home/root/wanting/obstacle_list.txt");
+	if (!infile.is_open())
+	{
+		fprintf(stderr, "Error opening obstacle list file: /home/root/wanting/obstacle_list.txt\n");
+		nbr_obs = 0;
+		obstacles = NULL;
+		std::fill(obstacle_map.begin(), obstacle_map.end(), 0);
+		return;
+	}
 	// first line is the number of obstacles
-	infile >> nbr_obs;
+	if (!(infile >> nbr_obs) || nbr_obs < 0)
+	{
+		fprintf(stderr, "Error reading obstacle count from /home/root/wanting/obstacle_list.txt\n");
+		nbr_obs = 0;
+		obstacles = NULL;
+		std::fill(obstacle_map.begin(), obstacle_map.end(), 0);
+		return;
+	}
 	// allocate memory for obstacle list array
 	obstacles = new float*[nbr_obs];
+	for(int i = 0; i < nbr_obs; i++)
+		obstacles[i] = NULL;
 	// read all obstacles now
+	int loaded_obs = 0;
 	for(int i = 0; i < nbr_obs; i++){
 		obstacles[i] = new float[4];
-		infile >> obstacles[i][0] >> obstacles[i][1] >> obstacles[i][2] >> obstacles[i][3];
+		if (!(infile >> obstacles[i][0] >> obstacles[i][1] >> obstacles[i][2] >> obstacles[i][3]))
+		{
+			fprintf(stderr, "Error reading obstacle %d from /home/root/wanting/obstacle_list.txt\n", i);
+			delete[] obstacles[i];
+			obstacles[i] = NULL;
+			break;
+		}
 		obstacles[i][0] -= margin;
 		obstacles[i][1] -= margin;
 		obstacles[i][2] += margin;
 		obstacles[i][3] += margin;
+		loaded_obs++;
 	}
+	nbr_obs = loaded_obs;
 
 	for(int i = 0; i < nbr_obs; i++){
 		printf("obstacle %d: %f %f %f %f\n", i, obstacles[i][0], obstacles[i][1], obstacles[i][2], obstacles[i][3]);
@@ -396,7 +468,9 @@ void process_team_messages()
 
 void log_position(){
 	double time = get_exp_time();
-	goalposition_logfile = fopen(goalposition_logfile_name, "a");
+	goalposition_logfile = open_log_file(goalposition_logfile_name, "a");
+	if (goalposition_logfile == NULL)
+		return;
 	fprintf(goalposition_logfile,"%d, %f, %f, %f, %f\n", FSM.n_cycles, current_position.x, current_position.y, current_position.heading, time);
 	fclose(goalposition_logfile);
 }
@@ -404,7 +478,9 @@ void log_position(){
 void log_measurements(){
 	//int i = 0;
 	double time = get_exp_time();
-	measurements_logfile = fopen(measurements_logfile_name, "a");
+	measurements_logfile = open_log_file(measurements_logfile_name, "a");
+	if (measurements_logfile == NULL)
+		return;
 	fprintf(measurements_logfile,"%d, %f, %f, %f, %f, %f\n",
 	        FSM.n_cycles, sampleBuffer.average_wind_intensity,
 	        sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy,
@@ -417,7 +493,9 @@ void log_measurements(){
 
 void log_expected_a_posteriori()
 {
-	expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "a");
+	expected_a_posteriori_logfile = open_log_file(expected_a_posteriori_logfile_name, "a");
+	if (expected_a_posteriori_logfile == NULL)
+		return;
 	fprintf(expected_a_posteriori_logfile, "%d", FSM.n_cycles);
 	for (int i = 0; i < plume_model->nbr_param; ++i)
 		fprintf(expected_a_posteriori_logfile, ", %f", plume_model->expected_value[i]);
@@ -427,7 +505,9 @@ void log_expected_a_posteriori()
 
 void log_max_a_posteriori()
 {
-	max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "a");
+	max_a_posteriori_logfile = open_log_file(max_a_posteriori_logfile_name, "a");
+	if (max_a_posteriori_logfile == NULL)
+		return;
 	fprintf(max_a_posteriori_logfile, "%d", FSM.n_cycles);
 	for (int i = 0; i < plume_model->nbr_param; ++i)
 		fprintf(max_a_posteriori_logfile, ", %f", plume_model->max_a_post_value[i]);
@@ -438,7 +518,9 @@ void log_max_a_posteriori()
 void log_entropy()
 {
 	double time = get_exp_time();
-	entropy_logfile = fopen(entropy_logfile_name, "a");
+	entropy_logfile = open_log_file(entropy_logfile_name, "a");
+	if (entropy_logfile == NULL)
+		return;
 	fprintf(entropy_logfile, "%f, %f\n", posterior->entropy, time);
 	fclose(entropy_logfile);
 }
@@ -490,7 +572,9 @@ void log_history(){
 }
 
 void log_visited_list(){
-	visited_list_logfile = fopen(visited_list_logfile_name, "a");
+	visited_list_logfile = open_log_file(visited_list_logfile_name, "a");
+	if (visited_list_logfile == NULL)
+		return;
 
 	for (int i = 0; i < MAP_SIZE; i++)
 		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
@@ -502,7 +586,9 @@ void log_visited_list(){
 
 void log_trajectory(Position p){
  	double time = get_exp_time();
- 	trajectory_logfile = fopen(trajectory_logfile_name, "a");
+	trajectory_logfile = open_log_file(trajectory_logfile_name, "a");
+	if (trajectory_logfile == NULL)
+		return;
 	fprintf(trajectory_logfile,"%d, %f, %f, %f, %f\n", FSM.n_cycles, p.x, p.y, p.heading, time);
  	fclose(trajectory_logfile);
 }
@@ -551,11 +637,12 @@ void state_initializing(){
     
 
     if(dist_to_goal(goal_position) > 0.05){
-		//move
-		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
-			i++;
-			printf("current goal is: %f, %f\n", i->x, i->y);
+		if (!ensure_current_path_target("STATE_INITIALIZATION"))
+		{
+			set_wheels_speed(0,0);
+			return;
 		}
+		//move
 		if(obstacle_or_not() == 0){
 			go_to_goal(*i);
 			set_wheels_speed(speed[0],speed[1]);
@@ -660,7 +747,7 @@ void state_measuring(){
 	share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f),
 	                       sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy);
 	history.size++;
-	history_print(history);
+	//history_print(history);
 
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
@@ -747,6 +834,8 @@ void state_updategoal()
 	//fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 	if (VERBOSE)
 		printf("[%d] updating the goal\n", ID);
+	path.clear();
+	use_visibility_path = true;
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
@@ -893,11 +982,20 @@ void state_moving(){
 		}
 	}
 	if(dist_to_goal(goal_position) > 0.05){
-		//move
-		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
-			i++;
-			printf("current goal is: %f, %f\n", i->x, i->y);
+		if (!ensure_current_path_target("STATE_MOVING"))
+		{
+			set_wheels_speed(0,0);
+			sampleBuffer.reset_all();
+			path.clear();
+			FSM.state = STATE_MEASURING;
+			FSM.hook = state_measuring;
+			time_after_moving = current_timestamp();
+			navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			time_before_measuring = current_timestamp();
+			entered_state_moving = false;
+			return;
 		}
+		//move
 		go_to_goal(*i);
 		//obstacle avoidance if necessary
 		if(obstacle_or_not() == 1){
@@ -910,8 +1008,8 @@ void state_moving(){
 		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / CONTROLLER_TIMESTAMP));
 
 		if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
-			if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
-				{
+			if (update_goal_iterations > 0 && n_time_step % update_goal_iterations == 0 && n_time_step != 0)
+			{
 				// set_wheels_speed(0, 0);
 				sampleBuffer.reset_all();
 				path.clear();
@@ -1199,10 +1297,18 @@ void initialize_plume_stack()
 	if (plume_model || posterior || path_planner || region_allocator)
 		return;
 
-	plume_model = initialize_plume_model();
-	posterior = new Posterior(plume_model);
-	path_planner = new PathPlanner(plume_model, posterior, &history);
-	region_allocator = new RegionAllocator(posterior, received_current_pos);
+	try
+	{
+		plume_model = initialize_plume_model();
+		posterior = new Posterior(plume_model);
+		path_planner = new PathPlanner(plume_model, posterior, &history);
+		region_allocator = new RegionAllocator(posterior, received_current_pos);
+	}
+	catch (const std::exception &e)
+	{
+		fprintf(stderr, "Failed to initialize plume stack: %s\n", e.what());
+		exit(1);
+	}
 }
 
 // =========================== MAIN ============================== //
@@ -1242,7 +1348,6 @@ int main(int argc, char **argv){
 	while (FSM.state != STATE_FINISHED){
 		update_position();
 		process_team_messages();
-		printf("FSM state: %d \n", FSM.state);
 		if (FSM.state == STATE_FINISHED)
 			break;
 	   	//change state
