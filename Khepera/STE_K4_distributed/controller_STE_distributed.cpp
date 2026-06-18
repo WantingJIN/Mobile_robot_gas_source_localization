@@ -1005,21 +1005,6 @@ void state_moving(){
 		}
 		//wb_differential_wheels_set_speed(speed[0],speed[1]);
 		set_wheels_speed(speed[0],speed[1]);
-		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / CONTROLLER_TIMESTAMP));
-
-		if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
-			if (update_goal_iterations > 0 && n_time_step % update_goal_iterations == 0 && n_time_step != 0)
-			{
-				// set_wheels_speed(0, 0);
-				sampleBuffer.reset_all();
-				path.clear();
-				// printf("Robot ID [%d]. Number of iteration is %d\n", ID, n_time_step);
-				FSM.state = STATE_MEASURING;
-				FSM.hook = state_measuring;
-				time_after_moving = current_timestamp();
-				entered_state_moving = false;
-			}
-		}
 	}else{
 		//wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0,0);

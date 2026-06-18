@@ -272,14 +272,6 @@ eStopCondition parse_stop_condition(const char* str) {
 	exit(1);
 }
 
-eUpdateGoalPolicy parse_update_goal_policy(const char* str) {
-	if (strcmp(str, "GOAL_REACHED") == 0) return GOAL_REACHED;
-	if (strcmp(str, "FIXED_FREQ") == 0) return FIXED_FREQ;
-	if (strcmp(str, "BELIEF_DIFF") == 0) return BELIEF_DIFF;
-	fprintf(stderr, "Unknown update goal policy: %s\n", str);
-	exit(1);
-}
-
 eScoreFun parse_score_fun(const char *str)
 {
 	if (strcmp(str, "RATIO") == 0)
@@ -353,7 +345,6 @@ SimulationParameters::SimulationParameters()
 	epsilon_clusterize = 1e-9;
 	update_goal_time = 10;
 	stopCondition = ENTROPY_ONLY;
-	updateGoalPolicy = GOAL_REACHED;
 	wheel_speed = 400;
 	plumeModel = DDPM;
 	windInfo = WIND_OFFLINE;
@@ -543,9 +534,6 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		else if (strcmp(key, "stopCondition") == 0) {
 			stopCondition = parse_stop_condition(value);
 		}
-		else if (strcmp(key, "updateGoalPolicy") == 0) {
-			updateGoalPolicy = parse_update_goal_policy(value);
-		}
 		else if (strcmp(key, "ID_list") == 0) {
 			ID_list = parse_ID_list(value);
 			for (size_t i = 0; i < ID_list.size(); i++) {
@@ -632,7 +620,6 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
 	fprintf(sim_param_file, "update_goal_time %d\n", update_goal_time);
 	fprintf(sim_param_file, "stop_condition %d\n", stopCondition);
-	fprintf(sim_param_file, "update_goal_policy %d\n", updateGoalPolicy);
 	fprintf(sim_param_file, "wheel_speed %d\n", wheel_speed);
 	fprintf(sim_param_file, "ID_list ");
 	for (size_t i = 0; i < ID_list.size(); i++) {

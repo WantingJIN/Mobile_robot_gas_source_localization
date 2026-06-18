@@ -159,12 +159,6 @@ typedef enum stopCondition{
 	END_OF_FIX_PATH = 4,
 } eStopCondition;
 
-typedef enum updataGoalPolicy{
-	GOAL_REACHED = 0,
-	FIXED_FREQ = 1,
-	BELIEF_DIFF = 2,
-} eUpdateGoalPolicy;
-
 typedef enum windEstimationMethod
 {
 	GROUND_TRUTH = 0,
@@ -243,7 +237,6 @@ class SimulationParameters{
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
-		eUpdateGoalPolicy updateGoalPolicy;
 		ePlumeModel plumeModel;
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
