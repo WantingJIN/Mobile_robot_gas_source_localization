@@ -59,14 +59,14 @@ clean:
 .PHONY: depend
 depend:
 	@echo "=== Building dependencies"
-	rm -f .depend
-	touch .depend
-	makedepend $(SYS_INCLUDES) $(INCS) -Y -f .depend $(SRCS)
+	$(CXX) -MM -MP $(INCS) $(CFLAGS) $(SRCS) > .depend
+
+.depend: $(SRCS) Makefile.include
+	@echo "=== Building dependencies"
+	$(CXX) -MM -MP $(INCS) $(CFLAGS) $(SRCS) > .depend
 
 %.o: %.cpp
 	@echo "=== Compiling $@"
 	$(CXX) -Wall $(INCS) -c $(CFLAGS) $< -o $@
 
-ifeq (.depend,$(wildcard .depend))
-include .depend 
-endif
+-include .depend
