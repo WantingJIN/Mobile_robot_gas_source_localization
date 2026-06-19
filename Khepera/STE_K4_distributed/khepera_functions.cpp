@@ -265,7 +265,7 @@ void establish_baseline(){
         //     	j--;
         // }
         //filtered_concentration /= ODOR_FILTER_LENGTH;
-        printf("[%d] position : %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, filtered_concentration);
+        printf("[%d] position : %f %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, current_position.heading, filtered_concentration);
     	//take min and max
     	if (filtered_concentration > max) 
             max = filtered_concentration ;
@@ -310,12 +310,14 @@ void wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* 
     current_wind = (float) trisonica.last.direction_rad;
     *wind_intensity = (float) trisonica.last.speed;
 
-    heading = current_position.heading * 180 / PI;
-    current_wind = fmod(-(current_wind * 180 / PI) + 3 * 180, 2 * 180);
-    *wind_angle = (heading - current_wind) * PI / 180.0;
-	float wind_world_angle = current_wind * PI / 180.0f;
-	*wind_vx = (*wind_intensity) * cos(wind_world_angle);
-	*wind_vy = (*wind_intensity) * sin(wind_world_angle);
+    float robot_heading = current_position.heading;
+    // Convert wind direction from trisonica to the global frame
+    *wind_angle = robot_heading - current_wind + 125.0f * PI / 180.0f; // trisonica's 0 degree is at the back of the robot, and it increases clockwise, so we need to subtract 135 degree to convert it to the standard mathematical angle (0 degree at the front and increases counter-clockwise)
+    // Normalize the angle to [0, 2*PI]
+    while (*wind_angle >= 2*PI) *wind_angle -= 2.0*PI;
+    while (*wind_angle < 0) *wind_angle += 2.0*PI;  
+	*wind_vx = (*wind_intensity) * cos(*wind_angle);
+	*wind_vy = (*wind_intensity) * sin(*wind_angle);
 	*wind_vz = 0.0f;
 }
 

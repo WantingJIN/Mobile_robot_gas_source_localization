@@ -734,7 +734,7 @@ void state_measuring(){
 	if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 	log_position();
 	log_measurements();
-	history.position.push_back({current_position.x, current_position.y, 0.0});
+	history.position.push_back({current_position.x, current_position.y, current_position.heading});
 	float calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
 	if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
 	history.gas_meas_avg.push_back(calibrated_sensor_reading);
@@ -744,7 +744,7 @@ void state_measuring(){
 	history.wind_angle.push_back(sampleBuffer.average_wind_angle);
 	history.wind_meas_u.push_back(sampleBuffer.average_wind_vx);
 	history.wind_meas_v.push_back(sampleBuffer.average_wind_vy);
-	share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f),
+	share_team_wind_sample(Position(current_position.x, current_position.y, current_position.heading),
 	                       sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy);
 	history.size++;
 	//history_print(history);
@@ -963,18 +963,18 @@ void state_moving(){
 				// only record the measurement if the localization result is from MCS
 				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
 				if (MCS_data_available){
-					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
+					sample_in_motion.position.push_back({current_position.x, current_position.y, current_position.heading});
 					sample_in_motion.gas_meas_avg.push_back(instant_concentration);
 					sample_in_motion.wind_intensity.push_back(wind_intensity);
 					sample_in_motion.wind_angle.push_back(wind_angle);
 					sample_in_motion.wind_meas_u.push_back(wind_vx);
 					sample_in_motion.wind_meas_v.push_back(wind_vy);
-					share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f), wind_vx, wind_vy);
+					share_team_wind_sample(Position(current_position.x, current_position.y, current_position.heading), wind_vx, wind_vy);
 					sample_in_motion.size++;
 
-				      last_measurement_pos.x = current_position.x;
-				      last_measurement_pos.y = current_position.y;
-					  //printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
+				    last_measurement_pos.x = current_position.x;
+				    last_measurement_pos.y = current_position.y;
+					//printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
 				}
 				
 			//}
