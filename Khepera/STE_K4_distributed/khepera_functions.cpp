@@ -77,7 +77,7 @@ void init(){
     set_logfile_names();
     // set the simulation parameters
     // load the simulation parameters
-    simulation_parameters.load_simulation_parameters_from_config("/home/root/wanting/config.txt");
+    simulation_parameters.load_simulation_parameters_from_config("/home/root/wanting/config.yaml");
     simulation_parameters.read_mapID_from_file();
 
 	//read simulation parameters
