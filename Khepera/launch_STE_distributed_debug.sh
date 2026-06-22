@@ -1,7 +1,7 @@
 #!/bin/bash
 # NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
-ID_list=(106)
+ID_list=(103)
 source_position="11 2"
 session_name="robots_view"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,6 +9,13 @@ STE_DDPM_ROOT=${STE_DDPM_ROOT:-$(dirname "$SCRIPT_DIR")}
 config_file="$STE_DDPM_ROOT/Khepera/Data/config.yaml"
 source_position_file="$STE_DDPM_ROOT/Khepera/Data/source_position.txt"
 binary_path="$STE_DDPM_ROOT/Khepera/STE_K4_distributed/STE_K4_distributed"
+target_sysroot="${SDKTARGETSYSROOT:-/opt/poky/1.8/sysroots/cortexa8hf-vfp-neon-poky-linux-gnueabi}"
+superlu_soname_lib="$target_sysroot/usr/lib/libsuperlu.so.5"
+superlu_lib="$(readlink -f "$superlu_soname_lib" 2>/dev/null || true)"
+[ -n "$superlu_lib" ] || superlu_lib="$superlu_soname_lib"
+superlu_runtime_name="$(basename "$superlu_lib")"
+blas_lib="$target_sysroot/usr/lib/libblas.so"
+runtime_libs=("$superlu_lib" "$blas_lib")
 # ---------------------------------------- #
 
 #set the map number
@@ -45,6 +52,13 @@ echo "✅ Updated source_position.txt with source_position=$source_position"
 cd "$STE_DDPM_ROOT/Khepera/STE_K4_distributed" || exit 1
 make
 
+for runtime_lib in "${runtime_libs[@]}"; do
+    if [ ! -f "$runtime_lib" ]; then
+        echo "❌ Missing runtime library: $runtime_lib"
+        exit 1
+    fi
+done
+
 cd "$STE_DDPM_ROOT/Khepera" || exit 1
 
 
@@ -55,6 +69,10 @@ for ID in "${ID_list[@]}"; do
     echo "📤 Uploading to Robot $ID..."
     k4put "$config_file" +$ID
     k4put "$binary_path" +$ID
+    for runtime_lib in "${runtime_libs[@]}"; do
+        k4put "$runtime_lib" +$ID
+    done
+    ssh root@192.168.1.$ID "cd wanting; ln -sf '$superlu_runtime_name' libsuperlu.so.5; ln -sf '$superlu_runtime_name' libsuperlu.so"
     # environment map and obstacle list (skip if map unchanged)
     if [ "$upload_map_files" = true ]; then
         k4put $STE_DDPM_ROOT/Khepera/Data/test_map.environment +$ID
@@ -109,7 +127,7 @@ for ((i = 0; i < robot_count; i++)); do
 
     
 run_command="echo '🤖 Connecting to Robot $robot_id'; \
-ssh root@192.168.1.$robot_id 'cd wanting; rm -r log_STE_multi; stdbuf -oL -eL ./STE_K4_distributed 2>&1 | tee robot_output.log'; \
+ssh root@192.168.1.$robot_id 'cd wanting; rm -rf log_STE_multi; export LD_LIBRARY_PATH=\$PWD:\${LD_LIBRARY_PATH:-}; stdbuf -oL -eL ./STE_K4_distributed 2>&1 | tee robot_output.log'; \
 echo '📥 Gathering logs from Robot $robot_id'; \
 k4get log_STE_multi +$robot_id; \
 k4get robot_output.log +$robot_id; \
@@ -128,5 +146,3 @@ tmux select-pane -t 0
 
 # Attach to tmux session
 tmux attach-session -t $session_name
-
-

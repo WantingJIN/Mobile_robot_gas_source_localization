@@ -12,7 +12,7 @@ simulation:
 
 robot:
   number_of_robots: 1
-  ID_list: [106]
+  ID_list: [103]
   vel_factor: 10
   wheel_speed: 400
 
@@ -67,12 +67,12 @@ bayesian_estimation:
     MCMC_iteration_num: 1000
 
 plume_model:
-  plumeModel: DDPM
+  plumeModel: FDM_PDE
   FDM_PDE:
     diffCoefficient: 0.05
 
 wind:
-  windInfo: WIND_OFFLINE
+  windInfo: WIND_ONLINE
   windEstimationMethod: GAUSSIAN_KERNEL
   modelUncertainty: FIXED_UNCERTAINTY
   DYNAMIC_UNCERTAINTY:

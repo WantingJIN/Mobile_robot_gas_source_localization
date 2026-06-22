@@ -2,7 +2,9 @@
 #CC			:= arm-angstrom-linux-gnueabi-g++-4.6
 
 CFLAGS_ADD := -std=c++14 -pthread
-INCS_ADD := -I /usr/include/eigen3
+SUPERLU_INCLUDE = $(SDKTARGETSYSROOT)/usr/include/superlu
+INCS_ADD = -I /usr/include/eigen3 -I $(SUPERLU_INCLUDE)
+LIBS_ADD := -lsuperlu -lblas
 #-std=c++11
 
 #
