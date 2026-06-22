@@ -9,6 +9,11 @@ float odor_baseline_value = 0;
 sMsg STmsg;
 sUdpMsg udp_msgR;
 static int broadcastR = 1;
+static sVector3d robot_velocity_mcs = {0.0, 0.0, 0.0};
+static Position last_mcs_velocity_position;
+static long long last_mcs_velocity_timestamp = 0;
+static bool has_last_mcs_velocity_position = false;
+static constexpr float MAX_VALID_WIND_INTENSITY = 3.0f;
 
 void init(){
 	if(VERBOSE) printf("initialization\n");
@@ -295,30 +300,49 @@ float odor_read(){
     return current_odor;
 }
 
-void wind_read(float* wind_intensity, float* wind_angle){
+bool wind_read(float* wind_intensity, float* wind_angle){
 	float wind_vx = 0.0f;
 	float wind_vy = 0.0f;
 	float wind_vz = 0.0f;
-	wind_read(wind_intensity, wind_angle, &wind_vx, &wind_vy, &wind_vz);
+	return wind_read(wind_intensity, wind_angle, &wind_vx, &wind_vy, &wind_vz);
 }
 
-void wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz){
+bool wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz){
 	float current_wind = 0;
-    float heading = 0;
 
     trisonica_get();
     current_wind = (float) trisonica.last.direction_rad;
     *wind_intensity = (float) trisonica.last.speed;
 
     float robot_heading = current_position.heading;
+
     // Convert wind direction from trisonica to the global frame
-    *wind_angle = robot_heading - current_wind + 125.0f * PI / 180.0f; // trisonica's 0 degree is at the back of the robot, and it increases clockwise, so we need to subtract 135 degree to convert it to the standard mathematical angle (0 degree at the front and increases counter-clockwise)
+    *wind_angle = robot_heading - current_wind + 135.0f * PI / 180.0f; // trisonica's 0 degree is at the back of the robot, and it increases clockwise, so we need to subtract 135 degree to convert it to the standard mathematical angle (0 degree at the front and increases counter-clockwise)
+    //  printf("Robot ID [%d]: Wind reading - intensity: %f m/s, direction: %f degree, robot heading: %f degree\n",
+    //        ID, *wind_intensity, *wind_angle /PI * 180.0f, robot_heading /PI * 180.0f);
+    
     // Normalize the angle to [0, 2*PI]
     while (*wind_angle >= 2*PI) *wind_angle -= 2.0*PI;
     while (*wind_angle < 0) *wind_angle += 2.0*PI;  
-	*wind_vx = (*wind_intensity) * cos(*wind_angle);
-	*wind_vy = (*wind_intensity) * sin(*wind_angle);
+	float relative_wind_vx = (*wind_intensity) * cos(*wind_angle);
+	float relative_wind_vy = (*wind_intensity) * sin(*wind_angle);
+
+	// The anemometer measures air velocity relative to the moving robot.
+	// Add robot velocity in the global frame to estimate ambient wind.
+	*wind_vx = relative_wind_vx + static_cast<float>(robot_velocity_mcs.x);
+	*wind_vy = relative_wind_vy + static_cast<float>(robot_velocity_mcs.y);
 	*wind_vz = 0.0f;
+	*wind_intensity = sqrt((*wind_vx) * (*wind_vx) + (*wind_vy) * (*wind_vy));
+	*wind_angle = atan2(*wind_vy, *wind_vx);
+	while (*wind_angle >= 2*PI) *wind_angle -= 2.0*PI;
+	while (*wind_angle < 0) *wind_angle += 2.0*PI;
+	if (*wind_intensity > MAX_VALID_WIND_INTENSITY)
+	{
+		printf("Robot ID [%d]: Dropping wind measurement, intensity=%f m/s exceeds %f m/s\n",
+		       ID, *wind_intensity, MAX_VALID_WIND_INTENSITY);
+		return false;
+	}
+	return true;
 }
 
 
@@ -356,9 +380,9 @@ void updateCortexPos(Position * position){
             MCS_data_available = true;
             position->x=FrameOfData->BodyData[i].Segments[0][0]/1000;
             position->y=FrameOfData->BodyData[i].Segments[0][1]/1000;
-            position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
-            //while (position[2] > 2*PI) current_position[2] -= 2.0*PI;
-            //while (position[2] < 0   ) current_position[2] += 2.0*PI;
+            position->heading=FrameOfData->BodyData[i].Segments[0][5]/180*PI + PI;
+            while (position->heading > 2*PI) position->heading -= 2.0*PI;
+            while (position->heading < 0   ) position->heading += 2.0*PI;
             //printf("current_position - x: %f - y: %f - o3: %f\n", position->x, position->y, position->heading);
         }
     }
@@ -370,6 +394,29 @@ void update_position() {
     updateCortexPos(&current_position);
     while (current_position.heading > 2*PI) current_position.heading -= 2.0*PI;
     while (current_position.heading < 0   ) current_position.heading += 2.0*PI;
+	long long now = current_timestamp();
+	if (MCS_data_available)
+	{
+		if (has_last_mcs_velocity_position)
+		{
+			float dt = static_cast<float>(now - last_mcs_velocity_timestamp) / 1000.0f;
+			if (dt > 1e-3f)
+			{
+				robot_velocity_mcs.x = (current_position.x - last_mcs_velocity_position.x) / dt;
+				robot_velocity_mcs.y = (current_position.y - last_mcs_velocity_position.y) / dt;
+				robot_velocity_mcs.z = 0.0;
+			}
+		}
+		last_mcs_velocity_position = current_position;
+		last_mcs_velocity_timestamp = now;
+		has_last_mcs_velocity_position = true;
+	}
+	else
+	{
+		robot_velocity_mcs = vector3d_zeros();
+		has_last_mcs_velocity_position = false;
+		last_mcs_velocity_timestamp = now;
+	}
 }
 
 int obstacle_or_not(){
@@ -512,7 +559,7 @@ void go_to_goal(Position goal){
     movement[1] = movement[1]/dist;
 
     float x, y;
-    float gamma = (-1.0)*current_position.heading + PI; // the rotation of the coord. syst.
+    float gamma = current_position.heading; // the rotation of the coord. syst.
 
     x = movement[0]*cos(gamma) + movement[1]*sin(gamma);
     y = -movement[0]*sin(gamma) + movement[1]*cos(gamma);

@@ -713,8 +713,13 @@ void state_measuring(){
 			//continue measuring odor concentration
 			sampleBuffer.instant_concentration = odor_read();
 			//measuring wind
-			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
-					  &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+			bool valid_wind = wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
+										&sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+			if (!valid_wind)
+			{
+				next_iteration_time();
+				continue;
+			}
 			//add samples to buffers
 			sampleBuffer.add_all_to_buffer();
 			next_iteration_time();
@@ -724,8 +729,10 @@ void state_measuring(){
 		sampleBuffer.average_all();
 	} else if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING || simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
 		sampleBuffer.instant_concentration = odor_read();
-		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
-				  &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+		bool valid_wind = wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
+									&sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+		if (!valid_wind)
+			return;
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
 	}
@@ -944,41 +951,44 @@ void state_moving(){
 		float wind_vx = 0.0;
 		float wind_vy = 0.0;
 		float wind_vz = 0.0;
-		wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
-		float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
-		if (instant_concentration < 0) instant_concentration = 0;
-		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+		bool valid_wind = wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
+		if (valid_wind)
 		{
-			reverse_sensor_model(instant_concentration, previous_sensor_reading);
-		}
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-		{
-			gas_map.runKernelAlgorithm(current_position, instant_concentration);
-		}
-		if (sample_counter > simulation_parameters.sampling_period){
-			// Sampling distance threshold
-			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-			// {
-				// only record the measurement if the localization result is from MCS
-				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
-				if (MCS_data_available){
-					sample_in_motion.position.push_back({current_position.x, current_position.y, current_position.heading});
-					sample_in_motion.gas_meas_avg.push_back(instant_concentration);
-					sample_in_motion.wind_intensity.push_back(wind_intensity);
-					sample_in_motion.wind_angle.push_back(wind_angle);
-					sample_in_motion.wind_meas_u.push_back(wind_vx);
-					sample_in_motion.wind_meas_v.push_back(wind_vy);
-					share_team_wind_sample(Position(current_position.x, current_position.y, current_position.heading), wind_vx, wind_vy);
-					sample_in_motion.size++;
+			float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
+			if (instant_concentration < 0) instant_concentration = 0;
+			if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				reverse_sensor_model(instant_concentration, previous_sensor_reading);
+			}
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				gas_map.runKernelAlgorithm(current_position, instant_concentration);
+			}
+			if (sample_counter > simulation_parameters.sampling_period){
+				// Sampling distance threshold
+				// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				// {
+					// only record the measurement if the localization result is from MCS
+					// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
+					if (MCS_data_available){
+						sample_in_motion.position.push_back({current_position.x, current_position.y, current_position.heading});
+						sample_in_motion.gas_meas_avg.push_back(instant_concentration);
+						sample_in_motion.wind_intensity.push_back(wind_intensity);
+						sample_in_motion.wind_angle.push_back(wind_angle);
+						sample_in_motion.wind_meas_u.push_back(wind_vx);
+						sample_in_motion.wind_meas_v.push_back(wind_vy);
+						share_team_wind_sample(Position(current_position.x, current_position.y, current_position.heading), wind_vx, wind_vy);
+						sample_in_motion.size++;
 
-				    last_measurement_pos.x = current_position.x;
-				    last_measurement_pos.y = current_position.y;
-					//printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
-				}
-				
-			//}
-			sample_counter = 0;
+					    last_measurement_pos.x = current_position.x;
+					    last_measurement_pos.y = current_position.y;
+						//printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
+					}
+					
+				//}
+				sample_counter = 0;
+			}
 		}
 	}
 	if(dist_to_goal(goal_position) > 0.05){
