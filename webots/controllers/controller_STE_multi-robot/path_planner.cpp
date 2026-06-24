@@ -376,7 +376,7 @@ void PathPlanner::belief_clustering_planning()
 		for (int i = 0; i < clusters_bounding_box.size(); i++)
 		{
 			max_dist_to_robot = 0;
-			max_dist_to_robot_index = 0;
+			max_dist_to_robot_index = -1;
 			// calculate the distance of each vertex to robot
 			Position cluster_vertex[4] = {Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].first.y, 0),
 								Position(clusters_bounding_box[i].first.x, clusters_bounding_box[i].second.y, 0),
@@ -403,6 +403,13 @@ void PathPlanner::belief_clustering_planning()
 					max_dist_to_robot_index = i;
 				}
 			}
+			if (max_dist_to_robot_index == -1)
+			{
+			    fprintf(console_logfile, "all the vertex of clusters are visited, move to the center \n");
+				// maximal_information_planning();
+			    move_to_cluster_centroid(clusters_bounding_box[0], posterior->pdf);
+			    return;
+			}
 			candidate_goal.push_back(cluster_vertex[max_dist_to_robot_index]);
 		}
 		// find the closest point among candidate goals
@@ -419,23 +426,11 @@ void PathPlanner::belief_clustering_planning()
 					find_goal = true;
 			}
 		}
-		if (!find_goal)
-		{
-			fprintf(console_logfile, "all the vertex of clusters are visited, move to the center \n");
-			// maximal_information_planning();
-			move_to_cluster_centroid(clusters_bounding_box[0], posterior->pdf);
-			return;
-		}
-		else
-		{
-			goal_position.x = candidate_goal[min_dist_to_robot_index].x;
-			goal_position.y = candidate_goal[min_dist_to_robot_index].y;
-			goal_position.heading = 0;
-			int idx = position_to_index_2D(goal_position.x, goal_position.y);
-			cell_visited_list[idx] = 1;
-			
-		}
-
+		goal_position.x = candidate_goal[min_dist_to_robot_index].x;
+		goal_position.y = candidate_goal[min_dist_to_robot_index].y;
+		goal_position.heading = 0;
+		int idx = position_to_index_2D(goal_position.x, goal_position.y);
+		cell_visited_list[idx] = 1;
 		fprintf(console_logfile, "my current position %f %f, selected cluster goal position : %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
 	}
 }
