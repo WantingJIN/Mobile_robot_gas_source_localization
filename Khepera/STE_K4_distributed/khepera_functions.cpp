@@ -144,10 +144,9 @@ void set_logfile_names(){
 	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
-	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
-	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
-	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
-	sprintf(cluster_sizes_informative_name, "%s/cluster_sizes_informative.csv", folder_name);
+	sprintf(posterior_pdf_logfile_name, "%s/posterior_pdf.csv", folder_name);
+	sprintf(merged_pdf_logfile_name, "%s/merged_pdf.csv", folder_name);
+    sprintf(region_allocation_logfile_name, "%s/region_allocation.csv", folder_name);
 	sprintf(gas_concentration_maps_log_root, "%s/gas_concentration_maps", folder_name);
 	sprintf(wind_field_u_logfile_name, "%s/wind_field_u.csv", folder_name);
 	sprintf(wind_field_v_logfile_name, "%s/wind_field_v.csv", folder_name);

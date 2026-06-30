@@ -56,15 +56,14 @@ extern char max_a_posteriori_logfile_name[256];
 extern char likelihood_logfile_name[256];
 extern char measurement_history_logfile_name[256];
 extern char position_history_logfile_name[256];
-extern char posterior_pdf_3D_name[256];
+extern char posterior_pdf_logfile_name[256];
+extern char merged_pdf_logfile_name[256];
 extern char entropy_logfile_name[256];
 extern char config_logfile_name[256];
 extern char trajectory_logfile_name[256];
 extern char baseline_measurements_logfile_name[256];
 extern char visited_list_logfile_name[256];
-extern char posterior_pdf_3D_cluster_name[512];
-extern char cluster_sizes_geometric_name[512];
-extern char cluster_sizes_informative_name[512];
+extern char region_allocation_logfile_name[512];
 
 extern char clustering_bounding_boxes_logfile_name[512];
 extern char scores_map_logfile_name[512];

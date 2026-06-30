@@ -11,8 +11,8 @@ simulation:
   map_nbr: 0
 
 robot:
-  number_of_robots: 1
-  ID_list: [103]
+  number_of_robots: 2
+  ID_list: [103,105]
   vel_factor: 10
   wheel_speed: 400
 
@@ -79,7 +79,7 @@ wind:
     windBeliefWeight: 1.0
 
 planning:
-  planningStrategy: BELIEF_CLUSTERING
+  planningStrategy: INFO_CENTER
   visitedList: visitedList_ON
   infoFeature: PDF
   scoreFun: EXP
@@ -94,8 +94,8 @@ planning:
 
 team:
   teamStrategy: DISTRIBUTED
-  mapCoverageStrategy: NONE
-  mapCoverageSeed: MAX_CELL
+  mapCoverageStrategy: REGION_GROWING_D
+  mapCoverageSeed: ROBOT_CELL
   epsilon_clusterize: 1e-9
 
 termination:

@@ -45,15 +45,14 @@ FILE* measurement_history_logfile;
 FILE* position_history_logfile;
 FILE* visited_list_logfile;
 FILE* max_a_posteriori_logfile;
-FILE* posterior_pdf_3D;
+FILE* posterior_pdf;
+FILE* merged_pdf;
 FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* baseline_measurements_logfile;
-FILE* posterior_pdf_3D_cluster;
-FILE* cluster_sizes_geometric;
-FILE* cluster_sizes_informative;
+FILE* region_allocation_logfile;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
@@ -68,15 +67,14 @@ char max_a_posteriori_logfile_name[256];
 char likelihood_logfile_name[256];
 char measurement_history_logfile_name[256];
 char position_history_logfile_name[256];
-char posterior_pdf_3D_name[256];
+char posterior_pdf_logfile_name[256];
+char merged_pdf_logfile_name[256];
 char entropy_logfile_name[256];
 char config_logfile_name[256];
 char trajectory_logfile_name[256];
 char baseline_measurements_logfile_name[256];
 char visited_list_logfile_name[256];
-char posterior_pdf_3D_cluster_name[512];
-char cluster_sizes_geometric_name[512];
-char cluster_sizes_informative_name[512];
+char region_allocation_logfile_name[512];
 char clustering_bounding_boxes_logfile_name[512];
 char gas_information_map_logfile_name[512];
 char scores_map_logfile_name[512];
@@ -567,8 +565,6 @@ void log_history(){
 	fclose(measurement_history_logfile);
 	logged_history_size = history.size;
    
-	//posterior 3D
-	//posterior->log_pdf(posterior_pdf_3D_name, 'w');
 }
 
 void log_visited_list(){
@@ -796,7 +792,7 @@ void state_estimating(){
 
 	// printf("sum posterior : %f \n", posterior->sum);
 	posterior->normalize();
-	posterior->log_pdf(posterior_pdf_3D_name, 'a');
+	posterior->log_pdf(posterior_pdf_logfile_name, 'a');
 
 	FSM.n_cycles++;
 	if (VERBOSE)
@@ -1216,7 +1212,7 @@ void state_region_allocation()
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
-		posterior->log_pdf(posterior_pdf_3D_name, 'a');
+		posterior->log_pdf(merged_pdf_logfile_name, 'a');
 		if (region_allocator)
 			region_allocator->region_allocation_algorithm();
 		FSM.state = STATE_UPDATEGOAL;

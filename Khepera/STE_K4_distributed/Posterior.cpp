@@ -650,16 +650,16 @@ void Posterior::log_pdf(const char *file_name, char writing_mode)
 {
 	int i = 0;
 	const char mode[2] = {writing_mode, '\0'};
-	FILE *posterior_pdf_3D = fopen(file_name, mode);
-	if (posterior_pdf_3D == NULL)
+	FILE *posterior_pdf = fopen(file_name, mode);
+	if (posterior_pdf == NULL)
 		return;
 
 	for (i = 0; i < nbr_element - 1; i++)
-		fprintf(posterior_pdf_3D, "%.9f, ", pdf[i]);
+		fprintf(posterior_pdf, "%.9f, ", pdf[i]);
 
-	fprintf(posterior_pdf_3D, "%.9f\n", pdf[nbr_element - 1]);
+	fprintf(posterior_pdf, "%.9f\n", pdf[nbr_element - 1]);
 
-	fclose(posterior_pdf_3D);
+	fclose(posterior_pdf);
 }
 
 void Posterior::log_relative_history_meas(const char *file_name, const char writing_mode, const vector<float> rel_history_meas)
