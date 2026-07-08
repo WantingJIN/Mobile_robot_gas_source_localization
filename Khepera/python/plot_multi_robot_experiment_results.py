@@ -37,7 +37,7 @@ from matplotlib.lines import Line2D
 
 DEFAULT_ROOT = Path(
     "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/"
-    "Results_2026-06-29/15-20"
+    "Results_2026-06-30/11-50"
 )
 
 ROBOT_COLORS = [
@@ -50,6 +50,22 @@ ROBOT_COLORS = [
 ]
 DARK_GRAY = "#3a3a3a"
 EPS = 1e-12
+
+TITLE_FONT_SIZE = 14
+SUPTITLE_FONT_SIZE = 18
+AXIS_LABEL_SIZE = 13
+TICK_LABEL_SIZE = 11
+LEGEND_FONT_SIZE = 10
+COLORBAR_LABEL_SIZE = 12
+COLORBAR_TICK_SIZE = 11
+SOURCE_MARKER_SIZE = 15
+TRAJECTORY_SCATTER_SIZE = 38
+TRAJECTORY_LINE_WIDTH = 2.8
+TRAJECTORY_GUIDE_LINE_WIDTH = 1.7
+START_MARKER_SIZE = 80
+CURRENT_MARKER_SIZE = 90
+GOAL_MARKER_SIZE = 120
+LEGEND_MARKER_SIZE = 8
 
 
 @dataclass(frozen=True)
@@ -76,6 +92,7 @@ class RobotLog:
     folder: Path
     positions: np.ndarray
     gas: np.ndarray
+    goal_positions: np.ndarray | None
     posterior: np.ndarray
     merged: np.ndarray | None
     region_allocation: np.ndarray | None
@@ -206,6 +223,7 @@ def discover_robot_dirs(k_dir: Path) -> list[Path]:
 def load_robot_log(folder: Path) -> RobotLog:
     positions_raw = load_csv(folder / "position_history.csv")
     measurements = load_csv(folder / "measurement_history.csv")
+    goal_positions_raw = load_csv(folder / "goal_position.csv", required=False)
     posterior = load_csv(folder / "posterior_pdf.csv")
     merged = load_csv(folder / "merged_pdf.csv", required=False)
     region_allocation = load_csv(folder / "region_allocation.csv", required=False)
@@ -226,11 +244,21 @@ def load_robot_log(folder: Path) -> RobotLog:
     positions = positions_raw[:n_history, 1:3]
     gas = measurements[:n_history, 1]
 
+    goal_positions = None
+    if goal_positions_raw is not None:
+        if goal_positions_raw.shape[1] >= 3:
+            goal_positions = goal_positions_raw[:, 1:3]
+        elif goal_positions_raw.shape[1] == 2:
+            goal_positions = goal_positions_raw[:, :2]
+        else:
+            raise ValueError(f"Expected x,y in {folder / 'goal_position.csv'}")
+
     return RobotLog(
         name=folder.name.replace("log_STE_multi_", "Robot "),
         folder=folder,
         positions=positions,
         gas=gas,
+        goal_positions=goal_positions,
         posterior=posterior,
         merged=merged,
         region_allocation=region_allocation,
@@ -290,7 +318,7 @@ def make_line_collection(points: np.ndarray, values: np.ndarray, norm: Normalize
         return LineCollection([], cmap=cmap, norm=norm)
 
     segments = np.stack([points[:-1], points[1:]], axis=1)
-    collection = LineCollection(segments, cmap=cmap, norm=norm, linewidths=2.2, alpha=0.75)
+    collection = LineCollection(segments, cmap=cmap, norm=norm, linewidths=TRAJECTORY_LINE_WIDTH, alpha=0.75)
     collection.set_array(values[:-1])
     return collection
 
@@ -311,18 +339,19 @@ def style_map_ax(
             source_xy[0],
             source_xy[1],
             "*",
-            markersize=11,
+            markersize=SOURCE_MARKER_SIZE,
             markerfacecolor="black",
             markeredgecolor="white",
-            markeredgewidth=0.6,
+            markeredgewidth=0.8,
             zorder=8,
         )
 
     ax.set_xlim(grid.x_min, grid.x_max)
     ax.set_ylim(grid.y_min, grid.y_max)
     ax.set_aspect("equal", adjustable="box")
-    ax.set_xlabel("x (m)")
-    ax.set_ylabel("y (m)")
+    ax.set_xlabel("x (m)", fontsize=AXIS_LABEL_SIZE)
+    ax.set_ylabel("y (m)", fontsize=AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_SIZE)
     ax.grid(True, alpha=0.18, linewidth=0.5)
 
 
@@ -367,23 +396,27 @@ class ExperimentViewer:
         self.n_iterations = self._count_iterations()
         self.gas_norm = self._gas_norm()
 
-        n_cols = max(len(robots) + 1, 4)
-        self.fig = plt.figure(figsize=(6.6 * n_cols * fig_scale, 11.0 * fig_scale), constrained_layout=True)
-        gs = self.fig.add_gridspec(2, n_cols)
+        n_robot_cols = max(len(robots), 1)
+        n_panel_cols = max(n_robot_cols, 4)
+        n_grid_cols = 4 * n_robot_cols // math.gcd(4, n_robot_cols)
+        self.fig = plt.figure(figsize=(6.2 * n_panel_cols * fig_scale, 15.0 * fig_scale), constrained_layout=True)
+        gs = self.fig.add_gridspec(3, n_grid_cols)
 
-        self.ax_traj = self.fig.add_subplot(gs[0, 0])
-        self.ax_beliefs = [self.fig.add_subplot(gs[0, idx + 1]) for idx in range(len(robots))]
-        for col in range(len(robots) + 1, n_cols):
-            ax = self.fig.add_subplot(gs[0, col])
-            ax.axis("off")
+        robot_edges = np.linspace(0, n_grid_cols, len(robots) + 1, dtype=int)
+        self.ax_trajectories = [
+            self.fig.add_subplot(gs[0, robot_edges[idx] : robot_edges[idx + 1]])
+            for idx in range(len(robots))
+        ]
+        self.ax_beliefs = [
+            self.fig.add_subplot(gs[1, robot_edges[idx] : robot_edges[idx + 1]])
+            for idx in range(len(robots))
+        ]
 
-        self.ax_merged = self.fig.add_subplot(gs[1, 0])
-        self.ax_region = self.fig.add_subplot(gs[1, 1])
-        self.ax_wind = self.fig.add_subplot(gs[1, 2])
-        self.ax_uncertainty = self.fig.add_subplot(gs[1, 3])
-        for col in range(4, n_cols):
-            ax = self.fig.add_subplot(gs[1, col])
-            ax.axis("off")
+        panel_edges = np.linspace(0, n_grid_cols, 5, dtype=int)
+        self.ax_merged = self.fig.add_subplot(gs[2, panel_edges[0] : panel_edges[1]])
+        self.ax_region = self.fig.add_subplot(gs[2, panel_edges[1] : panel_edges[2]])
+        self.ax_wind = self.fig.add_subplot(gs[2, panel_edges[2] : panel_edges[3]])
+        self.ax_uncertainty = self.fig.add_subplot(gs[2, panel_edges[3] : panel_edges[4]])
 
         self.colorbars = []
         self.fig.canvas.mpl_connect("key_press_event", self.on_key)
@@ -411,7 +444,17 @@ class ExperimentViewer:
     def history_end_index(self, robot: RobotLog) -> int:
         if self.history_mode == "full":
             return len(robot.positions)
-        return max(1, math.ceil((self.iteration + 1) * len(robot.positions) / self.n_iterations))
+
+        goal_xy = self.robot_goal_xy(robot)
+        if goal_xy is not None and len(robot.positions) > 0:
+            target = np.asarray(goal_xy, dtype=float)
+            distances = np.linalg.norm(robot.positions - target, axis=1)
+            valid_indices = np.flatnonzero(np.isfinite(distances))
+            if valid_indices.size > 0:
+                nearest = valid_indices[np.argmin(distances[valid_indices])]
+                return int(nearest + 1)
+
+        return max(1, math.ceil(self.iteration * len(robot.positions) / self.n_iterations))
 
     def merged_row(self) -> np.ndarray | None:
         candidates = [row_at(robot.merged, self.iteration) for robot in self.robots if robot.merged is not None]
@@ -430,6 +473,22 @@ class ExperimentViewer:
                 return row[2:]
             if row.size == expected_cells:
                 return row
+        return None
+
+    def robot_goal_xy(self, robot: RobotLog) -> tuple[float, float] | None:
+        goal = row_at(robot.goal_positions, self.iteration)
+        if goal is not None and goal.size >= 2 and np.all(np.isfinite(goal[:2])):
+            return float(goal[0]), float(goal[1])
+
+        expected_cells = self.grid.nx * self.grid.ny
+        allocation = row_at(robot.region_allocation, self.iteration)
+        if (
+            allocation is not None
+            and allocation.size == expected_cells + 2
+            and np.all(np.isfinite(allocation[:2]))
+        ):
+            return float(allocation[0]), float(allocation[1])
+
         return None
 
     def wind_rows(self) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
@@ -462,7 +521,7 @@ class ExperimentViewer:
 
     def draw(self) -> None:
         self.clear_colorbars()
-        self.draw_trajectory()
+        self.draw_trajectories()
         self.draw_individual_beliefs()
         self.draw_merged_belief()
         self.draw_region_allocation()
@@ -470,7 +529,7 @@ class ExperimentViewer:
 
         self.fig.suptitle(
             f"Multi-robot experiment - iteration {self.iteration + 1}/{self.n_iterations}",
-            fontsize=16,
+            fontsize=SUPTITLE_FONT_SIZE,
             fontweight="bold",
         )
         self.fig.canvas.draw_idle()
@@ -483,25 +542,33 @@ class ExperimentViewer:
                 pass
         self.colorbars = []
 
-    def add_colorbar(self, mappable, ax: plt.Axes, **kwargs):
+    def add_colorbar(self, mappable, ax, **kwargs):
         colorbar = self.fig.colorbar(mappable, ax=ax, **kwargs)
+        colorbar.ax.tick_params(labelsize=COLORBAR_TICK_SIZE)
+        colorbar.ax.yaxis.label.set_size(COLORBAR_LABEL_SIZE)
         self.colorbars.append(colorbar)
         return colorbar
 
-    def draw_trajectory(self) -> None:
-        ax = self.ax_traj
-        ax.clear()
-        style_map_ax(ax, self.grid, self.source_xy, self.obstacles)
-        ax.set_title("Robot Trajectories and Gas", fontweight="bold")
+    def draw_trajectories(self) -> None:
+        for idx, (ax, robot) in enumerate(zip(self.ax_trajectories, self.robots)):
+            ax.clear()
+            style_map_ax(ax, self.grid, self.source_xy, self.obstacles)
+            ax.set_title(f"{robot.name} Trajectory and Gas", fontsize=TITLE_FONT_SIZE, fontweight="bold")
 
-        for idx, robot in enumerate(self.robots):
             end = self.history_end_index(robot)
             points = robot.positions[:end]
             gas = robot.gas[:end]
             color = ROBOT_COLORS[idx % len(ROBOT_COLORS)]
 
             if len(points) >= 2:
-                ax.plot(points[:, 0], points[:, 1], color=color, linewidth=1.2, alpha=0.7, zorder=2)
+                ax.plot(
+                    points[:, 0],
+                    points[:, 1],
+                    color=color,
+                    linewidth=TRAJECTORY_GUIDE_LINE_WIDTH,
+                    alpha=0.7,
+                    zorder=2,
+                )
                 ax.add_collection(make_line_collection(points, gas, self.gas_norm, "viridis"))
 
             if len(points) > 0:
@@ -511,40 +578,59 @@ class ExperimentViewer:
                     c=gas,
                     cmap="viridis",
                     norm=self.gas_norm,
-                    s=20,
+                    s=TRAJECTORY_SCATTER_SIZE,
                     edgecolors="#222222",
-                    linewidths=0.25,
+                    linewidths=0.35,
                     zorder=4,
                 )
                 ax.scatter(
                     points[0, 0],
                     points[0, 1],
                     marker="o",
-                    s=42,
+                    s=START_MARKER_SIZE,
                     color=color,
                     edgecolors="black",
-                    linewidths=0.7,
+                    linewidths=0.9,
                     zorder=6,
                 )
                 ax.scatter(
                     points[-1, 0],
                     points[-1, 1],
                     marker="s",
-                    s=48,
+                    s=CURRENT_MARKER_SIZE,
                     color=color,
                     edgecolors="black",
-                    linewidths=0.7,
+                    linewidths=0.9,
                     zorder=6,
                 )
 
         handles = [
-            Line2D([0], [0], color=ROBOT_COLORS[i % len(ROBOT_COLORS)], lw=2, label=robot.name)
-            for i, robot in enumerate(self.robots)
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="w",
+                markerfacecolor="#bbbbbb",
+                markeredgecolor="black",
+                markersize=LEGEND_MARKER_SIZE,
+                label="Start",
+            ),
+            Line2D(
+                [0],
+                [0],
+                marker="s",
+                color="w",
+                markerfacecolor="#bbbbbb",
+                markeredgecolor="black",
+                markersize=LEGEND_MARKER_SIZE,
+                label="Current",
+            ),
         ]
-        ax.legend(handles=handles, loc="upper right", fontsize=9, framealpha=0.9)
+        for ax in self.ax_trajectories:
+            ax.legend(handles=handles, loc="upper right", fontsize=LEGEND_FONT_SIZE, framealpha=0.9)
 
         mappable = plt.cm.ScalarMappable(norm=self.gas_norm, cmap="viridis")
-        self.add_colorbar(mappable, ax=ax, fraction=0.046, pad=0.03, label="Gas measurement")
+        self.add_colorbar(mappable, ax=self.ax_trajectories, fraction=0.025, pad=0.02, label="Gas measurement")
 
     def draw_individual_beliefs(self) -> None:
         for idx, (ax, robot) in enumerate(zip(self.ax_beliefs, self.robots)):
@@ -562,7 +648,7 @@ class ExperimentViewer:
                 zorder=1,
             )
             style_map_ax(ax, self.grid, self.source_xy, self.obstacles)
-            ax.set_title(f"{robot.name} Belief", fontweight="bold")
+            ax.set_title(f"{robot.name} Belief", fontsize=TITLE_FONT_SIZE, fontweight="bold")
             self.add_colorbar(mesh, ax=ax, fraction=0.046, pad=0.03, ticks=[0, 1])
 
     def draw_merged_belief(self) -> None:
@@ -587,7 +673,7 @@ class ExperimentViewer:
             zorder=1,
         )
         style_map_ax(ax, self.grid, self.source_xy, self.obstacles)
-        ax.set_title("Merged Belief Map", fontweight="bold")
+        ax.set_title("Merged Belief Map", fontsize=TITLE_FONT_SIZE, fontweight="bold")
         self.add_colorbar(mesh, ax=ax, fraction=0.046, pad=0.03, ticks=[0, 1])
 
     def draw_region_allocation(self) -> None:
@@ -597,7 +683,7 @@ class ExperimentViewer:
         if allocation is None:
             ax.text(0.5, 0.5, "No region_allocation.csv", ha="center", va="center", transform=ax.transAxes)
             ax.set_axis_off()
-            ax.set_title("Region Allocation", fontweight="bold")
+            ax.set_title("Region Allocation", fontsize=TITLE_FONT_SIZE, fontweight="bold")
             return
 
         allocation_map = reshape_map(np.rint(allocation).astype(int), self.grid)
@@ -612,7 +698,7 @@ class ExperimentViewer:
             zorder=1,
         )
         style_map_ax(ax, self.grid, self.source_xy, self.obstacles)
-        ax.set_title("Region Allocation", fontweight="bold")
+        ax.set_title("Region Allocation", fontsize=TITLE_FONT_SIZE, fontweight="bold")
 
         handles = [
             mpatches.Patch(facecolor="#f0f0f0", edgecolor="#777777", label="Unassigned")
@@ -625,7 +711,40 @@ class ExperimentViewer:
             )
             for idx, robot in enumerate(self.robots)
         )
-        ax.legend(handles=handles, loc="upper right", fontsize=8, framealpha=0.9)
+
+        goal_handles: list[Line2D] = []
+        for idx, robot in enumerate(self.robots):
+            goal_xy = self.robot_goal_xy(robot)
+            if goal_xy is None:
+                continue
+
+            color = ROBOT_COLORS[idx % len(ROBOT_COLORS)]
+            ax.scatter(
+                goal_xy[0],
+                goal_xy[1],
+                marker="D",
+                s=GOAL_MARKER_SIZE,
+                facecolor=color,
+                edgecolor="black",
+                linewidth=1.0,
+                zorder=9,
+            )
+            goal_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="D",
+                    linestyle="None",
+                    markerfacecolor=color,
+                    markeredgecolor="black",
+                    markeredgewidth=1.0,
+                    markersize=LEGEND_MARKER_SIZE,
+                    label=f"{robot.name} goal",
+                )
+            )
+
+        handles.extend(goal_handles)
+        ax.legend(handles=handles, loc="upper right", fontsize=LEGEND_FONT_SIZE, framealpha=0.9)
 
     def draw_wind(self) -> None:
         self.ax_wind.clear()
@@ -638,7 +757,7 @@ class ExperimentViewer:
             ):
                 ax.text(0.5, 0.5, "No wind_field_*.csv", ha="center", va="center", transform=ax.transAxes)
                 ax.set_axis_off()
-                ax.set_title(title, fontweight="bold")
+                ax.set_title(title, fontsize=TITLE_FONT_SIZE, fontweight="bold")
             return
 
         u_flat, v_flat, w_flat = wind
@@ -674,7 +793,7 @@ class ExperimentViewer:
             zorder=4,
         )
         style_map_ax(self.ax_wind, self.grid, self.source_xy, self.obstacles)
-        self.ax_wind.set_title("Estimated Wind Field", fontweight="bold")
+        self.ax_wind.set_title("Estimated Wind Field", fontsize=TITLE_FONT_SIZE, fontweight="bold")
         self.add_colorbar(wind_mesh, ax=self.ax_wind, fraction=0.046, pad=0.03, label="Wind speed")
 
         if self.uncertainty_mode == "inverse":
@@ -693,7 +812,7 @@ class ExperimentViewer:
             zorder=1,
         )
         style_map_ax(self.ax_uncertainty, self.grid, self.source_xy, self.obstacles)
-        self.ax_uncertainty.set_title("Wind Uncertainty", fontweight="bold")
+        self.ax_uncertainty.set_title("Wind Uncertainty", fontsize=TITLE_FONT_SIZE, fontweight="bold")
         self.add_colorbar(uncert_mesh, ax=self.ax_uncertainty, fraction=0.046, pad=0.03, label=label)
 
     def on_key(self, event) -> None:

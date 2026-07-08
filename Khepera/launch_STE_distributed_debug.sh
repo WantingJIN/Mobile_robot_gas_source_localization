@@ -1,7 +1,7 @@
 #!/bin/bash
 # NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
-ID_list=(103)
+ID_list=(102 105)
 source_position="11 2"
 session_name="robots_view"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,12 +19,12 @@ runtime_libs=("$superlu_lib" "$blas_lib")
 # ---------------------------------------- #
 
 #set the map number
-map=0
+map=9
 echo "+++ Map number $map +++"
 
 cp $STE_DDPM_ROOT/Khepera/Data/Env_map/test_map"$map".environment $STE_DDPM_ROOT/Khepera/Data/test_map.environment
 cp $STE_DDPM_ROOT/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt
-cp $STE_DDPM_ROOT/Khepera/Data/DeepCFD_result/gas_concentration_maps_"$map".csv $STE_DDPM_ROOT/Khepera/Data/gas_concentration_maps.csv
+#cp $STE_DDPM_ROOT/Khepera/Data/DeepCFD_result/gas_concentration_maps_"$map".csv $STE_DDPM_ROOT/Khepera/Data/gas_concentration_maps.csv
 
 
 

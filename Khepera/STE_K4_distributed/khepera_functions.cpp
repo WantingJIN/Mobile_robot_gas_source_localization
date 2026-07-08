@@ -239,13 +239,12 @@ void establish_baseline(){
 			if (sorted_ids[j] == ID) { robot_rank = j; break; }
 		}
 	}
-    goal_position.x = 3 + robot_rank;
+    goal_position.x = 3 + robot_rank*0.5;
 
     //stop every 35 cm to make a measurement 
     for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.5){
     	//move until reached
     	 while (dist_to_goal(goal_position)>0.05){
-        	//updateSwisTrack(current_position);
             updateCortexPos(&current_position);
         	go_to_goal(goal_position);  
         	//if obstacle, avoid

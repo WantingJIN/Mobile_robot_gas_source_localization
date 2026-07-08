@@ -8,11 +8,11 @@
 simulation:
   workMode: EXPERIMENT
   scenario: NO_COM_NO_COOR
-  map_nbr: 0
+  map_nbr: 9
 
 robot:
   number_of_robots: 2
-  ID_list: [103,105]
+  ID_list: [102,105]
   vel_factor: 10
   wheel_speed: 400
 
@@ -38,7 +38,7 @@ gas_feature:
   ABSOLUTE_VALUE:
     likelihoodSigma: 1
   RELATIVE_VALUE:
-    relativeMethod: EMPIRICAL_CDF
+    relativeMethod: Z_SCORE
     NORMALIZATION:
       likelihoodSigma: 1
     Z_SCORE:
@@ -79,7 +79,7 @@ wind:
     windBeliefWeight: 1.0
 
 planning:
-  planningStrategy: INFO_CENTER
+  planningStrategy: BELIEF_CLUSTERING
   visitedList: visitedList_ON
   infoFeature: PDF
   scoreFun: EXP
