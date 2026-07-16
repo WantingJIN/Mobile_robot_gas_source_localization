@@ -29,8 +29,44 @@ set_yaml_value() {
 nbr_source_pos=10
 source_pos_y_min=0.5
 source_pos_y_max=3.5
+
+# source_pos_x_min=4
+# source_pos_x_max=11.5
 source_pos_x_min=10
-source_pos_x_max=12
+source_pos_x_max=12.7
+
+
+
+# Return the k-th of n deterministic positions on an X.  The first position is
+# the centre; the remaining positions are spread evenly over the four arms,
+# with the last position on each used arm reaching a corner of the bounds.
+x_source_position() {
+	awk -v k="$1" -v n="$2" \
+		-v xmin="$source_pos_x_min" -v xmax="$source_pos_x_max" \
+		-v ymin="$source_pos_y_min" -v ymax="$source_pos_y_max" '
+	BEGIN {
+		xmid = (xmin + xmax) / 2
+		ymid = (ymin + ymax) / 2
+		if (n <= 1 || k <= 1) {
+			printf "%.6f %.6f\n", xmid, ymid
+			exit
+		}
+
+		point = k - 2
+		arm = point % 4
+		layer = int(point / 4) + 1
+		arm_count = int((n - 2 - arm) / 4) + 1
+		radius = layer / arm_count
+		xsign = (arm < 2) ? 1 : -1
+		ysign = (arm == 0 || arm == 3) ? 1 : -1
+
+		x = xmid + xsign * radius * (xmax - xmin) / 2
+		y = ymid + ysign * radius * (ymax - ymin) / 2
+		printf "%.6f %.6f\n", x, y
+	}'
+}
+
+
 
 random_between() {
     local min="$1"
@@ -90,7 +126,7 @@ do
                 echo "Use random source positions at x boundary: $source_pos_x_max"
                 ;;
             source_in_middle)
-                echo "Use random source positions inside x range: [$source_pos_x_min, $source_pos_x_max]"
+                echo "Use deterministic X-shaped source positions inside bounds: x=[$source_pos_x_min, $source_pos_x_max], y=[$source_pos_y_min, $source_pos_y_max]"
                 ;;
             *)
                 echo "Unknown source_position_mode: $source_position_mode" >&2
@@ -161,8 +197,7 @@ do
                     source_pos_y=$(random_between "$source_pos_y_min" "$source_pos_y_max")
                     ;;
                 source_in_middle)
-                    source_pos_x=$(random_between "$source_pos_x_min" "$source_pos_x_max")
-                    source_pos_y=$(random_between "$source_pos_y_min" "$source_pos_y_max")
+                    read -r source_pos_x source_pos_y <<< "$(x_source_position "$k" "$nbr_source_pos")"
                     ;;
                 source_from_file)
                     if [ "$source_locations_count" -gt 0 ]; then
@@ -177,7 +212,7 @@ do
             echo $source_pos_x $source_pos_y > $source_pos_filename
             $webots '--minimize' '--mode=fast' $webots_folder'/worlds/WT_test_maps.wbt' &> wb_output.txt
             now=$(date +"%T")
-            echo "map $m  k $k  release $r  end time $now"
+            echo "map $m  k $k end time $now"
         done
 
         # -- close sweep loops in the same order as opened (uncomment matching done lines) --
