@@ -203,6 +203,8 @@ void DBSCAN::calculateBoundingBoxes()
 void DBSCAN::logBoundingBoxes()
 {
 	clustering_bounding_boxes_logfile = fopen(clustering_bounding_boxes_logfile_name, "a");
+	if (clustering_bounding_boxes_logfile == NULL)
+		return;
 
 	for (vector<pair<CellPoint, CellPoint>>::iterator iter = cluster_bounding_boxes.begin(); iter != cluster_bounding_boxes.end(); iter++)
 	{

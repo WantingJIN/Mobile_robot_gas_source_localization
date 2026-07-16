@@ -16,7 +16,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <Eigen/Sparse>
-#include <Eigen/SparseLU>
+#include <Eigen/SuperLUSupport>
 #include "CellMeasurements.h"
 #include "GasDispersionMap.h"
 #include "SimulationParameters.h"
@@ -246,7 +246,7 @@ private:
 	float source_strength_;
 	WindEstimator *wind_estimator_;
 	SpMat A_;
-	mutable Eigen::SparseLU<SpMat> solver_;
+	mutable Eigen::SuperLU<SpMat> solver_;
 	bool fact_ok_;
 	std::vector<float> u_;
 	std::vector<float> v_;
@@ -267,6 +267,7 @@ private:
 	                      int Nx, int Ny);
 	void assemble_and_factorize();
 	std::vector<float> solve_point_source(float sx, float sy) const;
+	void calculate_gas_concentration_maps_batched();
 	void rebuild_cell_measurements();
 	int grid_indices_to_idx(int i, int j) const { return i + Nx_ * j; }
 	void world_pos_to_grid_indices(float x, float y, int &i, int &j) const;

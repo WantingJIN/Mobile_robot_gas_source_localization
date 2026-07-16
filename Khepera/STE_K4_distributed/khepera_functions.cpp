@@ -9,6 +9,11 @@ float odor_baseline_value = 0;
 sMsg STmsg;
 sUdpMsg udp_msgR;
 static int broadcastR = 1;
+static sVector3d robot_velocity_mcs = {0.0, 0.0, 0.0};
+static Position last_mcs_velocity_position;
+static long long last_mcs_velocity_timestamp = 0;
+static bool has_last_mcs_velocity_position = false;
+static constexpr float MAX_VALID_WIND_INTENSITY = 3.0f;
 
 void init(){
 	if(VERBOSE) printf("initialization\n");
@@ -22,9 +27,11 @@ void init(){
 	//get ID from file
 	if(access("ID.txt", F_OK) != -1 ){
 		FILE * ID_file = fopen("ID.txt", "r");
-		int ok = fscanf(ID_file, "%d", &ID);
-		if(ok) printf("My ID is %d\n", ID);
-		fclose(ID_file);
+		if (ID_file != NULL) {
+			int ok = fscanf(ID_file, "%d", &ID);
+			if(ok) printf("My ID is %d\n", ID);
+			fclose(ID_file);
+		}
 	}
 	
 	// seed the RNG with both time and robot ID to ensure different sequences across robots
@@ -48,7 +55,6 @@ void init(){
     udp_msg_init(3000, ID);
     //initCommSwisTrack();
     initCortexComm();
-    initCommRobot();
 
     // Initialise infrared
     khepera4_infrared_init();
@@ -58,9 +64,6 @@ void init(){
     //updateSwisTrack(current_position);
     updateCortexPos(&current_position);
 
-	//set the state to wait for stationary plume
-	FSM.state = STATE_WAITFORPLUME;
-	FSM.hook  = state_waiting;
 	FSM.n_cycles = 0;
 
 
@@ -79,18 +82,20 @@ void init(){
     set_logfile_names();
     // set the simulation parameters
     // load the simulation parameters
-    simulation_parameters.load_simulation_parameters_from_config("/home/root/wanting/config.txt");
+    simulation_parameters.load_simulation_parameters_from_config("/home/root/wanting/config.yaml");
     simulation_parameters.read_mapID_from_file();
 
 	//read simulation parameters
 	FILE* sim_param_file;
 	int ok = 0;
     float real_source_position[2]={0};
-    if(access("/home/root/wanting/source_location.txt", F_OK) != -1 ){
+    if(access("/home/root/wanting/source_position.txt", F_OK) != -1 ){
        sim_param_file = fopen("/home/root/wanting/source_position.txt", "r");
-       ok = fscanf(sim_param_file, "%f %f", &real_source_position[0], &real_source_position[1]);
-       if(ok) printf("source position : %f %f\n", real_source_position[0], real_source_position[1]);
-       fclose(sim_param_file);
+       if (sim_param_file != NULL) {
+           ok = fscanf(sim_param_file, "%f %f", &real_source_position[0], &real_source_position[1]);
+           if(ok) printf("source position : %f %f\n", real_source_position[0], real_source_position[1]);
+           fclose(sim_param_file);
+       }
     }
 
 	printf("Number of robots : %d - scenario : %d \n", simulation_parameters.number_of_robots, simulation_parameters.scenario);
@@ -98,8 +103,12 @@ void init(){
 	//write the simulation parameters
 	sprintf(config_logfile_name, "%s/param_log.csv", folder_name);
 	sim_param_file = fopen(config_logfile_name, "w");
+	if (sim_param_file == NULL) {
+		fprintf(stderr, "Error opening parameter log file: %s\n", config_logfile_name);
+		exit(1);
+	}
 	fprintf(sim_param_file, "nbins %d %d %d %d %d\n", Q_nbins, x_nbins, y_nbins, a_y_nbins, b_y_nbins);
-	fprintf(sim_param_file, "min_maxs %d %d %f %f %d %d %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
+	fprintf(sim_param_file, "min_maxs %f %f %f %f %f %f %f %f %f %f\n", Q_min, Q_max, source_x_min, source_x_max, source_y_min, source_y_max, a_y_min, a_y_max, b_y_min, b_y_max);
     fprintf(sim_param_file, "source_position %f %f %f\n", real_source_position[0], real_source_position[1], 0.1);
     fprintf(sim_param_file, "ID %d\n", ID);
     fclose(sim_param_file);
@@ -107,8 +116,23 @@ void init(){
     simulation_parameters.log_simulation_parameters(config_logfile_name);
     
     self_index = find_index_in_ID_list(ID, simulation_parameters.ID_list);
+    if (simulation_parameters.number_of_robots < 1 || simulation_parameters.number_of_robots > MAX_NB_ROBOTS) {
+        fprintf(stderr, "Invalid number_of_robots: %d (supported range is 1..%d)\n",
+                simulation_parameters.number_of_robots, MAX_NB_ROBOTS);
+        exit(1);
+    }
+    if ((int)simulation_parameters.ID_list.size() < simulation_parameters.number_of_robots) {
+        fprintf(stderr, "ID_list has %zu entries, but number_of_robots is %d\n",
+                simulation_parameters.ID_list.size(), simulation_parameters.number_of_robots);
+        exit(1);
+    }
+    if (simulation_parameters.teamStrategy == DISTRIBUTED &&
+        (self_index < 0 || self_index >= simulation_parameters.number_of_robots)) {
+        fprintf(stderr, "Robot ID %d is not in the active ID_list entries for distributed mode\n", ID);
+        exit(1);
+    }
     
-}
+	}
 
 void set_logfile_names(){
 
@@ -120,10 +144,9 @@ void set_logfile_names(){
 	sprintf(likelihood_logfile_name, "%s/likelihood_comparison.csv", folder_name);
 	sprintf(measurement_history_logfile_name, "%s/measurement_history.csv", folder_name);
 	sprintf(position_history_logfile_name, "%s/position_history.csv", folder_name);
-	sprintf(posterior_pdf_3D_name, "%s/posterior_pdf_3D.csv", folder_name);
-	sprintf(posterior_pdf_3D_cluster_name, "%s/posterior_pdf_3D_cluster.csv", folder_name);
-	sprintf(cluster_sizes_geometric_name, "%s/cluster_sizes_geometric.csv", folder_name);
-	sprintf(cluster_sizes_informative_name, "%s/cluster_sizes_informative.csv", folder_name);
+	sprintf(posterior_pdf_logfile_name, "%s/posterior_pdf.csv", folder_name);
+	sprintf(merged_pdf_logfile_name, "%s/merged_pdf.csv", folder_name);
+    sprintf(region_allocation_logfile_name, "%s/region_allocation.csv", folder_name);
 	sprintf(gas_concentration_maps_log_root, "%s/gas_concentration_maps", folder_name);
 	sprintf(wind_field_u_logfile_name, "%s/wind_field_u.csv", folder_name);
 	sprintf(wind_field_v_logfile_name, "%s/wind_field_v.csv", folder_name);
@@ -199,37 +222,6 @@ int initCortexComm(){
     return 0;
 }
 
-void initCommRobot(){
-//   	udp_msgR.myID = ID;
-//   	udp_msgR.len = sizeof(float)*12;
-
-//   	//initialize receiver
-//   	memset(&udp_msgR.rcv.address, 0, sizeof (udp_msgR.rcv.address));
-//   	udp_msgR.rcv.address.sin_family = AF_INET;
-//   	udp_msgR.rcv.address.sin_port = htons(3010);
-//   	udp_msgR.rcv.address.sin_addr.s_addr = htonl(INADDR_ANY);
-
-//   	//create and bind to socket
-//   	udp_msgR.rcv.sock = socket(AF_INET, SOCK_DGRAM, 0);
-// 	//if (setsockopt(udp_msgR.rcv.sock, SOL_SOCKET, SO_REUSEADDR, (void*) &broadcastR, sizeof (broadcastR)) <0)
-//    		//fail_with_error("no reuse \n");
-//   	if (udp_msgR.rcv.sock < 0)
-//     	fail_with_error("Unable to create receiver socket");
-//   	fcntl(udp_msgR.rcv.sock, F_SETFL, O_NONBLOCK);
-//   	if (bind(udp_msgR.rcv.sock, (struct sockaddr*) &udp_msgR.rcv.address, sizeof (udp_msgR.rcv.address)))
-//     	fail_with_error("Bind failed robot");
-
-//   	//initialize sender
-//   	memset(&udp_msgR.snd.address, 0, sizeof (udp_msgR.snd.address));
-//   	udp_msgR.snd.address.sin_family = AF_INET;
-//   	udp_msgR.snd.address.sin_port = htons(3010);
-//   	udp_msgR.snd.address.sin_addr.s_addr = inet_addr("192.168.1.255");
-//   	udp_msgR.snd.sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-//   	if (setsockopt(udp_msgR.snd.sock, SOL_SOCKET, SO_BROADCAST, (void*) &broadcastR, sizeof (broadcastR)) < 0)
-//     	fail_with_error("Unable to set broadcast option");
-}
-
 void establish_baseline(){
     float current_odor = 0;
     float min=10000000.0, max=0.0;
@@ -238,13 +230,21 @@ void establish_baseline(){
     printf("[%d] Establishing the odor baseline ... \n", ID);
 
     //starting point at the begining of the map to establish the baseline
-    goal_position.x = 3 + float(ID-101)/5.0;
+    int n_robots = simulation_parameters.number_of_robots;
+	int robot_rank = 0;
+	if (n_robots > 1) {
+		std::vector<int> sorted_ids = simulation_parameters.ID_list;
+		std::sort(sorted_ids.begin(), sorted_ids.end());
+		for (int j = 0; j < (int)sorted_ids.size(); j++) {
+			if (sorted_ids[j] == ID) { robot_rank = j; break; }
+		}
+	}
+    goal_position.x = 3 + robot_rank*0.5;
 
     //stop every 35 cm to make a measurement 
-    for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.35){
+    for (goal_position.y = 0.50; goal_position.y < 3.9; goal_position.y += 0.5){
     	//move until reached
     	 while (dist_to_goal(goal_position)>0.05){
-        	//updateSwisTrack(current_position);
             updateCortexPos(&current_position);
         	go_to_goal(goal_position);  
         	//if obstacle, avoid
@@ -268,7 +268,7 @@ void establish_baseline(){
         //     	j--;
         // }
         //filtered_concentration /= ODOR_FILTER_LENGTH;
-        printf("[%d] position : %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, filtered_concentration);
+        printf("[%d] position : %f %f %f, averaged value : %f\n", ID, current_position.x, current_position.y, current_position.heading, filtered_concentration);
     	//take min and max
     	if (filtered_concentration > max) 
             max = filtered_concentration ;
@@ -279,43 +279,12 @@ void establish_baseline(){
     }
     //once reached the end of the line
     khepera4_drive_set_speed(0,0);
-    odor_baseline_value = (max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
+    odor_baseline_value = min; //(max-min)*0.2 + min;//* 0.9// 90% of the lowest value //(odor_threshold-1000 <0)? 500 : (odor_threshold-1000) ;
     printf("[%d] Baseline established : %f\n", ID, odor_baseline_value);
     log_baseline(min, max, odor_baseline_value);
-    //odor_baseline_value = 15890;
-    //starting point of the actuall algorithm random on Y
-    goal_position.x = current_position.x;
-    //NOTE - Khepera start position
-    goal_position.y = (randu() * (4 - SAFETY_MARGIN*2)) + SAFETY_MARGIN;
-    //goal_position.y = 2;
 
-    printf("find the path using visibility graph \n");
-    printf("[%d] Current posotion : %f, %f\n",ID, current_position.x, current_position.y);    
-    //find the path using visibility graph
-    VisiLibity::Point start(current_position.x, current_position.y);
-    VisiLibity::Point finish(goal_position.x, goal_position.y);
-    VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-    // copy the path in another variable
-    for(unsigned k=0; k<Polyline_path.size(); k++){
-        Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-        path.push_back(p);
-    }
-    i = path.begin();
-     printf("[%d] Goal posotiom : %f, %f\n",ID, i->x, i->y);
-    //keep receiving the position until you reach the starting point
-    // while (dist_to_goal()>0.05){
-    //     updateSwisTrack(current_position);
-    //     go_to_goal();  
-    //     if(obstacle_or_not() == 1)
-    //     	obstacle_avoidance(speed);
-    //     set_wheels_speed(speed[0],speed[1]);
-    //     usleep(SLEEP_PERIOD * 100);
-    // }
-    printf("[%d] starting point : %f %f \n",  ID, goal_position.x,  goal_position.y);
-    //khepera4_drive_set_speed(0,0);
-    //move to the goal position
-    FSM.state = STATE_MOVING;
-    FSM.hook = state_moving;
+    FSM.state = STATE_INITIALIZATION;
+    FSM.hook = state_initializing;
 }
 
 float odor_read(){
@@ -329,28 +298,49 @@ float odor_read(){
     return current_odor;
 }
 
-void wind_read(float* wind_intensity, float* wind_angle){
+bool wind_read(float* wind_intensity, float* wind_angle){
 	float wind_vx = 0.0f;
 	float wind_vy = 0.0f;
 	float wind_vz = 0.0f;
-	wind_read(wind_intensity, wind_angle, &wind_vx, &wind_vy, &wind_vz);
+	return wind_read(wind_intensity, wind_angle, &wind_vx, &wind_vy, &wind_vz);
 }
 
-void wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz){
+bool wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz){
 	float current_wind = 0;
-    float heading = 0;
 
     trisonica_get();
     current_wind = (float) trisonica.last.direction_rad;
     *wind_intensity = (float) trisonica.last.speed;
 
-    heading = current_position.heading * 180 / PI;
-    current_wind = fmod(-(current_wind * 180 / PI) + 3 * 180, 2 * 180);
-    *wind_angle = (heading - current_wind) * PI / 180.0;
-	float wind_world_angle = current_wind * PI / 180.0f;
-	*wind_vx = (*wind_intensity) * cos(wind_world_angle);
-	*wind_vy = (*wind_intensity) * sin(wind_world_angle);
+    float robot_heading = current_position.heading;
+
+    // Convert wind direction from trisonica to the global frame
+    *wind_angle = robot_heading - current_wind + 135.0f * PI / 180.0f; // trisonica's 0 degree is at the back of the robot, and it increases clockwise, so we need to subtract 135 degree to convert it to the standard mathematical angle (0 degree at the front and increases counter-clockwise)
+    //  printf("Robot ID [%d]: Wind reading - intensity: %f m/s, direction: %f degree, robot heading: %f degree\n",
+    //        ID, *wind_intensity, *wind_angle /PI * 180.0f, robot_heading /PI * 180.0f);
+    
+    // Normalize the angle to [0, 2*PI]
+    while (*wind_angle >= 2*PI) *wind_angle -= 2.0*PI;
+    while (*wind_angle < 0) *wind_angle += 2.0*PI;  
+	float relative_wind_vx = (*wind_intensity) * cos(*wind_angle);
+	float relative_wind_vy = (*wind_intensity) * sin(*wind_angle);
+
+	// The anemometer measures air velocity relative to the moving robot.
+	// Add robot velocity in the global frame to estimate ambient wind.
+	*wind_vx = relative_wind_vx + static_cast<float>(robot_velocity_mcs.x);
+	*wind_vy = relative_wind_vy + static_cast<float>(robot_velocity_mcs.y);
 	*wind_vz = 0.0f;
+	*wind_intensity = sqrt((*wind_vx) * (*wind_vx) + (*wind_vy) * (*wind_vy));
+	*wind_angle = atan2(*wind_vy, *wind_vx);
+	while (*wind_angle >= 2*PI) *wind_angle -= 2.0*PI;
+	while (*wind_angle < 0) *wind_angle += 2.0*PI;
+	if (*wind_intensity > MAX_VALID_WIND_INTENSITY)
+	{
+		printf("Robot ID [%d]: Dropping wind measurement, intensity=%f m/s exceeds %f m/s\n",
+		       ID, *wind_intensity, MAX_VALID_WIND_INTENSITY);
+		return false;
+	}
+	return true;
 }
 
 
@@ -388,9 +378,9 @@ void updateCortexPos(Position * position){
             MCS_data_available = true;
             position->x=FrameOfData->BodyData[i].Segments[0][0]/1000;
             position->y=FrameOfData->BodyData[i].Segments[0][1]/1000;
-            position->heading=(-1)*FrameOfData->BodyData[i].Segments[0][5]/180*PI;
-            //while (position[2] > 2*PI) current_position[2] -= 2.0*PI;
-            //while (position[2] < 0   ) current_position[2] += 2.0*PI;
+            position->heading=FrameOfData->BodyData[i].Segments[0][5]/180*PI + PI;
+            while (position->heading > 2*PI) position->heading -= 2.0*PI;
+            while (position->heading < 0   ) position->heading += 2.0*PI;
             //printf("current_position - x: %f - y: %f - o3: %f\n", position->x, position->y, position->heading);
         }
     }
@@ -402,6 +392,29 @@ void update_position() {
     updateCortexPos(&current_position);
     while (current_position.heading > 2*PI) current_position.heading -= 2.0*PI;
     while (current_position.heading < 0   ) current_position.heading += 2.0*PI;
+	long long now = current_timestamp();
+	if (MCS_data_available)
+	{
+		if (has_last_mcs_velocity_position)
+		{
+			float dt = static_cast<float>(now - last_mcs_velocity_timestamp) / 1000.0f;
+			if (dt > 1e-3f)
+			{
+				robot_velocity_mcs.x = (current_position.x - last_mcs_velocity_position.x) / dt;
+				robot_velocity_mcs.y = (current_position.y - last_mcs_velocity_position.y) / dt;
+				robot_velocity_mcs.z = 0.0;
+			}
+		}
+		last_mcs_velocity_position = current_position;
+		last_mcs_velocity_timestamp = now;
+		has_last_mcs_velocity_position = true;
+	}
+	else
+	{
+		robot_velocity_mcs = vector3d_zeros();
+		has_last_mcs_velocity_position = false;
+		last_mcs_velocity_timestamp = now;
+	}
 }
 
 int obstacle_or_not(){
@@ -413,7 +426,7 @@ int obstacle_or_not(){
 		sensors_value[i] = khepera4.infrared_proximity.sensor[i];
 		//if one of the sensors detect something, then obstacle
 		if(sensors_value[i] > 200){
-            printf("sensor %d value : %f\n", i, sensors_value[i]);
+            // printf("sensor %d value : %f\n", i, sensors_value[i]);
 			printf("obstacle detected..!!!!!\n");
 			return 1;
 		}
@@ -421,6 +434,7 @@ int obstacle_or_not(){
 	//otherwise no obstacle
 	return 0;
 }
+
 
 // void receive_from_friends(){
 // 	//printf("I am receiving\n");
@@ -543,7 +557,7 @@ void go_to_goal(Position goal){
     movement[1] = movement[1]/dist;
 
     float x, y;
-    float gamma = (-1.0)*current_position.heading + PI; // the rotation of the coord. syst.
+    float gamma = current_position.heading; // the rotation of the coord. syst.
 
     x = movement[0]*cos(gamma) + movement[1]*sin(gamma);
     y = -movement[0]*sin(gamma) + movement[1]*cos(gamma);
@@ -646,6 +660,8 @@ void next_iteration_time(){
 
 void log_baseline(float min_c, float max_c, float baseline_c){
 	baseline_measurements_logfile = fopen(baseline_measurements_logfile_name, "a");
+	if (baseline_measurements_logfile == NULL)
+		return;
 	fprintf(baseline_measurements_logfile,"%f, %f, %f\n", min_c, max_c, baseline_c);
 	fclose(baseline_measurements_logfile);
 }

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <climits>
+#include <algorithm>
 // #include "nvwa/debug_new.h"
 #include "PlumeModel.h"
 #include "CellMeasurements.h"
@@ -367,9 +368,17 @@ void DeepCFDPlumeModel2D::concentration(vector<Position> robot_position, int nbr
 
 void DeepCFDPlumeModel2D::retrieve_hist_measurements(int idx[], int idy[], int nbr, float wind_intensity, int soure_pos_idx, vector<float> &c_avg)
 {
+	if (soure_pos_idx < 0 || soure_pos_idx >= static_cast<int>(gas_con_map_list.size()))
+	{
+		std::fill(c_avg.begin(), c_avg.end(), 0.0f);
+		return;
+	}
+
 	for (int i = 0; i < nbr; i++)
 	{
-		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[idx[i]][idy[i]];
+		int ix = std::max(0, std::min(idx[i], x_nbins - 1));
+		int iy = std::max(0, std::min(idy[i], y_nbins - 1));
+		c_avg[i] = gas_con_map_list[soure_pos_idx].gasConcentrationMap[ix][iy];
 	}
 }
 
@@ -381,8 +390,7 @@ void DeepCFDPlumeModel2D::load_gas_concentration_map_list_from_file(const char *
     FILE *fp = fopen(filename, "r");
     if (!fp)
     {
-        std::cerr << "Failed to open file: " << filename << std::endl;
-        return;
+        throw std::runtime_error(std::string("Failed to open DDPM gas concentration map file: ") + filename);
     }
 
     char line[10000]; // adjust if needed
@@ -414,6 +422,8 @@ void DeepCFDPlumeModel2D::load_gas_concentration_map_list_from_file(const char *
     }
 
     fclose(fp);
+    if (gas_con_map_list.empty())
+        throw std::runtime_error(std::string("DDPM gas concentration map file is empty or invalid: ") + filename);
 }
 
 
@@ -532,7 +542,7 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 	fact_ok_ = false;
 	u_x_ = -0.75f;
 
-	set_parameters(100, 40, simulation_parameters.diff_coefficient, 1500.0f);
+	set_parameters(50, 20, simulation_parameters.diff_coefficient, 1500.0f);
 	set_u_field_uniform(u_x_);
 
 	if (simulation_parameters.windInfo == WIND_OFFLINE)
@@ -556,7 +566,6 @@ AdeFDMPlumeModel2D::AdeFDMPlumeModel2D()
 													   Nx_, Ny_, obstacles, nbr_obs, 0.30f, 1.0f, 0.5f);
 		}
 	}
-
 	assemble_and_factorize();
 	initialize_potential_gas_maps();
 }
@@ -621,15 +630,16 @@ void AdeFDMPlumeModel2D::set_parameters(int Nx, int Ny, float D, float Q)
 void AdeFDMPlumeModel2D::initialize_potential_gas_maps()
 {
 	gas_con_map_list.clear();
+	gas_con_map_list.reserve(MAP_SIZE);
 	for (int j = 0; j < param_list[1].nbins; j++)
 	{
 		for (int i = 0; i < param_list[0].nbins; i++)
 		{
 			GasDispersionMap gas_map(i, j);
-			calculate_gas_concentration_map(gas_map);
 			gas_con_map_list.push_back(gas_map);
 		}
 	}
+	calculate_gas_concentration_maps_batched();
 	rebuild_cell_measurements();
 }
 
@@ -849,7 +859,7 @@ void AdeFDMPlumeModel2D::assemble_and_factorize()
 	if (solver_.info() != Eigen::Success)
 	{
 		fact_ok_ = false;
-		throw std::runtime_error("ADE FDM SparseLU factorization failed");
+		throw std::runtime_error("ADE FDM SuperLU factorization failed");
 	}
 	fact_ok_ = true;
 }
@@ -892,6 +902,64 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_map(GasDispersionMap &gas_m
 			int grid_j = 0;
 			world_pos_to_grid_indices(px, py, grid_i, grid_j);
 			gas_map.gasConcentrationMap[map_i][map_j] = C[grid_indices_to_idx(grid_i, grid_j)];
+		}
+	}
+}
+
+void AdeFDMPlumeModel2D::calculate_gas_concentration_maps_batched()
+{
+	if (!fact_ok_)
+		throw std::runtime_error("ADE FDM matrix must be factorized before solving");
+
+	std::vector<int> map_cell_to_grid(MAP_SIZE, 0);
+	for (int map_j = 0; map_j < y_nbins; map_j++)
+	{
+		for (int map_i = 0; map_i < x_nbins; map_i++)
+		{
+			float px = 0.0f;
+			float py = 0.0f;
+			indices_to_position_2D(map_i, map_j, &px, &py);
+			int grid_i = 0;
+			int grid_j = 0;
+			world_pos_to_grid_indices(px, py, grid_i, grid_j);
+			map_cell_to_grid[map_i + map_j * x_nbins] = grid_indices_to_idx(grid_i, grid_j);
+		}
+	}
+
+	const int batch_size = 32;
+	const int map_count = static_cast<int>(gas_con_map_list.size());
+	for (int batch_begin = 0; batch_begin < map_count; batch_begin += batch_size)
+	{
+		int batch_cols = std::min(batch_size, map_count - batch_begin);
+		Eigen::MatrixXf B = Eigen::MatrixXf::Zero(N_, batch_cols);
+
+		for (int col = 0; col < batch_cols; col++)
+		{
+			const GasDispersionMap &gas_map = gas_con_map_list[batch_begin + col];
+			int si = 0;
+			int sj = 0;
+			world_pos_to_grid_indices(gas_map.sx, gas_map.sy, si, sj);
+			if (si == 0 || si == Nx_ - 1 || sj == 0 || sj == Ny_ - 1)
+				continue;
+			B(grid_indices_to_idx(si, sj), col) = -source_strength_;
+		}
+
+		Eigen::MatrixXf X = solver_.solve(B);
+		if (solver_.info() != Eigen::Success)
+			throw std::runtime_error("ADE FDM batched linear solve failed");
+
+		for (int col = 0; col < batch_cols; col++)
+		{
+			GasDispersionMap &gas_map = gas_con_map_list[batch_begin + col];
+			for (int map_j = 0; map_j < y_nbins; map_j++)
+			{
+				for (int map_i = 0; map_i < x_nbins; map_i++)
+				{
+					int map_idx = map_i + map_j * x_nbins;
+					gas_map.gasConcentrationMap[map_i][map_j] =
+						std::max(0.0f, X(map_cell_to_grid[map_idx], col));
+				}
+			}
 		}
 	}
 }

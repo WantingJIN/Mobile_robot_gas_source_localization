@@ -93,6 +93,7 @@ typedef enum infoFeature
 typedef enum relativeMethod
 {
 	NORMALIZATION = 0,
+	Z_SCORE = 1,
 	EMPIRICAL_CDF = 3,
 	EMPIRICAL_CDF_AND_SLOPE = 4,
 	EMPIRICAL_CDF_NUM = 7,  // The likehood function is defined diffrently
@@ -159,12 +160,6 @@ typedef enum stopCondition{
 	END_OF_FIX_PATH = 4,
 } eStopCondition;
 
-typedef enum updataGoalPolicy{
-	GOAL_REACHED = 0,
-	FIXED_FREQ = 1,
-	BELIEF_DIFF = 2,
-} eUpdateGoalPolicy;
-
 typedef enum windEstimationMethod
 {
 	GROUND_TRUTH = 0,
@@ -209,12 +204,11 @@ class SimulationParameters{
 		float sampling_dist_thresh; 
 		int gas_hit_threshold;
 		float R0;
-	      float likelihoodSigma;
+	    float likelihoodSigma;
 		float lambda;
 		float scoreSigma;
 		int planning_step;
 		float weighting_entropy_ratio;
-		int update_goal_time;
 		int wheel_speed;
 		float diff_coefficient;
 		float wind_belief_weight;
@@ -243,13 +237,13 @@ class SimulationParameters{
 		eInfoSum infoSum;
 
 		eStopCondition stopCondition;
-		eUpdateGoalPolicy updateGoalPolicy;
 		ePlumeModel plumeModel;
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
 		eModelUncertainty modelUncertainty;
 
 		SimulationParameters();
+		SimulationParameters(const char *filename);
 		~SimulationParameters();
 
         	void load_simulation_parameters_from_config(const char *filename);

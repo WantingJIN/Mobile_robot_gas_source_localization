@@ -30,7 +30,7 @@ extern "C" {
 
 #define WEBOTS 0
 #define KHEPERA 1
-#define PUMP_SPEED        0    //1024=stop, 0=max
+#define PUMP_SPEED        1024    //1024=stop, 0=max
 #define COMPUTERID  30
 #define SLEEP_PERIOD      50
 #define CONTROLLER_TIMESTAMP SLEEP_PERIOD*200
@@ -56,15 +56,14 @@ extern char max_a_posteriori_logfile_name[256];
 extern char likelihood_logfile_name[256];
 extern char measurement_history_logfile_name[256];
 extern char position_history_logfile_name[256];
-extern char posterior_pdf_3D_name[256];
+extern char posterior_pdf_logfile_name[256];
+extern char merged_pdf_logfile_name[256];
 extern char entropy_logfile_name[256];
 extern char config_logfile_name[256];
 extern char trajectory_logfile_name[256];
 extern char baseline_measurements_logfile_name[256];
 extern char visited_list_logfile_name[256];
-extern char posterior_pdf_3D_cluster_name[512];
-extern char cluster_sizes_geometric_name[512];
-extern char cluster_sizes_informative_name[512];
+extern char region_allocation_logfile_name[512];
 
 extern char clustering_bounding_boxes_logfile_name[512];
 extern char scores_map_logfile_name[512];
@@ -150,12 +149,11 @@ struct sBraitenberg {
 void init();
 void initCommSwisTrack();
 int initCortexComm();
-void initCommRobot();
 void set_logfile_names();
 void establish_baseline();
 float odor_read();
-void wind_read(float* wind_intensity, float* wind_angle);
-void wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz);
+bool wind_read(float* wind_intensity, float* wind_angle);
+bool wind_read(float* wind_intensity, float* wind_angle, float* wind_vx, float* wind_vy, float* wind_vz);
 void update_position();
 void updateSwisTrack(float position[3]);
 void updateCortexPos(Position *position);

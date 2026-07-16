@@ -90,6 +90,16 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
 	}
+	if (simulation_parameters.relativeMethod == Z_SCORE)
+	{
+		calculate_measurements_zscore(rel_model_list, model_c_avg);
+		for (int i = 0; i < history.size; i++)
+		{
+			rel_hist_val = history.relative_meas[i];
+			rel_model_val = rel_model_list[i];
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
+		}
+	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
 		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
@@ -221,6 +231,34 @@ void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, co
 			rel_meas_list[i] = (data_list[i] - min_val) / (max_val - min_val);
 		}
 		// printf("data: %f, rel: %f\n", data_list[i], relative_history_meas[i]);
+	}
+}
+
+void calculate_measurements_zscore(vector<float> &rel_meas_list, const vector<float> data_list)
+{
+	rel_meas_list.resize(data_list.size());
+	if (data_list.size() == 1)
+	{
+		rel_meas_list[0] = 0.0;
+		return;
+	}
+
+	float sum = 0.0f;
+	for (size_t i = 0; i < data_list.size(); i++)
+		sum += data_list[i];
+	float mean = sum / data_list.size();
+
+	float sq_sum = 0.0f;
+	for (size_t i = 0; i < data_list.size(); i++)
+		sq_sum += (data_list[i] - mean) * (data_list[i] - mean);
+	float stddev = sqrt(sq_sum / data_list.size());
+
+	for (size_t i = 0; i < data_list.size(); i++)
+	{
+		if (stddev < 1e-6f)
+			rel_meas_list[i] = 0.0f;
+		else
+			rel_meas_list[i] = (data_list[i] - mean) / stddev;
 	}
 }
 

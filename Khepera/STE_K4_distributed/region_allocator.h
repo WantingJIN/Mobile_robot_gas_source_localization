@@ -17,9 +17,7 @@ private:
     float (*received_current_pos)[2];
     int belief_clusters[MAP_SIZE] = {0};
 
-    void log_cluster_sizes_geometric(const std::vector<int>& cluster_sizes);
-    void log_cluster_sizes_informative(const std::vector<double>& cluster_sizes_info);
-    void log_posterior_pdf_3d_cluster();
+    void log_region_allocation_result();
 
     bool is_inside_grid(int x, int y) const;
     bool is_active_cell(int idx, bool avoid_obstacles) const;
@@ -32,7 +30,7 @@ private:
     std::vector<int> assign_cells_to_nearest_seed(const std::vector<std::vector<double>>& dist_map, int cluster_count, bool balance_ties, std::vector<int> *cluster_sizes) const;
     std::vector<std::vector<int>> build_pdf_masks(int mask_rows, int cluster_count, int n_cells) const;
     std::vector<double> compute_informative_cluster_sizes(const std::vector<std::vector<int>>& pdf_masks, int cluster_count, int n_cells) const;
-    void log_informative_sizes_and_apply_masks(int mask_rows, int cluster_count, int n_cells);
+    void apply_pdf_masks(int mask_rows, int cluster_count, int n_cells);
     void apply_pdf_mask_for_current_robot(const std::vector<std::vector<int>>& pdf_masks, int cluster_count, int n_cells);
     double normalize_posterior(int n_cells);
     std::vector<int> best_seed_assignment_for_robots(const std::vector<GridPoint>& seeds) const;

@@ -1,0 +1,102 @@
+# =============================================================================
+# Khepera STE Configuration
+# =============================================================================
+# Parameters are grouped by component. Conditional sub-parameters are nested
+# under the value that activates them, matching the Webots controller format.
+# =============================================================================
+
+simulation:
+  workMode: EXPERIMENT
+  scenario: NO_COM_NO_COOR
+  map_nbr: 9
+
+robot:
+  number_of_robots: 2
+  ID_list: [102,105]
+  vel_factor: 10
+  wheel_speed: 400
+
+sensing:
+  samplingMode: CONTINOUS_SAMPLING
+  CONTINOUS_SAMPLING:
+    sampling_period: 1
+    sampling_dist_thresh: 0.1
+  STOP_AND_GO_SAMPLING:
+    sampling_period: 1
+    sampling_dist_thresh: 0.1
+  SENSE_WITHOUT_STOP:
+    sampling_period: 1
+    sampling_dist_thresh: 0.1
+  processingMode: NO_PROCESSING
+  gasSensor: PID
+  sensorCalibration: OFF
+  NOLINEAR:
+    R0: 100
+
+gas_feature:
+  gasFeature: RELATIVE_VALUE
+  ABSOLUTE_VALUE:
+    likelihoodSigma: 1
+  RELATIVE_VALUE:
+    relativeMethod: Z_SCORE
+    NORMALIZATION:
+      likelihoodSigma: 1
+    Z_SCORE:
+      likelihoodSigma: 3.5
+    EMPIRICAL_CDF:
+      likelihoodSigma: 1
+    EMPIRICAL_CDF_AND_SLOPE:
+      likelihoodSigma: 1
+    EMPIRICAL_CDF_NUM:
+      likelihoodSigma: 1
+  GASHIT:
+    gasHitMethod: FIXED_THRES
+    FIXED_THRES:
+      gasHitThres: 1000
+    FIXED_THRES_NUM:
+      gasHitThres: 1000
+    SLIDING_WINDOW_THRES:
+      lambda: 0.8
+    SLIDING_WINDOW_THRES_NUM:
+      lambda: 0.8
+
+bayesian_estimation:
+  BayesianModelingMethod: EXHAUSTIVE
+  likelihood_error: 2000
+  MCMC:
+    MCMC_iteration_num: 1000
+
+plume_model:
+  plumeModel: FDM_PDE
+  FDM_PDE:
+    diffCoefficient: 0.05
+
+wind:
+  windInfo: WIND_ONLINE
+  windEstimationMethod: GAUSSIAN_KERNEL
+  modelUncertainty: FIXED_UNCERTAINTY
+  DYNAMIC_UNCERTAINTY:
+    windBeliefWeight: 1.0
+
+planning:
+  planningStrategy: BELIEF_CLUSTERING
+  visitedList: visitedList_ON
+  infoFeature: PDF
+  scoreFun: EXP
+  scoreSigma: 0.5
+  infoSum: LINEAR_SUM
+  planning_step: 10
+  global_local_search_ratio: 0.5
+  BELIEF_CLUSTERING:
+    cluster_entropy_ratio: 6
+  SUM_DIJKSTRA_ADP:
+    weighting_entropy_ratio: 10
+
+team:
+  teamStrategy: DISTRIBUTED
+  mapCoverageStrategy: REGION_GROWING_D
+  mapCoverageSeed: ROBOT_CELL
+  epsilon_clusterize: 1e-9
+
+termination:
+  stopCondition: ENTROPY_ONLY

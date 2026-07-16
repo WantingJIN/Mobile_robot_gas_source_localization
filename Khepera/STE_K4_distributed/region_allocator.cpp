@@ -14,9 +14,7 @@ extern int cell_visited_list[MAP_SIZE];
 extern int ID;
 extern int self_index;
 extern FILE *clustering_debugging_logfile;
-extern char posterior_pdf_3D_cluster_name[512];
-extern char cluster_sizes_geometric_name[512];
-extern char cluster_sizes_informative_name[512];
+extern char region_allocation_logfile_name[512];
 extern std::vector<int> obstacle_map;
 
 RegionAllocator::RegionAllocator(Posterior *input_posterior, float (*input_received_current_pos)[2])
@@ -29,35 +27,9 @@ RegionAllocator::~RegionAllocator()
 {
 }
 
-void RegionAllocator::log_cluster_sizes_geometric(const std::vector<int>& cluster_sizes)
+void RegionAllocator::log_region_allocation_result()
 {
-    FILE *f = fopen(cluster_sizes_geometric_name, "a");
-    if (!f) return;
-    for (size_t i = 0; i < cluster_sizes.size(); ++i) {
-        fprintf(f, "%d", cluster_sizes[i]);
-        if (i + 1 != cluster_sizes.size())
-            fprintf(f, ",");
-    }
-    fprintf(f, "\n");
-    fclose(f);
-}
-
-void RegionAllocator::log_cluster_sizes_informative(const std::vector<double>& cluster_sizes_info)
-{
-    FILE *f = fopen(cluster_sizes_informative_name, "a");
-    if (!f) return;
-    for (size_t i = 0; i < cluster_sizes_info.size(); ++i) {
-        fprintf(f, "%f", cluster_sizes_info[i]);
-        if (i + 1 != cluster_sizes_info.size())
-            fprintf(f, ",");
-    }
-    fprintf(f, "\n");
-    fclose(f);
-}
-
-void RegionAllocator::log_posterior_pdf_3d_cluster()
-{
-    FILE *f = fopen(posterior_pdf_3D_cluster_name, "a");
+    FILE *f = fopen(region_allocation_logfile_name, "a");
     if (!f) return;
 
     fprintf(f, "%f,%f,", current_position.x, current_position.y);
@@ -229,10 +201,9 @@ std::vector<double> RegionAllocator::compute_informative_cluster_sizes(const std
     return cluster_sizes_info;
 }
 
-void RegionAllocator::log_informative_sizes_and_apply_masks(int mask_rows, int cluster_count, int n_cells)
+void RegionAllocator::apply_pdf_masks(int mask_rows, int cluster_count, int n_cells)
 {
     std::vector<std::vector<int>> pdf_masks = build_pdf_masks(mask_rows, cluster_count, n_cells);
-    log_cluster_sizes_informative(compute_informative_cluster_sizes(pdf_masks, mask_rows, n_cells));
     apply_pdf_mask_for_current_robot(pdf_masks, cluster_count, n_cells);
 }
 
@@ -294,9 +265,8 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_VORONOI(const std::vec
         if (assignments[i] >= 0)
             belief_clusters[i] = assignments[i] + 1;
 
-    log_cluster_sizes_geometric(cluster_sizes);
-    log_posterior_pdf_3d_cluster();
-    log_informative_sizes_and_apply_masks(K, K, N);
+    log_region_allocation_result();
+    apply_pdf_masks(K, K, N);
     normalize_posterior(N);
 }
 
@@ -358,10 +328,8 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_LLOYD(const std::vecto
         belief_clusters[i] = robot_k + 1;
         cluster_sizes[robot_k]++;
     }
-
-    log_cluster_sizes_geometric(cluster_sizes);
-    log_posterior_pdf_3d_cluster();
-    log_informative_sizes_and_apply_masks(K, K, N);
+    log_region_allocation_result();
+    apply_pdf_masks(K, K, N);
     normalize_posterior(N);
 }
 
@@ -437,9 +405,8 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
         }
     }
 
-    log_cluster_sizes_geometric(cluster_sizes);
-    log_posterior_pdf_3d_cluster();
-    log_informative_sizes_and_apply_masks(K, K, N);
+    log_region_allocation_result();
+    apply_pdf_masks(K, K, N);
     normalize_posterior(N);
 }
 
@@ -505,9 +472,8 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_P()
         }
     }
 
-    log_cluster_sizes_geometric(cluster_sizes);
-    log_posterior_pdf_3d_cluster();
-    log_informative_sizes_and_apply_masks(K, K, N);
+    log_region_allocation_result();
+    apply_pdf_masks(K, K, N);
     normalize_posterior(N);
 }
 

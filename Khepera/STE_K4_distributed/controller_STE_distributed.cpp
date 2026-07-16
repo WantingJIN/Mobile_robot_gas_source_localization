@@ -9,6 +9,8 @@
 //custom libraries
 #include <fstream>
 #include <array>
+#include <algorithm>
+#include <exception>
 #include "controller_STE_distributed.h"
 #include "Posterior.h"
 #include "khepera_functions.h"
@@ -43,15 +45,14 @@ FILE* measurement_history_logfile;
 FILE* position_history_logfile;
 FILE* visited_list_logfile;
 FILE* max_a_posteriori_logfile;
-FILE* posterior_pdf_3D;
+FILE* posterior_pdf;
+FILE* merged_pdf;
 FILE* entropy_logfile;
 FILE* tmp_file;
 FILE* config_logfile;
 FILE* trajectory_logfile;
 FILE* baseline_measurements_logfile;
-FILE* posterior_pdf_3D_cluster;
-FILE* cluster_sizes_geometric;
-FILE* cluster_sizes_informative;
+FILE* region_allocation_logfile;
 
 // text file for storing some prints for debugging
 FILE *console_logfile;
@@ -66,15 +67,14 @@ char max_a_posteriori_logfile_name[256];
 char likelihood_logfile_name[256];
 char measurement_history_logfile_name[256];
 char position_history_logfile_name[256];
-char posterior_pdf_3D_name[256];
+char posterior_pdf_logfile_name[256];
+char merged_pdf_logfile_name[256];
 char entropy_logfile_name[256];
 char config_logfile_name[256];
 char trajectory_logfile_name[256];
 char baseline_measurements_logfile_name[256];
 char visited_list_logfile_name[256];
-char posterior_pdf_3D_cluster_name[512];
-char cluster_sizes_geometric_name[512];
-char cluster_sizes_informative_name[512];
+char region_allocation_logfile_name[512];
 char clustering_bounding_boxes_logfile_name[512];
 char gas_information_map_logfile_name[512];
 char scores_map_logfile_name[512];
@@ -164,8 +164,18 @@ float ** obstacles = NULL;
 std::list<Position> path;
 std::list<Position>::iterator i;
 
+static VisiLibity::Environment load_environment_or_exit(const std::string &filename)
+{
+	if (access(filename.c_str(), F_OK) == -1)
+	{
+		fprintf(stderr, "Error opening environment file: %s\n", filename.c_str());
+		exit(1);
+	}
+	return VisiLibity::Environment(filename);
+}
+
 std::string environment_file("/home/root/wanting/test_map.environment");
-VisiLibity::Environment my_environment(environment_file);
+VisiLibity::Environment my_environment(load_environment_or_exit(environment_file));
 double epsilon = 0.000000001;
 VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 
@@ -211,8 +221,43 @@ RegionAllocator *region_allocator = NULL;
 
 bool printed = false;
 bool entered_state_receive_pdf = false;
+bool initial_point_calculated = false;
 
 // =========================== FUNCTIONS ================================ //
+static FILE *open_log_file(const char *filename, const char *mode)
+{
+	FILE *file = fopen(filename, mode);
+	if (file == NULL)
+		fprintf(stderr, "Error opening log file: %s\n", filename);
+	return file;
+}
+
+static bool ensure_current_path_target(const char *state_name)
+{
+	if (path.empty())
+	{
+		printf("Robot ID [%d]: %s has empty path; falling back to direct goal.\n", ID, state_name);
+		path.push_back(goal_position);
+		i = path.begin();
+	}
+
+	while (i != path.end() && dist_to_goal(*i) <= 0.05f)
+		i++;
+
+	if (i == path.end())
+	{
+		if (dist_to_goal(goal_position) <= 0.05f)
+			return false;
+
+		printf("Robot ID [%d]: %s path exhausted before goal; falling back to direct goal.\n", ID, state_name);
+		path.push_back(goal_position);
+		i = path.end();
+		i--;
+	}
+
+	return true;
+}
+
 //random value sampled from a uniform distribution
 float randu(){
 	//random variable between 0 and 1
@@ -265,19 +310,45 @@ void history_print(struct history history){
 void read_obstacle_list(){
 	// open file
 	std::ifstream infile("/home/root/wanting/obstacle_list.txt");
+	if (!infile.is_open())
+	{
+		fprintf(stderr, "Error opening obstacle list file: /home/root/wanting/obstacle_list.txt\n");
+		nbr_obs = 0;
+		obstacles = NULL;
+		std::fill(obstacle_map.begin(), obstacle_map.end(), 0);
+		return;
+	}
 	// first line is the number of obstacles
-	infile >> nbr_obs;
+	if (!(infile >> nbr_obs) || nbr_obs < 0)
+	{
+		fprintf(stderr, "Error reading obstacle count from /home/root/wanting/obstacle_list.txt\n");
+		nbr_obs = 0;
+		obstacles = NULL;
+		std::fill(obstacle_map.begin(), obstacle_map.end(), 0);
+		return;
+	}
 	// allocate memory for obstacle list array
 	obstacles = new float*[nbr_obs];
+	for(int i = 0; i < nbr_obs; i++)
+		obstacles[i] = NULL;
 	// read all obstacles now
+	int loaded_obs = 0;
 	for(int i = 0; i < nbr_obs; i++){
 		obstacles[i] = new float[4];
-		infile >> obstacles[i][0] >> obstacles[i][1] >> obstacles[i][2] >> obstacles[i][3];
+		if (!(infile >> obstacles[i][0] >> obstacles[i][1] >> obstacles[i][2] >> obstacles[i][3]))
+		{
+			fprintf(stderr, "Error reading obstacle %d from /home/root/wanting/obstacle_list.txt\n", i);
+			delete[] obstacles[i];
+			obstacles[i] = NULL;
+			break;
+		}
 		obstacles[i][0] -= margin;
 		obstacles[i][1] -= margin;
 		obstacles[i][2] += margin;
 		obstacles[i][3] += margin;
+		loaded_obs++;
 	}
+	nbr_obs = loaded_obs;
 
 	for(int i = 0; i < nbr_obs; i++){
 		printf("obstacle %d: %f %f %f %f\n", i, obstacles[i][0], obstacles[i][1], obstacles[i][2], obstacles[i][3]);
@@ -395,7 +466,9 @@ void process_team_messages()
 
 void log_position(){
 	double time = get_exp_time();
-	goalposition_logfile = fopen(goalposition_logfile_name, "a");
+	goalposition_logfile = open_log_file(goalposition_logfile_name, "a");
+	if (goalposition_logfile == NULL)
+		return;
 	fprintf(goalposition_logfile,"%d, %f, %f, %f, %f\n", FSM.n_cycles, current_position.x, current_position.y, current_position.heading, time);
 	fclose(goalposition_logfile);
 }
@@ -403,7 +476,9 @@ void log_position(){
 void log_measurements(){
 	//int i = 0;
 	double time = get_exp_time();
-	measurements_logfile = fopen(measurements_logfile_name, "a");
+	measurements_logfile = open_log_file(measurements_logfile_name, "a");
+	if (measurements_logfile == NULL)
+		return;
 	fprintf(measurements_logfile,"%d, %f, %f, %f, %f, %f\n",
 	        FSM.n_cycles, sampleBuffer.average_wind_intensity,
 	        sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy,
@@ -416,7 +491,9 @@ void log_measurements(){
 
 void log_expected_a_posteriori()
 {
-	expected_a_posteriori_logfile = fopen(expected_a_posteriori_logfile_name, "a");
+	expected_a_posteriori_logfile = open_log_file(expected_a_posteriori_logfile_name, "a");
+	if (expected_a_posteriori_logfile == NULL)
+		return;
 	fprintf(expected_a_posteriori_logfile, "%d", FSM.n_cycles);
 	for (int i = 0; i < plume_model->nbr_param; ++i)
 		fprintf(expected_a_posteriori_logfile, ", %f", plume_model->expected_value[i]);
@@ -426,7 +503,9 @@ void log_expected_a_posteriori()
 
 void log_max_a_posteriori()
 {
-	max_a_posteriori_logfile = fopen(max_a_posteriori_logfile_name, "a");
+	max_a_posteriori_logfile = open_log_file(max_a_posteriori_logfile_name, "a");
+	if (max_a_posteriori_logfile == NULL)
+		return;
 	fprintf(max_a_posteriori_logfile, "%d", FSM.n_cycles);
 	for (int i = 0; i < plume_model->nbr_param; ++i)
 		fprintf(max_a_posteriori_logfile, ", %f", plume_model->max_a_post_value[i]);
@@ -437,7 +516,9 @@ void log_max_a_posteriori()
 void log_entropy()
 {
 	double time = get_exp_time();
-	entropy_logfile = fopen(entropy_logfile_name, "a");
+	entropy_logfile = open_log_file(entropy_logfile_name, "a");
+	if (entropy_logfile == NULL)
+		return;
 	fprintf(entropy_logfile, "%f, %f\n", posterior->entropy, time);
 	fclose(entropy_logfile);
 }
@@ -484,12 +565,12 @@ void log_history(){
 	fclose(measurement_history_logfile);
 	logged_history_size = history.size;
    
-	//posterior 3D
-	//posterior->log_pdf(posterior_pdf_3D_name, 'w');
 }
 
 void log_visited_list(){
-	visited_list_logfile = fopen(visited_list_logfile_name, "a");
+	visited_list_logfile = open_log_file(visited_list_logfile_name, "a");
+	if (visited_list_logfile == NULL)
+		return;
 
 	for (int i = 0; i < MAP_SIZE; i++)
 		fprintf(visited_list_logfile, "%d, ", cell_visited_list[i]);
@@ -501,25 +582,85 @@ void log_visited_list(){
 
 void log_trajectory(Position p){
  	double time = get_exp_time();
- 	trajectory_logfile = fopen(trajectory_logfile_name, "a");
+	trajectory_logfile = open_log_file(trajectory_logfile_name, "a");
+	if (trajectory_logfile == NULL)
+		return;
 	fprintf(trajectory_logfile,"%d, %f, %f, %f, %f\n", FSM.n_cycles, p.x, p.y, p.heading, time);
  	fclose(trajectory_logfile);
 }
 
 // ============================== STATES ================================= //
-void state_waiting(){
-	// initial waiting for the plume to get established
-	static int counter = 0;
-	counter++;
+void state_initializing(){
 
-	if(counter > 300){
+	 // Compute this robot's Y sub-region using sorted ID ranking
+    if (initial_point_calculated == false) {
+
+		int n_robots = simulation_parameters.number_of_robots;
+		float y_range_min = YMIN + SAFETY_MARGIN;
+		float y_range_max = YMAX - SAFETY_MARGIN;
+		int robot_rank = 0;
+		if (n_robots > 1) {
+			std::vector<int> sorted_ids = simulation_parameters.ID_list;
+			std::sort(sorted_ids.begin(), sorted_ids.end());
+			for (int j = 0; j < (int)sorted_ids.size(); j++) {
+				if (sorted_ids[j] == ID) { robot_rank = j; break; }
+			}
+		}
+		float sub_height = (y_range_max - y_range_min) / n_robots;
+		float y_sub_min = y_range_min + robot_rank * sub_height;
+		float y_sub_max = y_range_min + (robot_rank + 1) * sub_height;
+		do
+		{
+			//goal_position.x = randu() * (XMAX - XMIN - 2 * SAFETY_MARGIN) + XMIN;
+			goal_position.x = XMIN;
+			goal_position.y = y_sub_min + randu() * (y_sub_max - y_sub_min);
+		} while (goal_position.is_in_obstacle_list(obstacles, nbr_obs) != -1);
+
+		// find the path using visibility graph
+		VisiLibity::Point start(current_position.x, current_position.y);
+		VisiLibity::Point finish(goal_position.x, goal_position.y);
+		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
+		// copy the path in another variable
+		for (size_t k = 0; k < Polyline_path.size(); k++)
+		{
+			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
+			path.push_back(p);
+			log_trajectory(p);
+		}
+		i = path.begin();
+		initial_point_calculated = true;
+    }
+    
+
+    if(dist_to_goal(goal_position) > 0.05){
+		if (!ensure_current_path_target("STATE_INITIALIZATION"))
+		{
+			set_wheels_speed(0,0);
+			return;
+		}
+		//move
+		if(obstacle_or_not() == 0){
+			go_to_goal(*i);
+			set_wheels_speed(speed[0],speed[1]);
+		} else {
+			//obstacle avoidance if necessary
+			braitenberg_run(&braitenberg);
+		}
+		
+	}else{
+		//wb_differential_wheels_set_speed(0,0);
+		set_wheels_speed(0,0);
+		path.clear();
+		khepera4_drive_set_speed(0, 0);
+    	printf("[%d] Reached initial position (%.2f, %.2f). Starting FSM.\n",
+           ID, current_position.x, current_position.y);
 		FSM.state = STATE_MEASURING;
 		FSM.hook  = state_measuring;
 	}
 }
 
 void state_measuring(){
-      printf("Robot ID [%d]: STATE_MEASURING \n", ID);
+    printf("Robot ID [%d]: STATE_MEASURING \n", ID);
 	std::vector<float> sample_from_map;
       if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING)
 	{
@@ -568,8 +709,13 @@ void state_measuring(){
 			//continue measuring odor concentration
 			sampleBuffer.instant_concentration = odor_read();
 			//measuring wind
-			wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
-					  &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+			bool valid_wind = wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
+										&sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+			if (!valid_wind)
+			{
+				next_iteration_time();
+				continue;
+			}
 			//add samples to buffers
 			sampleBuffer.add_all_to_buffer();
 			next_iteration_time();
@@ -579,8 +725,10 @@ void state_measuring(){
 		sampleBuffer.average_all();
 	} else if (simulation_parameters.samplingMode == CONTINOUS_SAMPLING || simulation_parameters.samplingMode == SENSE_WITHOUT_STOP){
 		sampleBuffer.instant_concentration = odor_read();
-		wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
-				  &sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+		bool valid_wind = wind_read(&sampleBuffer.instant_wind_intensity, &sampleBuffer.instant_wind_angle,
+									&sampleBuffer.instant_wind_vx, &sampleBuffer.instant_wind_vy, &sampleBuffer.instant_wind_vz);
+		if (!valid_wind)
+			return;
 		sampleBuffer.add_all_to_buffer();
 		sampleBuffer.average_all();
 	}
@@ -589,7 +737,7 @@ void state_measuring(){
 	if(VERBOSE) printf("[%d] ----------------------->>  average concentration: %f - wind intensity: %f angle: %f\n", ID, sampleBuffer.average_concentration, sampleBuffer.average_wind_intensity, sampleBuffer.average_wind_angle);
 	log_position();
 	log_measurements();
-	history.position.push_back({current_position.x, current_position.y, 0.0});
+	history.position.push_back({current_position.x, current_position.y, current_position.heading});
 	float calibrated_sensor_reading = (sampleBuffer.average_concentration - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sampleBuffer.average_concentration - odor_baseline_value);
 	if (calibrated_sensor_reading < 0) calibrated_sensor_reading = 0.0;
 	history.gas_meas_avg.push_back(calibrated_sensor_reading);
@@ -599,10 +747,10 @@ void state_measuring(){
 	history.wind_angle.push_back(sampleBuffer.average_wind_angle);
 	history.wind_meas_u.push_back(sampleBuffer.average_wind_vx);
 	history.wind_meas_v.push_back(sampleBuffer.average_wind_vy);
-	share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f),
+	share_team_wind_sample(Position(current_position.x, current_position.y, current_position.heading),
 	                       sampleBuffer.average_wind_vx, sampleBuffer.average_wind_vy);
 	history.size++;
-	history_print(history);
+	//history_print(history);
 
 	if (simulation_parameters.visitedList == visitedList_ON)
 	{
@@ -611,8 +759,6 @@ void state_measuring(){
 		int idx = posterior->indices_to_index(pos_coord);
 		cell_visited_list[idx] = 1;
 	}
-
-
 	FSM.state = STATE_ESTIMATING;
 	FSM.hook  = state_estimating;
 }
@@ -646,7 +792,7 @@ void state_estimating(){
 
 	// printf("sum posterior : %f \n", posterior->sum);
 	posterior->normalize();
-	posterior->log_pdf(posterior_pdf_3D_name, 'a');
+	posterior->log_pdf(posterior_pdf_logfile_name, 'a');
 
 	FSM.n_cycles++;
 	if (VERBOSE)
@@ -691,6 +837,8 @@ void state_updategoal()
 	//fprintf(console_logfile, "FSM iter: %d \n", FSM.n_cycles);
 	if (VERBOSE)
 		printf("[%d] updating the goal\n", ID);
+	path.clear();
+	use_visibility_path = true;
 	switch (simulation_parameters.planningStrategy)
 	{
 	case GREEDY:
@@ -779,43 +927,6 @@ void state_updategoal()
 		
 	}
 }
-
-void state_listen(){
-	// int result;
-	// float g_buffer[2] = {0}; 
-
-	// //wait for new orders
-	// result = read(sock, g_buffer, sizeof(g_buffer));
-	// if(result > 0){
-	// 	printf("received a goal position : (%f, %f)\n", g_buffer[0], g_buffer[1]);
-	// 	// check if it was a termination message
-	// 	if(g_buffer[0] == -1 && g_buffer[1] == -1){
-	// 		goal_position.x = 3;
-    	// 	goal_position.y = float(ID-100)/2.0;
-    	// 	finished = 1;
-	// 	}else{
-	// 		//set the goal position
-	// 		goal_position.x = g_buffer[0];
-	// 		goal_position.y = g_buffer[1];
-	// 	}
-	// 	//find the path using visibility graph
-	// 	VisiLibity::Point start(current_position.x, current_position.y);
-	// 	VisiLibity::Point finish(goal_position.x, goal_position.y);
-	// 	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-	// 	// copy the path in another variable
-	// 	for(size_t k=0; k<Polyline_path.size(); k++){
-	// 		Position p(Polyline_path[k].x(), Polyline_path[k].y(),0);
-	// 		path.push_back(p);
-	// 		log_trajectory(p);
-	// 	}
-	// 	i = path.begin();
-
-	// 	//move to the goal position
-	// 	FSM.state = STATE_MOVING;
-	// 	FSM.hook = state_moving;
-	// }
-}
-
 bool entered_state_moving = false;
 
 void state_moving(){
@@ -836,49 +947,61 @@ void state_moving(){
 		float wind_vx = 0.0;
 		float wind_vy = 0.0;
 		float wind_vz = 0.0;
-		wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
-		float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
-		if (instant_concentration < 0) instant_concentration = 0;
-		if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+		bool valid_wind = wind_read(&wind_intensity, &wind_angle, &wind_vx, &wind_vy, &wind_vz);
+		if (valid_wind)
 		{
-			reverse_sensor_model(instant_concentration, previous_sensor_reading);
-		}
-		if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
-		{
-			gas_map.runKernelAlgorithm(current_position, instant_concentration);
-		}
-		if (sample_counter > simulation_parameters.sampling_period){
-			// Sampling distance threshold
-			// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
-			// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
-			// {
-				// only record the measurement if the localization result is from MCS
-				// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
-				if (MCS_data_available){
-					sample_in_motion.position.push_back({current_position.x, current_position.y, 0});
-					sample_in_motion.gas_meas_avg.push_back(instant_concentration);
-					sample_in_motion.wind_intensity.push_back(wind_intensity);
-					sample_in_motion.wind_angle.push_back(wind_angle);
-					sample_in_motion.wind_meas_u.push_back(wind_vx);
-					sample_in_motion.wind_meas_v.push_back(wind_vy);
-					share_team_wind_sample(Position(current_position.x, current_position.y, 0.0f), wind_vx, wind_vy);
-					sample_in_motion.size++;
+			float instant_concentration = (sensor_reading - odor_baseline_value < 0) ? 0 : calibrate_sensor_reading(sensor_reading - odor_baseline_value);
+			if (instant_concentration < 0) instant_concentration = 0;
+			if (simulation_parameters.processingMode == DECONVOLUTION || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				reverse_sensor_model(instant_concentration, previous_sensor_reading);
+			}
+			if (simulation_parameters.processingMode == KERNEL_MAPPING || simulation_parameters.processingMode == MAPPING_AND_DECONVOLUTION)
+			{
+				gas_map.runKernelAlgorithm(current_position, instant_concentration);
+			}
+			if (sample_counter > simulation_parameters.sampling_period){
+				// Sampling distance threshold
+				// float dist_to_last_measurement = sqrt(pow(current_position.x - last_measurement_pos.x, 2) + pow(current_position.y - last_measurement_pos.y, 2));
+				// if ((sample_in_motion.size == 0) || dist_to_last_measurement > simulation_parameters.sampling_dist_thresh)
+				// {
+					// only record the measurement if the localization result is from MCS
+					// sometime the odometry result can be very wrong when the robot gets stuck with the obstacle (wheel slip)
+					if (MCS_data_available){
+						sample_in_motion.position.push_back({current_position.x, current_position.y, current_position.heading});
+						sample_in_motion.gas_meas_avg.push_back(instant_concentration);
+						sample_in_motion.wind_intensity.push_back(wind_intensity);
+						sample_in_motion.wind_angle.push_back(wind_angle);
+						sample_in_motion.wind_meas_u.push_back(wind_vx);
+						sample_in_motion.wind_meas_v.push_back(wind_vy);
+						share_team_wind_sample(Position(current_position.x, current_position.y, current_position.heading), wind_vx, wind_vy);
+						sample_in_motion.size++;
 
-				      last_measurement_pos.x = current_position.x;
-				      last_measurement_pos.y = current_position.y;
-					  //printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
-				}
-				
-			//}
-			sample_counter = 0;
+					    last_measurement_pos.x = current_position.x;
+					    last_measurement_pos.y = current_position.y;
+						//printf("sample in motion size: %d, current position: (%f, %f), measurement: %f \n", sample_in_motion.size, current_position.x, current_position.y, instant_concentration);
+					}
+					
+				//}
+				sample_counter = 0;
+			}
 		}
 	}
 	if(dist_to_goal(goal_position) > 0.05){
-		//move
-		if(dist_to_goal(*i) <= 0.05 && i != path.end()){
-			i++;
-			printf("current goal is: %f, %f\n", i->x, i->y);
+		if (!ensure_current_path_target("STATE_MOVING"))
+		{
+			set_wheels_speed(0,0);
+			sampleBuffer.reset_all();
+			path.clear();
+			FSM.state = STATE_MEASURING;
+			FSM.hook = state_measuring;
+			time_after_moving = current_timestamp();
+			navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			time_before_measuring = current_timestamp();
+			entered_state_moving = false;
+			return;
 		}
+		//move
 		go_to_goal(*i);
 		//obstacle avoidance if necessary
 		if(obstacle_or_not() == 1){
@@ -888,21 +1011,6 @@ void state_moving(){
 		}
 		//wb_differential_wheels_set_speed(speed[0],speed[1]);
 		set_wheels_speed(speed[0],speed[1]);
-		int update_goal_iterations = static_cast<int>(round(simulation_parameters.update_goal_time * 1000.0 / CONTROLLER_TIMESTAMP));
-
-		if (simulation_parameters.updateGoalPolicy == FIXED_FREQ){
-			if (n_time_step % update_goal_iterations == 0 && n_time_step != 0)
-				{
-				// set_wheels_speed(0, 0);
-				sampleBuffer.reset_all();
-				path.clear();
-				// printf("Robot ID [%d]. Number of iteration is %d\n", ID, n_time_step);
-				FSM.state = STATE_MEASURING;
-				FSM.hook = state_measuring;
-				time_after_moving = current_timestamp();
-				entered_state_moving = false;
-			}
-		}
 	}else{
 		//wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0,0);
@@ -928,8 +1036,6 @@ void state_obstacle_avoidance(){
 	
 	//if no obstacle,
 	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
-		//printf("no obstacle anymore..XXXXXXX\n");
-		//wb_differential_wheels_set_speed(0,0);
 		set_wheels_speed(0,0);
 		//back to moving
 		FSM.state = STATE_MOVING;
@@ -937,101 +1043,6 @@ void state_obstacle_avoidance(){
 		return;
 	}
 	braitenberg_run(&braitenberg);
-}
-
-void state_send_goal()
-{
-	if(VERBOSE) printf("Robot ID [%d]: STATE_SEND_GOAL \n", ID);
-
-	if (FSM.state != STATE_FINISHED)
-	{
-		// The goal position is very close to current postion, swith to random planning
-		// if (dist_to_goal(goal_position) <= std::max(0.05, static_cast<float>(simulation_parameters.sampling_dist_thresh)))
-		// {
-		// 	printf("The goal position is very close to current postion, switch to random planning \n");
-		// 	//fprintf(console_logfile, "The goal position is very close to current postion, switch to random planning \n");
-		// 	random_planning();
-		// }
-
-		// goal position for Robot
-		goal_position = goal_position_team[0];
-		printf("Robot [%d]: Goal position : %f %f \n", ID, goal_position.x, goal_position.y);
-		path_planner->goal_outside_obstacles(&goal_position);
-		printf("from %f %f to goal %f %f \n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-		// find the path using visibility graph
-		VisiLibity::Point start(current_position.x, current_position.y);
-		VisiLibity::Point finish(goal_position.x, goal_position.y);
-		VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-
-		// copy the path in another variable
-		for (size_t k = 0; k < Polyline_path.size(); k++)
-		{
-			Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-			path.push_back(p);
-			log_trajectory(p);
-		}
-		i = path.begin();
-
-		for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
-			int target_ID = 101 + i;
-			if (target_ID == ID) continue;  // Skip self
-	    
-			// Message msg(ID, target_ID, goal_position_team[i], -1, goal_position_team[i], 0); // -1 for STATE_FINISHED flag
-			// send_udp_msg(msg);
-			// TODO: Implement the logic to send goal position to other robots
-		}
-
-		// move to the goal position
-		FSM.state = STATE_MOVING;
-		FSM.hook = state_moving;
-		time_before_moving = current_timestamp();
-	}
-}
-
-bool entered_state_receive_goal = false;
-
-void state_receive_goal()
-{
-
-	if (!entered_state_receive_goal)
-	{
-		printf("Robot ID [%d]: STATE_RECEIVE_GOAL \n", ID);
-		entered_state_receive_goal = true;
-	}
-
-	bool goal_received = false;
-      // TODO: Implement the logic to receive goal position from other robots
-
-	// in case no goals received yet, remain in this state
-	if (!goal_received)
-	{
-		// printf("Robot ID [%d]: No goal received, staying in STATE_RECEIVE_GOAL.\n", ID);
-		return;
-	}
-
-	// print goal position for some of the robots
-	// printf("Robot ID [%d]: Final goal position: %f %f\n", ID, goal_position.x, goal_position.y);
-	path_planner->goal_outside_obstacles(&goal_position);
-	printf("Robot ID [%d]: from %f %f to goal %f %f\n", ID, current_position.x, current_position.y, goal_position.x, goal_position.y);
-
-	VisiLibity::Point start(current_position.x, current_position.y);
-	VisiLibity::Point finish(goal_position.x, goal_position.y);
-	VisiLibity::Polyline Polyline_path = my_environment.shortest_path(start, finish, vg, epsilon);
-
-	for (size_t k = 0; k < Polyline_path.size(); k++)
-	{
-		Position p(Polyline_path[k].x(), Polyline_path[k].y(), 0);
-		path.push_back(p);
-		log_trajectory(p);
-	}
-
-	i = path.begin();
-
-	FSM.state = STATE_MOVING;
-	FSM.hook = state_moving;
-	entered_state_receive_goal = true;
-	time_before_moving = current_timestamp();
 }
 
 void state_receive_pdf()
@@ -1161,13 +1172,7 @@ void state_merge_pdf()
 		FSM.hook = state_measuring;
 		return;
 	} else {
-		if (simulation_parameters.teamStrategy == CENTRALIZED)
-		{
-				FSM.state = STATE_UPDATEGOAL_TEAM;
-				FSM.hook = state_updategoal_team;
-			
-		}
-		else if (simulation_parameters.teamStrategy == DISTRIBUTED)
+		if (simulation_parameters.teamStrategy == DISTRIBUTED)
 		{
 			if (simulation_parameters.mapCoverageStrategy != NONE)
 			{
@@ -1182,23 +1187,6 @@ void state_merge_pdf()
 		}
 	}
 	
-}
-
-void state_updategoal_team()
-{
-	printf("Robot ID [%d]: STATE_UPDATEGOAL_TEAM \n", ID);
-
-	path_planner->maximal_merged_belief_planning();
-
-	printf("Assigned goal positions to Robot [101], [102] and [103].\n");
-
-	for (int i = 0; i < 3; i++)
-	{
-		printf("Robot [%d]: Goal position -> x: %f, y: %f\n", 101 + i, goal_position_team[i].x, goal_position_team[i].y);
-	}
-
-	FSM.state = STATE_SEND_GOAL;
-	FSM.hook = state_send_goal;
 }
 
 void state_share_pdf()
@@ -1224,7 +1212,7 @@ void state_region_allocation()
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
-		posterior->log_pdf(posterior_pdf_3D_name, 'a');
+		posterior->log_pdf(merged_pdf_logfile_name, 'a');
 		if (region_allocator)
 			region_allocator->region_allocation_algorithm();
 		FSM.state = STATE_UPDATEGOAL;
@@ -1300,10 +1288,18 @@ void initialize_plume_stack()
 	if (plume_model || posterior || path_planner || region_allocator)
 		return;
 
-	plume_model = initialize_plume_model();
-	posterior = new Posterior(plume_model);
-	path_planner = new PathPlanner(plume_model, posterior, &history);
-	region_allocator = new RegionAllocator(posterior, received_current_pos);
+	try
+	{
+		plume_model = initialize_plume_model();
+		posterior = new Posterior(plume_model);
+		path_planner = new PathPlanner(plume_model, posterior, &history);
+		region_allocator = new RegionAllocator(posterior, received_current_pos);
+	}
+	catch (const std::exception &e)
+	{
+		fprintf(stderr, "Failed to initialize plume stack: %s\n", e.what());
+		exit(1);
+	}
 }
 
 // =========================== MAIN ============================== //
@@ -1313,13 +1309,12 @@ int main(int argc, char **argv){
 	
 	init();
 	inter_robot_comm.initialize(ID, simulation_parameters.ID_list);
-	clustering_debugging_logfile = fopen(clustering_debugging_name, "a");
-	if (!clustering_debugging_logfile)
-		clustering_debugging_logfile = stderr;
 
 	read_obstacle_list();
-	initialize_plume_stack();
+
 	establish_baseline();
+    initialize_plume_stack();
+
 	//odor_baseline_value = 30000
 	// visibility graph (visilibity library)
 	std::cout << "Validating environment model . . . ";
