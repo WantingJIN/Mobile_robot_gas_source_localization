@@ -91,6 +91,7 @@ Posterior::Posterior(PlumeModel *input_model)
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 1 / (float)nbr_element_marginal;
 
+	sorted_model_measurements.resize(nbr_element);
 
 	// printf("expected_value: %f %f %f %f %f\n",
 	//	model->expected_value[0], model->expected_value[1], model->expected_value[2], model->expected_value[3], model->expected_value[4]);
@@ -135,6 +136,8 @@ Posterior::Posterior(PlumeModel *input_model, int zero)
 	source_marginal_pdf = new double[nbr_element_marginal];
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 0;
+
+	sorted_model_measurements.resize(nbr_element);
 }
 
 // copy constructor
@@ -158,6 +161,7 @@ Posterior::Posterior(const Posterior &to_copy_from)
 		source_marginal_pdf[i] = to_copy_from.source_marginal_pdf[i];
 	// model
 	model = to_copy_from.model;
+	sorted_model_measurements = to_copy_from.sorted_model_measurements;
 }
 
 // destructor
@@ -477,6 +481,8 @@ void Posterior::exhaustive_evaluation(struct history &history)
 	int i = 0;
 	double sample[nbr_dimension];
 	vector<double> slope_history_meas;
+	if (sorted_model_measurements.size() != static_cast<size_t>(nbr_element))
+		sorted_model_measurements.resize(nbr_element);
     
 	// FIXME - temporary arrays for measurement positions
 	int nbr = history.size;
@@ -510,6 +516,8 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 			printf("Updating online wind with %zu %s wind samples.\n", wind_nbr, use_team_wind ? "team" : "local");
 			model->update_wind_field_and_gas_concentration_map(wind_meas_x, wind_meas_y, wind_meas_u, wind_meas_v);
+			for (auto &sorted_measurements : sorted_model_measurements)
+				sorted_measurements.clear();
 			model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name,'a');
 			char gas_concentration_map_each_cycle_logfile_name[600];
 			sprintf(gas_concentration_map_each_cycle_logfile_name, "%s_%d.csv", gas_concentration_maps_log_root, iter);
@@ -532,7 +540,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE || 
 		simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM) 
 		{
-			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.gas_meas);
+			calculate_measurements_list_empirical_CDF(history.relative_meas, slope_history_meas, history.gas_meas, history.sorted_gas_meas);
 		}
 	}
 	// for each element of the pdf
@@ -551,7 +559,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 		}
 		if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 		{
-			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model);
+			pdf[i] = prior(sample, nbr_dimension, model) * likelihood_rel_con(history, sample, i, model, &sorted_model_measurements[i]);
 		}
 		if (simulation_parameters.gasFeature == GASHIT)
 		{

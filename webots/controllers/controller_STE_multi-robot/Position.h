@@ -59,6 +59,7 @@ struct history
 	vector<int> team_wind_sample_id;
 	vector<int> gas_hit_event;
 	vector<double> relative_meas;
+	vector<double> sorted_gas_meas;
 };
 
 #endif

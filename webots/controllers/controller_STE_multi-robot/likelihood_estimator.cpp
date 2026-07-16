@@ -1,9 +1,49 @@
 #include "likelihood_estimator.h"
+#include <algorithm>
+#include <iterator>
 
 extern int nbr_obs;
 extern float margin;
 extern float **obstacles;
 extern SimulationParameters simulation_parameters;
+
+namespace
+{
+void rebuild_sorted_measurements(vector<double> &sorted_data, const vector<double> &data_list)
+{
+	sorted_data = data_list;
+	sort(sorted_data.begin(), sorted_data.end());
+}
+
+void update_sorted_measurements(vector<double> &sorted_data, const vector<double> &data_list)
+{
+	if (sorted_data.size() > data_list.size())
+	{
+		rebuild_sorted_measurements(sorted_data, data_list);
+		return;
+	}
+
+	if (sorted_data.empty())
+	{
+		rebuild_sorted_measurements(sorted_data, data_list);
+		return;
+	}
+
+	const size_t sorted_size = sorted_data.size();
+	if (sorted_size == data_list.size())
+		return;
+
+	vector<double> new_measurements(data_list.begin() + sorted_size, data_list.end());
+	sort(new_measurements.begin(), new_measurements.end());
+
+	vector<double> merged_data;
+	merged_data.reserve(data_list.size());
+	merge(sorted_data.begin(), sorted_data.end(),
+		  new_measurements.begin(), new_measurements.end(),
+		  back_inserter(merged_data));
+	sorted_data.swap(merged_data);
+}
+}
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)
@@ -45,7 +85,7 @@ double likelihood_absolute_value(struct history &history, double *parameters, in
 
 
 // Likelihood for relative concentration with precomputed gas maps
-double likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+double likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model, vector<double> *sorted_model_measurements)
 {
 
 	// float sigma = 0.22; // works well for Gaussian CDF
@@ -100,6 +140,13 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	vector<double> pdf_model_list;
 	vector<double> slope_model_list;
 	double rel_model_val, rel_hist_val;
+	auto calculate_empirical_model_measurements = [&]()
+	{
+		if (sorted_model_measurements != nullptr)
+			calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg, *sorted_model_measurements);
+		else
+			calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+	};
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
@@ -153,7 +200,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		calculate_empirical_model_measurements();
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
@@ -164,7 +211,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		calculate_empirical_model_measurements();
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
@@ -175,7 +222,7 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		calculate_empirical_model_measurements();
 		// sigma = 0.48;// works well for Empirical CDF NUM
 		for (int i = 0; i < history.size; i++)
 		{
@@ -231,41 +278,55 @@ double likelihood(struct history &history, double *parameters, PlumeModel *model
 	return (exp(-0.5 * sum_tmp));
 }
 
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> data_list)
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> &data_list)
+{
+	vector<double> sorted_data;
+	calculate_measurements_list_empirical_CDF(rel_meas_list, slope_list, data_list, sorted_data);
+}
+
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> &data_list, vector<double> &sorted_data)
 {
 	rel_meas_list.resize(data_list.size());
 	slope_list.resize(data_list.size());
+	if (data_list.empty())
+	{
+		sorted_data.clear();
+		return;
+	}
+
+	update_sorted_measurements(sorted_data, data_list);
 	if (data_list.size() == 1)
 	{
 		rel_meas_list[0] = 0.0;
 		slope_list[0] = 0.0;
 		return;
 	}
-	vector<double> sortedData = data_list;
-	sort(sortedData.begin(), sortedData.end());
 
 	// Calculate ECDF
 	for (size_t i = 0; i < data_list.size(); ++i)
 	{
 		// Count the number of observations less than or equal to the current value
-		size_t count = count_if(sortedData.begin(), sortedData.end(),
-						[&](double x)
-						{ return data_list[i] - x > 0.1; });
+		size_t count = lower_bound(sorted_data.begin(), sorted_data.end(), data_list[i] - 0.1) - sorted_data.begin();
 		// Calculate proportion
 		rel_meas_list[i] = static_cast<double>(count) / data_list.size();
 	}
 	// Calculate Normalized Slope of ECDF
-	double data_range = sortedData.back() - sortedData.front();
-	for (size_t i = 1; i < sortedData.size(); ++i)
+	double data_range = sorted_data.back() - sorted_data.front();
+	if (abs(data_range) < 1e-12)
 	{
-		double delta_x = (sortedData[i] - sortedData[i - 1]) / data_range;
+		fill(slope_list.begin(), slope_list.end(), 0.0);
+		return;
+	}
+	for (size_t i = 1; i < sorted_data.size(); ++i)
+	{
+		double delta_x = (sorted_data[i] - sorted_data[i - 1]) / data_range;
 		slope_list[i] = (delta_x > 0) ? (delta_x / data_list.size()) : 0.0;
 	}
 	// Handle the first slope value
 	slope_list[0] = slope_list[1];
 }
 
-void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> data_list)
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> &data_list)
 {
       rel_meas_list.resize(data_list.size());
 	if (data_list.size() == 1)
@@ -292,7 +353,7 @@ void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, c
 	}
 }
 
-void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> data_list)
+void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> &data_list)
 {
 	rel_meas_list.resize(data_list.size());
 	if (data_list.size() == 1)

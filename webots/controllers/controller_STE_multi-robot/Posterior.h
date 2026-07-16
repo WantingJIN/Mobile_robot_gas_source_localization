@@ -23,6 +23,7 @@ public:
     double *source_marginal_pdf;
     PlumeModel *model;
     int iter = 0;
+    vector<vector<double>> sorted_model_measurements;
 
     // constructor : uniform distribution
     Posterior(PlumeModel *input_model);

@@ -707,6 +707,7 @@ void AdeFDMPlumeModel2D::set_u_field_from_csv(const std::string& filename,
 			double yt = param_list[1].lower_limit + dy_ * j;    // ymin + j*dy
 			u_[grid_idx(i,j)] = bilinear(xt, yt, Xs, Ys, us, Nx_src, Ny_src);
 			v_[grid_idx(i,j)] = bilinear(xt, yt, Xs, Ys, vs, Nx_src, Ny_src);
+			w_[grid_idx(i,j)] = INT_MAX;  // set the maximal confidence 
 			// fprintf(console_logfile, "u[%d,%d] = %f, v[%d,%d] = %f\n", i, j, u_[grid_idx(i,j)], i, j, v_[grid_idx(i,j)]);
 		}
 	}

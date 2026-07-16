@@ -1,17 +1,21 @@
+#ifndef LIKELIHOOD_ESTIMATOR_H
+#define LIKELIHOOD_ESTIMATOR_H
+
 #include "PlumeModel.h"
 #include "Posterior.h"
 
 // likelihood function
 double likelihood(struct history &history, double *parameters, PlumeModel *model);
 double likelihood_absolute_value(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model);
-double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model);
+double likelihood_rel_con(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model, vector<double> *sorted_model_measurements = nullptr);
 double likelihood_gas_hit(struct history &history, double *parameters, int soure_pos_idx, PlumeModel *model);
 
 // prior function
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model);
 
-void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> data_list);
-void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> data_list);    
-void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> data_list);
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> &data_list);
+void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> &data_list, vector<double> &sorted_data);
+void calculate_normalized_relative_measurements(vector<double> &rel_meas_list, const vector<double> &data_list);    
+void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<double> &data_list);
 
-
+#endif
