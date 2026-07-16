@@ -27,6 +27,7 @@ private:
     const std::vector<GridPoint>& moore_directions() const;
     const std::vector<GridPoint>& von_neumann_directions() const;
     std::vector<std::pair<double, int>> sorted_active_cells(bool avoid_obstacles) const;
+    std::vector<GridPoint> seed_points_from_tie_spread_cells(const std::vector<std::pair<double, int>>& sorted_cells, int count) const;
     std::vector<GridPoint> seed_points_from_indices(const std::vector<int>& selected_indices, int count) const;
     std::vector<std::vector<double>> compute_obstacle_aware_distance_maps(const std::vector<GridPoint>& seeds, const std::vector<GridPoint>& directions) const;
     std::vector<int> assign_cells_to_nearest_seed(const std::vector<std::vector<double>>& dist_map, int cluster_count, bool balance_ties, std::vector<int> *cluster_sizes) const;

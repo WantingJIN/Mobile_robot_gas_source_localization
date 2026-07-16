@@ -131,6 +131,92 @@ std::vector<std::pair<double, int>> RegionAllocator::sorted_active_cells(bool av
     return top_cells;
 }
 
+std::vector<RegionAllocator::GridPoint> RegionAllocator::seed_points_from_tie_spread_cells(const std::vector<std::pair<double, int>>& sorted_cells, int count) const
+{
+    std::vector<GridPoint> seeds;
+    std::vector<int> selected_indices;
+
+    if (count <= 0 || sorted_cells.empty())
+        return seeds;
+
+    seeds.reserve(count);
+    selected_indices.reserve(count);
+
+    auto pdf_is_tied = [](double a, double b) {
+        double scale = std::max(std::abs(a), std::abs(b));
+        double tolerance = std::max(1e-12, scale * 1e-9);
+        return std::abs(a - b) <= tolerance;
+    };
+
+    auto already_selected = [&](int idx) {
+        return std::find(selected_indices.begin(), selected_indices.end(), idx) != selected_indices.end();
+    };
+
+    auto add_seed = [&](int idx) {
+        GridPoint seed;
+        index_to_indices_2D(idx, &seed.first, &seed.second);
+        seeds.push_back(seed);
+        selected_indices.push_back(idx);
+    };
+
+    auto min_distance_sq_to_selected_seeds = [&](int idx) {
+        if (seeds.empty())
+            return std::numeric_limits<double>::max();
+
+        int x, y;
+        index_to_indices_2D(idx, &x, &y);
+
+        double min_distance_sq = std::numeric_limits<double>::max();
+        for (const auto& [sx, sy] : seeds) {
+            double dx = static_cast<double>(x - sx);
+            double dy = static_cast<double>(y - sy);
+            min_distance_sq = std::min(min_distance_sq, dx * dx + dy * dy);
+        }
+
+        return min_distance_sq;
+    };
+
+    while ((int)seeds.size() < count && selected_indices.size() < sorted_cells.size()) {
+        int first_candidate = -1;
+
+        for (int i = 0; i < (int)sorted_cells.size(); ++i) {
+            if (!already_selected(sorted_cells[i].second)) {
+                first_candidate = i;
+                break;
+            }
+        }
+
+        if (first_candidate < 0)
+            break;
+
+        double best_pdf = sorted_cells[first_candidate].first;
+        int best_idx = sorted_cells[first_candidate].second;
+        double best_distance_sq = -1.0;
+
+        for (int i = first_candidate; i < (int)sorted_cells.size(); ++i) {
+            double pdf = sorted_cells[i].first;
+            int idx = sorted_cells[i].second;
+
+            if (!pdf_is_tied(pdf, best_pdf))
+                break;
+
+            if (already_selected(idx))
+                continue;
+
+            double distance_sq = min_distance_sq_to_selected_seeds(idx);
+
+            if (distance_sq > best_distance_sq) {
+                best_distance_sq = distance_sq;
+                best_idx = idx;
+            }
+        }
+
+        add_seed(best_idx);
+    }
+
+    return seeds;
+}
+
 std::vector<RegionAllocator::GridPoint> RegionAllocator::seed_points_from_indices(const std::vector<int>& selected_indices, int count) const
 {
     std::vector<GridPoint> seeds(count, {-1, -1});
@@ -444,15 +530,18 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
         return;
     }
 
-    std::vector<GridPoint> seeds(K);
+    std::vector<GridPoint> seeds = seed_points_from_tie_spread_cells(top_cells, K);
 
-    for (int k = 0; k < K; ++k)
-        index_to_indices_2D(top_cells[k].second, &seeds[k].first, &seeds[k].second);
+    if ((int)seeds.size() < K) {
+        printf("Robot ID [%d]: Could not select enough seed cells for balanced region growing.\n", ID);
+        return;
+    }
 
     std::vector<int> best_perm = best_seed_assignment_for_robots(seeds);
     std::vector<GridPoint> ordered_seeds(K);
     for (int k = 0; k < K; ++k) {
         ordered_seeds[k] = seeds[best_perm[k]];
+        printf("Robot ID [%d]: Seed for robot %d is at (%d, %d)\n", ID, k + 1, ordered_seeds[k].first, ordered_seeds[k].second);
     }
     seeds = ordered_seeds;
 
