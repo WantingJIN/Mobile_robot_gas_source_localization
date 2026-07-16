@@ -29,7 +29,7 @@ import pandas as pd
 # DEFAULT PATHS  –  edit these two lines to match your setup
 # ===========================================================================
 GENERAL_FOLDER    = "/home/wjin/Workspace/Multi-robot_GSL/Results"
-DISPATCHED_FOLDER = "/home/wjin/Workspace/Multi-robot_GSL/Results/test/z-score_nonlinear"
+DISPATCHED_FOLDER = "/home/wjin/Workspace/Multi-robot_GSL/Results/multi_test/3_robot_sp_5_belief_cluster_wind_online_cdf_source_boundary"
 # Folder names inside GENERAL_FOLDER that are never treated as experiments
 DISPATCH_EXCLUDED = {".", "..", "current", "101", "102", "103"}
 # ===========================================================================
@@ -315,12 +315,14 @@ def extract_experiment_data(dispatched_folder):
         estimate_error = float(np.linalg.norm(error))
 
         # --- trajectory length ---
+        individual_traj_lengths = {}
         if is_multi:
-            traj_length = sum(
-                compute_traj_length_multi(str(r)) for r in robot_dirs
-            )
+            for r in robot_dirs:
+                individual_traj_lengths[f"R{r.name}"] = compute_traj_length_multi(str(r))
+            traj_length = sum(individual_traj_lengths.values())
         else:
             traj_length = compute_traj_length_single(str(ref_robot))
+            individual_traj_lengths[f"R{ref_robot.name}"] = traj_length
 
         # --- experiment time ---
         exp_time = read_experiment_time(str(ref_robot / "experiment_time.csv"))
@@ -339,7 +341,7 @@ def extract_experiment_data(dispatched_folder):
         gas_feature   = GAS_FEATURES.get(  int(params.get("gas_feature",      [0])[0]), "unknown")
         wind_config   = get_wind_config(params)
 
-        rows.append({
+        row = {
             "Map":               map_nbr,
             "x_error":           float(error[0]),
             "y_error":           float(error[1]),
@@ -356,7 +358,10 @@ def extract_experiment_data(dispatched_folder):
             "wind_config":       wind_config,
             "geometric_score":   H_geo,
             "informative_score": H_info,
-        })
+        }
+        for robot_label, length in individual_traj_lengths.items():
+            row[f"traj_length_{robot_label}"] = length
+        rows.append(row)
 
     return pd.DataFrame(rows)
 
@@ -374,6 +379,103 @@ _SUCCESS_RADIUS = float(np.sqrt(1.0 ** 2 + 0.5 ** 2))  # ≈ 1.118 m
 def _is_success(sub: pd.DataFrame) -> "pd.Series":
     """Return boolean Series: True when the run counts as a success."""
     return (sub["x_error"].abs() < 1.0) & (sub["y_error"].abs() < 0.5)
+
+
+def _robot_traj_columns(df: pd.DataFrame):
+    prefix = "traj_length_R"
+    cols = [col for col in df.columns if col.startswith(prefix)]
+
+    def sort_key(col):
+        suffix = col[len(prefix):]
+        return (0, int(suffix)) if suffix.isdigit() else (1, suffix)
+
+    return sorted(cols, key=sort_key)
+
+
+def plot_individual_traj_lengths(df: pd.DataFrame, dispatched_folder) -> None:
+    from matplotlib.patches import Patch
+
+    robot_cols = _robot_traj_columns(df)
+    if not robot_cols:
+        return
+
+    dispatched_folder = Path(dispatched_folder)
+    maps = sorted(df["Map"].unique())
+    n_maps = len(maps)
+    n_robots = len(robot_cols)
+    base_positions = np.arange(1, n_maps + 1)
+    width = min(0.22, 0.75 / max(n_robots, 1))
+    offsets = (np.arange(n_robots) - (n_robots - 1) / 2) * width
+    colors = plt.get_cmap("tab10").colors
+
+    fig, ax = plt.subplots(figsize=(max(9, 1.5 * n_maps + 3), 6))
+    fig.patch.set_facecolor("white")
+
+    legend_handles = []
+    plotted_any = False
+    for robot_idx, col in enumerate(robot_cols):
+        color = colors[robot_idx % len(colors)]
+        groups = []
+        positions = []
+
+        for map_idx, m in enumerate(maps):
+            values = df.loc[df["Map"] == m, col].dropna().values.astype(float)
+            values = values[np.isfinite(values)]
+            if values.size == 0:
+                continue
+            groups.append(values)
+            positions.append(base_positions[map_idx] + offsets[robot_idx])
+
+        if not groups:
+            continue
+        plotted_any = True
+
+        ax.boxplot(
+            groups,
+            positions=positions,
+            widths=width * 0.85,
+            patch_artist=True,
+            medianprops=dict(color="red", linewidth=1.4),
+            boxprops=dict(facecolor=(*color[:3], 0.45), color=color),
+            whiskerprops=dict(color=color, linewidth=1.1),
+            capprops=dict(color=color, linewidth=1.1),
+            flierprops=dict(marker="+", color="black", markersize=5),
+        )
+
+        for pos, values in zip(positions, groups):
+            jitter = np.linspace(-width * 0.18, width * 0.18, len(values)) if len(values) > 1 else [0.0]
+            ax.scatter(
+                np.full(len(values), pos) + jitter,
+                values,
+                s=22,
+                color=color,
+                edgecolors="white",
+                linewidths=0.4,
+                alpha=0.85,
+                zorder=3,
+            )
+
+        legend_handles.append(Patch(facecolor=(*color[:3], 0.45), edgecolor=color, label=col.replace("traj_length_", "")))
+
+    if not plotted_any:
+        plt.close(fig)
+        return
+
+    ax.set_xlim(0.5, n_maps + 0.5)
+    ax.set_xticks(base_positions)
+    ax.set_xticklabels([str(m) for m in maps], fontweight="bold")
+    ax.set_xlabel("Map", fontweight="bold")
+    ax.set_ylabel("Distance (m)", fontweight="bold")
+    ax.set_title("Individual Robot Traveling Distance", fontweight="bold")
+    ax.grid(True, axis="y", alpha=0.3)
+    ax.tick_params(labelsize=10)
+    if legend_handles:
+        ax.legend(handles=legend_handles, title="Robot", fontsize=9, title_fontsize=10)
+
+    plt.tight_layout()
+    save_path = dispatched_folder / "individual_robot_traj_lengths.png"
+    fig.savefig(str(save_path), dpi=150, bbox_inches="tight")
+    print(f"Individual robot trajectory plot saved → {save_path}")
 
 
 def plot_results(df: pd.DataFrame, dispatched_folder):
@@ -500,6 +602,7 @@ def plot_results(df: pd.DataFrame, dispatched_folder):
     save_path = dispatched_folder / "results_boxplot.png"
     plt.savefig(str(save_path), dpi=150, bbox_inches="tight")
     print(f"Plot saved → {save_path}")
+    plot_individual_traj_lengths(df, dispatched_folder)
     plt.show()
 
 
@@ -591,8 +694,12 @@ def main():
 
     maps = sorted(df["Map"].unique().tolist())
     print(f"\nExtracted {len(df)} rows across maps: {maps}")
-    print(df[["Map", "x_error", "y_error", "iteration", "exp_time", "traj_length",
-              "estimate_error", "n_robots"]].to_string(index=False))
+    summary_cols = [
+        "Map", "x_error", "y_error", "iteration", "exp_time", "traj_length",
+        *_robot_traj_columns(df),
+        "estimate_error", "n_robots",
+    ]
+    print(df[[col for col in summary_cols if col in df.columns]].to_string(index=False))
 
     # 3. Save CSV
     csv_path = Path(dispatched_folder) / "experiment_data.csv"

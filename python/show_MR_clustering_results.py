@@ -7,8 +7,9 @@ For each clustering iteration this shows:
      robot's trajectory segment for that iteration.
   2. posterior_pdf_3D.csv as the belief map for the same iteration.
 
-Press any key to advance to the next iteration, left/backspace to go back,
-and q to quit.
+If a base folder is used, a small window lets you choose the experiment
+subfolder to open. Press any key to advance to the next iteration,
+left/backspace to go back, and q to quit.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ import numpy as np
 
 
 DEFAULT_BASE_PATH = Path(
-    "/home/wjin/Workspace/Multi-robot_GSL/Results/multi_test/PDE_with_shared_wind/10"
+    "/home/wjin/Workspace/Multi-robot_GSL/Results/multi_test/PDE_belief_cluster_new_region_allocation/10"
 )
 DEFAULT_ROBOT_IDS = (101, 102, 103)
 REFERENCE_ROBOT = 101
@@ -178,7 +179,50 @@ def experiment_candidates(base_path: Path, robot_ids: tuple[int, ...]) -> list[P
     ]
 
 
-def choose_experiment_folder(base_path: Path, candidates: list[Path]) -> Path:
+def choose_experiment_folder_gui(base_path: Path, candidates: list[Path]) -> Path | None:
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except ImportError as exc:
+        print(f"GUI folder picker unavailable ({exc}); using terminal prompt.")
+        return None
+
+    root = None
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected = filedialog.askdirectory(
+            parent=root,
+            initialdir=str(base_path),
+            title="Select experiment subfolder",
+            mustexist=True,
+        )
+    except Exception as exc:
+        print(f"GUI folder picker unavailable ({exc}); using terminal prompt.")
+        return None
+    finally:
+        if root is not None:
+            root.destroy()
+
+    if not selected:
+        raise SystemExit("No experiment selected.")
+
+    selected_path = Path(selected).expanduser().resolve()
+    valid_paths = {candidate.resolve(): candidate for candidate in candidates}
+    if selected_path not in valid_paths:
+        raise FileNotFoundError(
+            f"Selected folder is not a valid experiment subfolder under {base_path}: {selected_path}"
+        )
+    return valid_paths[selected_path]
+
+
+def choose_experiment_folder(base_path: Path, candidates: list[Path], use_gui: bool = True) -> Path:
+    if use_gui:
+        selected = choose_experiment_folder_gui(base_path, candidates)
+        if selected is not None:
+            return selected
+
     print(f"Available experiment folders under {base_path}:")
     for idx, candidate in enumerate(candidates):
         print(f"  [{idx}] {candidate.name}")
@@ -207,6 +251,7 @@ def resolve_experiment_folder(
     selected_path: Path | None,
     robot_ids: tuple[int, ...],
     experiment_index: int | None,
+    use_gui: bool = True,
 ) -> tuple[Path, Path]:
     selected_path = (selected_path or DEFAULT_BASE_PATH).expanduser().resolve()
 
@@ -223,7 +268,7 @@ def resolve_experiment_folder(
     if not candidates:
         raise FileNotFoundError(f"No experiment subfolder found in {selected_path}")
     if experiment_index is None:
-        return selected_path, choose_experiment_folder(selected_path, candidates)
+        return selected_path, choose_experiment_folder(selected_path, candidates, use_gui)
     if experiment_index < 0 or experiment_index >= len(candidates):
         raise IndexError(
             f"Experiment index {experiment_index} out of range; found {len(candidates)} subfolders"
@@ -259,7 +304,12 @@ def infer_grid_shape(
 
 def load_experiment(args: argparse.Namespace) -> ExperimentData:
     robot_ids = tuple(args.robot_ids)
-    base_path, exp_folder = resolve_experiment_folder(args.path, robot_ids, args.experiment_index)
+    base_path, exp_folder = resolve_experiment_folder(
+        args.path,
+        robot_ids,
+        args.experiment_index,
+        args.gui_picker,
+    )
     reference_robot = args.reference_robot
     reference_path = exp_folder / str(reference_robot)
 
@@ -573,7 +623,12 @@ def parse_args() -> argparse.Namespace:
         "--experiment-index",
         type=int,
         default=None,
-        help="Subfolder index when path is a base folder. If omitted, you are prompted to choose.",
+        help="Subfolder index when path is a base folder. If omitted, a picker window is shown.",
+    )
+    parser.add_argument(
+        "--no-gui",
+        action="store_true",
+        help="Use the terminal prompt instead of the experiment folder picker window.",
     )
     parser.add_argument("--robot-ids", nargs="+", type=int, default=list(DEFAULT_ROBOT_IDS), help="Robot IDs to load.")
     parser.add_argument("--reference-robot", type=int, default=REFERENCE_ROBOT, help="Robot folder used for map CSVs.")
@@ -584,6 +639,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=None, help="Frame output directory for --save.")
     parser.add_argument("--dpi", type=int, default=150, help="Saved frame DPI.")
     args = parser.parse_args()
+    args.gui_picker = not args.no_gui
     args.robot_ids = tuple(args.robot_ids)
     if args.reference_robot not in args.robot_ids:
         args.robot_ids = (args.reference_robot, *args.robot_ids)
