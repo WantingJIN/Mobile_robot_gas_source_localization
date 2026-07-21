@@ -178,7 +178,6 @@ eMapCoverageStrategy parse_map_coverage_strategy(const char* str) {
 	if (strcmp(str, "VORONOI") == 0) return VORONOI;
 	if (strcmp(str, "LLOYD_D") == 0) return LLOYD_D;
 	if (strcmp(str, "LLOYD_P") == 0) return LLOYD_P;
-	if (strcmp(str, "REGION_GROWING_P") == 0) return REGION_GROWING_P;
 	if (strcmp(str, "REGION_GROWING_D") == 0) return REGION_GROWING_D;
 	if (strcmp(str, "NONE") == 0) return NONE;
 	fprintf(stderr, "Unknown cluster method: %s\n", str);
@@ -245,6 +244,13 @@ eModelUncertainty parse_model_uncertainty(const char* str) {
 	if (strcmp(str, "FIXED_UNCERTAINTY") == 0) return FIXED_UNCERTAINTY;
 	if (strcmp(str, "DYNAMIC_UNCERTAINTY") == 0) return DYNAMIC_UNCERTAINTY;
 	fprintf(stderr, "Unknown model uncertainty: %s\n", str);
+	exit(1);
+}
+
+ePosteriorRepresentation parse_posterior_representation(const char* str) {
+	if (strcmp(str, "normal_P") == 0 || strcmp(str, "NORMAL_P") == 0) return NORMAL_P;
+	if (strcmp(str, "log_p") == 0 || strcmp(str, "LOG_P") == 0) return LOG_P;
+	fprintf(stderr, "Unknown posterior representation: %s\n", str);
 	exit(1);
 }
 
@@ -349,6 +355,11 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		auto n = config["bayesian_estimation"];
 		BayesianModelingMethod = parse_evaluation_method(
 			n["BayesianModelingMethod"].as<std::string>().c_str());
+		posteriorRepresentation = NORMAL_P;
+		if (n["posteriorRepresentation"]) {
+			posteriorRepresentation = parse_posterior_representation(
+				n["posteriorRepresentation"].as<std::string>().c_str());
+		}
 
 		// MCMC sub-params
 		if (BayesianModelingMethod == MCMC && n["MCMC"]) {
@@ -429,6 +440,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);
 	fprintf(sim_param_file, "BayesianModelingMethod %d\n", BayesianModelingMethod);
+	fprintf(sim_param_file, "posteriorRepresentation %d\n", posteriorRepresentation);
 	fprintf(sim_param_file, "number_of_robots %d\n", number_of_robots);
 	fprintf(sim_param_file, "map_nbr %d\n", map_nbr);
 	fprintf(sim_param_file, "sampling_mode %d\n", samplingMode);

@@ -1,6 +1,8 @@
 #include "likelihood_estimator.h"
 #include <algorithm>
+#include <cmath>
 #include <iterator>
+#include <limits>
 
 extern int nbr_obs;
 extern float margin;
@@ -49,6 +51,11 @@ void update_sorted_measurements(vector<double> &sorted_data, const vector<double
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)
 double likelihood_absolute_value(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
+	return exp(log_likelihood_absolute_value(history, parameters, source_pos_idx, model));
+}
+
+double log_likelihood_absolute_value(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+{
 	float sigmaE = simulation_parameters.likelihoodSigma;
 	float sigmaD = 0; // 125;
 	double sum_tmp = 0;
@@ -80,12 +87,17 @@ double likelihood_absolute_value(struct history &history, double *parameters, in
 	}
 
 
-	return (exp(-0.5 * sum_tmp));
+	return -0.5 * sum_tmp;
 }
 
 
 // Likelihood for relative concentration with precomputed gas maps
 double likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model, vector<double> *sorted_model_measurements)
+{
+	return exp(log_likelihood_rel_con(history, parameters, source_pos_idx, model, sorted_model_measurements));
+}
+
+double log_likelihood_rel_con(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model, vector<double> *sorted_model_measurements)
 {
 
 	// float sigma = 0.22; // works well for Gaussian CDF
@@ -244,10 +256,15 @@ double likelihood_rel_con(struct history &history, double *parameters, int sourc
 	// 	}
 	
 	// }
-	return (exp(-0.5 * sum_tmp));
+	return -0.5 * sum_tmp;
 }
 
 double likelihood(struct history &history, double *parameters, PlumeModel *model)
+{
+	return exp(log_likelihood(history, parameters, model));
+}
+
+double log_likelihood(struct history &history, double *parameters, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihoodSigma;
 	float sigmaD = 0; // 125;
@@ -275,7 +292,7 @@ double likelihood(struct history &history, double *parameters, PlumeModel *model
 		// std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
 	}
 
-	return (exp(-0.5 * sum_tmp));
+	return -0.5 * sum_tmp;
 }
 
 void calculate_measurements_list_empirical_CDF(vector<double> &rel_meas_list, vector<double> &slope_list, const vector<double> &data_list)
@@ -391,6 +408,11 @@ void calculate_measurements_zscore(vector<double> &rel_meas_list, const vector<d
 
 double likelihood_gas_hit(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
 {
+	return exp(log_likelihood_gas_hit(history, parameters, source_pos_idx, model));
+}
+
+double log_likelihood_gas_hit(struct history &history, double *parameters, int source_pos_idx, PlumeModel *model)
+{
 	double sum_tmp = 0;
 	vector<double> model_c_avg(history.size);
 
@@ -425,8 +447,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int sourc
 	int history_hit;
 	int model_hit;
 
-	double likelihood;
-
 	//-----model and measurement fixed threshold, penalty on gas hit event difference-------
 	if (simulation_parameters.gasHitMethod == FIXED_THRES)
 	{
@@ -445,7 +465,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int sourc
 				sum_tmp += 1;
 		}
 		sum_tmp *= 0.8; // best result with exp 0.5
-		likelihood = (exp(-sum_tmp));
 	}
 	if (simulation_parameters.gasHitMethod == FIXED_THRES_NUM)
 	{
@@ -464,7 +483,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int sourc
 				sum_tmp += 1;
 		}
 		sum_tmp *= 0.8 * double(history.size) / (double(history.size) + 1); // best result with exp 0.5
-		likelihood = (exp(-sum_tmp));
 	}
 	//-------------------------min max avg threshold-------------------------------
 
@@ -513,7 +531,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int sourc
 			}
 		}
 		sum_tmp *= 0.8;
-		likelihood = (exp(-sum_tmp));
 	}
 
 	//-------------adaptive threshold- based on recent measurements------------------------------
@@ -552,7 +569,6 @@ double likelihood_gas_hit(struct history &history, double *parameters, int sourc
 			}
 		}
 		sum_tmp *= 0.8;
-		likelihood = (exp(-sum_tmp));
 	}
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES_NUM)
 	{
@@ -589,10 +605,14 @@ double likelihood_gas_hit(struct history &history, double *parameters, int sourc
 			}
 		}
 		sum_tmp *= 0.8 * double(history.size) / (double(history.size) + 1);
-		likelihood = (exp(-sum_tmp));
 	}
 
-	return likelihood;
+	return -sum_tmp;
+}
+
+double log_prior(double *parameters, int nbr_dimension, PlumeModel *model)
+{
+	return prior(parameters, nbr_dimension, model) ? 0.0 : -std::numeric_limits<double>::infinity();
 }
 
 bool prior(double *parameters, int nbr_dimension, PlumeModel *model)

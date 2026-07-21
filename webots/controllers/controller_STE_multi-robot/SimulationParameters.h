@@ -132,7 +132,6 @@ typedef enum mapCoverageStrategy{
 	VORONOI = 0,
 	LLOYD_D = 1,
 	LLOYD_P = 2,
-	REGION_GROWING_P = 3,
 	REGION_GROWING_D = 4,
 	NONE = 5,
 } eMapCoverageStrategy;
@@ -166,6 +165,11 @@ typedef enum modelUncertainty{
 	FIXED_UNCERTAINTY = 0,
 	DYNAMIC_UNCERTAINTY = 1,
 } eModelUncertainty;
+
+typedef enum posteriorRepresentation{
+	NORMAL_P = 0,
+	LOG_P = 1,
+} ePosteriorRepresentation;
 
 // parameters to estimate
 struct parameters_set
@@ -230,6 +234,7 @@ class SimulationParameters{
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
 		eModelUncertainty modelUncertainty;
+		ePosteriorRepresentation posteriorRepresentation;
 
 		SimulationParameters(const char *filename);
 		~SimulationParameters();

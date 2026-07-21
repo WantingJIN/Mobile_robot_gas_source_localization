@@ -19,6 +19,7 @@ public:
     int nbr_dimension;
     int nbr_element;
     double *pdf;
+    bool pdf_is_log;
     int nbr_element_marginal;
     double *source_marginal_pdf;
     PlumeModel *model;
@@ -47,8 +48,11 @@ public:
 
     // update the posterior pdf with the value given by sample paramter set
     void update(double value, double *sample);
+    void update_log(double value, double *sample);
     //normalization
     void normalize();
+    bool normalize_log();
+    void convert_log_pdf_to_pdf();
     // normalization + max a posterior (value and parameter set)
     void process();
     // entropy and spatial spread calculation

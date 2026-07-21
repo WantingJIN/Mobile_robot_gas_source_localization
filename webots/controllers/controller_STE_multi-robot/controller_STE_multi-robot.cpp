@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <array>
+#include <limits>
 #include "controller_STE_multi-robot.h"
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
@@ -17,6 +18,7 @@
 #include "webots_functions.h"
 #include "path_planner.h"
 #include "region_allocator.h"
+#include "BeliefMapFusion.h"
 // #include "aStar.h"
 #include "visilibity.hpp"
 #include <webots/supervisor.h>
@@ -241,6 +243,24 @@ bool should_process_team_messages()
 {
 	return simulation_parameters.number_of_robots > 1 &&
 		   simulation_parameters.teamStrategy == DISTRIBUTED;
+}
+
+bool should_use_log_posterior()
+{
+	return simulation_parameters.posteriorRepresentation == LOG_P;
+}
+
+void prepare_belief_map_for_sharing(double belief_map[MAP_SIZE])
+{
+	if (should_use_log_posterior())
+	{
+		if (posterior->pdf_is_log)
+			BeliefMapFusion::sanitize_log_map(posterior->pdf, belief_map, obstacle_map);
+		else
+			BeliefMapFusion::pdf_to_log_map(posterior->pdf, belief_map, obstacle_map);
+	}
+	else
+		memcpy(belief_map, posterior->pdf, MAP_SIZE * sizeof(double));
 }
 
 void record_team_wind_sample(Position sample_position, double wind_u, double wind_v, int sender_ID, int sample_id)
@@ -470,25 +490,15 @@ void read_obstacle_list()
 		printf("obstacle %d: %f %f %f %f\n", i, obstacles[i][0], obstacles[i][1], obstacles[i][2], obstacles[i][3]);
 	}
 
-	float dx = (XMAX - XMIN) / source_x_nbins;
-	float dy = (YMAX - YMIN) / source_y_nbins;
-
-	for (int i = 0; i < nbr_obs; ++i) {
-		float x1, y1, x2, y2;
-		infile >> x1 >> y1 >> x2 >> y2;
-
-		int col_start = std::max(0, static_cast<int>(std::floor((x1 - XMIN) / dx)));
-		int col_end   = std::min(source_x_nbins - 1, static_cast<int>(std::floor((x2 - XMIN) / dx)));
-		int row_start = std::max(0, static_cast<int>(std::floor((y1 - YMIN) / dy)));
-		int row_end   = std::min(source_y_nbins - 1, static_cast<int>(std::floor((y2 - YMIN) / dy)));
-
-		for (int row = row_start; row <= row_end; ++row) {
-			for (int col = col_start; col <= col_end; ++col) {
-				int idx = row * source_x_nbins + col;
-				obstacle_map[idx] = 1;
-			}
-		}
-
+	std::fill(obstacle_map.begin(), obstacle_map.end(), 0);
+	for (int idx = 0; idx < MAP_SIZE; ++idx)
+	{
+		float x = 0.0f;
+		float y = 0.0f;
+		index_to_position_2D(idx, &x, &y);
+		Position cell_center(x, y, 0.0);
+		if (cell_center.is_in_obstacle_list(obstacles, nbr_obs) != -1)
+			obstacle_map[idx] = 1;
 	}
 }
 
@@ -879,6 +889,7 @@ void state_estimating()
 	// check if stopping condition is reached
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
 	{
+		posterior->convert_log_pdf_to_pdf();
 		// calculate entropy and spread
 		posterior->process();
       	posterior->calculate_entropy_and_spread();
@@ -1125,38 +1136,66 @@ void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
 
-	// Original merge without weights
-	for (int i = 0; i < MAP_SIZE; i++)
-	{
-		belief_map_merged[i] = 1.0;
-	}
-
-	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
+	if (should_use_log_posterior())
 	{
 		for (int i = 0; i < MAP_SIZE; i++)
 		{
-			belief_map_merged[i] *= belief_maps[r][i];
+			belief_map_merged[i] = 0.0;
+			for (int r = 0; r < simulation_parameters.number_of_robots; r++)
+			{
+				if (!std::isfinite(belief_map_merged[i]) || !std::isfinite(belief_maps[r][i]))
+					belief_map_merged[i] = -INFINITY;
+				else
+					belief_map_merged[i] += belief_maps[r][i];
+			}
 		}
-	}
 
-	fprintf(clustering_debugging_logfile, "NO Normalized Full Merged BM: \n");
-	for (int i = 0; i < MAP_SIZE; i++) {
-		fprintf(clustering_debugging_logfile, "%.8f ", belief_map_merged[i]);
-	}
-	fprintf(clustering_debugging_logfile, "\n");
+		fprintf(clustering_debugging_logfile, "NO Normalized Full Merged log(BM): \n");
+		for (int i = 0; i < MAP_SIZE; i++) {
+			fprintf(clustering_debugging_logfile, "%.8f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile, "\n");
 
-	// normalize belief map
-	double sum = 0.0;
-	for (int i = 0; i < MAP_SIZE; i++)
+		if (!BeliefMapFusion::normalize_log_map(belief_map_merged))
+		{
+			printf("Robot ID [%d]: Failed to normalize merged log belief map.\n", ID);
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Failed to normalize merged log belief map.\n", ID);
+		}
+
+		fprintf(clustering_debugging_logfile, "Normalized Full Merged log(BM): \n");
+		for (int i = 0; i < MAP_SIZE; i++) {
+			fprintf(clustering_debugging_logfile, "%.8f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile, "\n");
+
+		BeliefMapFusion::log_map_to_pdf(belief_map_merged, belief_map_merged);
+	}
+	else
 	{
-		sum += belief_map_merged[i];
-	}
-
-	if (sum > 0)
-	{
+		// Original merge without weights
 		for (int i = 0; i < MAP_SIZE; i++)
 		{
-			belief_map_merged[i] /= sum;
+			belief_map_merged[i] = 1.0;
+		}
+
+		for (int r = 0; r < simulation_parameters.number_of_robots; r++)
+		{
+			for (int i = 0; i < MAP_SIZE; i++)
+			{
+				belief_map_merged[i] *= belief_maps[r][i];
+			}
+		}
+
+		fprintf(clustering_debugging_logfile, "NO Normalized Full Merged BM: \n");
+		for (int i = 0; i < MAP_SIZE; i++) {
+			fprintf(clustering_debugging_logfile, "%.8f ", belief_map_merged[i]);
+		}
+		fprintf(clustering_debugging_logfile, "\n");
+
+		if (!BeliefMapFusion::normalize_pdf(belief_map_merged))
+		{
+			printf("Robot ID [%d]: Failed to normalize merged belief map.\n", ID);
+			fprintf(clustering_debugging_logfile, "Robot ID [%d]: Failed to normalize merged belief map.\n", ID);
 		}
 	}
 
@@ -1178,6 +1217,10 @@ void state_merge_pdf()
 	printf("\n");
 
 	memcpy(posterior->pdf, belief_map_merged, MAP_SIZE * sizeof(double));
+	posterior->pdf_is_log = false;
+	posterior->sum = 0.0;
+	for (int i = 0; i < MAP_SIZE; ++i)
+		posterior->sum += posterior->pdf[i];
 
 
       // Check the stopping condition after merging
@@ -1244,7 +1287,7 @@ void state_receive_pdf()
 	
 	if (!printed && posterior->pdf != nullptr)
 	{
-		memcpy(belief_maps[self_index], posterior->pdf, MAP_SIZE * sizeof(double));
+		prepare_belief_map_for_sharing(belief_maps[self_index]);
 		printed = true;
 	}
 
@@ -1311,6 +1354,8 @@ void state_share_pdf()
     if (posterior->pdf == NULL) {
         printf("Robot ID [%d]: No posterior PDF to share.\n", ID);
     } else {
+		double belief_map_to_share[MAP_SIZE];
+		prepare_belief_map_for_sharing(belief_map_to_share);
         for (int i = 0; i < simulation_parameters.number_of_robots; i++) {
             int target_ID = 101 + i;
             if (target_ID == ID) continue; // skip self
@@ -1320,7 +1365,7 @@ void state_share_pdf()
 			received_current_pos[self_index][1] = current_position.y;
 
 			// share my current position & belief map with teammates
-            Message msg(ID, target_ID, current_position, -1, Position(), 0, posterior->pdf);
+            Message msg(ID, target_ID, current_position, -1, Position(), 0, belief_map_to_share);
             send_msg(msg);
 
             printf("Robot ID [%d]: Sent belief map to Robot ID [%d]\n", ID, target_ID);

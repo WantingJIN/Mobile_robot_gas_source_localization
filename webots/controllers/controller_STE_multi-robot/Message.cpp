@@ -27,6 +27,7 @@ Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _c
     concentration = _concentration;
     goal.copy_position(_goal);
     finish_flag = _flag;
+    memset(belief_map, 0, sizeof(belief_map));
     params_to_buffer();
     buffer_size = sizeof(double) * 11;
 }
@@ -43,13 +44,13 @@ Message::Message(int _sender_ID, int _receiver_ID, Position _position, double _c
     finish_flag = _flag;
     memcpy(belief_map, _belief_map, sizeof(belief_map)); // Copiar belief map
     params_to_buffer();
-    buffer_size = sizeof(double) * 410;
+    buffer_size = sizeof(double) * (MAP_SIZE + 10);
 }
 
 // constructor: buffer
 Message::Message(const void *m_buffer)
 {
-    buffer_size = sizeof(double) * 410;
+    buffer_size = sizeof(double) * (MAP_SIZE + 10);
     memcpy(buffer, m_buffer, buffer_size);
     buffer_to_params();
 }

@@ -1,7 +1,9 @@
 #include <eigen3/Eigen/Dense>
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <fstream>
+#include <limits>
 #include <vector>
 // #include "nvwa/debug_new.h"
 #include "Posterior.h"
@@ -17,6 +19,21 @@ extern char wind_field_u_logfile_name[512];
 extern char wind_field_v_logfile_name[512];
 extern char wind_field_w_logfile_name[512];
 extern char gas_concentration_maps_log_root[512];
+
+namespace
+{
+double log_add_exp(double a, double b)
+{
+	if (!std::isfinite(a))
+		return b;
+	if (!std::isfinite(b))
+		return a;
+	if (b > a)
+		std::swap(a, b);
+	return a + std::log1p(std::exp(b - a));
+}
+}
+
 struct normal_random_variable
 {
 	normal_random_variable(Eigen::MatrixXd const &covar)
@@ -52,6 +69,7 @@ Posterior::Posterior(PlumeModel *input_model)
 {
 	int i = 0;
 	nbr_element = 1;
+	pdf_is_log = false;
 
 	// model
 	model = input_model;
@@ -61,7 +79,7 @@ Posterior::Posterior(PlumeModel *input_model)
 
 	// stats
 	sum = 1;
-	max = 1 / (float)nbr_element;
+	max = 1.0 / static_cast<double>(nbr_element);
 	dirac_flag = 0;
 	entropy = 0;
 
@@ -70,7 +88,7 @@ Posterior::Posterior(PlumeModel *input_model)
 	pdf = new double[nbr_element];
 	for (i = 0; i < nbr_element; i++)
 	{
-		pdf[i] = 1 / (float)nbr_element;
+		pdf[i] = 1.0 / static_cast<double>(nbr_element);
 		entropy += pdf[i] * log(pdf[i]);
 	}
 	entropy = (-1) * entropy;
@@ -89,7 +107,7 @@ Posterior::Posterior(PlumeModel *input_model)
 		nbr_element_marginal *= model->param_list[i].nbins;
 	source_marginal_pdf = new double[nbr_element_marginal];
 	for (i = 0; i < nbr_element_marginal; i++)
-		source_marginal_pdf[i] = 1 / (float)nbr_element_marginal;
+		source_marginal_pdf[i] = 1.0 / static_cast<double>(nbr_element_marginal);
 
 	sorted_model_measurements.resize(nbr_element);
 
@@ -102,6 +120,7 @@ Posterior::Posterior(PlumeModel *input_model, int zero)
 {
 	int i = 0;
 	nbr_element = 1;
+	pdf_is_log = false;
 
 	// model
 	model = input_model;
@@ -150,6 +169,7 @@ Posterior::Posterior(const Posterior &to_copy_from)
 	dirac_flag = to_copy_from.dirac_flag;
 	nbr_dimension = to_copy_from.nbr_dimension;
 	nbr_element = to_copy_from.nbr_element;
+	pdf_is_log = to_copy_from.pdf_is_log;
 	nbr_element_marginal = to_copy_from.nbr_element_marginal;
 	// pdf
 	pdf = new double[nbr_element];
@@ -175,12 +195,13 @@ Posterior::~Posterior()
 void Posterior::pdf_reset()
 {
 	int i = 0;
-	sum = 0;
+	pdf_is_log = simulation_parameters.posteriorRepresentation == LOG_P;
+	sum = pdf_is_log ? -std::numeric_limits<double>::infinity() : 0.0;
 	max = 0;
 	entropy = 0;
 	dirac_flag = 0;
 	for (i = 0; i < nbr_element; i++)
-		pdf[i] = 0;
+		pdf[i] = pdf_is_log ? -std::numeric_limits<double>::infinity() : 0.0;
 	for (i = 0; i < nbr_element_marginal; i++)
 		source_marginal_pdf[i] = 0;
 }
@@ -321,21 +342,111 @@ void Posterior::update(double value, double *sample)
 	}
 	pdf[indices_to_index(indices)] += value;
 	sum += value;
+	pdf_is_log = false;
+}
+
+void Posterior::update_log(double value, double *sample)
+{
+	int i = 0;
+	int indices[nbr_dimension];
+
+	if (!std::isfinite(value))
+		return;
+
+	for (i = 0; i < nbr_dimension; i++)
+	{
+		if (std::isnan(sample[i]))
+		{
+			printf("ERROR in update_log: sample is NaN  \n");
+			fprintf(console_logfile, "ERROR in update_log: sample %f is NaN  \n", sample[i]);
+			return;
+		}
+		indices[i] = (int)((sample[i] - model->param_list[i].lower_limit) / (float)model->param_list[i].resolution);
+		if (indices[i] < 0 || indices[i] >= model->param_list[i].nbins)
+		{
+			printf("ERROR in update_log: indices[%d] = %d - sample: %f - min: %f - res: %f\n", i, indices[i], sample[i], model->param_list[i].lower_limit, model->param_list[i].resolution);
+			return;
+		}
+	}
+
+	int index = indices_to_index(indices);
+	pdf[index] = log_add_exp(pdf[index], value);
+	sum = log_add_exp(sum, value);
+	pdf_is_log = true;
 }
 
 void Posterior::normalize()
 {
+	if (pdf_is_log)
+	{
+		normalize_log();
+		return;
+	}
+
 	int i = 0;
+	if (sum <= 0.0 || !std::isfinite(sum))
+	{
+		printf("!!!!!!!!!!!!!sum is invalid: %e\n", sum);
+		fprintf(console_logfile, "!!!!!!!!!!!!!sum is invalid: %e\n", sum);
+		return;
+	}
+
 	// normalize the pdf
 	for (i = 0; i < nbr_element; i++)
 	{
-		if (sum == 0)
-		{
-			printf("!!!!!!!!!!!!!sum is equal to zero!\n");
-			fprintf(console_logfile, "!!!!!!!!!!!!!sum is equal to zero!\n");
-		}
 		pdf[i] /= sum;
 	}
+	sum = 1.0;
+}
+
+bool Posterior::normalize_log()
+{
+	double max_log = -std::numeric_limits<double>::infinity();
+	for (int i = 0; i < nbr_element; i++)
+		if (pdf[i] > max_log)
+			max_log = pdf[i];
+
+	if (!std::isfinite(max_log))
+	{
+		printf("!!!!!!!!!!!!!log posterior has no finite values!\n");
+		fprintf(console_logfile, "!!!!!!!!!!!!!log posterior has no finite values!\n");
+		return false;
+	}
+
+	double shifted_sum = 0.0;
+	for (int i = 0; i < nbr_element; i++)
+		if (std::isfinite(pdf[i]))
+			shifted_sum += std::exp(pdf[i] - max_log);
+
+	if (shifted_sum <= 0.0 || !std::isfinite(shifted_sum))
+	{
+		printf("!!!!!!!!!!!!!log posterior normalization sum is invalid: %e\n", shifted_sum);
+		fprintf(console_logfile, "!!!!!!!!!!!!!log posterior normalization sum is invalid: %e\n", shifted_sum);
+		return false;
+	}
+
+	const double log_sum = max_log + std::log(shifted_sum);
+	for (int i = 0; i < nbr_element; i++)
+		if (std::isfinite(pdf[i]))
+			pdf[i] -= log_sum;
+
+	sum = 0.0;
+	pdf_is_log = true;
+	return true;
+}
+
+void Posterior::convert_log_pdf_to_pdf()
+{
+	if (!pdf_is_log)
+		return;
+
+	sum = 0.0;
+	for (int i = 0; i < nbr_element; i++)
+	{
+		pdf[i] = std::isfinite(pdf[i]) ? std::exp(pdf[i]) : 0.0;
+		sum += pdf[i];
+	}
+	pdf_is_log = false;
 }
 
 // normalization + expected value + max a posterior (value and parameter set) using only the pdf
@@ -347,6 +458,8 @@ void Posterior::process()
 	max = 0;
 	for (j = 0; j < nbr_dimension; j++)
 		model->expected_value[j] = 0;
+	for (i = 0; i < nbr_element_marginal; i++)
+		source_marginal_pdf[i] = 0;
 
 	// for every value in the pdf
 	for (i = 0; i < nbr_element; i++)
@@ -428,8 +541,50 @@ void Posterior::MCMC_evaluation(struct history history)
 		}
 	}
 
-	double sample_likelihood = likelihood(history, sample, model);
+	if (simulation_parameters.posteriorRepresentation == LOG_P)
+	{
+		double sample_log_posterior = log_prior(sample, nbr_dimension, model);
+		if (std::isfinite(sample_log_posterior))
+			sample_log_posterior += log_likelihood(history, sample, model);
+		update_log(sample_log_posterior, sample);
 
+		memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
+		for (i = 0; i < count; i++)
+		{
+			for (j = 0; j < nbr_dimension; j++)
+				mean(j) = sample[j];
+
+			normal_random_variable random_sample{mean, covar};
+			for (j = 0; j < nbr_dimension; j++)
+				candidate[j] = random_sample()(j);
+
+			double candidate_log_posterior = log_prior(candidate, nbr_dimension, model);
+			if (std::isfinite(candidate_log_posterior))
+				candidate_log_posterior += log_likelihood(history, candidate, model);
+
+			if (std::isfinite(candidate_log_posterior) && !std::isfinite(sample_log_posterior))
+				p_acceptance = 1.0;
+			else if (!std::isfinite(candidate_log_posterior))
+				p_acceptance = 0.0;
+			else
+				p_acceptance = std::min(1.0, std::exp(candidate_log_posterior - sample_log_posterior));
+
+			if (randu() < p_acceptance)
+			{
+				memcpy(sample, candidate, sizeof(double) * nbr_dimension);
+				sample_log_posterior = candidate_log_posterior;
+				acceptance_rate++;
+			}
+			else
+				continue;
+
+			update_log(sample_log_posterior, sample);
+		}
+		memcpy(last_sample, sample, sizeof(double) * nbr_dimension);
+		return;
+	}
+
+	double sample_likelihood = likelihood(history, sample, model);
 	posterior_value = prior(sample, nbr_dimension, model) * sample_likelihood;
 	update(posterior_value, sample);
 
@@ -552,6 +707,21 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 		// calculate the posterior distribution of source term param 'sample'
 		// check the gas feature selected
+		if (simulation_parameters.posteriorRepresentation == LOG_P)
+		{
+			pdf[i] = log_prior(sample, nbr_dimension, model);
+			if (std::isfinite(pdf[i]))
+			{
+				if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
+					pdf[i] += log_likelihood_absolute_value(history, sample, i, model);
+				if (simulation_parameters.gasFeature == RELATIVE_VALUE)
+					pdf[i] += log_likelihood_rel_con(history, sample, i, model, &sorted_model_measurements[i]);
+				if (simulation_parameters.gasFeature == GASHIT)
+					pdf[i] += log_likelihood_gas_hit(history, sample, i, model);
+			}
+			sum = log_add_exp(sum, pdf[i]);
+			continue;
+		}
 		if (simulation_parameters.gasFeature == ABSOLUTE_VALUE)
 		{
 			// pdf[i] = prior(sample, nbr_dimension, model) * likelihood(history, sample, model);   //old
@@ -696,9 +866,9 @@ void Posterior::log_pdf(const char *file_name, char writing_mode)
 	}
 
 	for (i = 0; i < nbr_element - 1; i++)
-		fprintf(posterior_pdf_3D, "%.9f, ", pdf[i]);
+		fprintf(posterior_pdf_3D, "%.9f, ", pdf_is_log && std::isfinite(pdf[i]) ? std::exp(pdf[i]) : (pdf_is_log ? 0.0 : pdf[i]));
 
-	fprintf(posterior_pdf_3D, "%.9f\n", pdf[nbr_element - 1]);
+	fprintf(posterior_pdf_3D, "%.9f\n", pdf_is_log && std::isfinite(pdf[nbr_element - 1]) ? std::exp(pdf[nbr_element - 1]) : (pdf_is_log ? 0.0 : pdf[nbr_element - 1]));
 
 	fclose(posterior_pdf_3D);
 }
