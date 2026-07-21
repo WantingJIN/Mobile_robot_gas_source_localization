@@ -1,5 +1,8 @@
 #include "path_planner.h"
 
+#include <algorithm>
+#include <queue>
+
 extern SimulationParameters simulation_parameters;
 FILE *gas_information_map_logfile;
 FILE *scores_map_logfile;
@@ -69,34 +72,183 @@ void PathPlanner::information_center_planning()
     printf("Enter information center planning \n");
     fprintf(console_logfile, "Enter information center planning \n");
 
-    double weighted_sum_x = 0.0;
-    double weighted_sum_y = 0.0;
-    double total_weight = 0.0;
-
-    double coords[2];
-
-    for (int i = 0; i < MAP_SIZE; i++)
+    if (simulation_parameters.visitedList != visitedList_ON)
     {
-        double weight = posterior->pdf[i];
-        if (weight < 1e-9)
-            continue; // ignorar pesos insignificantes
+        double weighted_sum_x = 0.0;
+        double weighted_sum_y = 0.0;
+        double total_weight = 0.0;
+        double coords[2];
 
-        posterior->index_to_param_values(i, coords);
-		fprintf(clustering_debugging_logfile, "Robot ID [%d]: The bin %i correspond to the coordinates of the BM MASK (x,y)=(%f,%f), with a weight=%f\n", ID, i+1, coords[0], coords[1], posterior->pdf[i]);
-        weighted_sum_x += coords[0] * weight;
-        weighted_sum_y += coords[1] * weight;
-        total_weight += weight;
-    }
+        for (int i = 0; i < MAP_SIZE; i++)
+        {
+            double weight = posterior->pdf[i];
+            if (weight < 1e-9)
+                continue; // ignorar pesos insignificantes
 
-    if (total_weight < 1e-9)
-    {
-        printf("Belief map is effectively empty\n");
-        fprintf(console_logfile, "Belief map is effectively empty, cannot compute information center\n");
+            posterior->index_to_param_values(i, coords);
+            fprintf(clustering_debugging_logfile, "Robot ID [%d]: The bin %i correspond to the coordinates of the BM MASK (x,y)=(%f,%f), with a weight=%f\n", ID, i+1, coords[0], coords[1], posterior->pdf[i]);
+
+            weighted_sum_x += coords[0] * weight;
+            weighted_sum_y += coords[1] * weight;
+            total_weight += weight;
+        }
+
+        if (total_weight < 1e-9)
+        {
+            printf("Belief map is effectively empty\n");
+            fprintf(console_logfile, "Belief map is effectively empty, cannot compute information center\n");
+            return;
+        }
+
+        goal_position.x = weighted_sum_x / total_weight;
+        goal_position.y = weighted_sum_y / total_weight;
+        goal_position.heading = 0;
+
+        printf("Information center goal: %f %f\n", goal_position.x, goal_position.y);
+        fprintf(clustering_debugging_logfile, "Robot ID [%d]: Information center goal: %f %f\n", ID, goal_position.x, goal_position.y);
         return;
     }
 
-    goal_position.x = weighted_sum_x / total_weight;
-    goal_position.y = weighted_sum_y / total_weight;
+    struct WeightedCenter {
+        Position center;
+        double weight;
+    };
+
+    auto is_available_cell = [&](int idx) {
+        if (posterior->pdf[idx] < 1e-9)
+            return false;
+        return cell_visited_list[idx] == 0;
+    };
+
+    std::vector<WeightedCenter> centers;
+    std::vector<int> visited(MAP_SIZE, 0);
+
+    for (int seed_idx = 0; seed_idx < MAP_SIZE; ++seed_idx)
+    {
+        if (visited[seed_idx] || !is_available_cell(seed_idx))
+            continue;
+
+        std::queue<int> pending;
+        pending.push(seed_idx);
+        visited[seed_idx] = 1;
+
+        double weighted_sum_x = 0.0;
+        double weighted_sum_y = 0.0;
+        double total_weight = 0.0;
+
+        while (!pending.empty())
+        {
+            int idx = pending.front();
+            pending.pop();
+
+            double coords[2];
+            posterior->index_to_param_values(idx, coords);
+            double weight = posterior->pdf[idx];
+
+            fprintf(clustering_debugging_logfile, "Robot ID [%d]: The bin %i correspond to the coordinates of the unvisited BM MASK (x,y)=(%f,%f), with a weight=%f\n", ID, idx+1, coords[0], coords[1], weight);
+
+            weighted_sum_x += coords[0] * weight;
+            weighted_sum_y += coords[1] * weight;
+            total_weight += weight;
+
+            int x_idx, y_idx;
+            index_to_indices_2D(idx, &x_idx, &y_idx);
+
+            const int dx[4] = {1, -1, 0, 0};
+            const int dy[4] = {0, 0, 1, -1};
+            for (int direction = 0; direction < 4; ++direction)
+            {
+                int nx = x_idx + dx[direction];
+                int ny = y_idx + dy[direction];
+
+                if (nx < 0 || nx >= _xnbins || ny < 0 || ny >= _ynbins)
+                    continue;
+
+                int nidx = indices_to_index_2D(nx, ny);
+                if (visited[nidx] || !is_available_cell(nidx))
+                    continue;
+
+                visited[nidx] = 1;
+                pending.push(nidx);
+            }
+        }
+
+        if (total_weight >= 1e-9)
+        {
+            WeightedCenter weighted_center;
+            weighted_center.center.x = weighted_sum_x / total_weight;
+            weighted_center.center.y = weighted_sum_y / total_weight;
+            weighted_center.center.heading = 0;
+            weighted_center.weight = total_weight;
+            centers.push_back(weighted_center);
+        }
+    }
+
+    if (centers.empty())
+    {
+        printf("Belief map has no unvisited information center cells\n");
+        fprintf(console_logfile, "Belief map has no unvisited information center cells\n");
+        return;
+    }
+
+    std::sort(centers.begin(), centers.end(),
+        [](const WeightedCenter &a, const WeightedCenter &b) {
+            return a.weight > b.weight;
+        }
+    );
+
+    Position center;
+    bool found_unvisited_center = false;
+    for (int i = 0; i < (int)centers.size(); ++i)
+    {
+        int center_idx = position_to_index_2D(centers[i].center.x, centers[i].center.y);
+        if (simulation_parameters.visitedList == visitedList_ON && cell_visited_list[center_idx] != 0)
+        {
+            printf("Information center candidate %d is already visited; trying next largest center\n", i + 1);
+            fprintf(clustering_debugging_logfile, "Robot ID [%d]: Information center candidate %d maps to visited cell %d; trying next largest center\n", ID, i + 1, center_idx);
+            continue;
+        }
+
+        center.copy_position(centers[i].center);
+        found_unvisited_center = true;
+        if (i > 0)
+            fprintf(clustering_debugging_logfile, "Robot ID [%d]: Using information center candidate %d with total weight=%f\n", ID, i + 1, centers[i].weight);
+        break;
+    }
+
+    if (!found_unvisited_center)
+    {
+        double max_weight = 0.0;
+        int max_weight_idx = -1;
+        for (int i = 0; i < MAP_SIZE; ++i)
+        {
+            if (!is_available_cell(i))
+                continue;
+            if (posterior->pdf[i] > max_weight)
+            {
+                max_weight = posterior->pdf[i];
+                max_weight_idx = i;
+            }
+        }
+
+        if (max_weight_idx < 0)
+        {
+            printf("No unvisited information center candidate found\n");
+            fprintf(console_logfile, "No unvisited information center candidate found\n");
+            return;
+        }
+
+        double coords[2];
+        posterior->index_to_param_values(max_weight_idx, coords);
+        center.x = coords[0];
+        center.y = coords[1];
+        center.heading = 0;
+        printf("No unvisited centroid candidate found; using max unvisited belief cell: %f %f\n", center.x, center.y);
+        fprintf(clustering_debugging_logfile, "Robot ID [%d]: No unvisited centroid candidate found; using max unvisited belief cell %d with weight=%f\n", ID, max_weight_idx, max_weight);
+    }
+
+    goal_position.x = center.x;
+    goal_position.y = center.y;
     goal_position.heading = 0;
 
     printf("Information center goal: %f %f\n", goal_position.x, goal_position.y);

@@ -766,95 +766,6 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
            ID, sum_def);
 }
 
-void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_P()
-{
-    constexpr int K = 3;
-    const int N = MAP_SIZE;
-    std::vector<std::pair<double, int>> top_cells = sorted_active_cells(false);
-
-    std::vector<int> seeds_x(K), seeds_y(K);
-    for (int i = 0; i < K && i < (int)top_cells.size(); ++i)
-        index_to_indices_2D(top_cells[i].second, &seeds_x[i], &seeds_y[i]);
-
-    std::fill(belief_clusters, belief_clusters + N, 0);
-
-    std::vector<std::vector<bool>> visited(source_y_nbins, std::vector<bool>(source_x_nbins, false));
-    std::queue<GridPoint> queues[K];
-    int cluster_sizes[K] = {0, 0, 0};
-
-    int target_size = count_active_cells(true) / K;
-    int max_size_margin = target_size * 1.2;
-
-    for (int k = 0; k < K; ++k) {
-        queues[k].push({seeds_x[k], seeds_y[k]});
-        visited[seeds_y[k]][seeds_x[k]] = true;
-        belief_clusters[seeds_y[k] * source_x_nbins + seeds_x[k]] = k + 1;
-        cluster_sizes[k]++;
-    }
-
-    bool growing = true;
-    while (growing) {
-        growing = false;
-
-        for (int k = 0; k < K; ++k) {
-            if (cluster_sizes[k] >= max_size_margin) continue;
-
-            if (queues[k].empty()) goto stop_region_growing;
-
-            auto [x, y] = queues[k].front(); queues[k].pop();
-
-            int best_nx = -1, best_ny = -1;
-            double best_pdf = -1.0;
-
-            for (const auto& [dx, dy] : von_neumann_directions()) {
-                int nx = x + dx, ny = y + dy;
-                if (!is_inside_grid(nx, ny)) continue;
-                if (obstacle_map[ny * source_x_nbins + nx] == 1) continue;
-                if (visited[ny][nx]) continue;
-
-                int idx = ny * source_x_nbins + nx;
-                if (posterior->pdf[idx] <= simulation_parameters.epsilon_clusterize) continue;
-
-                if (posterior->pdf[idx] > best_pdf) {
-                    best_pdf = posterior->pdf[idx];
-                    best_nx = nx;
-                    best_ny = ny;
-                }
-            }
-
-            if (best_nx != -1 && best_ny != -1) {
-                int idx = best_ny * source_x_nbins + best_nx;
-                visited[best_ny][best_nx] = true;
-                belief_clusters[idx] = k + 1;
-                queues[k].push({best_nx, best_ny});
-                cluster_sizes[k]++;
-                growing = true;
-            }
-        }
-    }
-stop_region_growing:
-
-    std::vector<int> cluster_sizes_vector(cluster_sizes, cluster_sizes + K);
-    int unclustered_before_absorb = count_unclustered_active_cells(true);
-    int absorbed_cells = assign_unclustered_active_cells_to_continuous_clusters(K, cluster_sizes_vector, true);
-    int unclustered_after_absorb = count_unclustered_active_cells(true);
-
-    if (unclustered_before_absorb > 0) {
-        printf("Robot ID [%d]: Absorbed %d leftover active cells into continuous probability region-growing clusters; %d active cells remain unclustered.\n",
-               ID, absorbed_cells, unclustered_after_absorb);
-    }
-
-    log_cluster_sizes_geometric(cluster_sizes_vector);
-    log_posterior_pdf_3d_cluster();
-    log_informative_sizes_and_apply_masks(simulation_parameters.number_of_robots, K, N);
-
-    normalize_posterior(N);
-    double sum_def = std::accumulate(posterior->pdf, posterior->pdf + N, 0.0);
-    printf("Robot ID [%d]: Sum of clusterized pdf is %f \n", ID, sum_def);
-
-    log_cluster_map_debug_for_current_robot(K);
-}
-
 void RegionAllocator::region_allocation_algorithm()
 {
     std::vector<int> selected_indices;
@@ -889,8 +800,6 @@ void RegionAllocator::region_allocation_algorithm()
         clusterize_belief_map_obstacle_dist_LLOYD(selected_indices);
     }
 
-    if (simulation_parameters.mapCoverageStrategy == REGION_GROWING_P)
-        clusterize_belief_map_obstacle_dist_REGION_GROWING_P();
     if (simulation_parameters.mapCoverageStrategy == REGION_GROWING_D)
         clusterize_belief_map_obstacle_dist_REGION_GROWING_D();
 }

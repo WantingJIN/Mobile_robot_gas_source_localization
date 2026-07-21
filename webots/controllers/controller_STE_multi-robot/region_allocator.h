@@ -44,7 +44,6 @@ private:
     void clusterize_belief_map_obstacle_dist_VORONOI(const std::vector<int>& selected_indices);
     void clusterize_belief_map_obstacle_dist_LLOYD(const std::vector<int>& selected_indices);
     void clusterize_belief_map_obstacle_dist_REGION_GROWING_D();
-    void clusterize_belief_map_obstacle_dist_REGION_GROWING_P();
 
 public:
     RegionAllocator(Posterior *input_posterior, float (*input_received_current_pos)[2]);
