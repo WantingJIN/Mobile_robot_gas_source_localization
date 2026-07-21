@@ -24,6 +24,7 @@ private:
     bool is_inside_grid(int x, int y) const;
     bool is_active_cell(int idx, bool avoid_obstacles) const;
     int count_active_cells(bool avoid_obstacles) const;
+    int count_unclustered_active_cells(bool avoid_obstacles) const;
     const std::vector<GridPoint>& moore_directions() const;
     const std::vector<GridPoint>& von_neumann_directions() const;
     std::vector<std::pair<double, int>> sorted_active_cells(bool avoid_obstacles) const;
@@ -37,6 +38,7 @@ private:
     void apply_pdf_mask_for_current_robot(const std::vector<std::vector<int>>& pdf_masks, int cluster_count, int n_cells);
     double normalize_posterior(int n_cells);
     std::vector<int> best_seed_assignment_for_robots(const std::vector<GridPoint>& seeds) const;
+    int assign_unclustered_active_cells_to_continuous_clusters(int cluster_count, std::vector<int>& cluster_sizes, bool avoid_obstacles);
     void log_cluster_map_debug_for_current_robot(int cluster_count);
 
     void clusterize_belief_map_obstacle_dist_VORONOI(const std::vector<int>& selected_indices);
