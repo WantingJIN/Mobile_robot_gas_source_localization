@@ -33,7 +33,7 @@ source_pos_y_max=3.5
 # source_pos_x_min=4
 # source_pos_x_max=11.5
 source_pos_x_min=10
-source_pos_x_max=12.7
+source_pos_x_max=12
 
 
 
@@ -102,7 +102,7 @@ for r in 53 #10 30 53 80 200
 do
     echo $r > $rr_filename
 
-    for m in 10 #1 2 3 5 10
+    for m in 10 15 #1 2 3 5 10
     do
         set_yaml_value map_nbr $m
         env_folder="../openfoam/test_maps/map${m}/map${m}_wind0.75"

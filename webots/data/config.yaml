@@ -14,7 +14,7 @@
 simulation:
   simuMode: ONLINE                  # ONLINE | OFFLINE
   experimental_logname: "physics_encoded_GSL/fixed_sigma_normalization_dijstra/10/1760633017749"
-  map_nbr: 10
+  map_nbr: 15
 
 # --- Robot ---
 robot:
@@ -42,7 +42,7 @@ gas_feature:
   ABSOLUTE_VALUE:                        # sub-params: active when gasFeature = ABSOLUTE_VALUE
     likelihoodSigma: 3000
   RELATIVE_VALUE:                   # sub-params: active when gasFeature = RELATIVE_VALUE
-    relativeMethod: EMPIRICAL_CDF_NUM         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
+    relativeMethod: Z_SCORE         # NORMALIZATION | Z_SCORE | EMPIRICAL_CDF | EMPIRICAL_CDF_AND_SLOPE | EMPIRICAL_CDF_NUM
     # likelihoodSigma is read from the active relativeMethod sub-block below
     NORMALIZATION:
       likelihoodSigma: 1.0
@@ -68,6 +68,7 @@ gas_feature:
 # --- Bayesian Source Estimation ---
 bayesian_estimation:
   BayesianModelingMethod: EXHAUSTIVE  # MCMC | EXHAUSTIVE
+  posteriorRepresentation: LOG_P
   MCMC:                               # sub-params: active when BayesianModelingMethod = MCMC
     MCMC_iteration_num: 1000
 
@@ -81,13 +82,13 @@ plume_model:
 wind:
   windInfo: WIND_ONLINE             # WIND_OFFLINE | WIND_ONLINE
   windEstimationMethod: GAUSSIAN_KERNEL  # GROUND_TRUTH | GAUSSIAN_KERNEL | BASEFLOW_CORRECTION
-  modelUncertainty: FIXED_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
+  modelUncertainty: DYNAMIC_UNCERTAINTY  # FIXED_UNCERTAINTY | DYNAMIC_UNCERTAINTY
   DYNAMIC_UNCERTAINTY:              # sub-params: active when modelUncertainty = DYNAMIC_UNCERTAINTY
     windBeliefWeight: 0.4
 
 # --- Path Planning ---
 planning:
-  planningStrategy: BELIEF_CLUSTERING  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |INFORMATIVE_KLD
+  planningStrategy: INFO_CENTER  # GREEDY | BALANCE_MAXIMAL_EXPECTED | RANDOM | LAWNMOWER |INFORMATIVE_KLD
                                        # BELIEF_CLUSTERING | WEIGHTED_CLUSTERING | INFO_CLUSTERING |
                                        # INFO_CENTER| SUM_DIJKSTRA_FIX | SUM_DIJKSTRA_ADP | MULTI_DIJKSTRA
   visitedList: visitedList_ON       # visitedList_ON | visitedList_OFF
@@ -106,7 +107,7 @@ planning:
 # --- Team Coordination ---
 team:
   teamStrategy: DISTRIBUTED          # INDIVIDUAL | DISTRIBUTED 
-  mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_P | REGION_GROWING_D | NONE
+  mapCoverageStrategy: REGION_GROWING_D     #VORONOI | LLOYD_D | LLOYD_P | REGION_GROWING_D | NONE
   mapCoverageSeed: ROBOT_CELL    # MAX_CELL | ROBOT_CELL
   epsilon_clusterize: 0
   
