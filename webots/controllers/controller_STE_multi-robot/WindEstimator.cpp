@@ -48,47 +48,39 @@ void GaussianWindEstimator::computeSDF() {
 void GaussianWindEstimator::computeNormals() {
     Nx_.assign(ny_, std::vector<float>(nx_, 0.0));
     Ny_.assign(ny_, std::vector<float>(nx_, 0.0));
-    for (int j = 1; j < ny_ - 1; ++j) {
-        for (int i = 1; i < nx_ - 1; ++i) {
-            float dDx = (D_[j][i+1] - D_[j][i-1]) / (2*dx_);
-            float dDy = (D_[j+1][i] - D_[j-1][i]) / (2*dy_);
-            float mag = std::sqrt(dDx*dDx + dDy*dDy) + 1e-12;
-            Nx_[j][i] = dDx / mag;
-            Ny_[j][i] = dDy / mag;
-        }
-    }
-
-    // for the boundaries, use forward/backward difference
+    const float eps = 1e-12f;
     for (int j = 0; j < ny_; ++j) {
-        // left boundary
-        {
-            int i = 0;
-            float dDx = (D_[j][i+1] - D_[j][i]) / dx_;
-            float dDy;
-            if (j == 0)
-                dDy = (D_[j+1][i] - D_[j][i]) / dy_;
-            else if (j == ny_ - 1)
-                dDy = (D_[j][i] - D_[j-1][i]) / dy_;
-            else
-                dDy = (D_[j+1][i] - D_[j-1][i]) / (2*dy_);
-            float mag = std::sqrt(dDx*dDx + dDy*dDy) + 1e-12;
-            Nx_[j][i] = dDx / mag;
-            Ny_[j][i] = dDy / mag;
-        }
-        // right boundary
-        {
-            int i = nx_ - 1;
-            float dDx = (D_[j][i] - D_[j][i-1]) / dx_;
-            float dDy;
-            if (j == 0)
-                dDy = (D_[j+1][i] - D_[j][i]) / dy_;
-            else if (j == ny_ - 1)
-                dDy = (D_[j][i] - D_[j-1][i]) / dy_;
-            else
-                dDy = (D_[j+1][i] - D_[j-1][i]) / (2*dy_);
-            float mag = std::sqrt(dDx*dDx + dDy*dDy) + 1e-12;
-            Nx_[j][i] = dDx / mag;
-            Ny_[j][i] = dDy / mag;
+        for (int i = 0; i < nx_; ++i) {
+            float dDx = 0.0f;
+            float dDy = 0.0f;
+
+            if (nx_ > 1) {
+                if (i == 0)
+                    dDx = (D_[j][i+1] - D_[j][i]) / dx_;
+                else if (i == nx_ - 1)
+                    dDx = (D_[j][i] - D_[j][i-1]) / dx_;
+                else
+                    dDx = (D_[j][i+1] - D_[j][i-1]) / (2*dx_);
+            }
+
+            if (ny_ > 1) {
+                if (j == 0)
+                    dDy = (D_[j+1][i] - D_[j][i]) / dy_;
+                else if (j == ny_ - 1)
+                    dDy = (D_[j][i] - D_[j-1][i]) / dy_;
+                else
+                    dDy = (D_[j+1][i] - D_[j-1][i]) / (2*dy_);
+            }
+
+            float mag = std::sqrt(dDx*dDx + dDy*dDy);
+            if (mag > eps) {
+                Nx_[j][i] = dDx / mag;
+                Ny_[j][i] = dDy / mag;
+            } else {
+                // Keep a valid orthonormal basis for flat/degenerate SDF cells.
+                Nx_[j][i] = 1.0f;
+                Ny_[j][i] = 0.0f;
+            }
         }
     }
 }
@@ -132,18 +124,17 @@ void GaussianWindEstimator::estimateField(
         float x_i = meas_x[i], y_i = meas_y[i];
         int idx_i, idy_i;
         world_pos_to_grid_indices(meas_x[i], meas_y[i], idx_i, idy_i);
-    
-        
+
         float d_local = std::abs(D_[idy_i][idx_i]);
         float n_x = Nx_[idy_i][idx_i], n_y = Ny_[idy_i][idx_i];
         float beta = 1.0 + c_ / (d_local + 1e-3);
+        //float beta = 1.0;
         for (int jj = 0; jj < ny_; ++jj) {
             for (int ii = 0; ii < nx_; ++ii) {
                 float dx_ = X_[jj][ii] - x_i;
                 float dy_ = Y_[jj][ii] - y_i;
                 float r_n = dx_ * n_x + dy_ * n_y;
                 float r_t = -dx_ * n_y + dy_ * n_x;
-                // FIXME: still we have something very wired when the samples is very close to the obstacle
                 // Now we set beta to 0.0 manually
                 float w = std::exp(-(r_t*r_t + beta*r_n*r_n) / (2*sigma_*sigma_));
                 //float w = std::exp(-(dx_*dx_ + dy_*dy_) / (2*sigma_*sigma_));
