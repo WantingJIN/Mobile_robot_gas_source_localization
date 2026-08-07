@@ -165,6 +165,16 @@ eModelUncertainty parse_model_uncertainty(const char *str)
 	exit(1);
 }
 
+ePosteriorRepresentation parse_posterior_representation(const char *str)
+{
+	if (strcmp(str, "normal_P") == 0 || strcmp(str, "NORMAL_P") == 0)
+		return NORMAL_P;
+	if (strcmp(str, "log_p") == 0 || strcmp(str, "LOG_P") == 0)
+		return LOG_P;
+	fprintf(stderr, "Unknown posterior representation: %s\n", str);
+	exit(1);
+}
+
 eGasFeature parse_gas_feature(const char *str)
 {
 	if (strcmp(str, "ABSOLUTE_VALUE") == 0)
@@ -562,6 +572,7 @@ SimulationParameters::SimulationParameters()
 	windInfo = WIND_OFFLINE;
 	windEstimationMethod = GAUSSIAN_KERNEL;
 	modelUncertainty = FIXED_UNCERTAINTY;
+	posteriorRepresentation = NORMAL_P;
 	diff_coefficient = 0.05f;
 	wind_belief_weight = 1.0f;
 	ID_list= {101, 102, 103, 104, 105, 106, 107, 108, 109, 110}; 
@@ -585,6 +596,8 @@ void SimulationParameters::load_simulation_parameters_from_config(const char *fi
 		global_local_search_ratio = atof(value.c_str());
 	if (get_first_config_value(config, {"bayesian_estimation.BayesianModelingMethod", "BayesianModelingMethod"}, &value))
 		BayesianModelingMethod = parse_evaluation_method(value.c_str());
+	if (get_first_config_value(config, {"bayesian_estimation.posteriorRepresentation", "posteriorRepresentation"}, &value))
+		posteriorRepresentation = parse_posterior_representation(value.c_str());
 	if (get_first_config_value(config, {"robot.number_of_robots", "number_of_robots"}, &value))
 		number_of_robots = atoi(value.c_str());
 	if (get_first_config_value(config, {"simulation.scenario", "scenario"}, &value))
@@ -739,6 +752,7 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "global_local_search_ratio %f\n", global_local_search_ratio);
 	fprintf(sim_param_file, "MCMC_iteration_num %d\n", MCMC_iteration_num);
 	fprintf(sim_param_file, "BayesianModelingMethod %d\n", BayesianModelingMethod);
+	fprintf(sim_param_file, "posteriorRepresentation %d\n", posteriorRepresentation);
 	fprintf(sim_param_file, "number_of_robots %d\n", number_of_robots);
 	fprintf(sim_param_file, "scenario %d\n", scenario);
 	fprintf(sim_param_file, "map_nbr %d\n", map_nbr);

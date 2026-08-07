@@ -10,7 +10,9 @@
 #include <fstream>
 #include <array>
 #include <algorithm>
+#include <cmath>
 #include <exception>
+#include <limits>
 #include "controller_STE_distributed.h"
 #include "Posterior.h"
 #include "khepera_functions.h"
@@ -20,6 +22,7 @@
 #include "Position.h"
 #include "BeliefCommManager.h"
 #include "region_allocator.h"
+#include "BeliefMapFusion.h"
 
 //#define PORT 3011
 #define SA struct sockaddr 
@@ -375,6 +378,26 @@ bool should_share_team_wind()
 	return simulation_parameters.number_of_robots > 1 &&
 	       simulation_parameters.teamStrategy == DISTRIBUTED &&
 	       simulation_parameters.windInfo == WIND_ONLINE;
+}
+
+bool should_use_log_posterior()
+{
+	return simulation_parameters.posteriorRepresentation == LOG_P;
+}
+
+void prepare_belief_map_for_sharing(float belief_map[MAP_SIZE])
+{
+	if (should_use_log_posterior())
+	{
+		if (posterior && posterior->pdf_is_log)
+			BeliefMapFusion::sanitize_log_map(posterior->pdf, belief_map, obstacle_map);
+		else if (posterior)
+			BeliefMapFusion::pdf_to_log_map(posterior->pdf, belief_map, obstacle_map);
+		return;
+	}
+
+	if (posterior)
+		memcpy(belief_map, posterior->pdf, MAP_SIZE * sizeof(float));
 }
 
 void record_team_wind_sample(Position sample_position, float wind_u, float wind_v, int sender_ID, int sample_id)
@@ -805,6 +828,7 @@ void state_estimating(){
 	// check if stopping condition is reached
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
 	{
+		posterior->convert_log_pdf_to_pdf();
 		// calculate entropy and spread
 		posterior->process();
       	posterior->calculate_entropy_and_spread();
@@ -1055,7 +1079,7 @@ void state_receive_pdf()
 
 	if (!printed && posterior->pdf != nullptr)
 	{
-		memcpy(belief_maps[self_index], posterior->pdf, MAP_SIZE * sizeof(float));
+		prepare_belief_map_for_sharing(belief_maps[self_index]);
 		printed = true;
 	}
 
@@ -1113,34 +1137,19 @@ void state_receive_pdf()
 void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
-	// Initialize to 1.0 for multiplicative identity
-	for (int i = 0; i < MAP_SIZE; i++)
+	bool merge_ok = false;
+	if (should_use_log_posterior())
 	{
-		belief_map_merged[i] = 1.0;
+		merge_ok = BeliefMapFusion::fuse_log_maps(belief_maps, simulation_parameters.number_of_robots, belief_map_merged);
+		if (!merge_ok)
+			printf("Robot ID [%d]: Failed to normalize merged log belief map.\n", ID);
+		BeliefMapFusion::log_map_to_pdf(belief_map_merged, belief_map_merged);
 	}
-
-	// Multiply belief maps from all robots, including self.
-	for (int r = 0; r < simulation_parameters.number_of_robots; r++)
+	else
 	{
-		for (int i = 0; i < MAP_SIZE; i++)
-		{
-			belief_map_merged[i] *= belief_maps[r][i];
-		}
-	}
-
-	// normalize belief map
-	float sum = 0.0;
-	for (int i = 0; i < MAP_SIZE; i++)
-	{
-		sum += belief_map_merged[i];
-	}
-
-	if (sum > 0)
-	{
-		for (int i = 0; i < MAP_SIZE; i++)
-		{
-			belief_map_merged[i] /= sum;
-		}
+		merge_ok = BeliefMapFusion::fuse_normal_maps(belief_maps, simulation_parameters.number_of_robots, belief_map_merged);
+		if (!merge_ok)
+			printf("Robot ID [%d]: Failed to normalize merged belief map.\n", ID);
 	}
 
 	// printf("Robot ID [%d]: Belief map merged successfully.\n", ID);
@@ -1151,6 +1160,10 @@ void state_merge_pdf()
 	}
 	printf("\n");
 	memcpy(posterior->pdf, belief_map_merged, MAP_SIZE * sizeof(float));
+	posterior->pdf_is_log = false;
+	posterior->sum = 0.0f;
+	for (int i = 0; i < MAP_SIZE; ++i)
+		posterior->sum += posterior->pdf[i];
       // Check the stopping condition after merging
 	posterior->process();
       posterior->calculate_entropy_and_spread();
@@ -1160,7 +1173,7 @@ void state_merge_pdf()
 	bool is_stop_condition_reached = check_stop_condition();
 	if (is_stop_condition_reached)
 	{
-		if (sum > 0)
+		if (posterior->sum > 0.0f && merge_ok)
 		{
 			FSM.state = STATE_FINISHED;
 			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
@@ -1198,7 +1211,9 @@ void state_share_pdf()
     } else {
 		received_current_pos[self_index][0] = current_position.x;
 		received_current_pos[self_index][1] = current_position.y;
-		Message msg(MSG_STATE_BELIEF_MAP, ID, 0, current_position, 0.0f, Position(), 0, posterior->pdf);
+		float belief_map_to_share[MAP_SIZE];
+		prepare_belief_map_for_sharing(belief_map_to_share);
+		Message msg(MSG_STATE_BELIEF_MAP, ID, 0, current_position, 0.0f, Position(), 0, belief_map_to_share);
 		inter_robot_comm.send_message_to_all(msg);
 		printf("Robot ID [%d]: Broadcast belief map.\n", ID);
     }

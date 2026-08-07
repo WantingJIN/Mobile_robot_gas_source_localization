@@ -1,5 +1,8 @@
 #include "path_planner.h"
 
+#include <algorithm>
+#include <queue>
+
 extern SimulationParameters simulation_parameters;
 FILE *gas_information_map_logfile;
 FILE *scores_map_logfile;
@@ -39,34 +42,182 @@ PathPlanner:: ~PathPlanner()
 void PathPlanner::information_center_planning()
 {
 	printf("Enter information center planning \n");
-	float weighted_sum_x = 0.0f;
-	float weighted_sum_y = 0.0f;
-	float total_weight = 0.0f;
-	float coords[2] = {0.0f, 0.0f};
 
-	for (int i = 0; i < MAP_SIZE; i++)
+	if (simulation_parameters.visitedList != visitedList_ON)
 	{
-		float weight = posterior->pdf[i];
-		if (weight < 1e-9f)
-			continue;
+		float weighted_sum_x = 0.0f;
+		float weighted_sum_y = 0.0f;
+		float total_weight = 0.0f;
+		float coords[2] = {0.0f, 0.0f};
 
-		posterior->index_to_param_values(i, coords);
-		if (clustering_debugging_logfile)
-			fprintf(clustering_debugging_logfile, "Robot ID [%d]: belief bin %d -> (%f,%f), weight=%f\n", ID, i + 1, coords[0], coords[1], weight);
-		weighted_sum_x += coords[0] * weight;
-		weighted_sum_y += coords[1] * weight;
-		total_weight += weight;
+		for (int i = 0; i < MAP_SIZE; i++)
+		{
+			float weight = posterior->pdf[i];
+			if (weight < 1e-9f)
+				continue;
+
+			posterior->index_to_param_values(i, coords);
+			if (clustering_debugging_logfile)
+				fprintf(clustering_debugging_logfile, "Robot ID [%d]: belief bin %d -> (%f,%f), weight=%f\n", ID, i + 1, coords[0], coords[1], weight);
+			weighted_sum_x += coords[0] * weight;
+			weighted_sum_y += coords[1] * weight;
+			total_weight += weight;
+		}
+
+		if (total_weight < 1e-9f)
+		{
+			printf("Belief map is effectively empty\n");
+			maximal_belief_planning();
+			return;
+		}
+
+		goal_position.x = weighted_sum_x / total_weight;
+		goal_position.y = weighted_sum_y / total_weight;
+		goal_position.heading = 0;
+		printf("Information center goal: %f %f\n", goal_position.x, goal_position.y);
+		return;
 	}
 
-	if (total_weight < 1e-9f)
+	struct WeightedCenter
 	{
-		printf("Belief map is effectively empty\n");
+		Position center;
+		float weight;
+	};
+
+	auto is_available_cell = [&](int idx) {
+		if (idx < 0 || idx >= MAP_SIZE)
+			return false;
+		if (posterior->pdf[idx] < 1e-9f)
+			return false;
+		return cell_visited_list[idx] == 0;
+	};
+
+	std::vector<WeightedCenter> centers;
+	std::vector<int> visited(MAP_SIZE, 0);
+
+	for (int seed_idx = 0; seed_idx < MAP_SIZE; ++seed_idx)
+	{
+		if (visited[seed_idx] || !is_available_cell(seed_idx))
+			continue;
+
+		std::queue<int> pending;
+		pending.push(seed_idx);
+		visited[seed_idx] = 1;
+
+		float weighted_sum_x = 0.0f;
+		float weighted_sum_y = 0.0f;
+		float total_weight = 0.0f;
+
+		while (!pending.empty())
+		{
+			int idx = pending.front();
+			pending.pop();
+
+			float coords[2] = {0.0f, 0.0f};
+			posterior->index_to_param_values(idx, coords);
+			float weight = posterior->pdf[idx];
+
+			if (clustering_debugging_logfile)
+				fprintf(clustering_debugging_logfile, "Robot ID [%d]: unvisited belief bin %d -> (%f,%f), weight=%f\n", ID, idx + 1, coords[0], coords[1], weight);
+
+			weighted_sum_x += coords[0] * weight;
+			weighted_sum_y += coords[1] * weight;
+			total_weight += weight;
+
+			int x_idx = 0;
+			int y_idx = 0;
+			index_to_indices_2D(idx, &x_idx, &y_idx);
+
+			const int dx[4] = {1, -1, 0, 0};
+			const int dy[4] = {0, 0, 1, -1};
+			for (int direction = 0; direction < 4; ++direction)
+			{
+				int nx = x_idx + dx[direction];
+				int ny = y_idx + dy[direction];
+
+				if (nx < 0 || nx >= x_nbins || ny < 0 || ny >= y_nbins)
+					continue;
+
+				int nidx = indices_to_index_2D(nx, ny);
+				if (visited[nidx] || !is_available_cell(nidx))
+					continue;
+
+				visited[nidx] = 1;
+				pending.push(nidx);
+			}
+		}
+
+		if (total_weight >= 1e-9f)
+		{
+			WeightedCenter weighted_center;
+			weighted_center.center.x = weighted_sum_x / total_weight;
+			weighted_center.center.y = weighted_sum_y / total_weight;
+			weighted_center.center.heading = 0;
+			weighted_center.weight = total_weight;
+			centers.push_back(weighted_center);
+		}
+	}
+
+	if (centers.empty())
+	{
+		printf("Belief map has no unvisited information center cells\n");
 		maximal_belief_planning();
 		return;
 	}
 
-	goal_position.x = weighted_sum_x / total_weight;
-	goal_position.y = weighted_sum_y / total_weight;
+	std::sort(centers.begin(), centers.end(),
+		[](const WeightedCenter &a, const WeightedCenter &b) {
+			return a.weight > b.weight;
+		});
+
+	Position center;
+	bool found_unvisited_center = false;
+	for (int c = 0; c < static_cast<int>(centers.size()); ++c)
+	{
+		int center_idx = position_to_index_2D(centers[c].center.x, centers[c].center.y);
+		if (cell_visited_list[center_idx] != 0)
+		{
+			if (clustering_debugging_logfile)
+				fprintf(clustering_debugging_logfile, "Robot ID [%d]: information center candidate %d maps to visited cell %d\n", ID, c + 1, center_idx);
+			continue;
+		}
+
+		center.copy_position(centers[c].center);
+		found_unvisited_center = true;
+		break;
+	}
+
+	if (!found_unvisited_center)
+	{
+		float max_weight = 0.0f;
+		int max_weight_idx = -1;
+		for (int i = 0; i < MAP_SIZE; ++i)
+		{
+			if (!is_available_cell(i))
+				continue;
+			if (posterior->pdf[i] > max_weight)
+			{
+				max_weight = posterior->pdf[i];
+				max_weight_idx = i;
+			}
+		}
+
+		if (max_weight_idx < 0)
+		{
+			printf("No unvisited information center candidate found\n");
+			maximal_belief_planning();
+			return;
+		}
+
+		float coords[2] = {0.0f, 0.0f};
+		posterior->index_to_param_values(max_weight_idx, coords);
+		center.x = coords[0];
+		center.y = coords[1];
+		center.heading = 0;
+	}
+
+	goal_position.x = center.x;
+	goal_position.y = center.y;
 	goal_position.heading = 0;
 	printf("Information center goal: %f %f\n", goal_position.x, goal_position.y);
 }

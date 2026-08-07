@@ -179,6 +179,12 @@ typedef enum modelUncertainty
 	DYNAMIC_UNCERTAINTY = 1,
 } eModelUncertainty;
 
+typedef enum posteriorRepresentation
+{
+	NORMAL_P = 0,
+	LOG_P = 1,
+} ePosteriorRepresentation;
+
 // parameters to estimate
 struct parameters_set
 {
@@ -241,6 +247,7 @@ class SimulationParameters{
 		eWindInfo windInfo;
 		eWindEstimationMethod windEstimationMethod;
 		eModelUncertainty modelUncertainty;
+		ePosteriorRepresentation posteriorRepresentation;
 
 		SimulationParameters();
 		SimulationParameters(const char *filename);

@@ -1,13 +1,66 @@
 #include "likelihood_estimator.h"
 
+#include <algorithm>
+#include <cmath>
+#include <iterator>
+#include <limits>
+
 extern int nbr_obs;
 extern float margin;
 extern float **obstacles;
 extern SimulationParameters simulation_parameters;
+
+namespace
+{
+void rebuild_sorted_measurements(vector<float> &sorted_data, const vector<float> &data_list)
+{
+	sorted_data = data_list;
+	sort(sorted_data.begin(), sorted_data.end());
+}
+
+void update_sorted_measurements(vector<float> &sorted_data, const vector<float> &data_list)
+{
+	if (sorted_data.size() > data_list.size())
+	{
+		rebuild_sorted_measurements(sorted_data, data_list);
+		return;
+	}
+
+	if (sorted_data.empty())
+	{
+		rebuild_sorted_measurements(sorted_data, data_list);
+		return;
+	}
+
+	const size_t sorted_size = sorted_data.size();
+	if (sorted_size == data_list.size())
+		return;
+
+	vector<float> new_measurements(data_list.begin() + sorted_size, data_list.end());
+	sort(new_measurements.begin(), new_measurements.end());
+
+	vector<float> merged_data;
+	merged_data.reserve(data_list.size());
+	merge(sorted_data.begin(), sorted_data.end(),
+	      new_measurements.begin(), new_measurements.end(),
+	      back_inserter(merged_data));
+	sorted_data.swap(merged_data);
+}
+}
 // ====================== ESTIMATION functions ========================= //
 
 // Likelihood with concentration values from precomputed gas maps (initialized and stored during initialization)
 float likelihood_precomp(struct history &history, float *parameters, int source_pos_idx, PlumeModel *model)
+{
+	return exp(log_likelihood_precomp(history, parameters, source_pos_idx, model));
+}
+
+float likelihood_absolute_value(struct history &history, float *parameters, int source_pos_idx, PlumeModel *model)
+{
+	return likelihood_precomp(history, parameters, source_pos_idx, model);
+}
+
+float log_likelihood_precomp(struct history &history, float *parameters, int source_pos_idx, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -43,12 +96,22 @@ float likelihood_precomp(struct history &history, float *parameters, int source_
 		// if (source_pos_idx == 0)
 		// 	//fprintf(console_logfile, "x: %f, y: %f, idx: %d, idy: %d, hist: %f, model: %f\n", px[i], py[i], idx[i], idy[i], history.gas_meas_avg[i], model_c_avg[i]);
 	}
-	return (exp(-0.5 * sum_tmp));
+	return -0.5f * sum_tmp;
+}
+
+float log_likelihood_absolute_value(struct history &history, float *parameters, int source_pos_idx, PlumeModel *model)
+{
+	return log_likelihood_precomp(history, parameters, source_pos_idx, model);
 }
 
 
 // Likelihood for relative concentration with precomputed gas maps
 float likelihood_rel_con(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
+{
+	return exp(log_likelihood_rel_con(history, parameters, soure_pos_idx, model));
+}
+
+float log_likelihood_rel_con(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model, vector<float> *sorted_model_measurements)
 {
 
 	float sigma = simulation_parameters.likelihoodSigma;
@@ -56,7 +119,7 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 	{
 		float wind_confidence = model->get_wind_estimation_confidence(soure_pos_idx);
 		sigma = simulation_parameters.likelihoodSigma *
-		        (1.0f + simulation_parameters.wind_belief_weight * exp(-wind_confidence * wind_confidence * 2.0f));
+		        (1.0f + simulation_parameters.wind_belief_weight * exp(-wind_confidence * 2.0f));
 	}
 	float sum_tmp = 0;
 
@@ -80,6 +143,13 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 	vector<float> pdf_model_list;
 	vector<float> slope_model_list;
 	float rel_model_val, rel_hist_val;
+	auto calculate_empirical_model_measurements = [&]()
+	{
+		if (sorted_model_measurements != nullptr)
+			calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg, *sorted_model_measurements);
+		else
+			calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+	};
 	if (simulation_parameters.relativeMethod == NORMALIZATION)
 	{
 		calculate_normalized_relative_measurements(rel_model_list, model_c_avg);
@@ -87,8 +157,9 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 		{
 			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
+			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2) / (history.size + 1);
 		}
+		sum_tmp /= (sigma * sigma);
 	}
 	if (simulation_parameters.relativeMethod == Z_SCORE)
 	{
@@ -102,29 +173,29 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		calculate_empirical_model_measurements();
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
 			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_AND_SLOPE)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		calculate_empirical_model_measurements();
 		// sigma = 0.45;// works well for Empirical CDF
 		for (int i = 0; i < history.size; i++)
 		{
 			rel_hist_val = history.relative_meas[i];
 			rel_model_val = rel_model_list[i];
-			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma);
+			sum_tmp += pow(rel_model_val - rel_hist_val, 2) / (sigma * sigma);
 		}
 	}
 	if (simulation_parameters.relativeMethod == EMPIRICAL_CDF_NUM)
 	{
-		calculate_measurements_list_empirical_CDF(rel_model_list, slope_model_list, model_c_avg);
+		calculate_empirical_model_measurements();
 		// sigma = 0.48;// works well for Empirical CDF NUM
 		for (int i = 0; i < history.size; i++)
 		{
@@ -133,12 +204,17 @@ float likelihood_rel_con(struct history &history, float *parameters, int soure_p
 			// NOTE: take into account the measurement number information, to avoid the algorithm converge to fast to local minima
 			sum_tmp += history.size * pow(rel_model_val - rel_hist_val, 2) / (history.size + 1);
 		}
-		sum_tmp /= simulation_parameters.likelihoodSigma * simulation_parameters.likelihoodSigma;
+		sum_tmp /= sigma * sigma;
 	}
-	return (exp(-0.5 * sum_tmp));
+	return -0.5f * sum_tmp;
 }
 
 float likelihood(struct history &history, float *parameters, PlumeModel *model)
+{
+	return exp(log_likelihood(history, parameters, model));
+}
+
+float log_likelihood(struct history &history, float *parameters, PlumeModel *model)
 {
 	float sigmaE = simulation_parameters.likelihood_error;
 	float sigmaD = 0; // 125;
@@ -170,44 +246,57 @@ float likelihood(struct history &history, float *parameters, PlumeModel *model)
 		// std::cout<<"size: "<< history.size <<"model_c_avg[i] "<<model_c_avg[i]<<std::endl;
 	}
 
-	return (exp(-0.5 * sum_tmp));
+	return -0.5f * sum_tmp;
 }
 
-void calculate_measurements_list_empirical_CDF(vector<float> &rel_meas_list, vector<float> &slope_list, const vector<float> data_list)
+void calculate_measurements_list_empirical_CDF(vector<float> &rel_meas_list, vector<float> &slope_list, const vector<float> &data_list)
+{
+	vector<float> sorted_data;
+	calculate_measurements_list_empirical_CDF(rel_meas_list, slope_list, data_list, sorted_data);
+}
+
+void calculate_measurements_list_empirical_CDF(vector<float> &rel_meas_list, vector<float> &slope_list, const vector<float> &data_list, vector<float> &sorted_data)
 {
 	rel_meas_list.resize(data_list.size());
 	slope_list.resize(data_list.size());
+	if (data_list.empty())
+	{
+		sorted_data.clear();
+		return;
+	}
 	if (data_list.size() == 1)
 	{
 		rel_meas_list[0] = 0.0;
 		slope_list[0] = 0.0;
 		return;
 	}
-	vector<float> sortedData = data_list;
-	sort(sortedData.begin(), sortedData.end());
+	update_sorted_measurements(sorted_data, data_list);
 
 	// Calculate ECDF
 	for (size_t i = 0; i < data_list.size(); ++i)
 	{
 		// Count the number of observations less than or equal to the current value
-		size_t count = count_if(sortedData.begin(), sortedData.end(),
-						[&](float x)
-						{ return data_list[i] - x > 0.1; });
+		size_t count = lower_bound(sorted_data.begin(), sorted_data.end(), data_list[i] - 0.1f) - sorted_data.begin();
 		// Calculate proportion
 		rel_meas_list[i] = static_cast<float>(count) / data_list.size();
 	}
 	// Calculate Normalized Slope of ECDF
-	float data_range = sortedData.back() - sortedData.front();
-	for (size_t i = 1; i < sortedData.size(); ++i)
+	float data_range = sorted_data.back() - sorted_data.front();
+	if (fabs(data_range) < 1e-12f)
 	{
-		float delta_x = (sortedData[i] - sortedData[i - 1]) / data_range;
+		fill(slope_list.begin(), slope_list.end(), 0.0f);
+		return;
+	}
+	for (size_t i = 1; i < sorted_data.size(); ++i)
+	{
+		float delta_x = (sorted_data[i] - sorted_data[i - 1]) / data_range;
 		slope_list[i] = (delta_x > 0) ? (delta_x / data_list.size()) : 0.0;
 	}
 	// Handle the first slope value
 	slope_list[0] = slope_list[1];
 }
 
-void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, const vector<float> data_list)
+void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, const vector<float> &data_list)
 {
       rel_meas_list.resize(data_list.size());
 	if (data_list.size() == 1)
@@ -234,7 +323,7 @@ void calculate_normalized_relative_measurements(vector<float> &rel_meas_list, co
 	}
 }
 
-void calculate_measurements_zscore(vector<float> &rel_meas_list, const vector<float> data_list)
+void calculate_measurements_zscore(vector<float> &rel_meas_list, const vector<float> &data_list)
 {
 	rel_meas_list.resize(data_list.size());
 	if (data_list.size() == 1)
@@ -264,6 +353,11 @@ void calculate_measurements_zscore(vector<float> &rel_meas_list, const vector<fl
 
 float likelihood_gas_hit(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
 {
+	return exp(log_likelihood_gas_hit(history, parameters, soure_pos_idx, model));
+}
+
+float log_likelihood_gas_hit(struct history &history, float *parameters, int soure_pos_idx, PlumeModel *model)
+{
 	float sum_tmp = 0;
 
 	vector<float> model_c_avg(history.size);
@@ -286,8 +380,6 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 	int history_hit;
 	int model_hit;
 
-	float likelihood;
-
 	//-----model and measurement fixed threshold, penalty on gas hit event difference-------
 	if (simulation_parameters.gasHitMethod == FIXED_THRES)
 	{
@@ -306,7 +398,6 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 				sum_tmp += 1;
 		}
 		sum_tmp *= 0.8; // best result with exp 0.5
-		likelihood = (exp(-sum_tmp));
 	}
 	if (simulation_parameters.gasHitMethod == FIXED_THRES_NUM)
 	{
@@ -325,7 +416,6 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 				sum_tmp += 1;
 		}
 		sum_tmp *= 0.8 * float(history.size) / (float(history.size) + 1); // best result with exp 0.5
-		likelihood = (exp(-sum_tmp));
 	}
 	//-------------------------min max avg threshold-------------------------------
 
@@ -374,7 +464,6 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 			}
 		}
 		sum_tmp *= 0.8;
-		likelihood = (exp(-sum_tmp));
 	}
 
 	//-------------adaptive threshold- based on recent measurements------------------------------
@@ -413,7 +502,6 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 			}
 		}
 		sum_tmp *= 0.8;
-		likelihood = (exp(-sum_tmp));
 	}
 	if (simulation_parameters.gasHitMethod == SLIDING_WINDOW_THRES_NUM)
 	{
@@ -450,10 +538,14 @@ float likelihood_gas_hit(struct history &history, float *parameters, int soure_p
 			}
 		}
 		sum_tmp *= 0.8 * float(history.size) / (float(history.size) + 1);
-		likelihood = (exp(-sum_tmp));
 	}
 
-	return likelihood;
+	return -sum_tmp;
+}
+
+float log_prior(float *parameters, int nbr_dimension, PlumeModel *model)
+{
+	return prior(parameters, nbr_dimension, model) ? 0.0f : -std::numeric_limits<float>::infinity();
 }
 
 bool prior(float *parameters, int nbr_dimension, PlumeModel *model)
@@ -464,6 +556,13 @@ bool prior(float *parameters, int nbr_dimension, PlumeModel *model)
 	// verify if all the parameters are between the right intervals
 	for (i = 0; i < nbr_dimension; i++)
 		output = output && (parameters[i] < model->param_list[i].upper_limit && parameters[i] >= model->param_list[i].lower_limit);
+
+	int idx = 0;
+	int idy = 0;
+	position_to_indices_2D(parameters[0], parameters[1], &idx, &idy);
+	if (idx <= 0 || idx >= model->param_list[0].nbins - 1 ||
+	    idy <= 0 || idy >= model->param_list[1].nbins - 1)
+		output = 0;
 
 	// verify the x and y elements of the parameters are not inside obstacles
 	Position tmp_p(parameters[0], parameters[1], 0);

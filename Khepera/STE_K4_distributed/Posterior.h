@@ -19,9 +19,11 @@ public:
     int nbr_dimension;
     int nbr_element;
     float *pdf;
+    bool pdf_is_log;
     int nbr_element_marginal;
     float *source_marginal_pdf;
     PlumeModel *model;
+    vector<vector<float>> sorted_model_measurements;
 
     // constructor : uniform distribution
     Posterior(PlumeModel *input_model);
@@ -45,8 +47,11 @@ public:
 
     // update the posterior pdf with the value given by sample paramter set
     void update(float value, float *sample);
+    void update_log(float value, float *sample);
     //normalization
     void normalize();
+    bool normalize_log();
+    void convert_log_pdf_to_pdf();
     // normalization + max a posterior (value and parameter set)
     void process();
     // entropy and spatial spread calculation

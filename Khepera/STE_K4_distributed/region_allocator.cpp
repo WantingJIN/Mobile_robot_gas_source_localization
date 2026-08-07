@@ -68,6 +68,15 @@ int RegionAllocator::count_active_cells(bool avoid_obstacles) const
     return count;
 }
 
+int RegionAllocator::count_unclustered_active_cells(bool avoid_obstacles) const
+{
+    int count = 0;
+    for (int i = 0; i < MAP_SIZE; ++i)
+        if (is_active_cell(i, avoid_obstacles) && belief_clusters[i] == 0)
+            count++;
+    return count;
+}
+
 std::vector<RegionAllocator::GridPoint> RegionAllocator::moore_directions() const
 {
     std::vector<GridPoint> directions;
@@ -100,6 +109,93 @@ std::vector<std::pair<double, int>> RegionAllocator::sorted_active_cells(bool av
             cells.push_back(std::make_pair(static_cast<double>(posterior->pdf[i]), i));
     std::sort(cells.begin(), cells.end(), std::greater<std::pair<double, int>>());
     return cells;
+}
+
+std::vector<RegionAllocator::GridPoint> RegionAllocator::seed_points_from_tie_spread_cells(const std::vector<std::pair<double, int>>& sorted_cells, int count) const
+{
+    std::vector<GridPoint> seeds;
+    std::vector<int> selected_indices;
+
+    if (count <= 0 || sorted_cells.empty())
+        return seeds;
+
+    seeds.reserve(count);
+    selected_indices.reserve(count);
+
+    auto pdf_is_tied = [](double a, double b) {
+        double scale = std::max(std::abs(a), std::abs(b));
+        double tolerance = std::max(1e-12, scale * 1e-9);
+        return std::abs(a - b) <= tolerance;
+    };
+
+    auto already_selected = [&](int idx) {
+        return std::find(selected_indices.begin(), selected_indices.end(), idx) != selected_indices.end();
+    };
+
+    auto add_seed = [&](int idx) {
+        GridPoint seed;
+        index_to_indices_2D(idx, &seed.first, &seed.second);
+        seeds.push_back(seed);
+        selected_indices.push_back(idx);
+    };
+
+    auto min_distance_sq_to_selected_seeds = [&](int idx) {
+        if (seeds.empty())
+            return std::numeric_limits<double>::max();
+
+        int x = 0;
+        int y = 0;
+        index_to_indices_2D(idx, &x, &y);
+
+        double min_distance_sq = std::numeric_limits<double>::max();
+        for (size_t i = 0; i < seeds.size(); ++i) {
+            double dx = static_cast<double>(x - seeds[i].first);
+            double dy = static_cast<double>(y - seeds[i].second);
+            min_distance_sq = std::min(min_distance_sq, dx * dx + dy * dy);
+        }
+
+        return min_distance_sq;
+    };
+
+    while (static_cast<int>(seeds.size()) < count && selected_indices.size() < sorted_cells.size()) {
+        int first_candidate = -1;
+
+        for (int i = 0; i < static_cast<int>(sorted_cells.size()); ++i) {
+            if (!already_selected(sorted_cells[i].second)) {
+                first_candidate = i;
+                break;
+            }
+        }
+
+        if (first_candidate < 0)
+            break;
+
+        double best_pdf = sorted_cells[first_candidate].first;
+        int best_idx = sorted_cells[first_candidate].second;
+        double best_distance_sq = -1.0;
+
+        for (int i = first_candidate; i < static_cast<int>(sorted_cells.size()); ++i) {
+            double pdf = sorted_cells[i].first;
+            int idx = sorted_cells[i].second;
+
+            if (!pdf_is_tied(pdf, best_pdf))
+                break;
+
+            if (already_selected(idx))
+                continue;
+
+            double distance_sq = min_distance_sq_to_selected_seeds(idx);
+
+            if (distance_sq > best_distance_sq) {
+                best_distance_sq = distance_sq;
+                best_idx = idx;
+            }
+        }
+
+        add_seed(best_idx);
+    }
+
+    return seeds;
 }
 
 std::vector<RegionAllocator::GridPoint> RegionAllocator::seed_points_from_indices(const std::vector<int>& selected_indices, int count) const
@@ -251,6 +347,97 @@ std::vector<int> RegionAllocator::best_seed_assignment_for_robots(const std::vec
     return best_perm;
 }
 
+int RegionAllocator::assign_unclustered_active_cells_to_continuous_clusters(int cluster_count, std::vector<int>& cluster_sizes, bool avoid_obstacles)
+{
+    if (static_cast<int>(cluster_sizes.size()) < cluster_count)
+        cluster_sizes.resize(cluster_count, 0);
+
+    std::vector<GridPoint> frontier;
+    frontier.reserve(MAP_SIZE);
+
+    for (int idx = 0; idx < MAP_SIZE; ++idx) {
+        if (!is_active_cell(idx, avoid_obstacles))
+            continue;
+
+        int cluster = belief_clusters[idx] - 1;
+        if (cluster < 0 || cluster >= cluster_count)
+            continue;
+
+        int x = 0;
+        int y = 0;
+        index_to_indices_2D(idx, &x, &y);
+        frontier.push_back(GridPoint(x, y));
+    }
+
+    int assigned_count = 0;
+    std::vector<GridPoint> directions = moore_directions();
+
+    while (!frontier.empty()) {
+        std::vector<int> proposed_cluster(MAP_SIZE, -1);
+
+        for (size_t f = 0; f < frontier.size(); ++f) {
+            int x = frontier[f].first;
+            int y = frontier[f].second;
+            int idx = y * x_nbins + x;
+            int source_cluster = belief_clusters[idx] - 1;
+
+            if (source_cluster < 0 || source_cluster >= cluster_count)
+                continue;
+
+            for (size_t d = 0; d < directions.size(); ++d) {
+                int nx = x + directions[d].first;
+                int ny = y + directions[d].second;
+
+                if (!is_inside_grid(nx, ny))
+                    continue;
+
+                int nidx = ny * x_nbins + nx;
+
+                if (belief_clusters[nidx] != 0)
+                    continue;
+
+                if (!is_active_cell(nidx, avoid_obstacles))
+                    continue;
+
+                int current_cluster = proposed_cluster[nidx];
+                if (current_cluster < 0 ||
+                    cluster_sizes[source_cluster] < cluster_sizes[current_cluster] ||
+                    (cluster_sizes[source_cluster] == cluster_sizes[current_cluster] && source_cluster < current_cluster)) {
+                    proposed_cluster[nidx] = source_cluster;
+                }
+            }
+        }
+
+        std::vector<GridPoint> next_frontier;
+        next_frontier.reserve(MAP_SIZE);
+
+        for (int idx = 0; idx < MAP_SIZE; ++idx) {
+            int cluster = proposed_cluster[idx];
+            if (cluster < 0)
+                continue;
+
+            if (belief_clusters[idx] != 0)
+                continue;
+
+            if (!is_active_cell(idx, avoid_obstacles))
+                continue;
+
+            belief_clusters[idx] = cluster + 1;
+            cluster_sizes[cluster]++;
+            assigned_count++;
+
+            int x = 0;
+            int y = 0;
+            index_to_indices_2D(idx, &x, &y);
+            next_frontier.push_back(GridPoint(x, y));
+        }
+
+        frontier.swap(next_frontier);
+    }
+
+    return assigned_count;
+}
+
 void RegionAllocator::clusterize_belief_map_obstacle_dist_VORONOI(const std::vector<int>& selected_indices)
 {
     const int K = simulation_parameters.number_of_robots;
@@ -338,25 +525,35 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
     const int K = simulation_parameters.number_of_robots;
     const int N = MAP_SIZE;
     std::vector<std::pair<double, int>> top_cells = sorted_active_cells(true);
-    if (static_cast<int>(top_cells.size()) < K)
+    if (static_cast<int>(top_cells.size()) < K) {
+        printf("Robot ID [%d]: Not enough valid seed cells for balanced region growing.\n", ID);
         return;
+    }
 
-    std::vector<GridPoint> seeds(K);
-    for (int k = 0; k < K; ++k)
-        index_to_indices_2D(top_cells[k].second, &seeds[k].first, &seeds[k].second);
+    std::vector<GridPoint> seeds = seed_points_from_tie_spread_cells(top_cells, K);
+    if (static_cast<int>(seeds.size()) < K) {
+        printf("Robot ID [%d]: Could not select enough seed cells for balanced region growing.\n", ID);
+        return;
+    }
 
     std::vector<int> best_perm = best_seed_assignment_for_robots(seeds);
     std::vector<GridPoint> ordered_seeds(K);
-    for (int k = 0; k < K; ++k)
+    for (int k = 0; k < K; ++k) {
         ordered_seeds[k] = seeds[best_perm[k]];
+        printf("Robot ID [%d]: Seed for robot %d is at (%d, %d)\n", ID, k + 1, ordered_seeds[k].first, ordered_seeds[k].second);
+    }
     seeds = ordered_seeds;
 
     std::fill(belief_clusters, belief_clusters + N, 0);
     std::vector<std::vector<bool>> visited(y_nbins, std::vector<bool>(x_nbins, false));
     std::vector<std::queue<GridPoint>> queues(K);
     std::vector<int> cluster_sizes(K, 0);
-    int target_size = std::max(1, count_active_cells(true) / K);
-    int max_size = static_cast<int>(target_size * 1.05);
+    int total_active_cells = count_active_cells(true);
+    int base_target_size = total_active_cells / K;
+    int extra_cells = total_active_cells % K;
+    std::vector<int> target_sizes(K, std::max(1, base_target_size));
+    for (int k = 0; k < K && k < extra_cells; ++k)
+        target_sizes[k]++;
     std::vector<GridPoint> directions = moore_directions();
 
     for (int k = 0; k < K; ++k) {
@@ -376,18 +573,24 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
         any_growth = false;
         std::vector<int> grow_order(K);
         std::iota(grow_order.begin(), grow_order.end(), 0);
-        std::sort(grow_order.begin(), grow_order.end(), [&](int a, int b) { return cluster_sizes[a] < cluster_sizes[b]; });
+        std::sort(grow_order.begin(), grow_order.end(), [&](int a, int b) {
+            int remaining_a = target_sizes[a] - cluster_sizes[a];
+            int remaining_b = target_sizes[b] - cluster_sizes[b];
+            if (remaining_a != remaining_b)
+                return remaining_a > remaining_b;
+            return cluster_sizes[a] < cluster_sizes[b];
+        });
 
         for (int oi = 0; oi < K; ++oi) {
             int k = grow_order[oi];
-            if (cluster_sizes[k] >= max_size || queues[k].empty())
+            if (cluster_sizes[k] >= target_sizes[k] || queues[k].empty())
                 continue;
 
             int frontier_size = queues[k].size();
-            for (int qi = 0; qi < frontier_size && cluster_sizes[k] < max_size; ++qi) {
+            for (int qi = 0; qi < frontier_size && cluster_sizes[k] < target_sizes[k]; ++qi) {
                 GridPoint p = queues[k].front();
                 queues[k].pop();
-                for (size_t d = 0; d < directions.size() && cluster_sizes[k] < max_size; ++d) {
+                for (size_t d = 0; d < directions.size() && cluster_sizes[k] < target_sizes[k]; ++d) {
                     int nx = p.first + directions[d].first;
                     int ny = p.second + directions[d].second;
                     if (!is_inside_grid(nx, ny) || visited[ny][nx])
@@ -403,6 +606,15 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
                 }
             }
         }
+    }
+
+    int unclustered_before_absorb = count_unclustered_active_cells(true);
+    int absorbed_cells = assign_unclustered_active_cells_to_continuous_clusters(K, cluster_sizes, true);
+    int unclustered_after_absorb = count_unclustered_active_cells(true);
+
+    if (unclustered_before_absorb > 0) {
+        printf("Robot ID [%d]: Absorbed %d leftover active cells into continuous region-growing clusters; %d active cells remain unclustered.\n",
+               ID, absorbed_cells, unclustered_after_absorb);
     }
 
     log_region_allocation_result();
