@@ -65,10 +65,12 @@ GaussianWindEstimator::GaussianWindEstimator(float xmin, float xmax, float ymin,
                                              int nx, int ny, float **obstacles, int obs_nbr,
                                              float sigma, float alpha, float c)
     : WindEstimator(xmin, xmax, ymin, ymax, nx, ny, obstacles, obs_nbr),
-      sigma_(sigma), alpha_(alpha), c_(c), U_global_(0.0f), V_global_(0.0f)
+      sigma_(sigma), alpha_(alpha), c_(c), U_global_(0.0f), V_global_(0.0f),
+      processed_measurements_(0), sum_u_(0.0f), sum_v_(0.0f)
 {
     computeSDF();
     computeNormals();
+    resetEstimateState();
 }
 
 void GaussianWindEstimator::computeSDF()
@@ -116,58 +118,75 @@ void GaussianWindEstimator::computeNormals()
     }
 }
 
+void GaussianWindEstimator::resetEstimateState()
+{
+    U_global_ = 0.0f;
+    V_global_ = 0.0f;
+    processed_measurements_ = 0;
+    sum_u_ = 0.0f;
+    sum_v_ = 0.0f;
+    U_weighted_sum_.assign(ny_, std::vector<float>(nx_, 0.0f));
+    V_weighted_sum_.assign(ny_, std::vector<float>(nx_, 0.0f));
+    U_field_.assign(ny_, std::vector<float>(nx_, 0.0f));
+    V_field_.assign(ny_, std::vector<float>(nx_, 0.0f));
+    W_field_.assign(ny_, std::vector<float>(nx_, 0.0f));
+}
+
+void GaussianWindEstimator::addMeasurement(float meas_x, float meas_y, float u_meas, float v_meas)
+{
+    int idx_i = 0;
+    int idy_i = 0;
+    world_pos_to_grid_indices(meas_x, meas_y, idx_i, idy_i);
+
+    float d_local = std::fabs(D_[idy_i][idx_i]);
+    float n_x = Nx_[idy_i][idx_i];
+    float n_y = Ny_[idy_i][idx_i];
+    float beta = 1.0f + c_ / (d_local + 1e-3f);
+
+    for (int j = 0; j < ny_; ++j) {
+        for (int i = 0; i < nx_; ++i) {
+            float dx = X_[j][i] - meas_x;
+            float dy = Y_[j][i] - meas_y;
+            float r_n = dx * n_x + dy * n_y;
+            float r_t = -dx * n_y + dy * n_x;
+            float weight = std::exp(-(r_t * r_t + beta * r_n * r_n) / (2.0f * sigma_ * sigma_));
+            U_weighted_sum_[j][i] += weight * u_meas;
+            V_weighted_sum_[j][i] += weight * v_meas;
+            W_field_[j][i] += weight;
+        }
+    }
+}
+
 void GaussianWindEstimator::estimateField(const std::vector<float> &meas_x,
                                           const std::vector<float> &meas_y,
                                           const std::vector<float> &u_meas,
                                           const std::vector<float> &v_meas)
 {
-    if (u_meas.empty() || u_meas.size() != v_meas.size() || u_meas.size() != meas_x.size())
+    if (u_meas.empty() || u_meas.size() != v_meas.size() ||
+        u_meas.size() != meas_x.size() || u_meas.size() != meas_y.size())
         return;
 
-    float mean_u = 0.0f;
-    float mean_v = 0.0f;
-    for (size_t i = 0; i < u_meas.size(); ++i) {
-        mean_u += u_meas[i];
-        mean_v += v_meas[i];
-    }
-    mean_u /= static_cast<float>(u_meas.size());
-    mean_v /= static_cast<float>(v_meas.size());
-    U_global_ = (1.0f - alpha_) * U_global_ + alpha_ * mean_u;
-    V_global_ = (1.0f - alpha_) * V_global_ + alpha_ * mean_v;
+    if (u_meas.size() < processed_measurements_)
+        resetEstimateState();
 
-    U_field_.assign(ny_, std::vector<float>(nx_, 0.0f));
-    V_field_.assign(ny_, std::vector<float>(nx_, 0.0f));
-    W_field_.assign(ny_, std::vector<float>(nx_, 0.0f));
+    for (size_t k = processed_measurements_; k < u_meas.size(); ++k) {
+        sum_u_ += u_meas[k];
+        sum_v_ += v_meas[k];
+        ++processed_measurements_;
 
-    for (size_t k = 0; k < u_meas.size(); ++k) {
-        int idx_i = 0;
-        int idy_i = 0;
-        world_pos_to_grid_indices(meas_x[k], meas_y[k], idx_i, idy_i);
+        float mean_u = sum_u_ / static_cast<float>(processed_measurements_);
+        float mean_v = sum_v_ / static_cast<float>(processed_measurements_);
+        U_global_ = (1.0f - alpha_) * U_global_ + alpha_ * mean_u;
+        V_global_ = (1.0f - alpha_) * V_global_ + alpha_ * mean_v;
 
-        float d_local = std::fabs(D_[idy_i][idx_i]);
-        float n_x = Nx_[idy_i][idx_i];
-        float n_y = Ny_[idy_i][idx_i];
-        float beta = 1.0f + c_ / (d_local + 1e-3f);
-
-        for (int j = 0; j < ny_; ++j) {
-            for (int i = 0; i < nx_; ++i) {
-                float dx = X_[j][i] - meas_x[k];
-                float dy = Y_[j][i] - meas_y[k];
-                float r_n = dx * n_x + dy * n_y;
-                float r_t = -dx * n_y + dy * n_x;
-                float weight = std::exp(-(r_t * r_t + beta * r_n * r_n) / (2.0f * sigma_ * sigma_));
-                U_field_[j][i] += weight * u_meas[k];
-                V_field_[j][i] += weight * v_meas[k];
-                W_field_[j][i] += weight;
-            }
-        }
+        addMeasurement(meas_x[k], meas_y[k], u_meas[k], v_meas[k]);
     }
 
     for (int j = 0; j < ny_; ++j) {
         for (int i = 0; i < nx_; ++i) {
             if (W_field_[j][i] > 1e-6f) {
-                U_field_[j][i] /= W_field_[j][i];
-                V_field_[j][i] /= W_field_[j][i];
+                U_field_[j][i] = U_weighted_sum_[j][i] / W_field_[j][i];
+                V_field_[j][i] = V_weighted_sum_[j][i] / W_field_[j][i];
             } else {
                 U_field_[j][i] = U_global_;
                 V_field_[j][i] = V_global_;

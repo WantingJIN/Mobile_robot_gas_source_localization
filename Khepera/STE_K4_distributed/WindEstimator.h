@@ -62,15 +62,22 @@ public:
 private:
     void computeSDF();
     void computeNormals();
+    void resetEstimateState();
+    void addMeasurement(float meas_x, float meas_y, float u_meas, float v_meas);
 
     float sigma_;
     float alpha_;
     float c_;
     float U_global_;
     float V_global_;
+    size_t processed_measurements_;
+    float sum_u_;
+    float sum_v_;
     std::vector<std::vector<float>> D_;
     std::vector<std::vector<float>> Nx_;
     std::vector<std::vector<float>> Ny_;
+    std::vector<std::vector<float>> U_weighted_sum_;
+    std::vector<std::vector<float>> V_weighted_sum_;
 };
 
 class BaseflowCorrectionWindEstimator : public WindEstimator {
