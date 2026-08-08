@@ -629,18 +629,19 @@ void AdeFDMPlumeModel2D::set_parameters(int Nx, int Ny, float D, float Q)
 
 void AdeFDMPlumeModel2D::initialize_potential_gas_maps()
 {
-	gas_con_map_list.clear();
-	gas_con_map_list.reserve(MAP_SIZE);
-	for (int j = 0; j < param_list[1].nbins; j++)
+	if (gas_con_map_list.size() != MAP_SIZE)
 	{
-		for (int i = 0; i < param_list[0].nbins; i++)
+		gas_con_map_list.clear();
+		gas_con_map_list.reserve(MAP_SIZE);
+		for (int j = 0; j < param_list[1].nbins; j++)
 		{
-			GasDispersionMap gas_map(i, j);
-			gas_con_map_list.push_back(gas_map);
+			for (int i = 0; i < param_list[0].nbins; i++)
+			{
+				gas_con_map_list.push_back(GasDispersionMap(i, j));
+			}
 		}
 	}
 	calculate_gas_concentration_maps_batched();
-	rebuild_cell_measurements();
 }
 
 void AdeFDMPlumeModel2D::rebuild_cell_measurements()
@@ -651,16 +652,18 @@ void AdeFDMPlumeModel2D::rebuild_cell_measurements()
 
 void AdeFDMPlumeModel2D::initialize_cell_measurement_list()
 {
+	cell_lists.reserve(MAP_SIZE);
 	for (int j = 0; j < y_nbins; j++)
 	{
 		for (int i = 0; i < x_nbins; i++)
 		{
-			CellMeasurements cell_measurements(i, j);
-			cell_lists.push_back(cell_measurements);
+			cell_lists.push_back(CellMeasurements(i, j));
 		}
 	}
 	for (auto &cell : cell_lists)
 	{
+		cell.measurements.reserve(gas_con_map_list.size());
+		cell.gas_hits.reserve(gas_con_map_list.size());
 		for (auto &gas_map : gas_con_map_list)
 		{
 			float con = gas_map.get_concentration(cell.idx_x, cell.idx_y);
@@ -926,8 +929,8 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_maps_batched()
 		}
 	}
 
-	const int batch_size = 32;
 	const int map_count = static_cast<int>(gas_con_map_list.size());
+	const int batch_size = map_count;
 	for (int batch_begin = 0; batch_begin < map_count; batch_begin += batch_size)
 	{
 		int batch_cols = std::min(batch_size, map_count - batch_begin);
@@ -966,28 +969,62 @@ void AdeFDMPlumeModel2D::calculate_gas_concentration_maps_batched()
 
 void AdeFDMPlumeModel2D::calculate_weighted_gas_con_variance_map(float *gas_con_variance_map, float *pdf)
 {
-	for (size_t i = 0; i < cell_lists.size(); i++)
+	for (int map_j = 0; map_j < y_nbins; map_j++)
 	{
-		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
-		gas_con_variance_map[i] = cell_lists[i].meas_std;
+		for (int map_i = 0; map_i < x_nbins; map_i++)
+		{
+			float mean = 0.0f;
+			for (int source_idx = 0; source_idx < MAP_SIZE; source_idx++)
+				mean += gas_con_map_list[source_idx].gasConcentrationMap[map_i][map_j] * pdf[source_idx];
+
+			float variance = 0.0f;
+			for (int source_idx = 0; source_idx < MAP_SIZE; source_idx++)
+			{
+				float diff = gas_con_map_list[source_idx].gasConcentrationMap[map_i][map_j] - mean;
+				variance += diff * diff * pdf[source_idx];
+			}
+			gas_con_variance_map[map_i + map_j * x_nbins] = std::sqrt(variance);
+		}
 	}
 }
 
 void AdeFDMPlumeModel2D::calculate_weighted_gas_con_mean_map(float *gas_con_mean_map, float *pdf)
 {
-	for (size_t i = 0; i < cell_lists.size(); i++)
+	for (int map_j = 0; map_j < y_nbins; map_j++)
 	{
-		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
-		gas_con_mean_map[i] = cell_lists[i].meas_mean;
+		for (int map_i = 0; map_i < x_nbins; map_i++)
+		{
+			float mean = 0.0f;
+			for (int source_idx = 0; source_idx < MAP_SIZE; source_idx++)
+				mean += gas_con_map_list[source_idx].gasConcentrationMap[map_i][map_j] * pdf[source_idx];
+			gas_con_mean_map[map_i + map_j * x_nbins] = mean;
+		}
 	}
 }
 
 void AdeFDMPlumeModel2D::calculate_weighted_gas_hit_variance_map(float *gas_hit_variance_map, float *pdf)
 {
-	for (size_t i = 0; i < cell_lists.size(); i++)
+	const int gas_hit_thres = 2000;
+	for (int map_j = 0; map_j < y_nbins; map_j++)
 	{
-		cell_lists[i].calculate_con_weighted_mean_variance(pdf);
-		gas_hit_variance_map[i] = cell_lists[i].hit_std;
+		for (int map_i = 0; map_i < x_nbins; map_i++)
+		{
+			float mean = 0.0f;
+			for (int source_idx = 0; source_idx < MAP_SIZE; source_idx++)
+			{
+				float hit = gas_con_map_list[source_idx].gasConcentrationMap[map_i][map_j] > gas_hit_thres ? 1.0f : 0.0f;
+				mean += hit * pdf[source_idx];
+			}
+
+			float variance = 0.0f;
+			for (int source_idx = 0; source_idx < MAP_SIZE; source_idx++)
+			{
+				float hit = gas_con_map_list[source_idx].gasConcentrationMap[map_i][map_j] > gas_hit_thres ? 1.0f : 0.0f;
+				float diff = hit - mean;
+				variance += diff * diff * pdf[source_idx];
+			}
+			gas_hit_variance_map[map_i + map_j * x_nbins] = std::sqrt(variance);
+		}
 	}
 }
 
@@ -1069,20 +1106,20 @@ void AdeFDMPlumeModel2D::update_wind_field_and_gas_concentration_map(const vecto
 		}
 	}
 	auto end = std::chrono::high_resolution_clock::now();
-	printf("Wind field updated in %ld ms.\n",
-	       static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()));
+	// printf("Wind field updated in %ld ms.\n",
+	//        static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()));
 
-	auto start_assemble = std::chrono::high_resolution_clock::now();
+	//auto start_assemble = std::chrono::high_resolution_clock::now();
 	assemble_and_factorize();
-	auto end_assemble = std::chrono::high_resolution_clock::now();
-	printf("ADE FDM matrix re-assembled and factorized in %ld ms.\n",
-	       static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(end_assemble - start_assemble).count()));
+	//auto end_assemble = std::chrono::high_resolution_clock::now();
+	//printf("ADE FDM matrix re-assembled and factorized in %ld ms.\n",
+	       //static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(end_assemble - start_assemble).count()));
 
-	auto start_gas_map = std::chrono::high_resolution_clock::now();
+	//auto start_gas_map = std::chrono::high_resolution_clock::now();
 	initialize_potential_gas_maps();
-	auto end_gas_map = std::chrono::high_resolution_clock::now();
-	printf("Gas concentration map list recalculated in %ld ms.\n",
-	       static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(end_gas_map - start_gas_map).count()));
+	//auto end_gas_map = std::chrono::high_resolution_clock::now();
+	// printf("Gas concentration map list recalculated in %ld ms.\n",
+	//        static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(end_gas_map - start_gas_map).count()));
 }
 
 void AdeFDMPlumeModel2D::log_wind_field(char *filename_u, char *filename_v, char *filename_w, char writing_mode)
