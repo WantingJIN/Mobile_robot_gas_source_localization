@@ -14,6 +14,8 @@ static Position last_mcs_velocity_position;
 static long long last_mcs_velocity_timestamp = 0;
 static bool has_last_mcs_velocity_position = false;
 static constexpr float MAX_VALID_WIND_INTENSITY = 3.0f;
+static constexpr float OBSTACLE_ENTER_THRESHOLD = 300.0f;
+static constexpr float OBSTACLE_EXIT_THRESHOLD = 250.0f;
 
 void init(){
 	if(VERBOSE) printf("initialization\n");
@@ -417,7 +419,7 @@ void update_position() {
 	}
 }
 
-int obstacle_or_not(){
+static int obstacle_or_not_with_threshold(float threshold){
 	float sensors_value[SENSOR_NUMBER];
 
 	khepera4_infrared_proximity();
@@ -425,14 +427,51 @@ int obstacle_or_not(){
 	for (int i = 1; i < SENSOR_NUMBER-2; i++){
 		sensors_value[i] = khepera4.infrared_proximity.sensor[i];
 		//if one of the sensors detect something, then obstacle
-		if(sensors_value[i] > 200){
-            // printf("sensor %d value : %f\n", i, sensors_value[i]);
-			printf("obstacle detected..!!!!!\n");
+		if(sensors_value[i] > threshold){
+            printf("sensor %d value : %f\n", i, sensors_value[i]);
+			printf("obstacle detected above threshold %f..!!!!!\n", threshold);
 			return 1;
 		}
 	}
 	//otherwise no obstacle
 	return 0;
+}
+
+static int obstacle_in_front_with_threshold(float threshold){
+	const int front_sensors[] = {
+		cKhepera4SensorsInfrared_FrontLeft,
+		cKhepera4SensorsInfrared_Front,
+		cKhepera4SensorsInfrared_FrontRight
+	};
+
+	khepera4_infrared_proximity();
+
+	for (int i = 0; i < 3; i++){
+		int sensor_idx = front_sensors[i];
+		float sensor_value = khepera4.infrared_proximity.sensor[sensor_idx];
+		if(sensor_value > threshold){
+            printf("front sensor %d value : %f\n", sensor_idx, sensor_value);
+			printf("front obstacle detected above threshold %f..!!!!!\n", threshold);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int obstacle_or_not(){
+	return obstacle_or_not_enter();
+}
+
+int obstacle_or_not_enter(){
+	return obstacle_or_not_with_threshold(OBSTACLE_ENTER_THRESHOLD);
+}
+
+int obstacle_or_not_exit(){
+	return obstacle_or_not_with_threshold(OBSTACLE_EXIT_THRESHOLD);
+}
+
+int obstacle_in_front_enter(){
+	return obstacle_in_front_with_threshold(OBSTACLE_ENTER_THRESHOLD);
 }
 
 
@@ -732,7 +771,7 @@ void braitenberg_set_obstacle_avoidance(struct sBraitenberg *braitenberg, int ag
     braitenberg->weight_left[cKhepera4SensorsInfrared_BackLeft] = -1 * aggressivity;
     braitenberg->weight_left[cKhepera4SensorsInfrared_Left] = 1 * aggressivity;
     braitenberg->weight_left[cKhepera4SensorsInfrared_FrontLeft] = 3 * aggressivity;
-    braitenberg->weight_left[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
+    braitenberg->weight_left[cKhepera4SensorsInfrared_Front] = 3 * aggressivity;
     braitenberg->weight_left[cKhepera4SensorsInfrared_FrontRight] = -3 * aggressivity;
     braitenberg->weight_left[cKhepera4SensorsInfrared_Right] = -1 * aggressivity;
     braitenberg->weight_left[cKhepera4SensorsInfrared_BackRight] = 1 * aggressivity;

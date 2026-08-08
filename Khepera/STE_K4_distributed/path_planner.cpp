@@ -1,7 +1,9 @@
 #include "path_planner.h"
 
 #include <algorithm>
+#include <chrono>
 #include <queue>
+#include <random>
 
 extern SimulationParameters simulation_parameters;
 FILE *gas_information_map_logfile;
@@ -19,6 +21,7 @@ extern char scores_map_logfile_name[512];
 extern char distance_map_logfile_name[512];
 extern char acc_info_map_logfile_name[512];
 extern int ID;
+extern int self_index;
 extern int nbr_obs;
 extern float margin;
 extern float **obstacles;
@@ -345,12 +348,37 @@ void PathPlanner::random_planning()
 {
 	printf("Enter random planning \n");
 	//fprintf(console_logfile, "Enter random planning \n");
+	static int rng_seeded_for_id = std::numeric_limits<int>::min();
+	static std::mt19937 rng;
+	if (rng_seeded_for_id != ID)
+	{
+		unsigned int now = static_cast<unsigned int>(
+			std::chrono::high_resolution_clock::now().time_since_epoch().count());
+		std::seed_seq seed{
+			static_cast<unsigned int>(ID),
+			static_cast<unsigned int>(self_index),
+			static_cast<unsigned int>(simulation_parameters.number_of_robots),
+			static_cast<unsigned int>(now),
+			static_cast<unsigned int>(reinterpret_cast<uintptr_t>(this))
+		};
+		rng.seed(seed);
+		rng_seeded_for_id = ID;
+	}
+
+	std::uniform_real_distribution<float> x_dist(
+		XMIN + SAFETY_MARGIN,
+		XMAX - SAFETY_MARGIN);
+	std::uniform_real_distribution<float> y_dist(
+		YMIN + SAFETY_MARGIN,
+		YMAX - SAFETY_MARGIN);
+
 	do
 	{
 		goal_position.heading = 0;
-		goal_position.x = (((float)rand() / (float)RAND_MAX) * (XMAX - XMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + XMIN;
-		goal_position.y = (((float)rand() / (float)RAND_MAX) * (YMAX - YMIN - SAFETY_MARGIN * 2)) + SAFETY_MARGIN + YMIN;
+		goal_position.x = x_dist(rng);
+		goal_position.y = y_dist(rng);
 	} while (goal_position.is_in_obstacle_list(obstacles, nbr_obs) != -1);
+	printf("Robot ID [%d]: random goal position: %f %f\n", ID, goal_position.x, goal_position.y);
 }
 
 //TODO - Now can only be used in obstacle free environment

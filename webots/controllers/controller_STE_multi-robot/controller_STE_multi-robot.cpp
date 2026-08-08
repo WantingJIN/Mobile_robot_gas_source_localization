@@ -226,6 +226,9 @@ bool entered_state_receive_pdf = false;
 bool entered_state_receive_dist = false;
 bool entered_state_moving = false;
 
+constexpr double GOAL_REACHED_DISTANCE = 0.1;
+constexpr double BLOCKED_GOAL_REACHED_DISTANCE = 0.25;
+
 // preallocate obstacle map
 std::vector<int> obstacle_map(source_x_nbins * source_y_nbins, 0);  // GLOBAL
 
@@ -1082,7 +1085,11 @@ void state_moving()
 	// verify if arrived to the goal if applicable
 	// fprintf(console_logfile, "check dist to end goal \n");
 	// fprintf(console_logfile,"my position (%f, %f) - my end goal (%f, %f)\n", current_position.x, current_position.y, goal_position.x, goal_position.y);
-	if (current_position.dist_to_goal(goal_position) > 0.1)
+	const double distance_to_goal = current_position.dist_to_goal(goal_position);
+	const bool goal_reached = distance_to_goal <= GOAL_REACHED_DISTANCE ||
+		(distance_to_goal <= BLOCKED_GOAL_REACHED_DISTANCE &&
+		 front_obstacle_or_not() == 1);
+	if (!goal_reached)
 	{
 		if (i == path.end())
 		{
@@ -1128,6 +1135,21 @@ void state_moving()
 
 void state_obstacle_avoidance()
 {
+	// Another robot can remain directly in front when nearby goals overlap.
+	// Treat the goal as reached instead of repeatedly colliding while avoiding it.
+	if (current_position.dist_to_goal(goal_position) <=
+			BLOCKED_GOAL_REACHED_DISTANCE &&
+		front_obstacle_or_not() == 1)
+	{
+		set_wheels_speed(0, 0);
+		sampleBuffer.reset_all();
+		path.clear();
+		FSM.state = STATE_MEASURING;
+		FSM.hook = state_measuring;
+		entered_state_moving = false;
+		return;
+	}
+
 	// printf("avoiding obstacle\n");
 	obstacle_avoidance_k4();
 }
