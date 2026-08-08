@@ -36,8 +36,8 @@ from matplotlib.lines import Line2D
 
 
 DEFAULT_ROOT = Path(
-    "/home/wanting/Workspace/kheperaodor/plume_model_learning/Khepera/"
-    "Results_2026-06-30/11-50"
+    "/home/wanting/Workspace/kheperaodor/multi-robot-GSL/Khepera/"
+    "Results_2026-08-08/13-17"
 )
 
 ROBOT_COLORS = [
@@ -66,6 +66,7 @@ START_MARKER_SIZE = 80
 CURRENT_MARKER_SIZE = 90
 GOAL_MARKER_SIZE = 120
 LEGEND_MARKER_SIZE = 8
+MAX_TRAJECTORY_RENDER_POINTS = 350
 
 
 @dataclass(frozen=True)
@@ -323,6 +324,13 @@ def make_line_collection(points: np.ndarray, values: np.ndarray, norm: Normalize
     return collection
 
 
+def render_sample_indices(length: int, max_points: int = MAX_TRAJECTORY_RENDER_POINTS) -> np.ndarray:
+    if length <= max_points:
+        return np.arange(length)
+
+    return np.unique(np.linspace(0, length - 1, max_points, dtype=int))
+
+
 def style_map_ax(
     ax: plt.Axes,
     grid: GridInfo,
@@ -367,6 +375,7 @@ class ExperimentViewer:
         history_mode: str,
         uncertainty_mode: str,
         fig_scale: float,
+        save_dpi: int,
         save_dir: Path | None = None,
     ) -> None:
         self.robots = robots
@@ -377,6 +386,7 @@ class ExperimentViewer:
         self.history_mode = history_mode
         self.uncertainty_mode = uncertainty_mode
         self.fig_scale = fig_scale
+        self.save_dpi = save_dpi
         self.save_dir = save_dir
         self.iteration = 0
 
@@ -399,7 +409,8 @@ class ExperimentViewer:
         n_robot_cols = max(len(robots), 1)
         n_panel_cols = max(n_robot_cols, 4)
         n_grid_cols = 4 * n_robot_cols // math.gcd(4, n_robot_cols)
-        self.fig = plt.figure(figsize=(6.2 * n_panel_cols * fig_scale, 15.0 * fig_scale), constrained_layout=True)
+        self.fig = plt.figure(figsize=(6.2 * n_panel_cols * fig_scale, 15.0 * fig_scale), constrained_layout=False)
+        self.fig.subplots_adjust(left=0.04, right=0.98, bottom=0.05, top=0.92, wspace=0.35, hspace=0.35)
         gs = self.fig.add_gridspec(3, n_grid_cols)
 
         robot_edges = np.linspace(0, n_grid_cols, len(robots) + 1, dtype=int)
@@ -417,6 +428,15 @@ class ExperimentViewer:
         self.ax_region = self.fig.add_subplot(gs[2, panel_edges[1] : panel_edges[2]])
         self.ax_wind = self.fig.add_subplot(gs[2, panel_edges[2] : panel_edges[3]])
         self.ax_uncertainty = self.fig.add_subplot(gs[2, panel_edges[3] : panel_edges[4]])
+        self.main_axes = [
+            *self.ax_trajectories,
+            *self.ax_beliefs,
+            self.ax_merged,
+            self.ax_region,
+            self.ax_wind,
+            self.ax_uncertainty,
+        ]
+        self.base_positions = {ax: ax.get_position().frozen() for ax in self.main_axes}
 
         self.colorbars = []
         self.fig.canvas.mpl_connect("key_press_event", self.on_key)
@@ -519,7 +539,7 @@ class ExperimentViewer:
             w_mean = np.zeros_like(u_mean)
         return u_mean, v_mean, w_mean
 
-    def draw(self) -> None:
+    def draw(self, *, update_canvas: bool = True) -> None:
         self.clear_colorbars()
         self.draw_trajectories()
         self.draw_individual_beliefs()
@@ -532,7 +552,8 @@ class ExperimentViewer:
             fontsize=SUPTITLE_FONT_SIZE,
             fontweight="bold",
         )
-        self.fig.canvas.draw_idle()
+        if update_canvas:
+            self.fig.canvas.draw_idle()
 
     def clear_colorbars(self) -> None:
         for colorbar in self.colorbars:
@@ -541,6 +562,8 @@ class ExperimentViewer:
             except (AttributeError, KeyError, ValueError):
                 pass
         self.colorbars = []
+        for ax, position in self.base_positions.items():
+            ax.set_position(position)
 
     def add_colorbar(self, mappable, ax, **kwargs):
         colorbar = self.fig.colorbar(mappable, ax=ax, **kwargs)
@@ -558,34 +581,38 @@ class ExperimentViewer:
             end = self.history_end_index(robot)
             points = robot.positions[:end]
             gas = robot.gas[:end]
+            render_idx = render_sample_indices(len(points))
+            render_points = points[render_idx]
+            render_gas = gas[render_idx]
             color = ROBOT_COLORS[idx % len(ROBOT_COLORS)]
 
-            if len(points) >= 2:
+            if len(render_points) >= 2:
                 ax.plot(
-                    points[:, 0],
-                    points[:, 1],
+                    render_points[:, 0],
+                    render_points[:, 1],
                     color=color,
                     linewidth=TRAJECTORY_GUIDE_LINE_WIDTH,
                     alpha=0.7,
                     zorder=2,
                 )
-                ax.add_collection(make_line_collection(points, gas, self.gas_norm, "viridis"))
+                ax.add_collection(make_line_collection(render_points, render_gas, self.gas_norm, "viridis"))
 
-            if len(points) > 0:
+            if len(render_points) > 0:
                 ax.scatter(
-                    points[:, 0],
-                    points[:, 1],
-                    c=gas,
+                    render_points[:, 0],
+                    render_points[:, 1],
+                    c=render_gas,
                     cmap="viridis",
                     norm=self.gas_norm,
                     s=TRAJECTORY_SCATTER_SIZE,
                     edgecolors="#222222",
                     linewidths=0.35,
+                    rasterized=True,
                     zorder=4,
                 )
                 ax.scatter(
-                    points[0, 0],
-                    points[0, 1],
+                    render_points[0, 0],
+                    render_points[0, 1],
                     marker="o",
                     s=START_MARKER_SIZE,
                     color=color,
@@ -594,8 +621,8 @@ class ExperimentViewer:
                     zorder=6,
                 )
                 ax.scatter(
-                    points[-1, 0],
-                    points[-1, 1],
+                    render_points[-1, 0],
+                    render_points[-1, 1],
                     marker="s",
                     s=CURRENT_MARKER_SIZE,
                     color=color,
@@ -744,7 +771,7 @@ class ExperimentViewer:
             )
 
         handles.extend(goal_handles)
-        ax.legend(handles=handles, loc="upper right", fontsize=LEGEND_FONT_SIZE, framealpha=0.9)
+        # ax.legend(handles=handles, loc="upper right", fontsize=LEGEND_FONT_SIZE, framealpha=0.9)
 
     def draw_wind(self) -> None:
         self.ax_wind.clear()
@@ -843,10 +870,10 @@ class ExperimentViewer:
         self.save_dir.mkdir(parents=True, exist_ok=True)
         for iteration in range(self.n_iterations):
             self.iteration = iteration
-            self.draw()
+            self.draw(update_canvas=False)
             out_path = self.save_dir / f"iteration_{iteration + 1:03d}.png"
-            self.fig.savefig(out_path, dpi=180, facecolor="white")
-            print(f"Saved {out_path}")
+            self.fig.savefig(out_path, dpi=self.save_dpi, facecolor="white")
+            print(f"Saved {out_path}", flush=True)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -880,6 +907,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional obstacle file with one rectangle per line: x_min x_max y_min y_max.",
     )
     parser.add_argument("--save-dir", type=Path, default=None, help="Optional folder to save every iteration as PNG.")
+    parser.add_argument(
+        "--save-dpi",
+        type=int,
+        default=120,
+        help="DPI for --save-dir PNG output. Higher values are much slower for this large figure.",
+    )
     parser.add_argument("--no-show", action="store_true", help="Do not open the interactive window.")
     parser.add_argument(
         "--fig-scale",
@@ -937,6 +970,7 @@ def main() -> None:
         history_mode=args.history_mode,
         uncertainty_mode=args.uncertainty_mode,
         fig_scale=args.fig_scale,
+        save_dpi=args.save_dpi,
         save_dir=args.save_dir,
     )
     viewer.draw()
@@ -944,9 +978,10 @@ def main() -> None:
 
     print(
         "Controls: right/space/n/enter next, left/backspace/p previous, "
-        "home/end jump, q/escape close."
+        "home/end jump, q/escape close.",
+        flush=True,
     )
-    print(f"Loaded {len(robots)} robots and {viewer.n_iterations} iterations from {k_dir}")
+    print(f"Loaded {len(robots)} robots and {viewer.n_iterations} iterations from {k_dir}", flush=True)
 
     if not args.no_show:
         plt.show()

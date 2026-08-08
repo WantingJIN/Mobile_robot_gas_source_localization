@@ -786,7 +786,7 @@ void braitenberg_set_obstacle_avoidance(struct sBraitenberg *braitenberg, int ag
         braitenberg->weight_right[i] = -braitenberg->weight_left[i];
         braitenberg->bias[i] = 20;
     }
-    braitenberg->weight_right[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
+    //braitenberg->weight_right[cKhepera4SensorsInfrared_Front] = -3 * aggressivity;
 }
 
 void braitenberg_init(struct sBraitenberg *braitenberg) {

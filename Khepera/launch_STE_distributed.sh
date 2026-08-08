@@ -1,8 +1,14 @@
 #!/bin/bash
 # NOTE: for debugging purposes, without sending all the documents to the robots; with full experiment run with different maps, please use launch_STE_distributed.sh
 # ---------------- CONFIG ---------------- #
-ID_list=(103)
-source_position="11 2"
+#set the Robot team ID list
+ID_list=(101 102 106)
+#set the map number
+map=10
+echo "+++ Map number $map +++"
+#set the source position
+source_position="12.7 2"
+
 session_name="robots_view"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STE_DDPM_ROOT=${STE_DDPM_ROOT:-$(dirname "$SCRIPT_DIR")}
@@ -16,26 +22,12 @@ superlu_lib="$(readlink -f "$superlu_soname_lib" 2>/dev/null || true)"
 superlu_runtime_name="$(basename "$superlu_lib")"
 blas_lib="$target_sysroot/usr/lib/libblas.so"
 runtime_libs=("$superlu_lib" "$blas_lib")
+deploy_manifest_name=".ste_distributed_deploy_manifest"
 # ---------------------------------------- #
-
-#set the map number
-map=9
-echo "+++ Map number $map +++"
 
 cp $STE_DDPM_ROOT/Khepera/Data/Env_map/test_map"$map".environment $STE_DDPM_ROOT/Khepera/Data/test_map.environment
 cp $STE_DDPM_ROOT/Khepera/Data/Obstacle_lists/"$map"_obstacles.txt $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt
 #cp $STE_DDPM_ROOT/Khepera/Data/DeepCFD_result/gas_concentration_maps_"$map".csv $STE_DDPM_ROOT/Khepera/Data/gas_concentration_maps.csv
-
-
-
-# Check if map files need to be re-uploaded
-config_map_nbr=$(grep -E "^[[:space:]]*map_nbr:" "$config_file" | sed -E "s/^[[:space:]]*map_nbr:[[:space:]]*([0-9]+).*/\1/")
-if [ "$config_map_nbr" = "$map" ]; then
-    upload_map_files=false
-    echo "ℹ️  Map $map already in config.yaml, skipping test_map.environment and obstacle_list.txt upload"
-else
-    upload_map_files=true
-fi
 
 # Update config.yaml with ID_list and map_nbr
 ID_list_str=$(IFS=,; echo "${ID_list[*]}")
@@ -50,7 +42,7 @@ echo "✅ Updated source_position.txt with source_position=$source_position"
 
 # Build the executable
 cd "$STE_DDPM_ROOT/Khepera/STE_K4_distributed" || exit 1
-make
+make || exit 1
 
 for runtime_lib in "${runtime_libs[@]}"; do
     if [ ! -f "$runtime_lib" ]; then
@@ -59,6 +51,35 @@ for runtime_lib in "${runtime_libs[@]}"; do
     fi
 done
 
+deploy_files=(
+    "$config_file"
+    "$source_position_file"
+    "$binary_path"
+    "$STE_DDPM_ROOT/Khepera/Data/test_map.environment"
+    "$STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt"
+    "${runtime_libs[@]}"
+)
+
+make_deploy_manifest() {
+    {
+        echo "team=${ID_list_str}"
+        echo "robot_count=${#ID_list[@]}"
+        echo "map=${map}"
+        echo "source_position=${source_position}"
+        for deploy_file in "${deploy_files[@]}"; do
+            if [ ! -f "$deploy_file" ]; then
+                echo "missing $(basename "$deploy_file")"
+            else
+                file_hash="$(sha256sum "$deploy_file" | awk '{print $1}')"
+                printf "%s  %s\n" "$file_hash" "$(basename "$deploy_file")"
+            fi
+        done
+    } | sha256sum | awk '{print $1}'
+}
+
+deploy_manifest="$(make_deploy_manifest)"
+echo "📦 Deployment manifest: $deploy_manifest"
+
 cd "$STE_DDPM_ROOT/Khepera" || exit 1
 
 
@@ -66,17 +87,21 @@ cd "$STE_DDPM_ROOT/Khepera" || exit 1
 
 # Upload config & binary to each robot
 for ID in "${ID_list[@]}"; do
-    echo "📤 Uploading to Robot $ID..."
-    k4put "$config_file" +$ID
-    k4put "$binary_path" +$ID
-    for runtime_lib in "${runtime_libs[@]}"; do
-        k4put "$runtime_lib" +$ID
-    done
-    ssh root@192.168.1.$ID "cd wanting; ln -sf '$superlu_runtime_name' libsuperlu.so.5; ln -sf '$superlu_runtime_name' libsuperlu.so"
-    # environment map and obstacle list (skip if map unchanged)
-    if [ "$upload_map_files" = true ]; then
-        k4put $STE_DDPM_ROOT/Khepera/Data/test_map.environment +$ID
-        k4put $STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt +$ID
+    remote_manifest="$(ssh root@192.168.1.$ID "cd wanting 2>/dev/null && cat '$deploy_manifest_name' 2>/dev/null" || true)"
+    if [ "$remote_manifest" = "$deploy_manifest" ]; then
+        echo "✅ Robot $ID already has unchanged files for this team; skipping upload"
+    else
+        echo "📤 Uploading to Robot $ID..."
+        k4put "$config_file" +$ID
+        k4put "$source_position_file" +$ID
+        k4put "$binary_path" +$ID
+        # only required for the first time or new robot
+        # for runtime_lib in "${runtime_libs[@]}"; do
+        #     k4put "$runtime_lib" +$ID
+        # done
+        k4put "$STE_DDPM_ROOT/Khepera/Data/test_map.environment" +$ID
+        k4put "$STE_DDPM_ROOT/Khepera/Data/obstacle_list.txt" +$ID
+        ssh root@192.168.1.$ID "cd wanting; ln -sf '$superlu_runtime_name' libsuperlu.so.5; ln -sf '$superlu_runtime_name' libsuperlu.so; printf '%s\n' '$deploy_manifest' > '$deploy_manifest_name'"
     fi
 done
 
