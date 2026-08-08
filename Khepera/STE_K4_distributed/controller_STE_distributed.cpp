@@ -205,6 +205,12 @@ double time_after_measuring;
 double navigation_sampling_time_sum = 0;
 long long estimating_time_sum = 0; // computation time of the estimation part
 long long planning_time_sum = 0;   // computation time of the planning part
+long long wind_gas_prediction_time_sum = 0;
+long long belief_update_time_sum = 0;
+long long belief_fusion_time_sum = 0;
+long long region_allocation_time_sum = 0;
+long long path_planning_time_sum = 0;
+long long robot_moving_time_sum = 0;
 
 static float belief_maps[MAX_NB_ROBOTS][MAP_SIZE] = {0};
 static int received_flags[MAX_NB_ROBOTS] = {0};
@@ -273,6 +279,53 @@ long long current_timestamp(){
 	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // caculate milliseconds
 	// printf("milliseconds: %lld\n", milliseconds);
 	return milliseconds;
+}
+
+void add_wind_gas_prediction_time_ms(long long elapsed_ms)
+{
+	wind_gas_prediction_time_sum += elapsed_ms;
+}
+
+static void log_experiment_time()
+{
+	end_timestamp = current_timestamp();
+	if (start_timestamp <= 0)
+		start_timestamp = end_timestamp;
+
+	long long total_experiment_time = static_cast<long long>(end_timestamp - start_timestamp);
+	long long region_and_path_time = region_allocation_time_sum + path_planning_time_sum;
+	long long measured_total_time =
+		wind_gas_prediction_time_sum +
+		belief_update_time_sum +
+		belief_fusion_time_sum +
+		region_and_path_time +
+		robot_moving_time_sum;
+
+	FILE *file = open_log_file(experiment_time_logfile_name, "w");
+	if (file == NULL)
+		return;
+
+	fprintf(file,
+	        "robot_id,total_experiment_ms,wind_estimation_and_gas_dispersion_prediction_ms,"
+	        "belief_update_ms,belief_fusion_ms,region_allocation_and_path_planning_ms,"
+	        "region_allocation_ms,path_planning_ms,robot_moving_ms,measured_total_ms,"
+	        "unaccounted_ms,n_cycles,n_time_step\n");
+	fprintf(file,
+	        "%d,%lld,%lld,%lld,%lld,%lld,%lld,%lld,%lld,%lld,%lld,%d,%d\n",
+	        ID,
+	        total_experiment_time,
+	        wind_gas_prediction_time_sum,
+	        belief_update_time_sum,
+	        belief_fusion_time_sum,
+	        region_and_path_time,
+	        region_allocation_time_sum,
+	        path_planning_time_sum,
+	        robot_moving_time_sum,
+	        measured_total_time,
+	        total_experiment_time - measured_total_time,
+	        FSM.n_cycles,
+	        n_time_step);
+	fclose(file);
 }
 
 void do_odometry(Position *position) {
@@ -791,18 +844,19 @@ void state_estimating(){
 	// 	printf("[%d] estimating...\n", ID);
 
 	long long time_before_estimating = current_timestamp();
+	long long wind_gas_time_before_estimating = wind_gas_prediction_time_sum;
 
 	// reinitialize
 	posterior->pdf_reset();
 	// estimation
 	if (simulation_parameters.BayesianModelingMethod == MCMC)
 	{
-		printf("going for MCMC\n");
+		//printf("going for MCMC\n");
 		posterior->MCMC_evaluation(history);
 	}
 	if (simulation_parameters.BayesianModelingMethod == EXHAUSTIVE)
 	{
-		printf("going for exhaustive\n");
+		//printf("going for exhaustive\n");
 		posterior->exhaustive_evaluation(history);
 	}
 	// only when using MCMC
@@ -822,8 +876,13 @@ void state_estimating(){
 		printf("[%d] cycle number %d\n", ID, FSM.n_cycles);
 
 	long long current_estimation_time = current_timestamp() - time_before_estimating;
+	long long current_wind_gas_time = wind_gas_prediction_time_sum - wind_gas_time_before_estimating;
+	long long current_belief_update_time = current_estimation_time - current_wind_gas_time;
+	if (current_belief_update_time < 0)
+		current_belief_update_time = 0;
 
 	estimating_time_sum += current_estimation_time;
+	belief_update_time_sum += current_belief_update_time;
 
 	// check if stopping condition is reached
 	if ((simulation_parameters.number_of_robots == 1)||(simulation_parameters.teamStrategy == INDIVIDUAL))
@@ -948,10 +1007,12 @@ void state_updategoal()
 		time_before_moving = current_timestamp();
 		long long current_path_planning_time = current_timestamp() - time_before_path_planning;
 		planning_time_sum += current_path_planning_time;
+		path_planning_time_sum += current_path_planning_time;
 		
 	}
 }
 bool entered_state_moving = false;
+static constexpr float GOAL_REACHED_WITH_FRONT_OBSTACLE_DIST = 0.25f;
 
 void state_moving(){
 
@@ -1011,7 +1072,8 @@ void state_moving(){
 			}
 		}
 	}
-	if(dist_to_goal(goal_position) > 0.05){
+	float goal_dist = dist_to_goal(goal_position);
+	if(goal_dist > 0.05){
 		if (!ensure_current_path_target("STATE_MOVING"))
 		{
 			set_wheels_speed(0,0);
@@ -1021,6 +1083,7 @@ void state_moving(){
 			FSM.hook = state_measuring;
 			time_after_moving = current_timestamp();
 			navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			robot_moving_time_sum += static_cast<long long>(time_after_moving - time_before_moving);
 			time_before_measuring = current_timestamp();
 			entered_state_moving = false;
 			return;
@@ -1028,7 +1091,30 @@ void state_moving(){
 		//move
 		go_to_goal(*i);
 		//obstacle avoidance if necessary
-		if(obstacle_or_not() == 1){
+		if(obstacle_in_front_enter() == 1 && goal_dist <= GOAL_REACHED_WITH_FRONT_OBSTACLE_DIST){
+			printf("Robot ID [%d]: Front obstacle within %.2f m of goal; treating goal as reached.\n",
+			       ID, GOAL_REACHED_WITH_FRONT_OBSTACLE_DIST);
+			set_wheels_speed(0,0);
+			sampleBuffer.reset_all();
+			path.clear();
+			if(finished){
+				time_after_moving = current_timestamp();
+				navigation_sampling_time_sum += time_after_moving - time_before_moving;
+				robot_moving_time_sum += static_cast<long long>(time_after_moving - time_before_moving);
+				entered_state_moving = false;
+				FSM.state = STATE_FINISHED;
+			}else{
+				FSM.state = STATE_MEASURING;
+				FSM.hook  = state_measuring;
+				time_after_moving = current_timestamp();
+				navigation_sampling_time_sum += time_after_moving - time_before_moving;
+				robot_moving_time_sum += static_cast<long long>(time_after_moving - time_before_moving);
+				time_before_measuring = current_timestamp();
+				entered_state_moving = false;
+			}
+			return;
+		}
+		if(obstacle_or_not_enter() == 1){
 			FSM.state = STATE_OBSTACLE_AVOIDANCE;
 			FSM.hook  = state_obstacle_avoidance;
 			return;
@@ -1041,6 +1127,10 @@ void state_moving(){
 		sampleBuffer.reset_all();
 		path.clear();
 		if(finished){
+			time_after_moving = current_timestamp();
+			navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			robot_moving_time_sum += static_cast<long long>(time_after_moving - time_before_moving);
+			entered_state_moving = false;
 			FSM.state = STATE_FINISHED;
 		}else{
 			//back to measuring
@@ -1048,6 +1138,7 @@ void state_moving(){
 			FSM.hook  = state_measuring;
 			time_after_moving = current_timestamp();
 			navigation_sampling_time_sum += time_after_moving - time_before_moving;
+			robot_moving_time_sum += static_cast<long long>(time_after_moving - time_before_moving);
 			time_before_measuring = current_timestamp();
 			printf("navigation sampling time: %f\n", navigation_sampling_time_sum);
 			entered_state_moving = false;
@@ -1059,7 +1150,7 @@ void state_obstacle_avoidance(){
 	if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
 	
 	//if no obstacle,
-	if(obstacle_or_not() == 0 || dist_to_goal(goal_position) <= 0.05){
+	if(obstacle_or_not_exit() == 0 || dist_to_goal(goal_position) <= 0.05){
 		set_wheels_speed(0,0);
 		//back to moving
 		FSM.state = STATE_MOVING;
@@ -1137,6 +1228,7 @@ void state_receive_pdf()
 void state_merge_pdf()
 {
 	printf("Robot ID [%d]: STATE_MERGE_PDF \n", ID);
+	long long time_before_belief_fusion = current_timestamp();
 	bool merge_ok = false;
 	if (should_use_log_posterior())
 	{
@@ -1175,6 +1267,7 @@ void state_merge_pdf()
 	{
 		if (posterior->sum > 0.0f && merge_ok)
 		{
+			belief_fusion_time_sum += current_timestamp() - time_before_belief_fusion;
 			FSM.state = STATE_FINISHED;
 			printf("Robot ID [%d]: STATE_FINISHED\n", ID);
 			broadcast_state_finished();
@@ -1183,6 +1276,7 @@ void state_merge_pdf()
 		printf("Robot ID [%d]: Avoided STATE_FINISHED because merged belief map is zero\n", ID);
 		FSM.state = STATE_MEASURING;
 		FSM.hook = state_measuring;
+		belief_fusion_time_sum += current_timestamp() - time_before_belief_fusion;
 		return;
 	} else {
 		if (simulation_parameters.teamStrategy == DISTRIBUTED)
@@ -1199,6 +1293,7 @@ void state_merge_pdf()
 			}
 		}
 	}
+	belief_fusion_time_sum += current_timestamp() - time_before_belief_fusion;
 	
 }
 
@@ -1225,6 +1320,7 @@ void state_share_pdf()
 void state_region_allocation()
 {
 	printf("Robot ID [%d]: STATE_REGION_ALLOCATION \n", ID);
+	long long time_before_region_allocation = current_timestamp();
 	if (simulation_parameters.teamStrategy == DISTRIBUTED)
 	{
 		posterior->log_pdf(merged_pdf_logfile_name, 'a');
@@ -1233,6 +1329,7 @@ void state_region_allocation()
 		FSM.state = STATE_UPDATEGOAL;
 		FSM.hook = state_updategoal;
 	}
+	region_allocation_time_sum += current_timestamp() - time_before_region_allocation;
 }
 
 // Broadcast STATE_FINISHED to all teammates
@@ -1351,6 +1448,7 @@ int main(int argc, char **argv){
   	}
   	VisiLibity::Visibility_Graph vg(my_environment, epsilon);
 	// main loop
+	start_timestamp = current_timestamp();
 	while (FSM.state != STATE_FINISHED){
 		update_position();
 		process_team_messages();
@@ -1363,7 +1461,7 @@ int main(int argc, char **argv){
 		next_iteration_time();
 		n_time_step++;
 	}
-	// final logs are written incrementally during each iteration
+	log_experiment_time();
 	if (clustering_debugging_logfile && clustering_debugging_logfile != stderr)
 		fclose(clustering_debugging_logfile);
 	cleaning_up();

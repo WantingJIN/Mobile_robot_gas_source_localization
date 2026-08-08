@@ -55,9 +55,11 @@ static void update_online_wind_model_if_needed(struct history &history, PlumeMod
 		wind_meas_y[i] = wind_positions[i].y;
 	}
 
-	printf("Updating online wind with %zu %s wind samples.\n", wind_nbr, use_team_wind ? "team" : "local");
+	//printf("Updating online wind with %zu %s wind samples.\n", wind_nbr, use_team_wind ? "team" : "local");
+	long long time_before_wind_gas_prediction = current_timestamp();
 	model->update_wind_field_and_gas_concentration_map(wind_meas_x, wind_meas_y, wind_meas_u, wind_meas_v);
 	model->log_wind_field(wind_field_u_logfile_name, wind_field_v_logfile_name, wind_field_w_logfile_name, 'a');
+	add_wind_gas_prediction_time_ms(current_timestamp() - time_before_wind_gas_prediction);
 }
 
 // struct normal_random_variable
@@ -681,7 +683,7 @@ void Posterior::exhaustive_evaluation(struct history &history)
 
 	if (simulation_parameters.gasFeature == RELATIVE_VALUE)
 	{
-		printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
+		//printf("relativeMethod %d\n ", simulation_parameters.relativeMethod);
 		if (simulation_parameters.relativeMethod == NORMALIZATION)
 		{
 			calculate_normalized_relative_measurements(history.relative_meas, history.gas_meas_avg);

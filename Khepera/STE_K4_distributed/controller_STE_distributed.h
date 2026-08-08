@@ -120,6 +120,7 @@ float prior(struct parameters_set parameters);
 
 float randu();
 long long current_timestamp();
+void add_wind_gas_prediction_time_ms(long long elapsed_ms);
 void ack_msg(Message msg);
 
 float target_evaluation(float position[][3]);

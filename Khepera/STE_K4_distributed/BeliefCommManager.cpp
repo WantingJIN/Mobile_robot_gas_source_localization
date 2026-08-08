@@ -157,7 +157,7 @@ bool BeliefCommManager::receive_from_any(Message& msg_out, int& from_peer, int t
         if (FD_ISSET(sock, &readfds)) {
             float buf[BUFFER_LEN];
             if (read_all(sock, reinterpret_cast<char *>(buf), sizeof(buf))) {
-                printf("Received message from Robot %d\n", peer_id);
+                //printf("Received message from Robot %d\n", peer_id);
                 msg_out = Message(buf);
                 from_peer = peer_id;
                 return true;

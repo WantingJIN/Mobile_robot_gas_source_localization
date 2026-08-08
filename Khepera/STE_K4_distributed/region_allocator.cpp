@@ -612,10 +612,10 @@ void RegionAllocator::clusterize_belief_map_obstacle_dist_REGION_GROWING_D()
     int absorbed_cells = assign_unclustered_active_cells_to_continuous_clusters(K, cluster_sizes, true);
     int unclustered_after_absorb = count_unclustered_active_cells(true);
 
-    if (unclustered_before_absorb > 0) {
-        printf("Robot ID [%d]: Absorbed %d leftover active cells into continuous region-growing clusters; %d active cells remain unclustered.\n",
-               ID, absorbed_cells, unclustered_after_absorb);
-    }
+    // if (unclustered_before_absorb > 0) {
+    //     printf("Robot ID [%d]: Absorbed %d leftover active cells into continuous region-growing clusters; %d active cells remain unclustered.\n",
+    //            ID, absorbed_cells, unclustered_after_absorb);
+    // }
 
     log_region_allocation_result();
     apply_pdf_masks(K, K, N);
