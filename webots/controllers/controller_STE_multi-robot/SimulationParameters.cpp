@@ -476,8 +476,8 @@ void SimulationParameters::log_simulation_parameters(const char *config_logfile_
 	fprintf(sim_param_file, "diff_coefficient %f\n", diff_coefficient);
 	fprintf(sim_param_file, "wind_belief_weight %f\n", wind_belief_weight);
 
-	fprintf(sim_param_file, "cluster_method %d\n", mapCoverageStrategy);
-	fprintf(sim_param_file, "cluster_seed %d\n", mapCoverageSeed);
+	fprintf(sim_param_file, "region_allocation_method %d\n", mapCoverageStrategy);
+	fprintf(sim_param_file, "region_allocation_seed %d\n", mapCoverageSeed);
 	fprintf(sim_param_file, "epsilon_clusterize %f\n", epsilon_clusterize);
 	fclose(sim_param_file);
 }

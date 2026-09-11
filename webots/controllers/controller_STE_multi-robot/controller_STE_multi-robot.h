@@ -109,6 +109,7 @@ long long current_timestamp();
 // double target_evaluation(double position[][3]);
 // void get_gps_position(Position external_gps_position);
 int obstacle_or_not();
+int front_obstacle_or_not();
 void do_odometry();
 
 void information_clustering_planning();

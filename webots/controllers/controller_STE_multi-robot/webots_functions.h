@@ -126,6 +126,7 @@ void wind_read(double *intensity, double *angle, double *wind_x, double *wind_y,
 void get_gps_position(Position *external_gps_position);
 void update_position();
 int obstacle_or_not();
+int front_obstacle_or_not();
 void receive_from_friends();
 double get_exp_time();
 void init_receiver(int step_size);

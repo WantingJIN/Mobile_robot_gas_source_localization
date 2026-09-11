@@ -397,6 +397,21 @@ int obstacle_or_not()
 	return 0;
 }
 
+int front_obstacle_or_not()
+{
+	const int front_sensor_indices[] = {2, 3, 4};
+
+	for (int sensor_index : front_sensor_indices)
+	{
+		double sensor_value = wb_distance_sensor_get_value(infrared_sensors[sensor_index]);
+		if (sensor_value > 200)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
 void obstacle_avoidance_k4()
 {
 	// if(VERBOSE) printf("[%d] avoiding obstacles .......\n", ID);
