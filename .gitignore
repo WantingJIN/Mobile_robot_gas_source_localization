@@ -1,4 +1,5 @@
 # webots
+webots/gaden_playground/
 webots/plugins/physics/odor_physics/results/SENSOR_*
 webots/wb_output.txt
 webots_*/
