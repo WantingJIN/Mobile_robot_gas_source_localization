@@ -1,0 +1,11 @@
+Starting STE Node... 
+initialization
+Workspace path: /home/wanting/Workspace/kheperaodor/plume_model_learning
+The current path is: /home/wanting/Workspace/kheperaodor/plume_model_learning
+Console log file: /home/wanting/Workspace/kheperaodor/plume_model_learning/ros2/Results/logs/console.txt
+scenario : 0
+Initialization done.
+Obstacle file path: /home/wanting/Workspace/kheperaodor/plume_model_learning/ros2/install/ste_package/share/ste_package/model/test_maps/map0/0_obstacles.txt
+Reading obstacle list from /home/wanting/Workspace/kheperaodor/plume_model_learning/ros2/install/ste_package/share/ste_package/model/test_maps/map0/0_obstacles.txt
+There is 0 obsatcle in total:
+Validating environment model . . . OK

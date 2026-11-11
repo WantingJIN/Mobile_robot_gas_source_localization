@@ -1,0 +1,11 @@
+# Goal
+geometry_msgs/PoseArray goal_positions
+---
+# Result
+bool success
+---
+# Feedback (The "Measurements" sent back to laptop)
+geometry_msgs/Pose2D current_pose
+float64 gas_level
+float64 wind_speed_u
+float64 wind_speed_v
